@@ -213,12 +213,74 @@ tests:
 
 ---
 
+## 13. Operating fund bears the tax on reserve interest
+
+**Decided:** Doug, 2026-07-28. **Status:** settled.
+
+Reserve interest is non-exempt income earned inside a restricted fund, but the
+income tax on it is paid from operating.
+
+That requires an **explicit inter-fund journal entry** — never an implicit
+one — and it is the single most common real transaction that touches both funds
+and the tax computation. It gets a test case.
+
+Note `5900 Income Tax Expense` is a **non-exempt** expenditure. Paying the tax
+therefore hurts the 90% ratio slightly. That is correct and unavoidable, but it
+means an association with substantial reserve interest sees its 90% headroom
+shrink as a direct consequence of earning that interest.
+
+---
+
+## 14. Bad debt is contra-income, not bad-debt expense
+
+**Decided:** Doug, 2026-07-28. **Status:** settled.
+
+Writing off an uncollectible assessment reverses the book receivable and the
+book income. It does not create an expense.
+
+**Under the cash method this has no tax effect at all.** The uncollected
+assessment was never tax income (DECISIONS #1), so writing it off changes
+nothing on the return — no income to reverse, no expenditure to add. It is
+purely a book entry.
+
+That is also why contra-income is the right choice: booking a bad-debt
+*expense* would have added a non-exempt expenditure to the 90% denominator and
+depressed the ratio for what is, on the tax basis, a non-event.
+
+---
+
+## 15. Local-first development. No cloud project, no domain.
+
+**Decided:** Doug, 2026-07-28. **Status:** settled for now.
+
+No Supabase cloud project, no Vercel project, no domain. Development runs
+against **PGlite** — real Postgres compiled to WASM, in-process, driven from
+Vitest (`tests/db/harness.ts`).
+
+This machine has no Docker and no Homebrew, so `supabase start` is unavailable
+without an admin install. PGlite needs neither.
+
+**What this proves:** DDL, constraints, triggers, exclusion constraints, and
+RLS policies. It is real Postgres with the real planner and the real RLS
+engine, so a policy that passes here behaves the same in production.
+
+**What it does not prove:**
+
+- PostgREST behaviour, including the one-transaction-per-request property that
+  forces DECISIONS #5. That has to be confirmed against a real project.
+- Supabase Auth. `auth.users` and `auth.uid()` are stubs in the harness — good
+  enough for policies to compile and run, nothing more.
+- Storage, edge functions, connection pooling, extension availability parity.
+
+Before any real data exists, the schema must also be applied to an actual
+Supabase project and the RLS suite re-run there.
+
+---
+
 ## Still open
 
 | # | Question | Blocks |
 |---|---|---|
 | A | CPA review of the cash-method treatment and the 60%/90% computations | Filing anything, not building |
-| B | Does the reserve fund pay the tax on its own interest, or does operating? | An inter-fund transfer test case |
-| C | Bad debt: contra-income or bad-debt expense? Affects the 90% denominator | Charge write-off, step 11 |
-| D | Domain name for walkup | Deploy |
+| D | Domain name | Deploy only; deferred by #15 |
 | E | Additional launch states beyond Illinois | Slice 4 only |
