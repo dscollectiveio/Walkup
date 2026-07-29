@@ -1,8 +1,8 @@
 import type { Metadata } from "next";
 import Link from "next/link";
 import "./globals.css";
-import { DEV_USERS, getCurrentUser } from "@/lib/session";
-import { switchDevUser } from "./actions";
+import { getUser } from "@/lib/supabase/server";
+import { signOut } from "./login/actions";
 
 export const metadata: Metadata = {
   title: "Walkup",
@@ -20,59 +20,40 @@ const NAV = [
 export default async function RootLayout({
   children,
 }: Readonly<{ children: React.ReactNode }>) {
-  const user = await getCurrentUser();
+  const user = await getUser();
 
   return (
     <html lang="en">
       <body className="min-h-screen bg-stone-50 text-stone-900 antialiased">
-        <header className="border-b border-stone-200 bg-white">
-          <div className="mx-auto flex max-w-6xl flex-wrap items-center gap-x-8 gap-y-3 px-6 py-4">
-            <Link href="/" className="text-lg font-semibold tracking-tight">
-              Walkup
-            </Link>
-            <nav className="flex gap-6 text-sm">
-              {NAV.map((item) => (
-                <Link
-                  key={item.href}
-                  href={item.href}
-                  className="text-stone-600 transition hover:text-stone-900"
-                >
-                  {item.label}
-                </Link>
-              ))}
-            </nav>
-
-            {/* Development identity switcher. Not an auth system — it trusts a
-                cookie. It exists so the RLS policies can be exercised through
-                the UI. See src/lib/session.ts. */}
-            <form action={switchDevUser} className="ml-auto flex items-center gap-2">
-              <span className="text-xs uppercase tracking-wide text-stone-400">
-                Viewing as
-              </span>
-              <select
-                name="userId"
-                // key forces a remount when the identity changes; without it
-                // React keeps the uncontrolled DOM value and the dropdown
-                // shows the previous user after switching.
-                key={user.id}
-                defaultValue={user.id}
-                className="rounded border border-stone-300 bg-white px-2 py-1 text-sm"
-              >
-                {DEV_USERS.map((u) => (
-                  <option key={u.id} value={u.id}>
-                    {u.name} — {u.role}
-                  </option>
+        {user ? (
+          <header className="border-b border-stone-200 bg-white">
+            <div className="mx-auto flex max-w-6xl flex-wrap items-center gap-x-8 gap-y-3 px-6 py-4">
+              <Link href="/" className="text-lg font-semibold tracking-tight">
+                Walkup
+              </Link>
+              <nav className="flex gap-6 text-sm">
+                {NAV.map((item) => (
+                  <Link
+                    key={item.href}
+                    href={item.href}
+                    className="text-stone-600 transition hover:text-stone-900"
+                  >
+                    {item.label}
+                  </Link>
                 ))}
-              </select>
-              <button
-                type="submit"
-                className="rounded bg-stone-900 px-3 py-1 text-sm text-white transition hover:bg-stone-700"
-              >
-                Switch
-              </button>
-            </form>
-          </div>
-        </header>
+              </nav>
+              <form action={signOut} className="ml-auto flex items-center gap-3">
+                <span className="text-xs text-stone-500">{user.email}</span>
+                <button
+                  type="submit"
+                  className="rounded border border-stone-300 px-3 py-1 text-sm transition hover:bg-stone-100"
+                >
+                  Sign out
+                </button>
+              </form>
+            </div>
+          </header>
+        ) : null}
 
         <main className="mx-auto max-w-6xl px-6 py-10">{children}</main>
 

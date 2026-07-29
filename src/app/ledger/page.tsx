@@ -1,32 +1,20 @@
-import { queryAs } from "@/lib/db";
-import { getCurrentUserId } from "@/lib/session";
+import { createClient } from "@/lib/supabase/server";
 import { Card, Restricted, money } from "@/components/ui";
 
 export const dynamic = "force-dynamic";
 
 export default async function LedgerPage() {
-  const userId = await getCurrentUserId();
+  const supabase = await createClient();
 
-  const rows = await queryAs<{
-    code: string;
-    name: string;
-    type: string;
-    fund: string;
-    total_debit: string;
-    total_credit: string;
-    net_debit: string;
-  }>(
-    userId,
-    `select tb.code, tb.name, tb.type, f.name as fund,
-            tb.total_debit::text, tb.total_credit::text, tb.net_debit::text
-       from trial_balance tb
-       join funds f on f.id = tb.fund_id
-      order by f.name, tb.code`,
-  );
+  const { data: rows } = await supabase
+    .from("trial_balance_by_fund")
+    .select("fund_name, code, name, type, total_debit, total_credit")
+    .order("fund_name")
+    .order("code");
 
-  // Owners have no SELECT policy on journal_lines, so this comes back empty
-  // for them rather than partially populated.
-  if (rows.length === 0) {
+  // Owners have no SELECT policy on journal_lines, so this is empty for them
+  // rather than partially populated.
+  if (!rows || rows.length === 0) {
     return <Restricted what="the general ledger" />;
   }
 
@@ -57,8 +45,8 @@ export default async function LedgerPage() {
           </thead>
           <tbody className="divide-y divide-stone-100">
             {rows.map((r) => (
-              <tr key={`${r.fund}-${r.code}`}>
-                <td className="py-2 text-stone-500">{r.fund}</td>
+              <tr key={`${r.fund_name}-${r.code}`}>
+                <td className="py-2 text-stone-500">{r.fund_name}</td>
                 <td className="tabular py-2 font-mono text-xs">{r.code}</td>
                 <td className="py-2">{r.name}</td>
                 <td className="py-2 text-xs text-stone-500">{r.type}</td>

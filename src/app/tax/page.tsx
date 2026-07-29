@@ -1,5 +1,4 @@
-import { queryAs } from "@/lib/db";
-import { getCurrentUserId } from "@/lib/session";
+import { createClient } from "@/lib/supabase/server";
 import { Card, Provisional, Restricted, money } from "@/components/ui";
 import {
   computeForm1120h,
@@ -30,9 +29,7 @@ function TestPanel({
         <h3 className="text-sm font-semibold">{title}</h3>
         <span
           className={`rounded-full px-3 py-1 text-xs font-medium ${
-            test.passed
-              ? "bg-emerald-100 text-emerald-800"
-              : "bg-red-100 text-red-800"
+            test.passed ? "bg-emerald-100 text-emerald-800" : "bg-red-100 text-red-800"
           }`}
         >
           {test.ratio === null ? "No activity" : test.passed ? "Passes" : "FAILS"}
@@ -40,8 +37,6 @@ function TestPanel({
       </header>
 
       <div className="space-y-3 px-5 py-4">
-        {/* Show the work. A bare pass/fail is useless to a board member who
-            has to decide whether to change something before year end. */}
         <dl className="space-y-1.5 text-sm">
           <div className="flex justify-between gap-4">
             <dt className="text-stone-600">{numeratorLabel}</dt>
@@ -81,56 +76,46 @@ function TestPanel({
 }
 
 export default async function TaxPage() {
-  const userId = await getCurrentUserId();
+  const supabase = await createClient();
 
-  const fiscalYears = await queryAs<{ id: string; label: string; association_id: string }>(
-    userId,
-    `select id, label, association_id from fiscal_years order by starts_on desc limit 1`,
-  );
+  const { data: fiscalYears } = await supabase
+    .from("fiscal_years")
+    .select("id, label, association_id")
+    .order("starts_on", { ascending: false })
+    .limit(1);
 
-  if (fiscalYears.length === 0) {
-    return <Restricted what="tax worksheets" />;
-  }
-  const fy = fiscalYears[0];
+  const fy = fiscalYears?.[0];
+  if (!fy) return <Restricted what="tax worksheets" />;
 
-  const [figuresRows, paramRows, receipts, disbursements] = await Promise.all([
-    queryAs<{
-      exempt_income: string;
-      nonexempt_income: string;
-      gross_income: string;
-      exempt_expenditures: string;
-      total_expenditures: string;
-    }>(userId, `select * from form_1120h_figures($1::uuid, $2::uuid)`, [
-      fy.association_id,
-      fy.id,
-    ]),
-    queryAs<{
-      key: string;
-      numeric_value: string;
-      source_url: string | null;
-      verified_on: string | null;
-      notes: string | null;
-    }>(userId, `select key, numeric_value, source_url, verified_on, notes from tax_parameters`),
-    queryAs<{ name: string; is_exempt: boolean; total: string }>(
-      userId,
-      `select income_account_name as name, is_exempt, sum(amount)::text as total
-         from cash_basis_receipts
-        where association_id = $1 and fiscal_year_id = $2
-        group by 1,2 order by is_exempt desc, 3 desc`,
-      [fy.association_id, fy.id],
-    ),
-    queryAs<{ name: string; is_exempt: boolean; account_type: string; total: string }>(
-      userId,
-      `select account_name as name, is_exempt, account_type, sum(amount)::text as total
-         from cash_basis_disbursements
-        where association_id = $1 and fiscal_year_id = $2
-        group by 1,2,3 order by is_exempt desc, 4 desc`,
-      [fy.association_id, fy.id],
-    ),
-  ]);
+  // The one genuine RPC call in the app besides post_journal_entry. Over
+  // PostgREST, as a signed-in user, with RLS applying inside the function.
+  const [{ data: figuresRows }, { data: paramRows }, { data: receipts }, { data: disbursements }] =
+    await Promise.all([
+      supabase.rpc("form_1120h_figures", {
+        p_association_id: fy.association_id,
+        p_fiscal_year_id: fy.id,
+      }),
+      supabase
+        .from("tax_parameters")
+        .select("key, numeric_value, source_url, verified_on, notes"),
+      supabase
+        .from("tax_receipts_by_account")
+        .select("account_name, is_exempt, total")
+        .eq("fiscal_year_id", fy.id)
+        .order("is_exempt", { ascending: false })
+        .order("total", { ascending: false }),
+      supabase
+        .from("tax_disbursements_by_account")
+        .select("account_name, account_type, is_exempt, total")
+        .eq("fiscal_year_id", fy.id)
+        .order("is_exempt", { ascending: false })
+        .order("total", { ascending: false }),
+    ]);
 
-  const f = figuresRows[0];
-  const parameters: TaxParameter[] = paramRows.map((p) => ({
+  const f = Array.isArray(figuresRows) ? figuresRows[0] : figuresRows;
+  if (!f) return <Restricted what="tax worksheets" />;
+
+  const parameters: TaxParameter[] = (paramRows ?? []).map((p) => ({
     key: p.key,
     numericValue: p.numeric_value,
     sourceUrl: p.source_url,
@@ -219,9 +204,9 @@ export default async function TaxPage() {
         <Card title="Cash received" hint="What the 60% test is built from.">
           <table className="w-full text-sm">
             <tbody className="divide-y divide-stone-100">
-              {receipts.map((r) => (
-                <tr key={r.name}>
-                  <td className="py-2">{r.name}</td>
+              {(receipts ?? []).map((r) => (
+                <tr key={r.account_name}>
+                  <td className="py-2">{r.account_name}</td>
                   <td className="py-2">
                     <span
                       className={`rounded px-1.5 py-0.5 text-xs ${
@@ -243,10 +228,10 @@ export default async function TaxPage() {
         <Card title="Cash spent" hint="What the 90% test is built from.">
           <table className="w-full text-sm">
             <tbody className="divide-y divide-stone-100">
-              {disbursements.map((d) => (
-                <tr key={d.name}>
+              {(disbursements ?? []).map((d) => (
+                <tr key={d.account_name}>
                   <td className="py-2">
-                    {d.name}
+                    {d.account_name}
                     {d.account_type === "asset" ? (
                       <span className="ml-2 text-xs text-stone-400">capitalized</span>
                     ) : null}

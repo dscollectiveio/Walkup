@@ -1,64 +1,45 @@
-import { queryAs } from "@/lib/db";
-import { getCurrentUserId } from "@/lib/session";
+import { createClient } from "@/lib/supabase/server";
 import { Card, Empty, Stat, UnitLink, money } from "@/components/ui";
 
 export const dynamic = "force-dynamic";
 
 export default async function OverviewPage() {
-  const userId = await getCurrentUserId();
+  const supabase = await createClient();
 
-  const [associations, funds, arrears, units, balance] = await Promise.all([
-    queryAs<{ id: string; display_name: string; state_code: string; fiscal_year_end_month: number }>(
-      userId,
-      `select id, display_name, state_code, fiscal_year_end_month from associations`,
-    ),
-    queryAs<{ name: string; net: string }>(
-      userId,
-      `select f.name, coalesce(sum(l.debit - l.credit), 0)::text as net
-         from funds f
-         left join journal_lines l on l.fund_id = f.id
-         left join journal_entries e on e.id = l.journal_entry_id and e.is_posted
-         left join accounts a on a.id = l.account_id and a.is_cash_account
-        where a.is_cash_account
-        group by f.name order by f.name`,
-    ),
-    queryAs<{ owed: string; units: number }>(
-      userId,
-      `select coalesce(sum(balance), 0)::text as owed,
-              count(distinct unit_id)::int as units
-         from charge_balances where status not in ('paid','waived','written_off')`,
-    ),
-    // visible_charges distinguishes "this unit owes nothing" from "row-level
-    // security is hiding this unit's charges from you". Without it an owner
-    // sees a confident $0.00 next to a neighbour who is $1,000 behind, which
-    // is worse than showing nothing at all.
-    queryAs<{ id: string; label: string; owed: string; visible_charges: number }>(
-      userId,
-      `select u.id, u.label,
-              count(cb.id)::int as visible_charges,
-              coalesce(sum(cb.balance) filter (
-                where cb.status not in ('paid','waived','written_off')), 0)::text as owed
-         from units u
-         left join charge_balances cb on cb.unit_id = u.id
-        group by u.id, u.label order by u.sort_order`,
-    ),
-    queryAs<{ rows: number; debits: string; credits: string }>(
-      userId,
-      `select count(*)::int as rows,
-              coalesce(sum(total_debit),0)::text debits,
-              coalesce(sum(total_credit),0)::text credits from trial_balance`,
-    ),
-  ]);
+  // No association_id filter anywhere below. RLS scopes every one of these to
+  // the associations this user actually belongs to — a forgotten WHERE clause
+  // cannot leak another building's books.
+  const [{ data: associations }, { data: funds }, { data: units }, { data: totals }] =
+    await Promise.all([
+      supabase
+        .from("associations")
+        .select("id, display_name, state_code, fiscal_year_end_month"),
+      supabase
+        .from("fund_cash_balances")
+        .select("fund_id, name, cash_balance, visible_lines")
+        .order("name"),
+      supabase
+        .from("unit_balances")
+        .select("unit_id, label, balance_owed, visible_charges")
+        .order("sort_order"),
+      supabase
+        .from("association_totals")
+        .select("visible_tb_rows, total_debits, total_credits, total_owed, units_behind"),
+    ]);
 
-  const association = associations[0];
-  const ledgerVisible = (balance[0]?.rows ?? 0) > 0;
-  const ties = ledgerVisible && balance[0].debits === balance[0].credits;
-
+  const association = associations?.[0];
   if (!association) {
     return (
-      <Empty>No association is visible to you. Row-level security is doing its job.</Empty>
+      <Empty>
+        No association is visible to you. Row-level security is doing its job.
+      </Empty>
     );
   }
+
+  const t = totals?.[0];
+  const ledgerVisible = (t?.visible_tb_rows ?? 0) > 0;
+  const ties = ledgerVisible && Number(t!.total_debits) === Number(t!.total_credits);
+  const visibleFunds = (funds ?? []).filter((f) => f.visible_lines > 0);
 
   return (
     <div className="space-y-8">
@@ -73,16 +54,16 @@ export default async function OverviewPage() {
       </div>
 
       <div className="grid gap-4 sm:grid-cols-3">
-        {funds.map((f) => (
-          <Stat key={f.name} label={`${f.name} cash`} value={money(f.net)} />
+        {visibleFunds.map((f) => (
+          <Stat key={f.fund_id} label={`${f.name} cash`} value={money(f.cash_balance)} />
         ))}
         <Stat
           label="Owed to the association"
-          value={money(arrears[0]?.owed ?? "0")}
-          tone={Number(arrears[0]?.owed ?? 0) > 0 ? "bad" : "good"}
+          value={money(t?.total_owed ?? 0)}
+          tone={Number(t?.total_owed ?? 0) > 0 ? "bad" : "good"}
           note={
-            Number(arrears[0]?.units ?? 0) > 0
-              ? `${arrears[0].units} unit${arrears[0].units === 1 ? "" : "s"} behind`
+            Number(t?.units_behind ?? 0) > 0
+              ? `${t!.units_behind} unit${t!.units_behind === 1 ? "" : "s"} behind`
               : "all current"
           }
         />
@@ -96,11 +77,11 @@ export default async function OverviewPage() {
           <div className="flex items-center gap-8">
             <div>
               <div className="text-xs uppercase tracking-wide text-stone-500">Debits</div>
-              <div className="tabular text-lg font-medium">{money(balance[0].debits)}</div>
+              <div className="tabular text-lg font-medium">{money(t!.total_debits)}</div>
             </div>
             <div>
               <div className="text-xs uppercase tracking-wide text-stone-500">Credits</div>
-              <div className="tabular text-lg font-medium">{money(balance[0].credits)}</div>
+              <div className="tabular text-lg font-medium">{money(t!.total_credits)}</div>
             </div>
             <div
               className={`rounded-full px-3 py-1 text-xs font-medium ${
@@ -119,7 +100,7 @@ export default async function OverviewPage() {
       </Card>
 
       <Card title="Units" hint="Owners see only their own.">
-        {units.length === 0 ? (
+        {!units || units.length === 0 ? (
           <Empty>No units are visible to you.</Empty>
         ) : (
           <table className="w-full text-sm">
@@ -131,10 +112,13 @@ export default async function OverviewPage() {
             </thead>
             <tbody className="divide-y divide-stone-100">
               {units.map((u) => (
-                <tr key={u.id}>
+                <tr key={u.unit_id}>
                   <td className="py-2.5">
-                    <UnitLink id={u.id} label={u.label} />
+                    <UnitLink id={u.unit_id} label={u.label} />
                   </td>
+                  {/* A SUM over zero visible rows is 0. Showing that as $0.00
+                      next to a neighbour who is behind would be a lie —
+                      DECISIONS #17. */}
                   {u.visible_charges === 0 ? (
                     <td className="py-2.5 text-right text-xs text-stone-400">
                       not visible to you
@@ -142,12 +126,12 @@ export default async function OverviewPage() {
                   ) : (
                     <td
                       className={`tabular py-2.5 text-right ${
-                        Number(u.owed) > 0
+                        Number(u.balance_owed) > 0
                           ? "font-medium text-red-700"
                           : "text-stone-600"
                       }`}
                     >
-                      {money(u.owed)}
+                      {money(u.balance_owed)}
                     </td>
                   )}
                 </tr>

@@ -10,15 +10,12 @@
     "test": "vitest run",
     "test:watch": "vitest",
     "test:e2e": "playwright test",
-    "typecheck": "tsc --noEmit",
-    "dev:db": "node scripts/dev-db.mjs"
+    "typecheck": "tsc --noEmit"
   },
   "dependencies": {
-    "@electric-sql/pglite-socket": "^0.2.7",
     "@supabase/ssr": "^0.12.4",
     "@supabase/supabase-js": "^2.111.0",
     "next": "16.2.12",
-    "pg": "^8.22.0",
     "react": "19.2.4",
     "react-dom": "19.2.4",
     "server-only": "^0.0.1",
@@ -29,7 +26,6 @@
     "@playwright/test": "^1.62.0",
     "@tailwindcss/postcss": "^4",
     "@types/node": "^20",
-    "@types/pg": "^8.20.0",
     "@types/react": "^19",
     "@types/react-dom": "^19",
     "dotenv": "^17.4.2",

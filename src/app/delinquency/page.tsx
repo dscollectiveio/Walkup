@@ -1,41 +1,17 @@
-import { queryAs } from "@/lib/db";
-import { getCurrentUserId } from "@/lib/session";
+import { createClient } from "@/lib/supabase/server";
 import { Card, Empty, UnitLink, money } from "@/components/ui";
 
 export const dynamic = "force-dynamic";
 
-interface Row {
-  unit_id: string;
-  label: string;
-  current: string;
-  d30: string;
-  d60: string;
-  d90: string;
-  total: string;
-}
-
 export default async function DelinquencyPage() {
-  const userId = await getCurrentUserId();
+  const supabase = await createClient();
 
-  // Aging buckets. Computed from charge_balances, which derives amounts from
-  // payment_allocations rather than a cached status column that could drift.
-  const rows = await queryAs<Row>(
-    userId,
-    `select u.id as unit_id, u.label,
-            coalesce(sum(cb.balance) filter (where cb.days_overdue = 0), 0)::text  as current,
-            coalesce(sum(cb.balance) filter (where cb.days_overdue between 1 and 30), 0)::text as d30,
-            coalesce(sum(cb.balance) filter (where cb.days_overdue between 31 and 60), 0)::text as d60,
-            coalesce(sum(cb.balance) filter (where cb.days_overdue > 60), 0)::text as d90,
-            coalesce(sum(cb.balance), 0)::text as total
-       from units u
-       join charge_balances cb on cb.unit_id = u.id
-      where cb.status not in ('paid','waived','written_off')
-      group by u.id, u.label
-      having coalesce(sum(cb.balance), 0) > 0
-      order by 7 desc`,
-  );
+  const { data: rows } = await supabase
+    .from("delinquency_aging")
+    .select("unit_id, label, current_due, days_1_30, days_31_60, days_60_plus, total_owed")
+    .order("total_owed", { ascending: false });
 
-  const total = rows.reduce((sum, r) => sum + Number(r.total), 0);
+  const total = (rows ?? []).reduce((sum, r) => sum + Number(r.total_owed), 0);
 
   return (
     <div className="space-y-6">
@@ -50,7 +26,7 @@ export default async function DelinquencyPage() {
         title="Aging"
         hint="Uncollected assessments are exempt function income you have not received — they lower the 60% ratio on the cash basis."
       >
-        {rows.length === 0 ? (
+        {!rows || rows.length === 0 ? (
           <Empty>Nothing outstanding is visible to you.</Empty>
         ) : (
           <table className="w-full text-sm">
@@ -71,17 +47,17 @@ export default async function DelinquencyPage() {
                     <UnitLink id={r.unit_id} label={r.label} />
                   </td>
                   <td className="tabular py-2.5 text-right text-stone-600">
-                    {money(r.current)}
+                    {money(r.current_due)}
                   </td>
-                  <td className="tabular py-2.5 text-right">{money(r.d30)}</td>
+                  <td className="tabular py-2.5 text-right">{money(r.days_1_30)}</td>
                   <td className="tabular py-2.5 text-right text-amber-700">
-                    {money(r.d60)}
+                    {money(r.days_31_60)}
                   </td>
                   <td className="tabular py-2.5 text-right font-medium text-red-700">
-                    {money(r.d90)}
+                    {money(r.days_60_plus)}
                   </td>
                   <td className="tabular py-2.5 text-right font-semibold">
-                    {money(r.total)}
+                    {money(r.total_owed)}
                   </td>
                 </tr>
               ))}

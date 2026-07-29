@@ -329,3 +329,42 @@ leaking "this unit exists but is not yours" is still a leak.
 The same class of bug produced a fabricated `$0.00` on the overview page.
 Anywhere a `LEFT JOIN` crosses an RLS boundary, absence must render as
 "not visible to you" and never as zero. **A false zero is worse than a blank.**
+
+---
+
+## 18. supabase-js replaces node-postgres; #15 and #16 are superseded
+
+**Decided:** Doug, 2026-07-29. **Status:** settled.
+
+The app talks to Supabase over PostgREST with the publishable key, using
+`@supabase/ssr`. Real Supabase Auth; the dev-cookie identity from #16 is gone,
+along with `src/lib/db.ts`, `src/lib/session.ts`, the `pg` dependency and the
+PGlite socket server.
+
+**There is no service-role client anywhere in this codebase, deliberately.** The
+service role bypasses RLS entirely, and the policies in 0002 exist precisely so
+authorization does not depend on application code remembering to scope a query.
+Anything that genuinely needs to bypass RLS should be a `SECURITY DEFINER`
+function with its own authorization check — the pattern `post_journal_entry`
+already uses — not a privileged client.
+
+Two consequences worth knowing:
+
+- **PostgREST cannot express GROUP BY**, so every aggregate moved into views
+  (0008). That is a better home for them anyway: versioned, reviewable, and
+  identical for every caller.
+- **A `SUM` over zero RLS-visible rows returns 0.** Every aggregate view that
+  can be filtered therefore also exposes a `COUNT`, so the UI can distinguish
+  "nothing owed" from "not yours to see" (DECISIONS #17).
+
+Offline development against PGlite is no longer possible for the *app*. The
+test suite still runs entirely offline against PGlite, so migrations, triggers
+and policies remain testable with no network. That was the part worth keeping.
+
+Verified over real HTTP with the anon key: every table returns `[]`,
+`post_journal_entry` returns `42501 permission denied`, and `tg_audit` returns
+404 — it is no longer part of the API surface at all.
+
+**Still unverified:** the claim in #5 that PostgREST runs each request in its
+own transaction, which is the entire justification for the RPC. Proving it needs
+an authenticated post over HTTP.
