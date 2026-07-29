@@ -95,12 +95,14 @@ export async function seed(db: PGlite) {
 
     -- A real ledger entry, so that "an owner cannot reach the ledger" is not
     -- passing merely because journal_lines is empty.
+    -- Unposted first, then lines, then post — the same order post_journal_entry
+    -- uses, and for the same reason: a posted entry's lines are frozen.
     insert into journal_entries
-      (id, association_id, fiscal_year_id, entry_date, memo, source, is_posted, posted_at)
+      (id, association_id, fiscal_year_id, entry_date, memo, source, is_posted)
     values
       ('3e000000-0000-0000-0000-000000000001', '${ids.damen}',
        'f1500000-0000-0000-0000-000000000001', '2026-01-01',
-       'January assessments', 'assessment', true, now());
+       'January assessments', 'assessment', false);
 
     insert into journal_lines
       (association_id, journal_entry_id, account_id, fund_id, unit_id, debit, credit)
@@ -111,6 +113,9 @@ export async function seed(db: PGlite) {
       ('${ids.damen}', '3e000000-0000-0000-0000-000000000001',
        'acc00000-0000-0000-0000-000000004000', 'ffff0000-0000-0000-0000-000000000001',
        '${ids.unit2}', 0, 750.00);
+
+    update journal_entries set is_posted = true, posted_at = now()
+     where id = '3e000000-0000-0000-0000-000000000001';
 
     -- Bo is behind. Ada is not. That difference is the whole point of the test.
     insert into assessment_charges

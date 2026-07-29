@@ -29,10 +29,16 @@ describe("migrations", () => {
       numeric_precision: number;
       numeric_scale: number;
     }>(
-      `select table_name, column_name, numeric_precision, numeric_scale
-         from information_schema.columns
-        where table_schema = 'public' and data_type = 'numeric'
-        order by table_name, column_name`,
+      // Base tables only. A view's sum() reports null precision, which says
+      // nothing about how the underlying money is stored.
+      `select c.table_name, c.column_name, c.numeric_precision, c.numeric_scale
+         from information_schema.columns c
+         join information_schema.tables t
+           on t.table_schema = c.table_schema and t.table_name = c.table_name
+        where c.table_schema = 'public'
+          and t.table_type = 'BASE TABLE'
+          and c.data_type = 'numeric'
+        order by 1, 2`,
     );
 
     const allowed = new Set(["14,2", "9,6", "6,4", "14,6"]);
