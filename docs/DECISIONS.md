@@ -284,3 +284,48 @@ Supabase project and the RLS suite re-run there.
 | A | CPA review of the cash-method treatment and the 60%/90% computations | Filing anything, not building |
 | D | Domain name | Deploy only; deferred by #15 |
 | E | Additional launch states beyond Illinois | Slice 4 only |
+
+---
+
+## 16. The app runs against PGlite over a Postgres socket
+
+**Decided:** Claude, 2026-07-29, extending #15. **Status:** settled for local work.
+
+`npm run dev:db` serves PGlite on the Postgres wire protocol at
+`127.0.0.1:5433`; the Next server connects with node-postgres. Every query runs
+as `authenticated` with `request.jwt.claim.sub` set, so the 0002 policies apply
+to the UI exactly as they will in production. There is no privileged path in
+the app — a page that forgets to scope a query is still stopped by the
+database.
+
+Two constraints worth knowing:
+
+- **The pool must be size 1.** PGlite serves one connection at a time; a larger
+  pool resets the socket mid-query. `DATABASE_POOL_MAX` raises it for Supabase.
+- **Identity is a cookie** (`src/lib/session.ts`). Not an auth system. It exists
+  so the policies can be exercised through the UI and must not survive contact
+  with a real deployment.
+
+---
+
+## 17. `units` is readable by all members and is NOT an access check
+
+**Decided:** Claude, 2026-07-29, after a leak found by testing the UI. **Status:** settled.
+
+The owner statement page originally gated on `select from units`. Because
+`units` is a configuration table readable by every member — deliberately; an
+owner knows their building has three units — navigating directly to a
+neighbour's unit URL rendered a real statement shell, titled with that unit,
+showing a confident `$0.00` balance.
+
+The financial rows were correctly empty. The page still should not have
+rendered.
+
+**How to apply:** gate on `unit_owners`, which carries the correct policy —
+board and accountant see every row, an owner sees only their own. An empty
+result is then indistinguishable from "does not exist", which is the point:
+leaking "this unit exists but is not yours" is still a leak.
+
+The same class of bug produced a fabricated `$0.00` on the overview page.
+Anywhere a `LEFT JOIN` crosses an RLS boundary, absence must render as
+"not visible to you" and never as zero. **A false zero is worse than a blank.**

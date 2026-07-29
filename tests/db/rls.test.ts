@@ -126,6 +126,29 @@ describe("row-level security", () => {
     });
   });
 
+  it("does not let units be used as an access check for another unit", async () => {
+    // Regression. The owner statement page originally gated on `select from
+    // units`, which every member can read — so navigating directly to a
+    // neighbour's unit URL rendered a real statement shell showing a confident
+    // $0.00 balance. unit_owners is the correct gate.
+    await asUser(db, f.adaUser, async () => {
+      const visibleUnits = await db.query<{ id: string }>(`select id from units`);
+      // units itself is intentionally readable — an owner knows the building
+      // has three units, and hiding that achieves nothing.
+      expect(visibleUnits.rows.length).toBeGreaterThan(1);
+
+      const owned = await db.query<{ unit_id: string }>(
+        `select unit_id from unit_owners`,
+      );
+      expect(owned.rows.map((r) => r.unit_id)).toEqual([f.unit1]);
+
+      const neighbour = await db.query(
+        `select 1 from unit_owners where unit_id = '${f.unit2}'`,
+      );
+      expect(neighbour.rows).toEqual([]);
+    });
+  });
+
   it("enables row-level security on every table in public", async () => {
     const { rows } = await db.query<{ tablename: string }>(
       `select tablename from pg_tables
