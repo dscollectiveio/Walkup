@@ -54,6 +54,16 @@ export async function freshDb(): Promise<PGlite> {
         create role service_role nologin bypassrls;
       end if;
     end $$;
+
+    -- Supabase grants table access broadly and relies on RLS to restrict.
+    -- Replicated here so that a denied read is a POLICY decision, not a
+    -- missing GRANT — otherwise the isolation tests would pass for the wrong
+    -- reason and keep passing after someone removed the policy.
+    grant usage on schema public to anon, authenticated, service_role;
+    alter default privileges in schema public
+      grant all on tables to anon, authenticated, service_role;
+    alter default privileges in schema public
+      grant all on sequences to anon, authenticated, service_role;
   `);
 
   for (const file of await migrationFiles()) {

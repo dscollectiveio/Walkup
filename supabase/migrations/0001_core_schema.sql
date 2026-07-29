@@ -367,7 +367,7 @@ create table assessment_charges (
   -- NOTE: amount_applied and status from the original schema are dropped.
   -- They were denormalized caches of payment_allocations and would drift. At
   -- 80-150 transactions a year there is no performance argument for the cache.
-  -- Both are computed in a view (migration 0002).
+  -- Both are computed in a view (migration 0003).
   waived_at        timestamptz,
   written_off_at   timestamptz,
 
@@ -404,7 +404,7 @@ create table payments (
   -- NOT NULL, unlike the original schema. A payment with no ledger entry is a
   -- subsidiary record that can silently diverge from the general ledger, which
   -- is the classic source of "the trial balance doesn't tie and nobody knows
-  -- why". Payment and entry are written together in one RPC (migration 0002).
+  -- why". Payment and entry are written together in one RPC (migration 0003).
   journal_entry_id uuid not null references journal_entries(id) on delete restrict,
 
   created_at       timestamptz not null default now()
@@ -550,7 +550,7 @@ create table tax_filings (
 
   computed_at timestamptz,
   filed_on    date,
-  locked_at   timestamptz,   -- set on filing; blocks recomputation (migration 0002)
+  locked_at   timestamptz,   -- set on filing; blocks recomputation (migration 0003)
 
   unique (association_id, fiscal_year_id, form)
 );
@@ -601,7 +601,12 @@ create index on ownership_amendment_lines (amendment_id);
 -- a later migration paired with the test that proves it. Nothing real goes in
 -- this database until all of them are green.
 --
--- 0002_ledger.sql
+-- 0002_rls.sql — DONE. RLS enabled on every table, policies written, helper
+--   functions SECURITY DEFINER with search_path pinned. The isolation suite in
+--   tests/db/rls.test.ts was written first and observed to fail (an owner read
+--   a neighbour's delinquency) before these policies existed.
+--
+-- 0003_ledger.sql
 --   - journal entry balance: sum(debit) = sum(credit) per entry, as a DEFERRED
 --     constraint trigger. NOTE: this cannot be satisfied by separate PostgREST
 --     inserts, because each REST request is its own transaction — the entry
@@ -617,19 +622,9 @@ create index on ownership_amendment_lines (amendment_id);
 --   - payment_allocations: sum per payment <= payments.amount
 --   - views: charge_balances, payment_unapplied, trial_balance
 --
--- 0003_audit.sql
+-- 0004_audit.sql
 --   - SECURITY DEFINER audit trigger on every financial table
 --   - audit_log INSERT policy only; no UPDATE, no DELETE, ever
---
--- 0004_rls.sql
---   - RLS enabled and policies written for every table, including
---     tax_parameters
---   - helper functions current_person_id() / has_role_in(), both
---     SECURITY DEFINER with `set search_path = ''` and fully schema-qualified
---     bodies (an unpinned search_path on a definer function is a privilege
---     escalation vector and Supabase's own linter flags it)
---   - the isolation test lands BEFORE the policies and must be seen to fail:
---     an owner must not be able to read another owner's balance
 --
 -- 0005_seed.sql
 --   - chart of accounts with is_cash_account and the 1120-H flags
