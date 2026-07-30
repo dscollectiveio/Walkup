@@ -18,8 +18,22 @@ export default async function LedgerPage() {
     return <Restricted what="the general ledger" />;
   }
 
-  const debits = rows.reduce((s, r) => s + Number(r.total_debit), 0);
-  const credits = rows.reduce((s, r) => s + Number(r.total_credit), 0);
+  // Summed in cents, and compared in cents.
+  //
+  // PostgREST returns NUMERIC as a JSON number, so these arrive as floats
+  // (DECISIONS #20). Adding thirteen of them per side gave
+  // 60232.18000000000029 against 60232.18000000000757 — identical to the
+  // penny, unequal as doubles. The page printed both totals as $60,232.18 and
+  // then declared the books broken.
+  //
+  // On a page whose entire job is to tell a board member whether their records
+  // are sound, a false alarm is close to the worst possible bug.
+  const toCentsLoose = (v: string | number) => Math.round(Number(v) * 100);
+  const debitCents = rows.reduce((s, r) => s + toCentsLoose(r.total_debit), 0);
+  const creditCents = rows.reduce((s, r) => s + toCentsLoose(r.total_credit), 0);
+  const debits = debitCents / 100;
+  const credits = creditCents / 100;
+  const balanced = debitCents === creditCents;
 
   return (
     <div className="space-y-6">
@@ -74,7 +88,7 @@ export default async function LedgerPage() {
           </tfoot>
         </table>
         <p className="mt-4 text-xs text-stone-500">
-          {debits === credits
+          {balanced
             ? "The two sides match, which is what you want. Walkup will not let you save a transaction where they do not."
             : "The two sides do not match. This should be impossible — please report it."}
         </p>
