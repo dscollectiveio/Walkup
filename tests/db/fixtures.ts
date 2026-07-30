@@ -31,6 +31,9 @@ export async function seed(db: PGlite) {
     zaraPerson: "eeee0000-0000-0000-0000-00000000000e",
     niaPerson: "eeee0000-0000-0000-0000-00000000000f",
     adaCharge: "cccc0000-0000-0000-0000-00000000000a",
+    ticketCommon: "7c000000-0000-0000-0000-000000000001",
+    ticketUnit1: "7c000000-0000-0000-0000-000000000002",
+    ticketUnit2: "7c000000-0000-0000-0000-000000000003",
     boCharge: "cccc0000-0000-0000-0000-00000000000b",
   } as const;
 
@@ -122,6 +125,22 @@ export async function seed(db: PGlite) {
       (id, association_id, unit_id, charge_type, period_start, due_on, amount) values
       ('${ids.adaCharge}', '${ids.damen}', '${ids.unit1}', 'assessment', '2026-01-01', '2026-01-01', 500.00),
       ('${ids.boCharge}',  '${ids.damen}', '${ids.unit2}', 'assessment', '2026-01-01', '2026-01-01', 750.00);
+
+    -- Operations fixtures. One shared-area problem everyone may see, and one
+    -- per unit so owner scoping is testable.
+    insert into tickets (id, association_id, title, status, priority, unit_id, opened_on) values
+      ('${ids.ticketCommon}', '${ids.damen}', 'Roof leak above the stairwell', 'open', 'urgent', null, '2026-02-01'),
+      ('${ids.ticketUnit1}',  '${ids.damen}', 'Ada kitchen tap dripping',      'open', 'low',  '${ids.unit1}', '2026-02-02'),
+      ('${ids.ticketUnit2}',  '${ids.damen}', 'Bo radiator cold',              'open', 'low',  '${ids.unit2}', '2026-02-03');
+
+    insert into recurring_bills (association_id, name, account_id, fund_id, frequency, typical_amount, autopay_arranged)
+    values ('${ids.damen}', 'Gas', 'acc00000-0000-0000-0000-000000001000',
+            'ffff0000-0000-0000-0000-000000000001', 'monthly', 100.00, true);
+
+    insert into insurance_policies (association_id, coverage, carrier_name, effective_from, effective_to, annual_premium)
+    values
+      ('${ids.damen}', 'property', 'Carrier A', '2025-01-01', '2026-01-01', 1000.00),
+      ('${ids.damen}', 'property', 'Carrier B', '2026-01-01', '2027-01-01', 1200.00);
   `);
 
   return ids;

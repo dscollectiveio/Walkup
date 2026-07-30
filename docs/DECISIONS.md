@@ -452,3 +452,59 @@ with the identical privileges, successfully.
 Fixed in 0012. DECISIONS #5 is now verified end to end over PostgREST: a
 balanced post returns a uuid, an unbalanced post is rejected at commit with
 `debits 10.00, credits 9.00, difference 1.00`, and nothing is left behind.
+
+---
+
+## 22. Operations layer: three deliberate limits
+
+**Decided:** Doug asked for these; Claude narrowed three. 2026-07-30. **Status:** settled.
+
+Maintenance tickets, contractor profiles, recurring bills, insurance tracking
+and document storage are built (0013). Three of the requests were narrowed
+rather than delivered as asked, and the schema comments say so at the point of
+use:
+
+**No payment initiation.** `recurring_bills` records what is due and whether
+autopay is already arranged *at the utility or the bank*. Walkup does not store
+banking credentials and never moves money. For a four-unit association that is
+the safer arrangement — no software holding the association's credentials, and
+no single point of failure if a volunteer's account is compromised. Real ACH
+would need a provider, NACHA obligations, and a much larger trust surface than
+this product has earned.
+
+**No automatic sending.** `contractor_messages` holds drafts; a person approves
+and sends each one, from their own mailbox via `mailto:`. The database refuses
+a row marked `sent` without an approver. An association that accidentally
+emails a contractor something reading like an authorisation to begin work has a
+real problem, and the volunteer doing this at 10pm is exactly who would not
+notice. Sending from the board's own mailbox also means the contractor's reply
+reaches a human.
+
+**No brokering.** `insurance_quotes` records what carriers offered so renewals
+can be compared year on year, and flags when no alternative quotes were
+obtained. Advising on or placing insurance is a licensed activity. The page
+says so.
+
+---
+
+## 23. Anything computing an aggregate must be SECURITY DEFINER
+
+**Decided:** Claude, 2026-07-30, after the third instance. **Status:** settled — invariant.
+
+`tg_ticket_reference` computed `max(reference) + 1` as SECURITY INVOKER, so the
+SELECT inside it ran under RLS. An owner sees shared-area tickets and their
+own, not a neighbour's — so with tickets 1 (shared), 2 (Ada's) and 3 (Bo's),
+Ada's view stopped at 2 and reporting a problem assigned her number 3, which
+collided.
+
+The failure mode is what makes it worth an entry: the more private data a
+building accumulates, the more often an owner simply cannot report a problem,
+failing on a unique constraint that says nothing about why.
+
+This is the third instance of one shape — logic assuming it can see every row,
+running under RLS that cannot (see #17 and #21).
+
+**How to apply:** any function computing a maximum, count, sum or sequence
+across a table must be `SECURITY DEFINER` with a pinned `search_path`, or it
+silently means something different for each caller. Trigger functions that only
+touch `NEW`/`OLD` are unaffected.

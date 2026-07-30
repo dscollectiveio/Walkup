@@ -16,7 +16,12 @@ export const metadata: Metadata = {
 // the next board need them.
 const NAV = [
   { href: "/", label: "Home" },
+  { href: "/maintenance", label: "Problems" },
   { href: "/delinquency", label: "Who owes" },
+  { href: "/bills", label: "Bills" },
+  { href: "/contractors", label: "Contractors" },
+  { href: "/insurance", label: "Insurance" },
+  { href: "/documents", label: "Documents" },
   { href: "/tax", label: "Tax filing" },
   { href: "/ledger", label: "All transactions" },
 ];
@@ -35,7 +40,7 @@ export default async function RootLayout({
               <Link href="/" className="text-lg font-semibold tracking-tight">
                 Walkup
               </Link>
-              <nav className="flex gap-6 text-sm">
+              <nav className="flex flex-wrap gap-x-5 gap-y-1 text-sm">
                 {NAV.map((item) => (
                   <Link
                     key={item.href}
