@@ -368,3 +368,54 @@ Verified over real HTTP with the anon key: every table returns `[]`,
 **Still unverified:** the claim in #5 that PostgREST runs each request in its
 own transaction, which is the entire justification for the RPC. Proving it needs
 an authenticated post over HTTP.
+
+---
+
+## 19. Development sign-in: a real account, not an auth bypass
+
+**Decided:** Doug, 2026-07-30. **Status:** temporary — remove before real data.
+
+`/login` shows a one-click "Sign in as dev user" button in development. It
+performs a real Supabase password sign-in as `walkup-dev@dscollective.io` and
+receives an ordinary JWT, so `auth.uid()` is populated and every policy in 0002
+applies exactly as it does to any other user.
+
+**It is deliberately not a bypass.** Faking a session, or reading with the
+service role, would make every page appear to work while testing nothing — RLS
+is the only thing standing between one owner and a neighbour's balance, so a
+development shortcut that skips it would hide the single class of bug that
+matters most here.
+
+Gated on two independent conditions, both required: `NODE_ENV !== "production"`
+and both `DEV_AUTH_*` variables present. Neither holds on Vercel. The variables
+are deliberately absent from `.env.local.example` so they cannot be copied into
+a deployment by habit.
+
+The account is separate from Doug's own login and holds `board_admin` plus
+`owner` on Unit 3. **Delete it, and its person and role_grant rows, before any
+real financial data exists.**
+
+---
+
+## 20. Money must cross the API boundary as text
+
+**Decided:** Claude, 2026-07-30, after the tax page crashed. **Status:** settled — invariant.
+
+**PostgREST serializes `NUMERIC` to a JSON number**, which is an IEEE 754
+double. `node-postgres` returns `NUMERIC` as a string. So moving to supabase-js
+silently routed every money value through a float — the exact failure mode
+`NUMERIC(14,2)` exists to prevent.
+
+It surfaced as a crash rather than a rounding error only because `toCents()`
+refuses anything that is not a plain decimal string. Had that function been
+more permissive, this would have been a quiet loss of precision inside a tax
+computation, which is the worst place for one.
+
+**How to apply:** any money column feeding arithmetic is cast `::text` in SQL
+before it crosses the API boundary — see `form_1120h_figures` in 0011.
+`toCents()` throws a specific error naming this cause if it ever receives a
+number again, and a regression test asserts that.
+
+Display-only money is still read as a JSON number and formatted with
+`Intl.NumberFormat`, which is acceptable: nothing is computed from it. Anything
+that feeds a total, a ratio or a tax figure is not.

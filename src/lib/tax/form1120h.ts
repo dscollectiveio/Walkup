@@ -61,8 +61,24 @@ export interface Form1120hResult {
   parametersUsed: TaxParameter[];
 }
 
-/** "1234.56" -> 123456. Rejects anything that is not a plain decimal. */
+/**
+ * "1234.56" -> 123456. Rejects anything that is not a plain decimal string.
+ *
+ * The string requirement is the point, not pedantry. PostgREST serializes
+ * NUMERIC to a JSON *number*, i.e. an IEEE 754 double, so a money value that
+ * arrives here as `number` has already lost the exactness NUMERIC(14,2) was
+ * chosen to guarantee. Accepting it — even by rounding politely — would hide
+ * that. Every money column crossing this boundary is cast to text in SQL
+ * (migration 0011); anything else is a bug upstream and should say so.
+ */
 export function toCents(numeric: string): number {
+  if (typeof numeric !== "string") {
+    throw new Error(
+      `money must cross the API boundary as text, not ${typeof numeric}: ` +
+        `${JSON.stringify(numeric)}. Cast the column to ::text in SQL — ` +
+        `PostgREST turns NUMERIC into a float.`,
+    );
+  }
   const m = /^(-?)(\d+)(?:\.(\d{1,2}))?$/.exec(numeric.trim());
   if (!m) throw new Error(`not a NUMERIC(14,2) value: ${JSON.stringify(numeric)}`);
   const [, sign, whole, frac = ""] = m;

@@ -43,6 +43,17 @@ describe("money conversion", () => {
     expect(() => toCents("1.234")).toThrow(/NUMERIC/);
     expect(() => toCents("")).toThrow(/NUMERIC/);
   });
+
+  it("refuses a JSON number, because PostgREST turns NUMERIC into a float", () => {
+    // Regression. The tax page crashed here after moving to supabase-js:
+    // PostgREST serializes NUMERIC to a JSON number, so money reached the
+    // computation as an IEEE 754 double. Migration 0011 casts to ::text; this
+    // asserts the guard stays loud rather than silently accepting a float.
+    // @ts-expect-error deliberately passing the wrong type
+    expect(() => toCents(8090.37)).toThrow(/must cross the API boundary as text/);
+    // @ts-expect-error deliberately passing the wrong type
+    expect(() => toCents(null)).toThrow(/must cross the API boundary as text/);
+  });
 });
 
 describe("60% income test", () => {

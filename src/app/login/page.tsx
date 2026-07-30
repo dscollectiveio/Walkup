@@ -1,10 +1,13 @@
-"use client";
+import { devAuthAvailable } from "./actions";
+import { LoginForm } from "./login-form";
+import { DevSignIn } from "./dev-sign-in";
 
-import { useActionState } from "react";
-import { signIn } from "./actions";
+export const dynamic = "force-dynamic";
 
-export default function LoginPage() {
-  const [state, action, pending] = useActionState(signIn, null);
+export default async function LoginPage() {
+  // Evaluated on the server. In production this is false and the component
+  // below is never rendered or sent to the client.
+  const devAvailable = await devAuthAvailable();
 
   return (
     <div className="mx-auto max-w-sm py-16">
@@ -13,49 +16,9 @@ export default function LoginPage() {
         Sign in to your association&rsquo;s books.
       </p>
 
-      <form action={action} className="mt-8 space-y-4">
-        <div>
-          <label htmlFor="email" className="block text-sm font-medium">
-            Email
-          </label>
-          <input
-            id="email"
-            name="email"
-            type="email"
-            autoComplete="email"
-            required
-            className="mt-1 w-full rounded border border-stone-300 bg-white px-3 py-2 text-sm"
-          />
-        </div>
+      <LoginForm />
 
-        <div>
-          <label htmlFor="password" className="block text-sm font-medium">
-            Password
-          </label>
-          <input
-            id="password"
-            name="password"
-            type="password"
-            autoComplete="current-password"
-            required
-            className="mt-1 w-full rounded border border-stone-300 bg-white px-3 py-2 text-sm"
-          />
-        </div>
-
-        {state?.error ? (
-          <p className="rounded border border-red-200 bg-red-50 px-3 py-2 text-sm text-red-800">
-            {state.error}
-          </p>
-        ) : null}
-
-        <button
-          type="submit"
-          disabled={pending}
-          className="w-full rounded bg-stone-900 px-3 py-2 text-sm font-medium text-white transition hover:bg-stone-700 disabled:opacity-50"
-        >
-          {pending ? "Signing in…" : "Sign in"}
-        </button>
-      </form>
+      {devAvailable ? <DevSignIn /> : null}
     </div>
   );
 }
