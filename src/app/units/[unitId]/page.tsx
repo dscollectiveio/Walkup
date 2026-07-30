@@ -51,26 +51,26 @@ export default async function UnitStatementPage({
     <div className="space-y-6">
       <div>
         <h1 className="text-2xl font-semibold tracking-tight">
-          {unit.label} — owner statement
+          {unit.label}
         </h1>
-        <p className="mt-1 text-sm text-stone-500">
-          Balance owed:{" "}
+        <p className="mt-1 text-stone-500">
+          Currently owed:{" "}
           <span className={owed > 0 ? "font-medium text-red-700" : "text-emerald-700"}>
             {money(owed)}
           </span>
         </p>
       </div>
 
-      <Card title="Charges">
+      <Card title="Fees charged" hint="What this unit has been billed, and how much of it has been paid.">
         <table className="w-full text-sm">
           <thead>
             <tr className="border-b border-stone-200 text-left text-xs uppercase tracking-wide text-stone-500">
-              <th className="pb-2 font-medium">Due</th>
+              <th className="pb-2 font-medium">Due date</th>
               <th className="pb-2 font-medium">Type</th>
-              <th className="pb-2 text-right font-medium">Charged</th>
+              <th className="pb-2 text-right font-medium">Billed</th>
               <th className="pb-2 text-right font-medium">Paid</th>
-              <th className="pb-2 text-right font-medium">Balance</th>
-              <th className="pb-2 text-right font-medium">Age</th>
+              <th className="pb-2 text-right font-medium">Still owed</th>
+              <th className="pb-2 text-right font-medium">Overdue</th>
             </tr>
           </thead>
           <tbody className="divide-y divide-stone-100">

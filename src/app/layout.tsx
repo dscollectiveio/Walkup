@@ -10,11 +10,15 @@ export const metadata: Metadata = {
     "Accounting and compliance for self-managed condominium associations",
 };
 
+// Plain words, not accounting vocabulary. The user is a board member doing
+// this unpaid in the evenings, not a bookkeeper. The technical terms still
+// appear inside each page, next to the plain ones, because the accountant and
+// the next board need them.
 const NAV = [
-  { href: "/", label: "Overview" },
-  { href: "/delinquency", label: "Delinquency" },
-  { href: "/ledger", label: "Ledger" },
-  { href: "/tax", label: "Form 1120-H" },
+  { href: "/", label: "Home" },
+  { href: "/delinquency", label: "Who owes" },
+  { href: "/tax", label: "Tax filing" },
+  { href: "/ledger", label: "All transactions" },
 ];
 
 export default async function RootLayout({
@@ -59,10 +63,10 @@ export default async function RootLayout({
 
         <footer className="mx-auto max-w-6xl px-6 pb-12 text-xs leading-relaxed text-stone-500">
           <p className="max-w-3xl">
-            Walkup does not provide tax or legal advice. Every figure here is
-            provisional and has not been reviewed by a CPA against current-year
-            IRS instructions. Do not file anything on the basis of what you see
-            here without professional review.
+            Walkup is not a tax adviser or a lawyer. The tax numbers here are
+            worked out from your own records, but nobody has checked them
+            against this year&rsquo;s IRS rules. Have an accountant look before
+            you file anything.
           </p>
         </footer>
       </body>

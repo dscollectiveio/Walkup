@@ -24,19 +24,23 @@ export default async function LedgerPage() {
   return (
     <div className="space-y-6">
       <div>
-        <h1 className="text-2xl font-semibold tracking-tight">Trial balance</h1>
-        <p className="mt-1 text-sm text-stone-500">
-          Posted entries only, separated by fund. Operating and reserve are
-          independently reportable.
+        <h1 className="text-2xl font-semibold tracking-tight">All transactions</h1>
+        <p className="mt-1 text-stone-500">
+          Every account, with its totals for the year. Your accountant will
+          want this; you probably only need it if a number elsewhere looks
+          wrong.
         </p>
       </div>
 
-      <Card title="Accounts">
+      <Card
+        title="Accounts"
+        hint="Money is separated into a day-to-day account and reserve savings, so you can always tell how much is set aside for big repairs."
+      >
         <table className="w-full text-sm">
           <thead>
             <tr className="border-b border-stone-200 text-left text-xs uppercase tracking-wide text-stone-500">
-              <th className="pb-2 font-medium">Fund</th>
-              <th className="pb-2 font-medium">Code</th>
+              <th className="pb-2 font-medium">Account for</th>
+              <th className="pb-2 font-medium">No.</th>
               <th className="pb-2 font-medium">Account</th>
               <th className="pb-2 font-medium">Type</th>
               <th className="pb-2 text-right font-medium">Debit</th>
@@ -71,8 +75,8 @@ export default async function LedgerPage() {
         </table>
         <p className="mt-4 text-xs text-stone-500">
           {debits === credits
-            ? "Debits equal credits, as the deferred balance constraint guarantees."
-            : "OUT OF BALANCE — this should be impossible; the balance trigger has been bypassed."}
+            ? "The two sides match, which is what you want. Walkup will not let you save a transaction where they do not."
+            : "The two sides do not match. This should be impossible — please report it."}
         </p>
       </Card>
     </div>
