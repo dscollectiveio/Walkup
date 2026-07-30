@@ -74,6 +74,42 @@ describe("migrations", () => {
     await db.close();
   });
 
+  it("let authenticated execute every function a deferred trigger calls", async () => {
+    // Regression for 0007/0012. Postgres does not check EXECUTE privilege when
+    // a trigger FIRES, but a trigger body calling another function makes an
+    // ordinary, privilege-checked call — as the current user, which at commit
+    // time is `authenticated`. Revoking check_entry_balanced therefore
+    // disabled every ledger write in production while the local suite stayed
+    // green, because PGlite resolves deferred-trigger privileges differently.
+    //
+    // This is a static assertion precisely because the runtime behaviour is
+    // the part PGlite cannot be trusted to reproduce.
+    const db = await freshDb();
+    const required = [
+      "public.check_entry_balanced(uuid)",
+      "public.tg_lines_balanced()",
+      "public.tg_entry_balanced()",
+      "public.tg_ownership_sums_to_100()",
+      "public.tg_allocation_within_payment()",
+    ];
+
+    for (const fn of required) {
+      const { rows } = await db.query<{ ok: boolean }>(
+        `select has_function_privilege('authenticated', $1, 'execute') as ok`,
+        [fn],
+      );
+      expect(rows[0].ok, `authenticated must be able to execute ${fn}`).toBe(true);
+    }
+
+    // anon must NOT be able to reach them.
+    const { rows: anon } = await db.query<{ ok: boolean }>(
+      `select has_function_privilege('anon', 'public.check_entry_balanced(uuid)', 'execute') as ok`,
+    );
+    expect(anon[0].ok).toBe(false);
+
+    await db.close();
+  });
+
   it("never cascade a delete from associations into financial history", async () => {
     const db = await freshDb();
     const { rows } = await db.query<{ table_name: string; constraint_name: string }>(

@@ -419,3 +419,36 @@ number again, and a regression test asserts that.
 Display-only money is still read as a JSON number and formatted with
 `Intl.NumberFormat`, which is acceptable: nothing is computed from it. Anything
 that feeds a total, a ratio or a tax figure is not.
+
+---
+
+## 21. PGlite does not model deferred-trigger privileges. Verify writes against Supabase.
+
+**Decided:** Claude, 2026-07-30, after shipping a broken ledger. **Status:** settled — process rule.
+
+Migration 0007 revoked `EXECUTE` on `check_entry_balanced` from `authenticated`,
+on the reasoning that Postgres does not check `EXECUTE` when a trigger fires.
+That is true of the *trigger function*. It is not true of a function the
+trigger body then calls: that is an ordinary, privilege-checked call, made as
+the current user, which at commit time is `authenticated`.
+
+**Every ledger write by a signed-in user failed with `42501`. It reached the
+live project.** The local suite stayed green — PGlite ran the identical post,
+with the identical privileges, successfully.
+
+**How to apply:**
+
+- The test harness is trustworthy for DDL, constraints, RLS policies and
+  trigger *logic*. It is **not** trustworthy for privilege resolution inside
+  deferred triggers.
+- Any migration that changes `GRANT`/`REVOKE` must be exercised against
+  Supabase over HTTP with a real JWT before it is considered done. Green tests
+  are not sufficient evidence for that class of change.
+- Prefer a static assertion where possible: `migrations.test.ts` now asserts
+  `has_function_privilege('authenticated', ...)` for every function the
+  deferred triggers call. A static check survives the harness's runtime
+  differences.
+
+Fixed in 0012. DECISIONS #5 is now verified end to end over PostgREST: a
+balanced post returns a uuid, an unbalanced post is rejected at commit with
+`debits 10.00, credits 9.00, difference 1.00`, and nothing is left behind.
