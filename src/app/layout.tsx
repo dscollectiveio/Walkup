@@ -1,8 +1,10 @@
 import type { Metadata } from "next";
-import Link from "next/link";
 import "./globals.css";
 import { getUser } from "@/lib/supabase/server";
 import { signOut } from "./login/actions";
+import { interTight, sourceSerif } from "@/lib/fonts";
+import { Lockup } from "@/components/mark";
+import { NavLink } from "@/components/nav-link";
 
 export const metadata: Metadata = {
   title: "Walkup",
@@ -22,6 +24,8 @@ const NAV = [
   { href: "/contractors", label: "Contractors" },
   { href: "/insurance", label: "Insurance" },
   { href: "/documents", label: "Documents" },
+  { href: "/budget", label: "Budget" },
+  { href: "/1099", label: "1099s" },
   { href: "/tax", label: "Tax filing" },
   { href: "/ledger", label: "All transactions" },
 ];
@@ -32,30 +36,24 @@ export default async function RootLayout({
   const user = await getUser();
 
   return (
-    <html lang="en">
-      <body className="min-h-screen bg-stone-50 text-stone-900 antialiased">
+    <html lang="en" className={`${interTight.variable} ${sourceSerif.variable}`}>
+      <body className="min-h-screen bg-bone text-ink antialiased">
         {user ? (
-          <header className="border-b border-stone-200 bg-white">
-            <div className="mx-auto flex max-w-6xl flex-wrap items-center gap-x-8 gap-y-3 px-6 py-4">
-              <Link href="/" className="text-lg font-semibold tracking-tight">
-                Walkup
-              </Link>
-              <nav className="flex flex-wrap gap-x-5 gap-y-1 text-sm">
+          <header className="bg-ink">
+            <div className="mx-auto flex max-w-[1100px] flex-wrap items-center gap-x-8 gap-y-3 px-6 py-4">
+              <a href="/" aria-label="Walkup home">
+                <Lockup dark />
+              </a>
+              <nav className="flex flex-wrap gap-x-6 gap-y-2">
                 {NAV.map((item) => (
-                  <Link
-                    key={item.href}
-                    href={item.href}
-                    className="text-stone-600 transition hover:text-stone-900"
-                  >
-                    {item.label}
-                  </Link>
+                  <NavLink key={item.href} href={item.href} label={item.label} />
                 ))}
               </nav>
               <form action={signOut} className="ml-auto flex items-center gap-3">
-                <span className="text-xs text-stone-500">{user.email}</span>
+                <span className="text-[11px] text-ondark-mute">{user.email}</span>
                 <button
                   type="submit"
-                  className="rounded border border-stone-300 px-3 py-1 text-sm transition hover:bg-stone-100"
+                  className="rounded-md border border-ink-mid px-3 py-1 text-[12px] font-medium text-paper transition hover:bg-ink-mid"
                 >
                   Sign out
                 </button>
@@ -64,9 +62,9 @@ export default async function RootLayout({
           </header>
         ) : null}
 
-        <main className="mx-auto max-w-6xl px-6 py-10">{children}</main>
+        <main className="mx-auto max-w-[1100px] px-6 py-10">{children}</main>
 
-        <footer className="mx-auto max-w-6xl px-6 pb-12 text-xs leading-relaxed text-stone-500">
+        <footer className="mx-auto max-w-[1100px] px-6 pb-12 text-[11px] leading-relaxed text-mute">
           <p className="max-w-3xl">
             Walkup is not a tax adviser or a lawyer. The tax numbers here are
             worked out from your own records, but nobody has checked them

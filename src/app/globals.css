@@ -1,8 +1,67 @@
 @import "tailwindcss";
 
 @theme {
-  --font-sans: ui-sans-serif, system-ui, -apple-system, "Segoe UI", sans-serif;
-  --font-mono: ui-monospace, "SF Mono", Menlo, monospace;
+  --font-sans: var(--font-inter-tight), ui-sans-serif, system-ui,
+    -apple-system, "Segoe UI", sans-serif;
+  --font-serif: var(--font-source-serif), Georgia, "Times New Roman", serif;
+  --font-mono: ui-monospace, "SF Mono", Menlo, Consolas, monospace;
+
+  /* Structure */
+  --color-ink: #14213d;
+  --color-ink-mid: #1e2e52;
+  --color-ink-deep: #0d172b;
+  --color-slate: #2d4a7c;
+  --color-brass: #c08a3e;
+  --color-moss: #2f7a5c;
+  --color-rust: #b3402f;
+
+  /* Ground and neutrals */
+  --color-bone: #f4f2ed;
+  --color-paper: #ffffff;
+  --color-fill: #edeae3;
+  --color-line: #dcd8cf;
+  --color-line-strong: #c9c4b8;
+  --color-mute: #6e7385;
+  --color-mute-soft: #8e93a3;
+  --color-ondark-mute: #9aa6bf;
+
+  /* Status: good */
+  --color-good: #2f7a5c;
+  --color-good-tint: #e8f1ec;
+  --color-good-line: #c3ddd0;
+  --color-good-text: #1e5540;
+
+  /* Status: warning */
+  --color-warning: #c08a3e;
+  --color-warning-tint: #f6edde;
+  --color-warning-line: #e4cea6;
+  --color-warning-text: #8a5f22;
+
+  /* Status: bad */
+  --color-bad: #b3402f;
+  --color-bad-tint: #f8ede9;
+  --color-bad-line: #e4c4bc;
+  --color-bad-text: #7a2519;
+
+  /* Status: info */
+  --color-info: #2d4a7c;
+  --color-info-tint: #eaeff7;
+  --color-info-line: #c6d3e8;
+  --color-info-text: #1d3560;
+
+  /* Status: neutral */
+  --color-neutral: #6e7385;
+  --color-neutral-tint: #edeae3;
+  --color-neutral-line: #dcd8cf;
+  --color-neutral-text: #14213d;
+
+  /* Data series, in order */
+  --color-series-1: #2d4a7c;
+  --color-series-2: #c08a3e;
+  --color-series-3: #2f7a5c;
+  --color-series-4: #b3402f;
+  --color-series-5: #6e7385;
+  --color-series-6: #8fa3c4;
 }
 
 body {
@@ -12,4 +71,18 @@ body {
 /* Money and account codes must line up in columns or they are unreadable. */
 .tabular {
   font-variant-numeric: tabular-nums;
+}
+
+/* Every number someone will eventually defend to an accountant or a buyer's
+   attorney reads as record, not interface. See WALKUP_BRAND.md section 7. */
+.figures {
+  font-family: var(--font-serif);
+  font-weight: 600;
+  font-variant-numeric: tabular-nums;
+}
+
+/* Focus is always visible. Never removed for aesthetics. */
+:focus-visible {
+  outline: 2px solid var(--color-slate);
+  outline-offset: 2px;
 }
