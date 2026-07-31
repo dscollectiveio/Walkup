@@ -22,7 +22,7 @@ export function ReportForm({
     return (
       <button
         onClick={() => setOpen(true)}
-        className="rounded-lg bg-stone-900 px-4 py-2 text-sm font-medium text-white hover:bg-stone-700"
+        className="rounded-md bg-ink px-4 py-2 text-[13px] font-medium text-paper hover:bg-ink-mid"
       >
         Report a problem
       </button>
@@ -30,9 +30,9 @@ export function ReportForm({
   }
 
   return (
-    <form action={action} className="space-y-4 rounded-xl border border-stone-200 bg-white p-5">
+    <form action={action} className="space-y-4 rounded-xl border border-line bg-paper p-5">
       <div>
-        <label htmlFor="title" className="block text-sm font-medium">
+        <label htmlFor="title" className="block text-[12px] font-medium text-ink">
           What&rsquo;s wrong?
         </label>
         <input
@@ -40,34 +40,34 @@ export function ReportForm({
           name="title"
           required
           placeholder="Water stain on the hallway ceiling"
-          className="mt-1 w-full rounded border border-stone-300 px-3 py-2 text-sm"
+          className="mt-1 w-full rounded-lg border border-line-strong px-3 py-2 text-[13px] text-ink"
         />
       </div>
 
       <div>
-        <label htmlFor="description" className="block text-sm font-medium">
+        <label htmlFor="description" className="block text-[12px] font-medium text-ink">
           Any detail that would help
-          <span className="ml-1 font-normal text-stone-400">optional</span>
+          <span className="ml-1 font-normal text-mute-soft">optional</span>
         </label>
         <textarea
           id="description"
           name="description"
           rows={3}
           placeholder="When you first noticed it, whether it's getting worse, anything you've already tried."
-          className="mt-1 w-full rounded border border-stone-300 px-3 py-2 text-sm"
+          className="mt-1 w-full rounded-lg border border-line-strong px-3 py-2 text-[13px] text-ink"
         />
       </div>
 
       <div className="grid gap-4 sm:grid-cols-2">
         <div>
-          <label htmlFor="unit_id" className="block text-sm font-medium">
+          <label htmlFor="unit_id" className="block text-[12px] font-medium text-ink">
             Where is it?
           </label>
           <select
             id="unit_id"
             name="unit_id"
             defaultValue="common"
-            className="mt-1 w-full rounded border border-stone-300 bg-white px-3 py-2 text-sm"
+            className="mt-1 w-full rounded-lg border border-line-strong bg-paper px-3 py-2 text-[13px] text-ink"
           >
             <option value="common">Shared area — hallway, roof, boiler, outside</option>
             {units.map((u) => (
@@ -79,14 +79,14 @@ export function ReportForm({
         </div>
 
         <div>
-          <label htmlFor="priority" className="block text-sm font-medium">
+          <label htmlFor="priority" className="block text-[12px] font-medium text-ink">
             How urgent?
           </label>
           <select
             id="priority"
             name="priority"
             defaultValue="normal"
-            className="mt-1 w-full rounded border border-stone-300 bg-white px-3 py-2 text-sm"
+            className="mt-1 w-full rounded-lg border border-line-strong bg-paper px-3 py-2 text-[13px] text-ink"
           >
             <option value="low">Can wait</option>
             <option value="normal">Should be looked at</option>
@@ -96,7 +96,7 @@ export function ReportForm({
       </div>
 
       {state?.error ? (
-        <p className="rounded border border-red-200 bg-red-50 px-3 py-2 text-sm text-red-800">
+        <p className="border-l-[3px] border-bad bg-bad-tint px-3 py-2 text-[13px] text-bad-text">
           {state.error}
         </p>
       ) : null}
@@ -105,14 +105,14 @@ export function ReportForm({
         <button
           type="submit"
           disabled={pending}
-          className="rounded-lg bg-stone-900 px-4 py-2 text-sm font-medium text-white hover:bg-stone-700 disabled:opacity-50"
+          className="rounded-md bg-ink px-4 py-2 text-[13px] font-medium text-paper hover:bg-ink-mid disabled:opacity-50"
         >
           {pending ? "Saving…" : "Report it"}
         </button>
         <button
           type="button"
           onClick={() => setOpen(false)}
-          className="rounded-lg border border-stone-300 px-4 py-2 text-sm hover:bg-stone-50"
+          className="rounded-md border border-line-strong px-4 py-2 text-[13px] text-ink hover:bg-fill"
         >
           Cancel
         </button>

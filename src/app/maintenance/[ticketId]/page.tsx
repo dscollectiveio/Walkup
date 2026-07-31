@@ -60,11 +60,11 @@ export default async function TicketPage({
   return (
     <div className="space-y-6">
       <div>
-        <Link href="/maintenance" className="text-sm text-stone-500 hover:underline">
+        <Link href="/maintenance" className="text-[13px] text-mute hover:underline">
           ← All problems
         </Link>
-        <h1 className="mt-2 text-2xl font-semibold tracking-tight">{ticket.title}</h1>
-        <p className="mt-1 text-stone-500">
+        <h1 className="mt-2 text-[20px] font-semibold tracking-tight text-ink">{ticket.title}</h1>
+        <p className="mt-1 text-mute">
           #{ticket.reference} · {unit ? unit.label : "Shared area"} · reported{" "}
           {ticket.opened_on} · {STATUS_LABEL[ticket.status] ?? ticket.status}
           {ticket.estimated_cost ? ` · estimated ${money(ticket.estimated_cost)}` : ""}
@@ -73,30 +73,30 @@ export default async function TicketPage({
 
       {ticket.description ? (
         <Card title="What was reported">
-          <p className="whitespace-pre-wrap text-sm leading-relaxed">{ticket.description}</p>
+          <p className="whitespace-pre-wrap text-[13px] leading-relaxed text-ink">{ticket.description}</p>
         </Card>
       ) : null}
 
       {vendor ? (
         <Card title="Who's handling it">
-          <div className="text-sm">
-            <div className="font-medium">{vendor.name}</div>
-            <div className="mt-1 text-stone-600">
+          <div className="text-[13px]">
+            <div className="font-medium text-ink">{vendor.name}</div>
+            <div className="mt-1 text-mute">
               {[vendor.contact_name, vendor.phone, vendor.email].filter(Boolean).join(" · ")}
             </div>
             {insuranceLapsed ? (
-              <p className="mt-3 rounded border border-red-200 bg-red-50 px-3 py-2 text-sm text-red-800">
+              <p className="mt-3 border-l-[3px] border-bad bg-bad-tint px-3 py-2 text-[13px] text-bad-text">
                 Their liability insurance expired on {vendor.insured_until}. An
                 uninsured contractor working on association property becomes the
                 association&rsquo;s problem — get a current certificate before
                 they start.
               </p>
             ) : vendor.insured_until ? (
-              <p className="mt-2 text-xs text-stone-500">
+              <p className="mt-2 text-[11px] text-mute">
                 Insured until {vendor.insured_until}
               </p>
             ) : (
-              <p className="mt-2 text-xs text-amber-700">
+              <p className="mt-2 text-[11px] text-warning-text">
                 No insurance expiry on file for this contractor.
               </p>
             )}
@@ -106,15 +106,15 @@ export default async function TicketPage({
 
       <Card title="Notes" hint="A record of what was decided and when, for whoever picks this up next.">
         {(comments ?? []).length === 0 ? (
-          <p className="py-2 text-sm text-stone-500">No notes yet.</p>
+          <p className="py-2 text-[13px] text-mute">No notes yet.</p>
         ) : (
           <ul className="space-y-4">
             {(comments ?? []).map((c) => {
               const person = c.persons as unknown as { full_name: string } | null;
               return (
-                <li key={c.id} className="border-l-2 border-stone-200 pl-3">
-                  <p className="whitespace-pre-wrap text-sm leading-relaxed">{c.body}</p>
-                  <p className="mt-1 text-xs text-stone-400">
+                <li key={c.id} className="border-l-2 border-line pl-3">
+                  <p className="whitespace-pre-wrap text-[13px] leading-relaxed text-ink">{c.body}</p>
+                  <p className="mt-1 text-[11px] text-mute-soft">
                     {person?.full_name ?? "Someone"} ·{" "}
                     {new Date(c.created_at).toLocaleDateString()}
                   </p>
@@ -127,13 +127,13 @@ export default async function TicketPage({
 
       {(messages ?? []).length > 0 ? (
         <Card title="Contractor emails">
-          <ul className="divide-y divide-stone-100 text-sm">
+          <ul className="divide-y divide-line text-[13px]">
             {(messages ?? []).map((m) => (
               <li key={m.id} className="flex items-center justify-between gap-3 py-2.5">
-                <Link href="/contractors" className="underline-offset-2 hover:underline">
+                <Link href="/contractors" className="text-ink underline-offset-2 hover:underline">
                   {m.subject}
                 </Link>
-                <span className="text-xs text-stone-500">
+                <span className="text-[11px] text-mute">
                   {m.status === "draft" ? "draft — not sent" : m.status}
                 </span>
               </li>

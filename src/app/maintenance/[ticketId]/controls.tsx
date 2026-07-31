@@ -22,9 +22,9 @@ export function TicketControls({
   const [statusState, statusAction, statusPending] = useActionState(setTicketStatus, null);
 
   return (
-    <div className="space-y-4 rounded-xl border border-stone-200 bg-white p-5">
+    <div className="space-y-4 rounded-xl border border-line bg-paper p-5">
       <form action={noteAction} className="space-y-2">
-        <label htmlFor="body" className="block text-sm font-medium">
+        <label htmlFor="body" className="block text-[12px] font-medium text-ink">
           Add a note
         </label>
         <input type="hidden" name="ticket_id" value={ticketId} />
@@ -33,15 +33,15 @@ export function TicketControls({
           name="body"
           rows={3}
           placeholder="Called the plumber, coming Thursday…"
-          className="w-full rounded border border-stone-300 px-3 py-2 text-sm"
+          className="w-full rounded-lg border border-line-strong px-3 py-2 text-[13px] text-ink"
         />
         {noteState?.error ? (
-          <p className="text-sm text-red-800">{noteState.error}</p>
+          <p className="text-[13px] text-bad-text">{noteState.error}</p>
         ) : null}
         <button
           type="submit"
           disabled={notePending}
-          className="rounded-lg bg-stone-900 px-4 py-2 text-sm font-medium text-white hover:bg-stone-700 disabled:opacity-50"
+          className="rounded-md bg-ink px-4 py-2 text-[13px] font-medium text-paper hover:bg-ink-mid disabled:opacity-50"
         >
           {notePending ? "Saving…" : "Add note"}
         </button>
@@ -50,17 +50,17 @@ export function TicketControls({
       {/* Board only. An owner posting a note is fine; an owner closing a
           problem someone else reported is not — the update policy refuses it,
           and this control simply reflects that. */}
-      <form action={statusAction} className="flex flex-wrap items-end gap-2 border-t border-stone-100 pt-4">
+      <form action={statusAction} className="flex flex-wrap items-end gap-2 border-t border-line pt-4">
         <input type="hidden" name="ticket_id" value={ticketId} />
         <div>
-          <label htmlFor="status" className="block text-sm font-medium">
+          <label htmlFor="status" className="block text-[12px] font-medium text-ink">
             Change status
           </label>
           <select
             id="status"
             name="status"
             defaultValue={status}
-            className="mt-1 rounded border border-stone-300 bg-white px-3 py-2 text-sm"
+            className="mt-1 rounded-lg border border-line-strong bg-paper px-3 py-2 text-[13px] text-ink"
           >
             {STATUSES.map((s) => (
               <option key={s.value} value={s.value}>
@@ -72,12 +72,12 @@ export function TicketControls({
         <button
           type="submit"
           disabled={statusPending}
-          className="rounded-lg border border-stone-300 px-4 py-2 text-sm hover:bg-stone-50 disabled:opacity-50"
+          className="rounded-md border border-line-strong px-4 py-2 text-[13px] text-ink hover:bg-fill disabled:opacity-50"
         >
           {statusPending ? "Saving…" : "Update"}
         </button>
         {statusState?.error ? (
-          <p className="text-sm text-red-800">{statusState.error}</p>
+          <p className="text-[13px] text-bad-text">{statusState.error}</p>
         ) : null}
       </form>
     </div>
