@@ -1,4 +1,5 @@
 import type { Metadata } from "next";
+import Link from "next/link";
 import "./globals.css";
 import { getUser } from "@/lib/supabase/server";
 import { signOut } from "./login/actions";
@@ -41,9 +42,9 @@ export default async function RootLayout({
         {user ? (
           <header className="bg-ink">
             <div className="mx-auto flex max-w-[1100px] flex-wrap items-center gap-x-8 gap-y-3 px-6 py-4">
-              <a href="/" aria-label="Walkup home">
+              <Link href="/" aria-label="Walkup home">
                 <Lockup dark />
-              </a>
+              </Link>
               <nav className="flex flex-wrap gap-x-6 gap-y-2">
                 {NAV.map((item) => (
                   <NavLink key={item.href} href={item.href} label={item.label} />
