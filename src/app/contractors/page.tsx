@@ -37,8 +37,8 @@ export default async function ContractorsPage() {
   return (
     <div className="space-y-6">
       <div>
-        <h1 className="text-2xl font-semibold tracking-tight">Contractors</h1>
-        <p className="mt-1 text-stone-500">
+        <h1 className="text-[20px] font-semibold tracking-tight text-ink">Contractors</h1>
+        <p className="mt-1 text-mute">
           Who you call, their details, and emails waiting to be sent.
         </p>
       </div>
@@ -63,40 +63,40 @@ export default async function ContractorsPage() {
         {vendors.length === 0 ? (
           <Empty>Nobody saved yet.</Empty>
         ) : (
-          <ul className="divide-y divide-stone-100">
+          <ul className="divide-y divide-line">
             {vendors.map((v) => {
               const isLapsed = v.insured_until && new Date(v.insured_until) < today;
               return (
                 <li key={v.id} className="flex flex-wrap items-start justify-between gap-3 py-3">
                   <div className="min-w-0">
                     <div className="flex items-center gap-2">
-                      <span className="font-medium">{v.name}</span>
+                      <span className="font-medium text-ink">{v.name}</span>
                       {v.is_preferred ? (
-                        <span className="rounded-full bg-emerald-50 px-2 py-0.5 text-xs text-emerald-700">
+                        <span className="rounded-full border border-good-line bg-good-tint px-2 py-0.5 text-[11px] text-good-text">
                           preferred
                         </span>
                       ) : null}
                     </div>
-                    <div className="mt-1 text-sm text-stone-600">
+                    <div className="mt-1 text-[13px] text-mute">
                       {[v.trade, v.contact_name, v.phone, v.email].filter(Boolean).join(" · ")}
                     </div>
                     {v.license_number ? (
-                      <div className="mt-0.5 text-xs text-stone-400">
+                      <div className="mt-0.5 text-[11px] text-mute-soft">
                         Licence {v.license_number}
                       </div>
                     ) : null}
                   </div>
-                  <div className="shrink-0 text-right text-xs">
+                  <div className="shrink-0 text-right text-[11px]">
                     {isLapsed ? (
-                      <div className="font-medium text-red-700">
+                      <div className="font-medium text-bad-text">
                         Insurance expired {v.insured_until}
                       </div>
                     ) : v.insured_until ? (
-                      <div className="text-stone-500">Insured to {v.insured_until}</div>
+                      <div className="text-mute">Insured to {v.insured_until}</div>
                     ) : (
-                      <div className="text-amber-700">No insurance on file</div>
+                      <div className="text-warning-text">No insurance on file</div>
                     )}
-                    <div className={v.w9_on_file ? "text-stone-500" : "text-amber-700"}>
+                    <div className={v.w9_on_file ? "text-mute" : "text-warning-text"}>
                       {v.w9_on_file
                         ? "W-9 on file"
                         : v.is_1099_exempt

@@ -9,7 +9,7 @@ export function LoginForm() {
   return (
     <form action={action} className="mt-8 space-y-4">
       <div>
-        <label htmlFor="email" className="block text-sm font-medium">
+        <label htmlFor="email" className="block text-[12px] font-medium text-ink">
           Email
         </label>
         <input
@@ -18,12 +18,12 @@ export function LoginForm() {
           type="email"
           autoComplete="email"
           required
-          className="mt-1 w-full rounded border border-stone-300 bg-white px-3 py-2 text-sm"
+          className="mt-1 w-full rounded-lg border border-line-strong bg-paper px-3 py-2 text-[13px] text-ink"
         />
       </div>
 
       <div>
-        <label htmlFor="password" className="block text-sm font-medium">
+        <label htmlFor="password" className="block text-[12px] font-medium text-ink">
           Password
         </label>
         <input
@@ -32,12 +32,12 @@ export function LoginForm() {
           type="password"
           autoComplete="current-password"
           required
-          className="mt-1 w-full rounded border border-stone-300 bg-white px-3 py-2 text-sm"
+          className="mt-1 w-full rounded-lg border border-line-strong bg-paper px-3 py-2 text-[13px] text-ink"
         />
       </div>
 
       {state?.error ? (
-        <p className="rounded border border-red-200 bg-red-50 px-3 py-2 text-sm text-red-800">
+        <p className="border-l-[3px] border-bad bg-bad-tint px-3 py-2 text-[13px] text-bad-text">
           {state.error}
         </p>
       ) : null}
@@ -45,7 +45,7 @@ export function LoginForm() {
       <button
         type="submit"
         disabled={pending}
-        className="w-full rounded bg-stone-900 px-3 py-2 text-sm font-medium text-white transition hover:bg-stone-700 disabled:opacity-50"
+        className="w-full rounded-md bg-ink px-3 py-2 text-[13px] font-medium text-paper transition hover:bg-ink-mid disabled:opacity-50"
       >
         {pending ? "Signing in…" : "Sign in"}
       </button>

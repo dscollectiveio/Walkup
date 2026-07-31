@@ -37,24 +37,24 @@ export function DraftPanel({
 
   return (
     <div className="space-y-4">
-      <section className="rounded-xl border border-stone-200 bg-white">
-        <header className="border-b border-stone-100 px-5 py-4">
-          <h2 className="font-semibold tracking-tight">Write to a contractor</h2>
-          <p className="mt-1 text-sm text-stone-500">
+      <section className="rounded-xl border border-line bg-paper">
+        <header className="border-b border-line px-5 py-4">
+          <h2 className="font-semibold tracking-tight text-ink">Write to a contractor</h2>
+          <p className="mt-1 text-[13px] text-mute">
             Walkup writes the first draft. You read it, change anything you
             want, then send it from your own email.
           </p>
         </header>
         <form action={newAction} className="flex flex-wrap items-end gap-3 px-5 py-4">
           <div>
-            <label htmlFor="vendor_id" className="block text-sm font-medium">
+            <label htmlFor="vendor_id" className="block text-[12px] font-medium text-ink">
               Contractor
             </label>
             <select
               id="vendor_id"
               name="vendor_id"
               required
-              className="mt-1 rounded border border-stone-300 bg-white px-3 py-2 text-sm"
+              className="mt-1 rounded-lg border border-line-strong bg-paper px-3 py-2 text-[13px] text-ink"
             >
               <option value="">Choose…</option>
               {vendors.map((v) => (
@@ -65,13 +65,13 @@ export function DraftPanel({
             </select>
           </div>
           <div>
-            <label htmlFor="ticket_id" className="block text-sm font-medium">
+            <label htmlFor="ticket_id" className="block text-[12px] font-medium text-ink">
               About which problem?
             </label>
             <select
               id="ticket_id"
               name="ticket_id"
-              className="mt-1 rounded border border-stone-300 bg-white px-3 py-2 text-sm"
+              className="mt-1 rounded-lg border border-line-strong bg-paper px-3 py-2 text-[13px] text-ink"
             >
               <option value="">Nothing specific</option>
               {tickets.map((t) => (
@@ -84,28 +84,28 @@ export function DraftPanel({
           <button
             type="submit"
             disabled={newPending}
-            className="rounded-lg bg-stone-900 px-4 py-2 text-sm font-medium text-white hover:bg-stone-700 disabled:opacity-50"
+            className="rounded-md bg-ink px-4 py-2 text-[13px] font-medium text-paper hover:bg-ink-mid disabled:opacity-50"
           >
             {newPending ? "Writing…" : "Write a draft"}
           </button>
           {newState?.error ? (
-            <p className="w-full text-sm text-red-800">{newState.error}</p>
+            <p className="w-full text-[13px] text-bad-text">{newState.error}</p>
           ) : null}
         </form>
       </section>
 
       {live.length > 0 ? (
-        <section className="rounded-xl border border-stone-200 bg-white">
-          <header className="border-b border-stone-100 px-5 py-4">
-            <h2 className="font-semibold tracking-tight">
+        <section className="rounded-xl border border-line bg-paper">
+          <header className="border-b border-line px-5 py-4">
+            <h2 className="font-semibold tracking-tight text-ink">
               Waiting to be sent ({live.length})
             </h2>
-            <p className="mt-1 text-sm text-stone-500">
+            <p className="mt-1 text-[13px] text-mute">
               Nothing here has been sent. Walkup never emails anyone on your
               behalf.
             </p>
           </header>
-          <ul className="divide-y divide-stone-100">
+          <ul className="divide-y divide-line">
             {live.map((d) => (
               <DraftRow key={d.id} draft={d} />
             ))}
@@ -133,17 +133,17 @@ function DraftRow({ draft }: { draft: Draft }) {
         <div className="min-w-0">
           <button
             onClick={() => setOpen(!open)}
-            className="text-left font-medium underline-offset-2 hover:underline"
+            className="text-left font-medium text-ink underline-offset-2 hover:underline"
           >
             {subject}
           </button>
-          <div className="mt-1 text-sm text-stone-500">
+          <div className="mt-1 text-[13px] text-mute">
             To {draft.vendor_name}
             {draft.to_email ? ` · ${draft.to_email}` : " · no email on file"}
             {draft.ticket ? ` · about #${draft.ticket.reference}` : ""}
           </div>
         </div>
-        <span className="shrink-0 rounded-full bg-amber-50 px-2.5 py-0.5 text-xs text-amber-800">
+        <span className="shrink-0 rounded-full border border-warning-line bg-warning-tint px-2.5 py-0.5 text-[11px] text-warning-text">
           not sent
         </span>
       </div>
@@ -156,26 +156,26 @@ function DraftRow({ draft }: { draft: Draft }) {
               name="subject"
               value={subject}
               onChange={(e) => setSubject(e.target.value)}
-              className="w-full rounded border border-stone-300 px-3 py-2 text-sm"
+              className="w-full rounded-lg border border-line-strong px-3 py-2 text-[13px] text-ink"
             />
             <textarea
               name="body"
               rows={12}
               value={body}
               onChange={(e) => setBody(e.target.value)}
-              className="w-full rounded border border-stone-300 px-3 py-2 font-mono text-xs leading-relaxed"
+              className="w-full rounded-lg border border-line-strong px-3 py-2 font-mono text-[11px] leading-relaxed text-ink"
             />
             <div className="flex flex-wrap gap-2">
               <button
                 type="submit"
                 disabled={savePending}
-                className="rounded-lg border border-stone-300 px-4 py-2 text-sm hover:bg-stone-50 disabled:opacity-50"
+                className="rounded-md border border-line-strong px-4 py-2 text-[13px] text-ink hover:bg-fill disabled:opacity-50"
               >
                 {savePending ? "Saving…" : "Save changes"}
               </button>
               <a
                 href={mailto}
-                className="rounded-lg bg-stone-900 px-4 py-2 text-sm font-medium text-white hover:bg-stone-700"
+                className="rounded-md bg-ink px-4 py-2 text-[13px] font-medium text-paper hover:bg-ink-mid"
               >
                 Open in your email app
               </a>
@@ -186,7 +186,7 @@ function DraftRow({ draft }: { draft: Draft }) {
             <input type="hidden" name="id" value={draft.id} />
             <button
               type="submit"
-              className="text-sm text-stone-500 underline-offset-2 hover:underline"
+              className="text-[13px] text-mute underline-offset-2 hover:underline"
             >
               Discard this draft
             </button>
