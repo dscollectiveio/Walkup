@@ -46,10 +46,10 @@ export default async function OverviewPage() {
   return (
     <div className="space-y-6">
       <div>
-        <h1 className="text-2xl font-semibold tracking-tight">
+        <h1 className="text-[20px] font-semibold tracking-tight text-ink">
           {association.display_name}
         </h1>
-        <p className="mt-1 text-stone-500">
+        <p className="mt-1 text-mute">
           {association.state_code} · financial year 2026
         </p>
       </div>
@@ -64,7 +64,7 @@ export default async function OverviewPage() {
         >
           <Link
             href="/delinquency"
-            className="inline-block rounded-lg bg-stone-900 px-4 py-2 text-sm font-medium text-white hover:bg-stone-700"
+            className="inline-block rounded-md bg-ink px-4 py-2 text-[13px] font-medium text-paper hover:bg-ink-mid"
           >
             See who owes
           </Link>
@@ -110,25 +110,25 @@ export default async function OverviewPage() {
         {!units || units.length === 0 ? (
           <Empty>No units are visible to you.</Empty>
         ) : (
-          <ul className="divide-y divide-stone-100">
+          <ul className="divide-y divide-line">
             {units.map((u) => (
               <li key={u.unit_id} className="flex items-center justify-between py-3">
                 <div>
                   <UnitLink id={u.unit_id} label={u.label} />
                   {ownerName.get(u.unit_id) ? (
-                    <span className="ml-2 text-sm text-stone-500">
+                    <span className="ml-2 text-[13px] text-mute">
                       {ownerName.get(u.unit_id)}
                     </span>
                   ) : null}
                 </div>
                 {u.visible_charges === 0 ? (
-                  <span className="text-sm text-stone-400">not shown to you</span>
+                  <span className="text-[13px] text-mute-soft">not shown to you</span>
                 ) : Number(u.balance_owed) > 0 ? (
-                  <span className="tabular text-sm font-medium text-red-700">
+                  <span className="figures text-[13px] font-medium text-bad-text">
                     owes {money(u.balance_owed)}
                   </span>
                 ) : (
-                  <span className="text-sm text-emerald-700">up to date</span>
+                  <span className="text-[13px] text-good-text">up to date</span>
                 )}
               </li>
             ))}
@@ -143,22 +143,22 @@ export default async function OverviewPage() {
         >
           <div className="flex flex-wrap items-center gap-4">
             <span
-              className={`rounded-full px-3 py-1 text-sm font-medium ${
+              className={`rounded-full border px-3 py-1 text-[13px] font-medium ${
                 booksBalance
-                  ? "bg-emerald-100 text-emerald-800"
-                  : "bg-red-100 text-red-800"
+                  ? "border-good-line bg-good-tint text-good-text"
+                  : "border-bad-line bg-bad-tint text-bad-text"
               }`}
             >
               {booksBalance ? "Yes — the two sides match" : "No — something is wrong"}
             </span>
-            <span className="tabular text-sm text-stone-500">
+            <span className="tabular text-[13px] text-mute">
               <Jargon term="trial balance">
                 {money(t!.total_debits)} on each side
               </Jargon>
             </span>
             <Link
               href="/ledger"
-              className="ml-auto text-sm text-stone-500 underline-offset-2 hover:underline"
+              className="ml-auto text-[13px] text-mute underline-offset-2 hover:underline"
             >
               See every transaction
             </Link>

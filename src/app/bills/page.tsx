@@ -33,8 +33,8 @@ export default async function BillsPage() {
   return (
     <div className="space-y-6">
       <div>
-        <h1 className="text-2xl font-semibold tracking-tight">Regular bills</h1>
-        <p className="mt-1 text-stone-500">
+        <h1 className="text-[20px] font-semibold tracking-tight text-ink">Regular bills</h1>
+        <p className="mt-1 text-mute">
           What the building pays out, how often, and which ones are on autopay.
         </p>
       </div>
@@ -59,14 +59,14 @@ export default async function BillsPage() {
         title="What Walkup does and doesn't do here"
         hint="Worth being clear about, because most bill software works differently."
       >
-        <p className="text-sm leading-relaxed text-stone-600">
+        <p className="text-[13px] leading-relaxed text-mute">
           Walkup keeps track of what&rsquo;s due and reminds you. It{" "}
-          <strong>does not hold your bank details and never pays anything</strong>.
+          <strong className="text-ink">does not hold your bank details and never pays anything</strong>.
           Autopay is set up directly with the utility or your bank, and recorded
           here so the next board knows what&rsquo;s already arranged and
           doesn&rsquo;t double-pay.
         </p>
-        <p className="mt-3 text-sm leading-relaxed text-stone-600">
+        <p className="mt-3 text-[13px] leading-relaxed text-mute">
           For a building this size that&rsquo;s the safer arrangement: no
           software holding the association&rsquo;s banking credentials, and no
           single point of failure if a volunteer&rsquo;s account is
@@ -78,31 +78,31 @@ export default async function BillsPage() {
         {bills.length === 0 ? (
           <Empty>No regular bills recorded yet.</Empty>
         ) : (
-          <ul className="divide-y divide-stone-100">
+          <ul className="divide-y divide-line">
             {bills.map((b) => (
               <li key={b.id} className="flex flex-wrap items-start justify-between gap-3 py-3">
                 <div className="min-w-0">
-                  <div className="font-medium">{b.name}</div>
-                  <div className="mt-1 text-sm text-stone-500">
+                  <div className="font-medium text-ink">{b.name}</div>
+                  <div className="mt-1 text-[13px] text-mute">
                     {[b.vendor_name, FREQUENCY[b.frequency] ?? b.frequency]
                       .filter(Boolean)
                       .join(" · ")}
                     {b.next_due_on ? ` · next due ${b.next_due_on}` : ""}
                   </div>
                   {b.autopay_note ? (
-                    <div className="mt-1 text-xs text-stone-400">{b.autopay_note}</div>
+                    <div className="mt-1 text-[11px] text-mute-soft">{b.autopay_note}</div>
                   ) : null}
                 </div>
                 <div className="shrink-0 text-right">
-                  <div className="tabular font-medium">
+                  <div className="figures text-ink">
                     {b.typical_amount ? money(b.typical_amount) : "—"}
                   </div>
                   {b.autopay_arranged ? (
-                    <span className="mt-1 inline-block rounded-full bg-emerald-50 px-2.5 py-0.5 text-xs text-emerald-700">
+                    <span className="mt-1 inline-block rounded-full border border-good-line bg-good-tint px-2.5 py-0.5 text-[11px] text-good-text">
                       autopay with provider
                     </span>
                   ) : (
-                    <span className="mt-1 inline-block rounded-full bg-amber-50 px-2.5 py-0.5 text-xs text-amber-800">
+                    <span className="mt-1 inline-block rounded-full border border-warning-line bg-warning-tint px-2.5 py-0.5 text-[11px] text-warning-text">
                       you pay this one
                     </span>
                   )}

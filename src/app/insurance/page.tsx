@@ -57,8 +57,8 @@ export default async function InsurancePage() {
   return (
     <div className="space-y-6">
       <div>
-        <h1 className="text-2xl font-semibold tracking-tight">Insurance</h1>
-        <p className="mt-1 text-stone-500">
+        <h1 className="text-[20px] font-semibold tracking-tight text-ink">Insurance</h1>
+        <p className="mt-1 text-mute">
           What you&rsquo;re paying, what you paid before, and what else was
           offered.
         </p>
@@ -82,15 +82,15 @@ export default async function InsurancePage() {
 
       <div className="grid gap-4 sm:grid-cols-2">
         <Card title="What you pay now" hint="All active policies combined.">
-          <div className="tabular text-2xl font-semibold">{money(totalPremium)}</div>
-          <p className="mt-1 text-sm text-stone-500">per year</p>
+          <div className="figures text-[26px] text-ink">{money(totalPremium)}</div>
+          <p className="mt-1 text-[13px] text-mute">per year</p>
         </Card>
         {biggestRise && Number(biggestRise.change_percent) > 0 ? (
           <Card title="Biggest increase you've had" hint="Worth remembering at renewal.">
-            <div className="tabular text-2xl font-semibold text-amber-700">
+            <div className="figures text-[26px] text-warning-text">
               +{Number(biggestRise.change_percent).toFixed(1)}%
             </div>
-            <p className="mt-1 text-sm text-stone-500">
+            <p className="mt-1 text-[13px] text-mute">
               {COVERAGE[biggestRise.coverage] ?? biggestRise.coverage}, year
               starting {biggestRise.effective_from}
               {biggestRise.quotes_obtained === 0
@@ -109,9 +109,9 @@ export default async function InsurancePage() {
           <Empty>No policies recorded yet.</Empty>
         ) : (
           <div className="overflow-x-auto">
-            <table className="w-full min-w-[40rem] text-sm">
+            <table className="w-full min-w-[40rem] text-[13px]">
               <thead>
-                <tr className="border-b border-stone-200 text-left text-stone-500">
+                <tr className="border-b border-line text-left text-mute">
                   <th className="pb-2 font-medium">Cover</th>
                   <th className="pb-2 font-medium">Year from</th>
                   <th className="pb-2 font-medium">Insurer</th>
@@ -120,34 +120,34 @@ export default async function InsurancePage() {
                   <th className="pb-2 text-right font-medium">Quotes got</th>
                 </tr>
               </thead>
-              <tbody className="divide-y divide-stone-100">
+              <tbody className="divide-y divide-line">
                 {history.map((h) => (
                   <tr key={h.policy_id}>
-                    <td className="py-3">{COVERAGE[h.coverage] ?? h.coverage}</td>
-                    <td className="tabular py-3">{h.effective_from}</td>
-                    <td className="py-3">
+                    <td className="py-3 text-ink">{COVERAGE[h.coverage] ?? h.coverage}</td>
+                    <td className="figures py-3 text-ink">{h.effective_from}</td>
+                    <td className="py-3 text-ink">
                       {h.carrier_name}
                       {h.previous_carrier && h.previous_carrier !== h.carrier_name ? (
-                        <span className="ml-2 text-xs text-stone-400">
+                        <span className="ml-2 text-[11px] text-mute-soft">
                           switched from {h.previous_carrier}
                         </span>
                       ) : null}
                     </td>
-                    <td className="tabular py-3 text-right">{money(h.annual_premium)}</td>
-                    <td className="tabular py-3 text-right">
+                    <td className="figures py-3 text-right text-ink">{money(h.annual_premium)}</td>
+                    <td className="figures py-3 text-right">
                       {h.change_percent === null ? (
-                        <span className="text-stone-400">first year</span>
+                        <span className="text-mute-soft">first year</span>
                       ) : (
                         <span
                           className={
                             Number(h.change_percent) > 0
-                              ? "text-amber-700"
-                              : "text-emerald-700"
+                              ? "text-warning-text"
+                              : "text-good-text"
                           }
                         >
                           {Number(h.change_percent) > 0 ? "+" : ""}
                           {Number(h.change_percent).toFixed(1)}%
-                          <span className="ml-1 text-xs text-stone-400">
+                          <span className="ml-1 text-[11px] text-mute-soft">
                             ({Number(h.change_amount) > 0 ? "+" : ""}
                             {money(h.change_amount)})
                           </span>
@@ -156,9 +156,9 @@ export default async function InsurancePage() {
                     </td>
                     <td className="py-3 text-right">
                       {h.quotes_obtained === 0 ? (
-                        <span className="text-xs text-amber-700">none</span>
+                        <span className="text-[11px] text-warning-text">none</span>
                       ) : (
-                        <span className="tabular text-stone-600">{h.quotes_obtained}</span>
+                        <span className="figures text-mute">{h.quotes_obtained}</span>
                       )}
                     </td>
                   </tr>
@@ -176,28 +176,28 @@ export default async function InsurancePage() {
         {(quotes ?? []).length === 0 ? (
           <Empty>No quotes recorded.</Empty>
         ) : (
-          <ul className="divide-y divide-stone-100">
+          <ul className="divide-y divide-line">
             {(quotes ?? []).map((q) => (
               <li key={q.id} className="flex flex-wrap items-start justify-between gap-3 py-3">
                 <div className="min-w-0">
                   <div className="flex items-center gap-2">
-                    <span className="font-medium">{q.carrier_name}</span>
+                    <span className="font-medium text-ink">{q.carrier_name}</span>
                     {q.was_selected ? (
-                      <span className="rounded-full bg-emerald-50 px-2 py-0.5 text-xs text-emerald-700">
+                      <span className="rounded-full border border-good-line bg-good-tint px-2 py-0.5 text-[11px] text-good-text">
                         chosen
                       </span>
                     ) : null}
                   </div>
-                  <div className="mt-1 text-sm text-stone-500">
+                  <div className="mt-1 text-[13px] text-mute">
                     {COVERAGE[q.coverage] ?? q.coverage} · quoted {q.quoted_on}
                     {q.deductible ? ` · ${money(q.deductible)} excess` : ""}
                     {q.coverage_limit ? ` · ${money(q.coverage_limit)} cover` : ""}
                   </div>
                   {q.declined_reason ? (
-                    <div className="mt-1 text-xs text-stone-400">{q.declined_reason}</div>
+                    <div className="mt-1 text-[11px] text-mute-soft">{q.declined_reason}</div>
                   ) : null}
                 </div>
-                <div className="tabular shrink-0 font-medium">
+                <div className="figures shrink-0 text-ink">
                   {money(q.annual_premium)}
                 </div>
               </li>
@@ -206,7 +206,7 @@ export default async function InsurancePage() {
         )}
       </Card>
 
-      <p className="text-xs leading-relaxed text-stone-500">
+      <p className="text-[11px] leading-relaxed text-mute">
         Walkup records what insurers have offered so you can compare them. It is
         not an insurance broker and does not give insurance advice — choosing
         cover is a decision for the board, with a licensed broker if you want

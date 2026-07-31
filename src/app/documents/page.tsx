@@ -24,8 +24,8 @@ export default async function DocumentsPage() {
   return (
     <div className="space-y-6">
       <div>
-        <h1 className="text-2xl font-semibold tracking-tight">Documents</h1>
-        <p className="mt-1 text-stone-500">
+        <h1 className="text-[20px] font-semibold tracking-tight text-ink">Documents</h1>
+        <p className="mt-1 text-mute">
           Insurance certificates, minutes, W-9s, invoices — anything the next
           board will need and nobody can find in an old inbox.
         </p>
@@ -40,14 +40,14 @@ export default async function DocumentsPage() {
             are usually the two worth having first.
           </Empty>
         ) : (
-          <ul className="divide-y divide-stone-100">
+          <ul className="divide-y divide-line">
             {documents.map((d) => {
               const links = (d.document_links ?? []) as unknown as { relation: string }[];
               return (
                 <li key={d.id} className="flex flex-wrap items-center justify-between gap-3 py-3">
                   <div className="min-w-0">
                     <DownloadLink id={d.id} filename={d.filename} />
-                    <div className="mt-1 text-sm text-stone-500">
+                    <div className="mt-1 text-[13px] text-mute">
                       {[
                         links[0]?.relation,
                         readableSize(d.byte_size),

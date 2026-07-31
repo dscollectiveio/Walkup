@@ -19,10 +19,10 @@ export function UploadForm() {
   return (
     <form
       action={action}
-      className="flex flex-wrap items-end gap-3 rounded-xl border border-stone-200 bg-white p-5"
+      className="flex flex-wrap items-end gap-3 rounded-xl border border-line bg-paper p-5"
     >
       <div>
-        <label htmlFor="file" className="block text-sm font-medium">
+        <label htmlFor="file" className="block text-[12px] font-medium text-ink">
           Add a document
         </label>
         <input
@@ -30,18 +30,18 @@ export function UploadForm() {
           name="file"
           type="file"
           required
-          className="mt-1 block text-sm file:mr-3 file:rounded file:border-0 file:bg-stone-900 file:px-3 file:py-1.5 file:text-sm file:text-white hover:file:bg-stone-700"
+          className="mt-1 block text-[13px] text-ink file:mr-3 file:rounded-md file:border-0 file:bg-ink file:px-3 file:py-1.5 file:text-[13px] file:text-paper hover:file:bg-ink-mid"
         />
       </div>
       <div>
-        <label htmlFor="relation" className="block text-sm font-medium">
+        <label htmlFor="relation" className="block text-[12px] font-medium text-ink">
           What is it?
         </label>
         <select
           id="relation"
           name="relation"
           defaultValue="general"
-          className="mt-1 rounded border border-stone-300 bg-white px-3 py-2 text-sm"
+          className="mt-1 rounded-lg border border-line-strong bg-paper px-3 py-2 text-[13px] text-ink"
         >
           {KINDS.map((k) => (
             <option key={k.value} value={k.value}>
@@ -53,14 +53,14 @@ export function UploadForm() {
       <button
         type="submit"
         disabled={pending}
-        className="rounded-lg bg-stone-900 px-4 py-2 text-sm font-medium text-white hover:bg-stone-700 disabled:opacity-50"
+        className="rounded-md bg-ink px-4 py-2 text-[13px] font-medium text-paper hover:bg-ink-mid disabled:opacity-50"
       >
         {pending ? "Uploading…" : "Upload"}
       </button>
       {state?.error ? (
-        <p className="w-full text-sm text-red-800">{state.error}</p>
+        <p className="w-full text-[13px] text-bad-text">{state.error}</p>
       ) : null}
-      <p className="w-full text-xs text-stone-500">
+      <p className="w-full text-[11px] text-mute">
         Up to 25 MB. PDFs, photos, Word and Excel files. Stored privately —
         links expire after a minute, so nothing stays publicly reachable.
       </p>
@@ -84,11 +84,11 @@ export function DownloadLink({ id, filename }: { id: string; filename: string })
           })
         }
         disabled={pending}
-        className="font-medium underline-offset-2 hover:underline disabled:opacity-50"
+        className="font-medium text-ink underline-offset-2 hover:underline disabled:opacity-50"
       >
         {pending ? "Opening…" : filename}
       </button>
-      {error ? <span className="ml-2 text-xs text-red-700">{error}</span> : null}
+      {error ? <span className="ml-2 text-[11px] text-bad-text">{error}</span> : null}
     </>
   );
 }

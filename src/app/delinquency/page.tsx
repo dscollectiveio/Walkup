@@ -25,8 +25,8 @@ export default async function DelinquencyPage() {
   return (
     <div className="space-y-6">
       <div>
-        <h1 className="text-2xl font-semibold tracking-tight">Who owes money</h1>
-        <p className="mt-1 text-stone-500">
+        <h1 className="text-[20px] font-semibold tracking-tight text-ink">Who owes money</h1>
+        <p className="mt-1 text-mute">
           Unpaid fees, grouped by how overdue they are.
         </p>
       </div>
@@ -50,9 +50,9 @@ export default async function DelinquencyPage() {
             hint="The longer a balance sits in the right-hand columns, the harder it usually is to recover."
           >
             <div className="overflow-x-auto">
-              <table className="w-full min-w-[34rem] text-sm">
+              <table className="w-full min-w-[34rem] text-[13px]">
                 <thead>
-                  <tr className="border-b border-stone-200 text-left text-stone-500">
+                  <tr className="border-b border-line text-left text-mute">
                     <th className="pb-2 font-medium">Unit</th>
                     <th className="pb-2 text-right font-medium">Not yet due</th>
                     <th className="pb-2 text-right font-medium">Up to a month</th>
@@ -61,43 +61,43 @@ export default async function DelinquencyPage() {
                     <th className="pb-2 text-right font-medium">Total</th>
                   </tr>
                 </thead>
-                <tbody className="divide-y divide-stone-100">
+                <tbody className="divide-y divide-line">
                   {rows.map((r) => (
                     <tr key={r.unit_id}>
                       <td className="py-3">
                         <UnitLink id={r.unit_id} label={r.label} />
                         {ownerName.get(r.unit_id) ? (
-                          <div className="text-xs text-stone-500">
+                          <div className="text-[11px] text-mute">
                             {ownerName.get(r.unit_id)}
                           </div>
                         ) : null}
                       </td>
-                      <td className="tabular py-3 text-right text-stone-500">
+                      <td className="figures py-3 text-right text-mute">
                         {money(r.current_due)}
                       </td>
-                      <td className="tabular py-3 text-right">{money(r.days_1_30)}</td>
-                      <td className="tabular py-3 text-right text-amber-700">
+                      <td className="figures py-3 text-right text-ink">{money(r.days_1_30)}</td>
+                      <td className="figures py-3 text-right text-warning-text">
                         {money(r.days_31_60)}
                       </td>
-                      <td className="tabular py-3 text-right font-medium text-red-700">
+                      <td className="figures py-3 text-right text-bad-text">
                         {money(r.days_60_plus)}
                       </td>
-                      <td className="tabular py-3 text-right font-semibold">
+                      <td className="figures py-3 text-right text-ink">
                         {money(r.total_owed)}
                       </td>
                     </tr>
                   ))}
                 </tbody>
                 <tfoot>
-                  <tr className="border-t border-stone-200">
-                    <td className="pt-3 text-stone-500">Total</td>
+                  <tr className="border-t border-line">
+                    <td className="pt-3 text-mute">Total</td>
                     <td colSpan={4} />
-                    <td className="tabular pt-3 text-right font-semibold">{money(total)}</td>
+                    <td className="figures pt-3 text-right text-ink">{money(total)}</td>
                   </tr>
                 </tfoot>
               </table>
             </div>
-            <p className="mt-4 text-xs text-stone-400">
+            <p className="mt-4 text-[11px] text-mute-soft">
               <Jargon term="delinquency aging">
                 Grouping unpaid amounts by age
               </Jargon>{" "}

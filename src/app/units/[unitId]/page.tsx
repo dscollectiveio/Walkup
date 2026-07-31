@@ -50,21 +50,21 @@ export default async function UnitStatementPage({
   return (
     <div className="space-y-6">
       <div>
-        <h1 className="text-2xl font-semibold tracking-tight">
+        <h1 className="text-[20px] font-semibold tracking-tight text-ink">
           {unit.label}
         </h1>
-        <p className="mt-1 text-stone-500">
+        <p className="mt-1 text-mute">
           Currently owed:{" "}
-          <span className={owed > 0 ? "font-medium text-red-700" : "text-emerald-700"}>
+          <span className={`figures ${owed > 0 ? "font-medium text-bad-text" : "text-good-text"}`}>
             {money(owed)}
           </span>
         </p>
       </div>
 
       <Card title="Fees charged" hint="What this unit has been billed, and how much of it has been paid.">
-        <table className="w-full text-sm">
+        <table className="w-full text-[13px]">
           <thead>
-            <tr className="border-b border-stone-200 text-left text-xs uppercase tracking-wide text-stone-500">
+            <tr className="border-b border-line text-left text-[11px] uppercase tracking-wide text-mute">
               <th className="pb-2 font-medium">Due date</th>
               <th className="pb-2 font-medium">Type</th>
               <th className="pb-2 text-right font-medium">Billed</th>
@@ -73,25 +73,25 @@ export default async function UnitStatementPage({
               <th className="pb-2 text-right font-medium">Overdue</th>
             </tr>
           </thead>
-          <tbody className="divide-y divide-stone-100">
+          <tbody className="divide-y divide-line">
             {(charges ?? []).map((c) => (
               <tr key={c.id}>
-                <td className="tabular py-2">{c.due_on}</td>
-                <td className="py-2 text-stone-600">
+                <td className="figures py-2 text-ink">{c.due_on}</td>
+                <td className="py-2 text-mute">
                   {String(c.charge_type).replace("_", " ")}
                 </td>
-                <td className="tabular py-2 text-right">{money(c.amount)}</td>
-                <td className="tabular py-2 text-right text-stone-600">
+                <td className="figures py-2 text-right text-ink">{money(c.amount)}</td>
+                <td className="figures py-2 text-right text-mute">
                   {money(c.amount_applied)}
                 </td>
                 <td
-                  className={`tabular py-2 text-right ${
-                    Number(c.balance) > 0 ? "font-medium text-red-700" : "text-stone-400"
+                  className={`figures py-2 text-right ${
+                    Number(c.balance) > 0 ? "font-medium text-bad-text" : "text-mute-soft"
                   }`}
                 >
                   {money(c.balance)}
                 </td>
-                <td className="tabular py-2 text-right text-xs text-stone-500">
+                <td className="figures py-2 text-right text-[11px] text-mute">
                   {Number(c.balance) > 0 && c.days_overdue > 0 ? `${c.days_overdue}d` : ""}
                 </td>
               </tr>
@@ -101,13 +101,13 @@ export default async function UnitStatementPage({
       </Card>
 
       <Card title="Payments received">
-        <table className="w-full text-sm">
-          <tbody className="divide-y divide-stone-100">
+        <table className="w-full text-[13px]">
+          <tbody className="divide-y divide-line">
             {(payments ?? []).map((p) => (
               <tr key={p.id}>
-                <td className="tabular py-2">{p.received_on}</td>
-                <td className="py-2 text-stone-500">{p.method ?? ""}</td>
-                <td className="tabular py-2 text-right">{money(p.amount)}</td>
+                <td className="figures py-2 text-ink">{p.received_on}</td>
+                <td className="py-2 text-mute">{p.method ?? ""}</td>
+                <td className="figures py-2 text-right text-ink">{money(p.amount)}</td>
               </tr>
             ))}
           </tbody>

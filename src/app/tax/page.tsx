@@ -40,15 +40,17 @@ function Rule({
   );
 
   return (
-    <div className="rounded-xl border border-stone-200 bg-white">
-      <header className="flex flex-wrap items-center justify-between gap-2 border-b border-stone-100 px-5 py-4">
+    <div className="rounded-xl border border-line bg-paper">
+      <header className="flex flex-wrap items-center justify-between gap-2 border-b border-line px-5 py-4">
         <div>
-          <h3 className="font-semibold">{heading}</h3>
-          <p className="mt-0.5 text-sm text-stone-500">{plainQuestion}</p>
+          <h3 className="font-semibold text-ink">{heading}</h3>
+          <p className="mt-0.5 text-[13px] text-mute">{plainQuestion}</p>
         </div>
         <span
-          className={`rounded-full px-3 py-1 text-sm font-medium ${
-            test.passed ? "bg-emerald-100 text-emerald-800" : "bg-red-100 text-red-800"
+          className={`rounded-full border px-3 py-1 text-[13px] font-medium ${
+            test.passed
+              ? "border-good-line bg-good-tint text-good-text"
+              : "border-bad-line bg-bad-tint text-bad-text"
           }`}
         >
           {test.ratio === null ? "Nothing recorded yet" : test.passed ? "Yes" : "No"}
@@ -60,33 +62,33 @@ function Rule({
           <>
             {/* A bar reads faster than a percentage for someone who does not
                 work with ratios daily. */}
-            <div className="relative h-3 overflow-hidden rounded-full bg-stone-100">
+            <div className="relative h-3 overflow-hidden rounded-full bg-fill">
               <div
-                className={`h-full ${test.passed ? "bg-emerald-500" : "bg-red-500"}`}
+                className={`h-full ${test.passed ? "bg-good" : "bg-bad"}`}
                 style={{ width: `${Math.min(100, test.ratio * 100)}%` }}
               />
               <div
-                className="absolute top-0 h-full w-0.5 bg-stone-900"
+                className="absolute top-0 h-full w-0.5 bg-ink"
                 style={{ left: `${test.threshold * 100}%` }}
                 title={`Minimum required: ${formatPercent(test.threshold)}`}
               />
             </div>
-            <div className="mt-2 flex justify-between text-sm">
-              <span className="font-medium">
+            <div className="mt-2 flex justify-between text-[13px]">
+              <span className="font-medium text-ink">
                 You&rsquo;re at {formatPercent(test.ratio)}
               </span>
-              <span className="text-stone-500">
+              <span className="text-mute">
                 need {formatPercent(test.threshold)} · marked by the line
               </span>
             </div>
 
             {test.passed ? (
-              <p className="mt-3 text-sm text-stone-600">
-                You have <strong>{formatMoney(headroomCents)}</strong> of room
+              <p className="mt-3 text-[13px] text-mute">
+                You have <strong className="text-ink">{formatMoney(headroomCents)}</strong> of room
                 before this rule would be at risk.
               </p>
             ) : (
-              <p className="mt-3 text-sm font-medium text-red-800">
+              <p className="mt-3 text-[13px] font-medium text-bad-text">
                 This rule is not met, so the simple tax form is not available
                 this year.
               </p>
@@ -94,20 +96,20 @@ function Rule({
           </>
         ) : null}
 
-        <dl className="mt-4 space-y-1 border-t border-stone-100 pt-3 text-sm">
+        <dl className="mt-4 space-y-1 border-t border-line pt-3 text-[13px]">
           <div className="flex justify-between gap-4">
-            <dt className="text-stone-600">{numeratorLabel}</dt>
-            <dd className="tabular">{formatMoney(test.numeratorCents)}</dd>
+            <dt className="text-mute">{numeratorLabel}</dt>
+            <dd className="figures text-ink">{formatMoney(test.numeratorCents)}</dd>
           </div>
           <div className="flex justify-between gap-4">
-            <dt className="text-stone-600">{denominatorLabel}</dt>
-            <dd className="tabular">{formatMoney(test.denominatorCents)}</dd>
+            <dt className="text-mute">{denominatorLabel}</dt>
+            <dd className="figures text-ink">{formatMoney(test.denominatorCents)}</dd>
           </div>
         </dl>
 
-        <p className="mt-3 border-t border-stone-100 pt-3 text-sm leading-relaxed text-stone-500">
+        <p className="mt-3 border-t border-line pt-3 text-[13px] leading-relaxed text-mute">
           {meaning}{" "}
-          <span className="text-stone-400">Accountants call this the {technicalName}.</span>
+          <span className="text-mute-soft">Accountants call this the {technicalName}.</span>
         </p>
       </div>
     </div>
@@ -172,10 +174,10 @@ export default async function TaxPage() {
   return (
     <div className="space-y-6">
       <div>
-        <h1 className="text-2xl font-semibold tracking-tight">
+        <h1 className="text-[20px] font-semibold tracking-tight text-ink">
           Tax filing for {fy.label}
         </h1>
-        <p className="mt-1 text-stone-500">
+        <p className="mt-1 text-mute">
           Associations like yours can use a short tax form{" "}
           <Jargon term="Form 1120-H">instead of a full company return</Jargon>,
           as long as two rules are met.
@@ -227,29 +229,29 @@ export default async function TaxPage() {
         title="What you would owe"
         hint="Owner fees are not taxed. Only other income — bank interest, laundry, renting out common space — is."
       >
-        <dl className="max-w-md space-y-2 text-sm">
+        <dl className="max-w-md space-y-2 text-[13px]">
           <div className="flex justify-between gap-4">
-            <dt className="text-stone-600">Income that can be taxed</dt>
-            <dd className="tabular">{formatMoney(result.nonexemptIncomeCents)}</dd>
+            <dt className="text-mute">Income that can be taxed</dt>
+            <dd className="figures text-ink">{formatMoney(result.nonexemptIncomeCents)}</dd>
           </div>
-          <div className="flex justify-between gap-4 border-b border-stone-100 pb-2">
-            <dt className="text-stone-600">Allowance every association gets</dt>
-            <dd className="tabular">−{formatMoney(result.specificDeductionCents)}</dd>
+          <div className="flex justify-between gap-4 border-b border-line pb-2">
+            <dt className="text-mute">Allowance every association gets</dt>
+            <dd className="figures text-ink">−{formatMoney(result.specificDeductionCents)}</dd>
           </div>
           <div className="flex justify-between gap-4">
-            <dt className="text-stone-600">
+            <dt className="text-mute">
               Taxed at {(result.rate * 100).toFixed(0)}%
             </dt>
-            <dd className="tabular">{formatMoney(result.taxableIncomeCents)}</dd>
+            <dd className="figures text-ink">{formatMoney(result.taxableIncomeCents)}</dd>
           </div>
-          <div className="flex justify-between gap-4 border-t border-stone-200 pt-2">
-            <dt className="font-semibold">Estimated tax</dt>
-            <dd className="tabular text-lg font-semibold">
+          <div className="flex justify-between gap-4 border-t border-line-strong pt-2">
+            <dt className="font-semibold text-ink">Estimated tax</dt>
+            <dd className="figures text-[18px] text-ink">
               {formatMoney(result.taxDueCents)}
             </dd>
           </div>
         </dl>
-        <p className="mt-4 text-sm text-stone-500">
+        <p className="mt-4 text-[13px] text-mute">
           The {formatMoney(result.exemptIncomeCents)} you collected in owner fees
           is not taxed at all.
         </p>
@@ -257,21 +259,21 @@ export default async function TaxPage() {
 
       <div className="grid gap-4 lg:grid-cols-2">
         <Card title="Money you collected" hint="What Rule 1 is worked out from.">
-          <ul className="divide-y divide-stone-100 text-sm">
+          <ul className="divide-y divide-line text-[13px]">
             {(receipts ?? []).map((r) => (
               <li key={r.account_name} className="flex items-center justify-between gap-3 py-2.5">
-                <span>{r.account_name}</span>
+                <span className="text-ink">{r.account_name}</span>
                 <span className="flex items-center gap-3">
                   <span
-                    className={`rounded px-2 py-0.5 text-xs ${
+                    className={`rounded-full px-2 py-0.5 text-[11px] ${
                       r.is_exempt
-                        ? "bg-emerald-50 text-emerald-700"
-                        : "bg-amber-50 text-amber-700"
+                        ? "bg-good-tint text-good-text"
+                        : "bg-warning-tint text-warning-text"
                     }`}
                   >
                     {r.is_exempt ? "owner fees" : "taxable"}
                   </span>
-                  <span className="tabular">{money(r.total)}</span>
+                  <span className="figures text-ink">{money(r.total)}</span>
                 </span>
               </li>
             ))}
@@ -279,26 +281,26 @@ export default async function TaxPage() {
         </Card>
 
         <Card title="Money you spent" hint="What Rule 2 is worked out from.">
-          <ul className="divide-y divide-stone-100 text-sm">
+          <ul className="divide-y divide-line text-[13px]">
             {(disbursements ?? []).map((d) => (
               <li key={d.account_name} className="flex items-center justify-between gap-3 py-2.5">
-                <span>
+                <span className="text-ink">
                   {d.account_name}
                   {d.account_type === "asset" ? (
-                    <span className="ml-2 text-xs text-stone-400">major improvement</span>
+                    <span className="ml-2 text-[11px] text-mute-soft">major improvement</span>
                   ) : null}
                 </span>
                 <span className="flex items-center gap-3">
                   <span
-                    className={`rounded px-2 py-0.5 text-xs ${
+                    className={`rounded-full px-2 py-0.5 text-[11px] ${
                       d.is_exempt
-                        ? "bg-emerald-50 text-emerald-700"
-                        : "bg-amber-50 text-amber-700"
+                        ? "bg-good-tint text-good-text"
+                        : "bg-warning-tint text-warning-text"
                     }`}
                   >
                     {d.is_exempt ? "on the building" : "doesn't count"}
                   </span>
-                  <span className="tabular">{money(d.total)}</span>
+                  <span className="figures text-ink">{money(d.total)}</span>
                 </span>
               </li>
             ))}
@@ -310,22 +312,22 @@ export default async function TaxPage() {
         title="Where these tax rules come from"
         hint="Rates and thresholds are stored with their source so an out-of-date figure is visible rather than silent."
       >
-        <ul className="divide-y divide-stone-100 text-sm">
+        <ul className="divide-y divide-line text-[13px]">
           {result.parametersUsed.map((p) => (
             <li key={p.key} className="flex flex-wrap items-center justify-between gap-2 py-2.5">
-              <span className="text-stone-600">{p.notes?.split(".")[0] ?? p.key}</span>
+              <span className="text-mute">{p.notes?.split(".")[0] ?? p.key}</span>
               <span className="flex items-center gap-3">
                 {p.verifiedOn ? (
-                  <span className="text-xs text-emerald-700">checked {p.verifiedOn}</span>
+                  <span className="text-[11px] text-good-text">checked {p.verifiedOn}</span>
                 ) : (
-                  <span className="text-xs font-medium text-amber-700">not yet checked</span>
+                  <span className="text-[11px] font-medium text-warning-text">not yet checked</span>
                 )}
                 {p.sourceUrl ? (
                   <a
                     href={p.sourceUrl}
                     target="_blank"
                     rel="noreferrer"
-                    className="text-xs text-stone-500 underline-offset-2 hover:underline"
+                    className="text-[11px] text-mute underline-offset-2 hover:underline"
                   >
                     IRS source
                   </a>
