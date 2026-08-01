@@ -508,3 +508,44 @@ running under RLS that cannot (see #17 and #21).
 across a table must be `SECURITY DEFINER` with a pinned `search_path`, or it
 silently means something different for each caller. Trigger functions that only
 touch `NEW`/`OLD` are unaffected.
+
+---
+
+## 24. Bank feed (Plaid): read-only, extending #22
+
+**Decided:** Doug, 2026-08-01. **Status:** settled.
+
+Doug asked to link a BMO account so transactions show up in Walkup and bills
+can autopay. The second half is declined — #22 already ruled out payment
+initiation, and nothing about this request changes that reasoning. Autopay
+means holding a live credential that can move the association's money, which
+is exactly the single point of failure #22 was written to avoid for a
+building this size.
+
+The first half is a different risk profile and is built (0016): a Plaid
+connection that can only read transactions, shown alongside the books on
+their own page, never posted into the ledger. A board member still records
+payments and bills the existing way. If auto-matching or draft-entry import
+is wanted later, that is a new decision, not an extension of this one — it
+changes what can silently enter a tax-relevant ledger, which #1 and #20 both
+care about.
+
+**How to apply:**
+
+- The Plaid access token is a live credential, worse than a password since it
+  doesn't expire on its own. It lives in `bank_connection_secrets`, RLS
+  enabled with zero policies — not even board_admin can `SELECT` it through
+  PostgREST. The only access path is `store_bank_connection()` and
+  `get_bank_access_token()`, both `SECURITY DEFINER`, same shape as
+  `post_journal_entry()` (#5).
+- That table is deliberately **not** on `tg_audit()`'s list. The trigger
+  serializes the whole row to JSONB into `audit_log`, which board_admin can
+  read — auditing the secrets table would leak the token into a place it was
+  just fenced out of.
+- Plaid reports transaction amounts positive-out. Everything else in this app
+  reads positive-in (Moss/good), so the sign is flipped once at the sync
+  boundary (`bank_transactions.amount`) rather than leaving every future
+  reader to remember Plaid's convention.
+- Connecting, syncing and disconnecting are board_admin only — not
+  board_member. Viewing the resulting feed follows the same audience as the
+  ledger (`can_read_financials`).
