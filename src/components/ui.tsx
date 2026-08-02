@@ -20,6 +20,23 @@ export function moneyRounded(numeric: string | number | null): string {
 }
 
 /**
+ * A zero in an aging bucket or table cell is the absence of data, not a
+ * fact worth stating — rendering it as an em-dash instead of "$0.00" lets
+ * the one meaningful number in a row carry the row.
+ */
+export function MoneyOrDash({
+  value,
+  className = "text-ink",
+}: {
+  value: string | number | null;
+  className?: string;
+}) {
+  const n = value === null ? 0 : Number(value);
+  if (n === 0) return <span className="text-line-strong">—</span>;
+  return <span className={className}>{money(value)}</span>;
+}
+
+/**
  * The five status tone families from WALKUP_BRAND.md section 5. Every
  * consumer of a status must pair the tint with its own text stop — never mix
  * a tint from one row with text from another.

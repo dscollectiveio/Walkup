@@ -1,5 +1,7 @@
 import { createClient } from "@/lib/supabase/server";
-import { Answer, Card, Jargon, UnitLink, money } from "@/components/ui";
+import { Answer, Card, Jargon, MoneyOrDash, UnitLink, money } from "@/components/ui";
+import { PaymentForm } from "./payment-form";
+import { ReminderLetterButton } from "./reminder-letter-button";
 
 export const dynamic = "force-dynamic";
 
@@ -11,16 +13,28 @@ export default async function DelinquencyPage() {
       .from("delinquency_aging")
       .select("unit_id, label, current_due, days_1_30, days_31_60, days_60_plus, total_owed")
       .order("total_owed", { ascending: false }),
-    supabase.from("unit_owners").select("unit_id, persons(full_name)"),
+    supabase.from("unit_owners").select("unit_id, persons(full_name, email)"),
   ]);
 
   const ownerName = new Map<string, string>();
+  const ownerEmail = new Map<string, string | null>();
   for (const o of owners ?? []) {
-    const p = o.persons as unknown as { full_name: string } | null;
-    if (p) ownerName.set(o.unit_id, p.full_name);
+    const p = o.persons as unknown as { full_name: string; email: string | null } | null;
+    if (p) {
+      ownerName.set(o.unit_id, p.full_name);
+      ownerEmail.set(o.unit_id, p.email);
+    }
   }
 
   const total = (rows ?? []).reduce((s, r) => s + Number(r.total_owed), 0);
+
+  const overdueUnits = (rows ?? []).map((r) => ({
+    id: r.unit_id,
+    label: r.label,
+    owed: Number(r.total_owed),
+    ownerName: ownerName.get(r.unit_id) ?? null,
+    ownerEmail: ownerEmail.get(r.unit_id) ?? null,
+  }));
 
   return (
     <div className="space-y-6">
@@ -44,6 +58,11 @@ export default async function DelinquencyPage() {
             headline={`${money(total)} is outstanding`}
             detail="Unpaid fees are money you have earned but not received. As well as the cash-flow problem, they lower the income figure your tax eligibility depends on — see the Tax filing page."
           />
+
+          <div className="flex flex-wrap items-start gap-2">
+            <PaymentForm units={overdueUnits} />
+            <ReminderLetterButton units={overdueUnits} />
+          </div>
 
           <Card
             title="Overdue by unit"
@@ -72,15 +91,17 @@ export default async function DelinquencyPage() {
                           </div>
                         ) : null}
                       </td>
-                      <td className="figures py-3 text-right text-mute">
-                        {money(r.current_due)}
+                      <td className="figures py-3 text-right">
+                        <MoneyOrDash value={r.current_due} className="text-mute" />
                       </td>
-                      <td className="figures py-3 text-right text-ink">{money(r.days_1_30)}</td>
-                      <td className="figures py-3 text-right text-warning-text">
-                        {money(r.days_31_60)}
+                      <td className="figures py-3 text-right">
+                        <MoneyOrDash value={r.days_1_30} className="text-ink" />
                       </td>
-                      <td className="figures py-3 text-right text-bad-text">
-                        {money(r.days_60_plus)}
+                      <td className="figures py-3 text-right">
+                        <MoneyOrDash value={r.days_31_60} className="text-bad-text" />
+                      </td>
+                      <td className="figures py-3 text-right">
+                        <MoneyOrDash value={r.days_60_plus} className="text-bad-text" />
                       </td>
                       <td className="figures py-3 text-right text-ink">
                         {money(r.total_owed)}
