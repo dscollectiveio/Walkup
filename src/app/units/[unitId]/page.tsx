@@ -1,5 +1,5 @@
 import { createClient } from "@/lib/supabase/server";
-import { Card, Restricted, money } from "@/components/ui";
+import { Card, MoneyOrDash, Restricted, money } from "@/components/ui";
 
 export const dynamic = "force-dynamic";
 
@@ -62,56 +62,59 @@ export default async function UnitStatementPage({
       </div>
 
       <Card title="Fees charged" hint="What this unit has been billed, and how much of it has been paid.">
-        <table className="w-full text-[13px]">
-          <thead>
-            <tr className="border-b border-line text-left text-[11px] uppercase tracking-wide text-mute">
-              <th className="pb-2 font-medium">Due date</th>
-              <th className="pb-2 font-medium">Type</th>
-              <th className="pb-2 text-right font-medium">Billed</th>
-              <th className="pb-2 text-right font-medium">Paid</th>
-              <th className="pb-2 text-right font-medium">Still owed</th>
-              <th className="pb-2 text-right font-medium">Overdue</th>
-            </tr>
-          </thead>
-          <tbody className="divide-y divide-line">
-            {(charges ?? []).map((c) => (
-              <tr key={c.id}>
-                <td className="figures py-2 text-ink">{c.due_on}</td>
-                <td className="py-2 text-mute">
-                  {String(c.charge_type).replace("_", " ")}
-                </td>
-                <td className="figures py-2 text-right text-ink">{money(c.amount)}</td>
-                <td className="figures py-2 text-right text-mute">
-                  {money(c.amount_applied)}
-                </td>
-                <td
-                  className={`figures py-2 text-right ${
-                    Number(c.balance) > 0 ? "font-medium text-bad-text" : "text-mute-soft"
-                  }`}
-                >
-                  {money(c.balance)}
-                </td>
-                <td className="figures py-2 text-right text-[11px] text-mute">
-                  {Number(c.balance) > 0 && c.days_overdue > 0 ? `${c.days_overdue}d` : ""}
-                </td>
+        <div className="overflow-x-auto">
+          <table className="w-full min-w-[32rem] text-[13px]">
+            <thead>
+              <tr className="border-b border-line text-left text-[11px] uppercase tracking-wide text-mute">
+                <th className="pb-2 font-medium">Due date</th>
+                <th className="pb-2 font-medium">Type</th>
+                <th className="pb-2 text-right font-medium">Billed</th>
+                <th className="pb-2 text-right font-medium">Paid</th>
+                <th className="pb-2 text-right font-medium">Still owed</th>
+                <th className="pb-2 text-right font-medium">Overdue</th>
               </tr>
-            ))}
-          </tbody>
-        </table>
+            </thead>
+            <tbody className="divide-y divide-line">
+              {(charges ?? []).map((c) => (
+                <tr key={c.id}>
+                  <td className="figures py-2 text-ink">{c.due_on}</td>
+                  <td className="py-2 text-mute">
+                    {String(c.charge_type).replace("_", " ")}
+                  </td>
+                  <td className="figures py-2 text-right text-ink">{money(c.amount)}</td>
+                  <td className="figures py-2 text-right">
+                    <MoneyOrDash value={c.amount_applied} className="text-mute" />
+                  </td>
+                  <td className="figures py-2 text-right">
+                    <MoneyOrDash
+                      value={c.balance}
+                      className={Number(c.balance) > 0 ? "font-medium text-bad-text" : "text-ink"}
+                    />
+                  </td>
+                  <td className="figures py-2 text-right text-[11px] text-mute">
+                    {Number(c.balance) > 0 && c.days_overdue > 0 ? `${c.days_overdue}d` : ""}
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
       </Card>
 
       <Card title="Payments received">
-        <table className="w-full text-[13px]">
-          <tbody className="divide-y divide-line">
-            {(payments ?? []).map((p) => (
-              <tr key={p.id}>
-                <td className="figures py-2 text-ink">{p.received_on}</td>
-                <td className="py-2 text-mute">{p.method ?? ""}</td>
-                <td className="figures py-2 text-right text-ink">{money(p.amount)}</td>
-              </tr>
-            ))}
-          </tbody>
-        </table>
+        <div className="overflow-x-auto">
+          <table className="w-full min-w-[24rem] text-[13px]">
+            <tbody className="divide-y divide-line">
+              {(payments ?? []).map((p) => (
+                <tr key={p.id}>
+                  <td className="figures py-2 text-ink">{p.received_on}</td>
+                  <td className="py-2 text-mute">{p.method ?? ""}</td>
+                  <td className="figures py-2 text-right text-ink">{money(p.amount)}</td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
       </Card>
     </div>
   );

@@ -1,5 +1,5 @@
 import { createClient } from "@/lib/supabase/server";
-import { Card, Restricted, money } from "@/components/ui";
+import { Card, MoneyOrDash, Restricted, money } from "@/components/ui";
 
 export const dynamic = "force-dynamic";
 
@@ -50,43 +50,47 @@ export default async function LedgerPage() {
         title="Accounts"
         hint="Money is separated into a day-to-day account and reserve savings, so you can always tell how much is set aside for big repairs."
       >
-        <table className="w-full text-[13px]">
-          <thead>
-            <tr className="border-b border-line text-left text-[11px] uppercase tracking-wide text-mute">
-              <th className="pb-2 font-medium">Account for</th>
-              <th className="pb-2 font-medium">No.</th>
-              <th className="pb-2 font-medium">Account</th>
-              <th className="pb-2 font-medium">Type</th>
-              <th className="pb-2 text-right font-medium">Debit</th>
-              <th className="pb-2 text-right font-medium">Credit</th>
-            </tr>
-          </thead>
-          <tbody className="divide-y divide-line">
-            {rows.map((r) => (
-              <tr key={`${r.fund_name}-${r.code}`}>
-                <td className="py-2 text-mute">{r.fund_name}</td>
-                <td className="figures py-2 font-mono text-[11px] text-ink">{r.code}</td>
-                <td className="py-2 text-ink">{r.name}</td>
-                <td className="py-2 text-[11px] text-mute">{r.type}</td>
-                <td className="figures py-2 text-right text-ink">
-                  {Number(r.total_debit) ? money(r.total_debit) : ""}
-                </td>
-                <td className="figures py-2 text-right text-ink">
-                  {Number(r.total_credit) ? money(r.total_credit) : ""}
-                </td>
+        {/* Widest table in the app — scrolls inside the card rather than
+            wrapping rows, per the layout spec. */}
+        <div className="overflow-x-auto">
+          <table className="w-full min-w-[36rem] text-[13px]">
+            <thead>
+              <tr className="border-b border-line text-left text-[11px] uppercase tracking-wide text-mute">
+                <th className="pb-2 font-medium">Account for</th>
+                <th className="pb-2 font-medium">No.</th>
+                <th className="pb-2 font-medium">Account</th>
+                <th className="pb-2 font-medium">Type</th>
+                <th className="pb-2 text-right font-medium">Debit</th>
+                <th className="pb-2 text-right font-medium">Credit</th>
               </tr>
-            ))}
-          </tbody>
-          <tfoot>
-            <tr className="border-t-2 border-line-strong">
-              <td colSpan={4} className="pt-2.5 text-[11px] font-medium uppercase tracking-wide text-ink">
-                Total
-              </td>
-              <td className="figures pt-2.5 text-right text-ink">{money(debits)}</td>
-              <td className="figures pt-2.5 text-right text-ink">{money(credits)}</td>
-            </tr>
-          </tfoot>
-        </table>
+            </thead>
+            <tbody className="divide-y divide-line">
+              {rows.map((r) => (
+                <tr key={`${r.fund_name}-${r.code}`}>
+                  <td className="py-2 text-mute">{r.fund_name}</td>
+                  <td className="figures py-2 font-mono text-[11px] text-ink">{r.code}</td>
+                  <td className="py-2 text-ink">{r.name}</td>
+                  <td className="py-2 text-[11px] text-mute">{r.type}</td>
+                  <td className="figures py-2 text-right">
+                    <MoneyOrDash value={r.total_debit} />
+                  </td>
+                  <td className="figures py-2 text-right">
+                    <MoneyOrDash value={r.total_credit} />
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+            <tfoot>
+              <tr className="border-t-2 border-line-strong">
+                <td colSpan={4} className="pt-2.5 text-[11px] font-medium uppercase tracking-wide text-ink">
+                  Total
+                </td>
+                <td className="figures pt-2.5 text-right text-ink">{money(debits)}</td>
+                <td className="figures pt-2.5 text-right text-ink">{money(credits)}</td>
+              </tr>
+            </tfoot>
+          </table>
+        </div>
         <p className="mt-4 text-[11px] text-mute">
           {balanced
             ? "The two sides match, which is what you want. Walkup will not let you save a transaction where they do not."
