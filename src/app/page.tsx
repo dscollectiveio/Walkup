@@ -1,47 +1,36 @@
-import Link from "next/link";
-import { ChevronRight } from "lucide-react";
-import { createClient } from "@/lib/supabase/server";
-import { Answer, Card, Empty, Jargon, Stat, UnitLink, money, moneyRounded } from "@/components/ui";
+import { createClient, getUser } from "@/lib/supabase/server";
+import { Empty, money, moneyRounded } from "@/components/ui";
+import { toCents } from "@/lib/tax/form1120h";
+import { assembleReminders, nextOccurrence } from "@/lib/home/reminders";
+import { urgentItems } from "@/lib/home/urgent-items";
+import { derivedTasks } from "@/lib/home/setup-tasks";
+import { Greeting } from "@/components/home/greeting";
+import { WorthAMinute } from "@/components/home/worth-a-minute";
+import { Standing } from "@/components/home/standing";
+import { YourList, type ManualTask } from "@/components/home/your-list";
+import {
+  ShowcaseCards,
+  type CashCardData,
+  type InOutCardData,
+  type SpendingCardData,
+} from "@/components/home/showcase-cards";
+import { StatStrip } from "@/components/home/stat-strip";
+import { ComingUp } from "@/components/home/coming-up";
+import { Building, type BuildingUnit } from "@/components/home/building";
 
 export const dynamic = "force-dynamic";
 
-interface Reminder {
-  name: string;
-  kind: string;
-  due: Date;
-  // Compliance dates the app computes but nobody has verified against this
-  // year's instructions. Stale legal information is worse than absent legal
-  // information, so these say so instead of reading as authoritative.
-  unverified?: boolean;
-}
+// Display-only figures that arrive as JSON numbers (14,2) from the older
+// views. Anything from the 0017 views arrives as text and goes through the
+// strict toCents instead (DECISIONS #20).
+const looseCents = (v: string | number | null) => Math.round(Number(v ?? 0) * 100);
 
-interface SetupTask {
-  name: string;
-  detail: string;
-  href: string;
-  done: boolean;
-}
+const monthShort = (d: Date) => d.toLocaleDateString("en-US", { month: "short" });
 
-function formatDue(due: Date, today: Date): string {
-  const days = Math.max(0, Math.ceil((due.getTime() - today.getTime()) / 86400000));
-  const sameYear = due.getFullYear() === today.getFullYear();
-  const date = due.toLocaleDateString("en-US", {
-    month: "long",
-    day: "numeric",
-    ...(sameYear ? {} : { year: "numeric" }),
-  });
-  // Dates and day counts, never adjectives.
-  return `Due ${date} — ${days} day${days === 1 ? "" : "s"}`;
-}
-
-/** Next occurrence of a month/day on or after today. */
-function nextOccurrence(month: number, day: number, today: Date): Date {
-  const thisYear = new Date(today.getFullYear(), month - 1, day);
-  return thisYear >= today ? thisYear : new Date(today.getFullYear() + 1, month - 1, day);
-}
-
-export default async function OverviewPage() {
+export default async function HomePage() {
   const supabase = await createClient();
+  const user = await getUser();
+  const todayIso = new Date().toISOString().slice(0, 10);
 
   const [
     { data: associations },
@@ -49,17 +38,26 @@ export default async function OverviewPage() {
     { data: funds },
     { data: units },
     { data: totals },
-    { data: owners },
+    { data: unitOwners },
     { data: bankConnections },
     { data: policies },
     { data: vendors },
-    { data: declarationDocs },
+    { data: declarationLinks },
     { data: bills },
-    { data: upcomingCharges },
+    { data: futureCharges },
+    { data: aging },
+    { data: persons },
+    { data: boardTasks },
+    { data: cashActivity },
+    { data: duesCollection },
+    { data: spendingRows },
+    { data: budgetRows },
   ] = await Promise.all([
     supabase
       .from("associations")
-      .select("id, display_name, state_code, fiscal_year_end_month, incorporated_on"),
+      .select(
+        "id, display_name, state_code, fiscal_year_end_month, incorporated_on, reserve_target",
+      ),
     supabase.from("fiscal_years").select("label").order("starts_on", { ascending: false }).limit(1),
     supabase
       .from("fund_cash_balances")
@@ -73,20 +71,43 @@ export default async function OverviewPage() {
       .from("association_totals")
       .select("visible_tb_rows, total_debits, total_credits, total_owed, units_behind"),
     supabase.from("unit_owners").select("unit_id, persons(full_name)"),
-    supabase.from("bank_connections").select("id, status"),
-    supabase.from("insurance_policies").select("coverage, effective_to"),
-    supabase.from("vendors").select("id, w9_on_file, is_1099_exempt"),
-    supabase.from("document_links").select("id").eq("relation", "declaration").limit(1),
+    supabase.from("bank_connections").select("id, status, created_at"),
+    supabase.from("insurance_policies").select("coverage, effective_from, effective_to"),
+    supabase.from("vendors").select("id, w9_on_file, w9_received_on, is_1099_exempt"),
     supabase
-      .from("upcoming_bills")
-      .select("name, next_due_on, autopay_arranged, days_until_due"),
+      .from("document_links")
+      .select("id, documents(uploaded_at)")
+      .eq("relation", "declaration")
+      .limit(1),
+    supabase.from("upcoming_bills").select("name, next_due_on, autopay_arranged"),
     supabase
       .from("charge_balances")
       .select("due_on")
       .in("status", ["open", "partial"])
-      .gt("due_on", new Date().toISOString().slice(0, 10))
+      .gt("due_on", todayIso)
       .order("due_on")
       .limit(50),
+    supabase
+      .from("delinquency_aging")
+      .select("label, days_1_30, days_31_60, days_60_plus, total_owed"),
+    supabase.from("persons").select("id, full_name, auth_user_id"),
+    supabase
+      .from("board_tasks")
+      .select("id, title, completed_at, owner_person_id")
+      .order("created_at"),
+    supabase
+      .from("monthly_cash_activity")
+      .select("month, fund_kind, inflow, outflow, visible_lines")
+      .order("month"),
+    supabase
+      .from("monthly_dues_collection")
+      .select("month, charge_count, charged, collected, collected_on_time")
+      .order("month"),
+    supabase
+      .from("monthly_spending_by_account")
+      .select("month, account_name, expense_count, total")
+      .order("month"),
+    supabase.from("budget_vs_actual").select("type, variance"),
   ]);
 
   const association = associations?.[0];
@@ -94,331 +115,352 @@ export default async function OverviewPage() {
     return <Empty>No association is visible to you.</Empty>;
   }
 
-  const fyLabel = fiscalYears?.[0]?.label ?? String(new Date().getFullYear());
   const t = totals?.[0];
   const booksVisible = (t?.visible_tb_rows ?? 0) > 0;
-  const booksBalance = booksVisible && Number(t!.total_debits) === Number(t!.total_credits);
-  const owed = Number(t?.total_owed ?? 0);
+  const tbDebitCents = looseCents(t?.total_debits ?? 0);
+  const booksBalanced = booksVisible && tbDebitCents === looseCents(t?.total_credits ?? 0);
+  const owedCents = looseCents(t?.total_owed ?? 0);
   const behind = Number(t?.units_behind ?? 0);
-  const visibleFunds = (funds ?? []).filter((f) => f.visible_lines > 0);
-  const totalCash = visibleFunds.reduce((s, f) => s + Number(f.cash_balance), 0);
-
-  const ownerName = new Map<string, string>();
-  for (const o of owners ?? []) {
-    const p = o.persons as unknown as { full_name: string } | null;
-    if (p) ownerName.set(o.unit_id, p.full_name);
-  }
+  const fyLabel = fiscalYears?.[0]?.label ?? String(new Date().getFullYear());
 
   const today = new Date();
   today.setHours(0, 0, 0, 0);
 
-  // ==========================================================================
-  // Coming up — deadlines assembled from the association's own records, plus
-  // the federal filing dates. Board/accountant only: RLS already returns
-  // nothing from the board-scoped tables for an owner, and half-empty
-  // reminders would be worse than none.
-  // ==========================================================================
-  const reminders: Reminder[] = [];
+  // The building's clock, not the server's: Vercel runs on UTC, and the one
+  // state on record is Illinois. Central time is the honest default.
+  const hour = Number(
+    new Intl.DateTimeFormat("en-US", {
+      hour: "numeric",
+      hour12: false,
+      timeZone: association.state_code === "IL" ? "America/Chicago" : "UTC",
+    }).format(new Date()),
+  );
 
+  // --------------------------------------------------------------------------
+  // People
+  // --------------------------------------------------------------------------
+  const me = (persons ?? []).find((p) => p.auth_user_id === user?.id);
+  const firstName = me?.full_name.split(" ")[0] ?? user?.email?.split("@")[0] ?? "there";
+
+  const personName = new Map((persons ?? []).map((p) => [p.id, p.full_name]));
+  const ownerName = new Map<string, string>();
+  for (const o of unitOwners ?? []) {
+    const p = o.persons as unknown as { full_name: string } | null;
+    if (p) ownerName.set(o.unit_id, p.full_name);
+  }
+
+  const statusLine = !booksVisible
+    ? "Here's where your unit stands."
+    : behind > 0
+      ? `${moneyRounded(owedCents / 100)} is owed across ${behind} unit${behind === 1 ? "" : "s"}. Everything else looks in order.`
+      : "Every unit is current and nothing is overdue.";
+
+  // --------------------------------------------------------------------------
+  // Worth a minute today
+  // --------------------------------------------------------------------------
+  const activePolicies = (policies ?? []).filter(
+    (p) => new Date(`${p.effective_to}T00:00:00`) >= today,
+  );
+  const soonestExpiry = activePolicies
+    .map((p) => new Date(`${p.effective_to}T00:00:00`))
+    .sort((a, b) => a.getTime() - b.getTime())[0];
+
+  const vendorsMissingW9 = (vendors ?? []).filter(
+    (v) => !v.w9_on_file && !v.is_1099_exempt,
+  ).length;
+
+  const urgent = booksVisible
+    ? urgentItems({
+        booksVisible,
+        booksBalance: booksBalanced,
+        aging: aging ?? [],
+        vendorsMissingW9,
+        nec1099Due: nextOccurrence(1, 31, today),
+        insuranceExpiry: soonestExpiry ?? null,
+        bankConnected: (bankConnections ?? []).some((c) => c.status === "active"),
+        today,
+      })
+    : [];
+
+  // --------------------------------------------------------------------------
+  // Standing + checklist
+  // --------------------------------------------------------------------------
+  const visibleFunds = (funds ?? []).filter((f) => f.visible_lines > 0);
+  const operatingCents = visibleFunds
+    .filter((f) => f.kind === "operating")
+    .reduce((s, f) => s + looseCents(f.cash_balance), 0);
+  const reserveCents = visibleFunds
+    .filter((f) => f.kind === "reserve")
+    .reduce((s, f) => s + looseCents(f.cash_balance), 0);
+  const totalCents = visibleFunds.reduce((s, f) => s + looseCents(f.cash_balance), 0);
+
+  let canSetTarget = false;
   if (booksVisible) {
-    const horizon = new Date(today.getTime() + 120 * 86400000);
+    const { data: isAdmin } = await supabase.rpc("has_role_in", {
+      assoc: association.id,
+      roles: ["board_admin"],
+    });
+    canSetTarget = isAdmin === true;
+  }
 
-    for (const b of bills ?? []) {
-      if (b.autopay_arranged || !b.next_due_on) continue;
-      const due = new Date(`${b.next_due_on}T00:00:00`);
-      if (due >= today && due <= horizon) {
-        reminders.push({ name: b.name, kind: "Bill to pay by hand", due });
+  const declarationDoc = declarationLinks?.[0]?.documents as unknown as {
+    uploaded_at: string;
+  } | null;
+
+  const derived = booksVisible
+    ? derivedTasks({
+        bankConnections: bankConnections ?? [],
+        policies: policies ?? [],
+        vendors: vendors ?? [],
+        declarationUploadedAt: declarationDoc?.uploaded_at ?? null,
+        today,
+      })
+    : [];
+
+  const manual: ManualTask[] = (boardTasks ?? []).map((task) => ({
+    id: task.id,
+    title: task.title,
+    completedAt: task.completed_at,
+    ownerName: task.owner_person_id ? (personName.get(task.owner_person_id) ?? null) : null,
+    isYou: task.owner_person_id === me?.id,
+  }));
+
+  // --------------------------------------------------------------------------
+  // Charts. All 0017-view money is text → strict cents (DECISIONS #20).
+  // --------------------------------------------------------------------------
+  const netByMonth = new Map<string, { inCents: number; outCents: number }>();
+  for (const row of cashActivity ?? []) {
+    const key = row.month as string;
+    const entry = netByMonth.get(key) ?? { inCents: 0, outCents: 0 };
+    entry.inCents += toCents(row.inflow);
+    entry.outCents += toCents(row.outflow);
+    netByMonth.set(key, entry);
+  }
+
+  let cash: CashCardData | null = null;
+  let inOut: InOutCardData | null = null;
+  const monthKeys = [...netByMonth.keys()].sort();
+
+  if (monthKeys.length > 0) {
+    // Fill month gaps carrying the balance forward — a quiet month still has
+    // a balance; that is the balance persisting, not fabricated data.
+    const first = new Date(`${monthKeys[0]}T00:00:00`);
+    const last = new Date(`${monthKeys[monthKeys.length - 1]}T00:00:00`);
+    const series: { date: Date; balanceCents: number; inCents: number; outCents: number }[] = [];
+    let running = 0;
+    for (let d = new Date(first); d <= last; d.setMonth(d.getMonth() + 1)) {
+      const key = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-01`;
+      const entry = netByMonth.get(key);
+      running += (entry?.inCents ?? 0) - (entry?.outCents ?? 0);
+      series.push({
+        date: new Date(d),
+        balanceCents: running,
+        inCents: entry?.inCents ?? 0,
+        outCents: entry?.outCents ?? 0,
+      });
+    }
+
+    const window = series.slice(-12);
+    const beforeWindowCents =
+      window.length < series.length ? series[series.length - window.length - 1].balanceCents : 0;
+    const sinceLabel = `Since ${window[0].date.toLocaleDateString("en-US", {
+      month: "long",
+      ...(window[0].date.getFullYear() !== today.getFullYear() ? { year: "numeric" } : {}),
+    })}`;
+
+    cash = {
+      points: window.map((s) => ({ label: monthShort(s.date), valueCents: s.balanceCents })),
+      netChangeCents: window[window.length - 1].balanceCents - beforeWindowCents,
+      sinceLabel,
+    };
+
+    // Spending by month, for shortfall captions.
+    const topSpendByMonth = new Map<string, { name: string; cents: number }>();
+    for (const row of spendingRows ?? []) {
+      const cents = toCents(row.total);
+      const cur = topSpendByMonth.get(row.month as string);
+      if (!cur || cents > cur.cents) {
+        topSpendByMonth.set(row.month as string, { name: row.account_name, cents });
       }
     }
 
-    const nextRenewal = (policies ?? [])
-      .map((p) => ({ coverage: p.coverage, due: new Date(`${p.effective_to}T00:00:00`) }))
-      .filter((p) => p.due >= today && p.due <= horizon)
-      .sort((a, b) => a.due.getTime() - b.due.getTime())[0];
-    if (nextRenewal) {
-      reminders.push({
-        name: "Insurance renewal",
-        kind: String(nextRenewal.coverage).replace(/_/g, " "),
-        due: nextRenewal.due,
-      });
+    let varianceCents: number | null = null;
+    const expenseBudgetRows = (budgetRows ?? []).filter((r) => r.type === "expense");
+    if (expenseBudgetRows.length > 0) {
+      varianceCents = expenseBudgetRows.reduce((s, r) => s + looseCents(r.variance), 0);
     }
 
-    const nextCharges = (upcomingCharges ?? []).filter((c) => c.due_on);
-    if (nextCharges.length > 0) {
-      const firstDue = nextCharges[0].due_on as string;
-      const count = nextCharges.filter((c) => c.due_on === firstDue).length;
-      reminders.push({
-        name: `Assessments due from ${count} unit${count === 1 ? "" : "s"}`,
-        kind: "Owner fees",
-        due: new Date(`${firstDue}T00:00:00`),
-      });
-    }
-
-    // Federal filing dates, computed rather than read from tax_parameters —
-    // that table holds numerics, and "the 15th day of the 4th month after the
-    // fiscal year ends" is a rule, not a number. Labeled unverified for the
-    // same reason every other tax figure in this app is provisional.
-    const fyEndMonth = association.fiscal_year_end_month ?? 12;
-    const due1120hMonth = ((fyEndMonth + 3) % 12) + 1; // 4th month after FYE
-    reminders.push({
-      name: "Form 1120-H",
-      kind: "Federal tax return",
-      due: nextOccurrence(due1120hMonth, 15, today),
-      unverified: true,
-    });
-    reminders.push({
-      name: "1099-NEC to contractors",
-      kind: "Federal filing",
-      due: nextOccurrence(1, 31, today),
-      unverified: true,
-    });
-
-    // The one state rule on record. Only shown when the state matches and the
-    // incorporation date exists — implying coverage of other states would be
-    // worse than staying quiet.
-    if (association.state_code === "IL" && association.incorporated_on) {
-      const inc = new Date(`${association.incorporated_on}T00:00:00`);
-      reminders.push({
-        name: "Illinois annual report",
-        kind: "Filed on the incorporation anniversary",
-        due: nextOccurrence(inc.getMonth() + 1, inc.getDate(), today),
-        unverified: true,
-      });
-    }
-
-    reminders.sort((a, b) => a.due.getTime() - b.due.getTime());
+    inOut = {
+      groups: window.slice(-6).map((s) => {
+        const key = `${s.date.getFullYear()}-${String(s.date.getMonth() + 1).padStart(2, "0")}-01`;
+        const shortfall = s.outCents > s.inCents;
+        const top = topSpendByMonth.get(key);
+        return {
+          label: monthShort(s.date),
+          aCents: s.inCents,
+          bCents: s.outCents,
+          shortfall,
+          caption: shortfall && top ? `mostly ${top.name}` : null,
+        };
+      }),
+      varianceCents,
+      fiscalYearLabel: fyLabel,
+    };
   }
 
-  // ==========================================================================
-  // Finish setting up — what the record still needs, checked against the
-  // data rather than tracked as state anywhere. Each row disappears by being
-  // done, not by being dismissed.
-  // ==========================================================================
-  const missingW9s = (vendors ?? []).filter((v) => !v.w9_on_file && !v.is_1099_exempt).length;
-  const hasActivePolicy = (policies ?? []).some(
-    (p) => new Date(`${p.effective_to}T00:00:00`) >= today,
-  );
+  let spending: SpendingCardData | null = null;
+  if ((spendingRows ?? []).length > 0) {
+    const byAccount = new Map<string, number>();
+    const months = new Set<string>();
+    for (const row of spendingRows ?? []) {
+      months.add(row.month as string);
+      byAccount.set(row.account_name, (byAccount.get(row.account_name) ?? 0) + toCents(row.total));
+    }
+    const totalSpendCents = [...byAccount.values()].reduce((s, v) => s + v, 0);
+    const firstSpendMonth = new Date(`${[...months.values()].sort()[0]}T00:00:00`);
+    spending = {
+      slices: [...byAccount.entries()].map(([label, valueCents]) => ({ label, valueCents })),
+      avgMonthlyCents: Math.round(totalSpendCents / months.size),
+      sinceLabel: `Since ${firstSpendMonth.toLocaleDateString("en-US", {
+        month: "long",
+        ...(firstSpendMonth.getFullYear() !== today.getFullYear() ? { year: "numeric" } : {}),
+      })}`,
+    };
+  }
 
-  const setupTasks: SetupTask[] = booksVisible
-    ? [
-        {
-          name: "Connect the bank account",
-          detail: "See transactions without typing them in by hand.",
-          href: "/bank-feed",
-          done: (bankConnections ?? []).some((c) => c.status === "active"),
-        },
-        {
-          name: "Record your insurance",
-          detail: "So renewals show up here before they arrive as invoices.",
-          href: "/insurance",
-          done: hasActivePolicy,
-        },
-        {
-          name: "Collect contractor W-9s",
-          detail:
-            missingW9s > 0
-              ? `${missingW9s} contractor${missingW9s === 1 ? "" : "s"} still need${missingW9s === 1 ? "s" : ""} one before January's 1099s.`
-              : "Everyone who needs one has one on file.",
-          href: "/contractors",
-          done: missingW9s === 0,
-        },
-        {
-          name: "Upload the declaration",
-          detail: "The document the next board will ask for first.",
-          href: "/documents",
-          done: (declarationDocs ?? []).length > 0,
-        },
-      ]
+  // --------------------------------------------------------------------------
+  // Stat strip
+  // --------------------------------------------------------------------------
+  const operatingOutflows = (cashActivity ?? [])
+    .filter((r) => r.fund_kind === "operating")
+    .map((r) => toCents(r.outflow))
+    .filter((c) => c > 0)
+    .slice(-6);
+  const avgOutflow =
+    operatingOutflows.length > 0
+      ? operatingOutflows.reduce((s, c) => s + c, 0) / operatingOutflows.length
+      : 0;
+  const runwayMonths = avgOutflow > 0 ? operatingCents / avgOutflow : null;
+
+  const chargedCents = (duesCollection ?? []).reduce((s, r) => s + toCents(r.charged), 0);
+  const onTimeCents = (duesCollection ?? []).reduce((s, r) => s + toCents(r.collected_on_time), 0);
+  const onTimeRate = chargedCents > 0 ? onTimeCents / chargedCents : null;
+
+  const reserveTarget = association.reserve_target as number | null;
+  const reserveFunded =
+    reserveTarget && reserveTarget > 0 ? reserveCents / Math.round(reserveTarget * 100) : null;
+
+  // --------------------------------------------------------------------------
+  // Coming up + the building
+  // --------------------------------------------------------------------------
+  const reminders = booksVisible
+    ? assembleReminders({
+        association,
+        bills: bills ?? [],
+        policies: policies ?? [],
+        upcomingChargeDates: (futureCharges ?? []).map((c) => c.due_on as string),
+        today,
+      })
     : [];
 
-  const tasksDone = setupTasks.filter((task) => task.done).length;
-  const showSetup = setupTasks.length > 0 && tasksDone < setupTasks.length;
+  const buildingUnits: BuildingUnit[] = (units ?? []).map((u) => {
+    const name = ownerName.get(u.unit_id) ?? null;
+    const owed = looseCents(u.balance_owed);
+    const status: BuildingUnit["status"] =
+      u.visible_charges === 0 && !booksVisible
+        ? "hidden"
+        : !name
+          ? "vacant"
+          : owed > 0
+            ? "behind"
+            : "current";
+    return {
+      id: u.unit_id,
+      label: u.label,
+      ownerName: name,
+      status,
+      owedLabel: status === "behind" ? `owes ${money(u.balance_owed)}` : null,
+    };
+  });
 
+  const latestDues = (duesCollection ?? []).at(-1);
+  const currentCount = buildingUnits.filter((u) => u.status === "current").length;
+  const duesLine =
+    booksVisible && latestDues && toCents(latestDues.charged) > 0
+      ? `Dues run ${money(toCents(latestDues.charged) / 100)} a month · ${currentCount} of ${buildingUnits.length} units current.`
+      : null;
+
+  // --------------------------------------------------------------------------
   return (
     <div className="space-y-6">
-      <div>
-        <h1 className="text-[20px] font-semibold tracking-tight text-ink">
-          {association.display_name}
-        </h1>
-        <p className="mt-1 text-mute">
-          {association.state_code} · financial year {fyLabel}
-        </p>
-      </div>
+      <Greeting
+        firstName={firstName}
+        statusLine={statusLine}
+        hour={hour}
+        books={booksVisible ? { visible: true, balanced: booksBalanced } : null}
+      />
 
-      {/* The headline answer, before any figures. A board member should be able
-          to tell in one glance whether anything needs them tonight. */}
-      {behind > 0 ? (
-        <Answer
-          status="attention"
-          headline={`${behind} of ${units?.length ?? 0} units is behind on payments`}
-          detail={`${moneyRounded(owed)} is owed to the association. Everything else looks in order.`}
-        >
-          <Link
-            href="/delinquency"
-            className="inline-block rounded-md bg-ink px-4 py-2 text-[13px] font-medium text-paper hover:bg-ink-mid"
-          >
-            See who owes
-          </Link>
-        </Answer>
-      ) : (
-        <Answer
-          status="good"
-          headline="Everything looks in order"
-          detail="All units are up to date on their payments, and your records add up."
-        />
-      )}
-
-      {reminders.length > 0 ? (
-        <Card
-          title="Coming up"
-          hint="Deadlines from your own records, plus the filings every association has."
-        >
-          <ul className="divide-y divide-line">
-            {reminders.slice(0, 6).map((r) => {
-              const days = Math.ceil((r.due.getTime() - today.getTime()) / 86400000);
-              return (
-                <li
-                  key={`${r.name}-${r.due.toISOString()}`}
-                  className="flex flex-wrap items-baseline justify-between gap-x-4 gap-y-1 py-2.5"
-                >
-                  <span className="min-w-0">
-                    <span className="text-[13px] font-medium text-ink">{r.name}</span>
-                    <span className="ml-2 text-[11px] text-mute">{r.kind}</span>
-                    {r.unverified ? (
-                      <span className="ml-2 text-[11px] text-mute-soft">
-                        not yet checked against this year&rsquo;s instructions
-                      </span>
-                    ) : null}
-                  </span>
-                  <span
-                    className={`tabular shrink-0 text-[13px] ${
-                      days <= 14 ? "font-medium text-warning-text" : "text-mute"
-                    }`}
-                  >
-                    {formatDue(r.due, today)}
-                  </span>
-                </li>
-              );
-            })}
-          </ul>
-        </Card>
+      {booksVisible ? (
+        urgent.length > 0 ? (
+          <WorthAMinute items={urgent} />
+        ) : (
+          <p className="rounded-lg border border-good-line bg-good-tint px-4 py-2.5 text-[13px] text-good-text">
+            Nothing needs you today. The books balance and every unit is current.
+          </p>
+        )
       ) : null}
 
-      {showSetup ? (
-        <Card
-          title="Finish setting up"
-          hint={`${tasksDone} of ${setupTasks.length} done. Each of these disappears once the record has it.`}
-        >
-          <ul className="divide-y divide-line">
-            {setupTasks.map((task) => (
-              <li key={task.name}>
-                <Link
-                  href={task.href}
-                  className="flex items-center justify-between gap-4 py-3 transition-colors hover:bg-fill"
-                >
-                  <span className="min-w-0">
-                    <span
-                      className={`block text-[13px] font-medium ${task.done ? "text-mute" : "text-ink"}`}
-                    >
-                      {task.name}
-                    </span>
-                    <span className="mt-0.5 block text-[12px] text-mute">{task.detail}</span>
-                  </span>
-                  {task.done ? (
-                    <span className="shrink-0 text-[12px] font-medium text-good-text">Done</span>
-                  ) : (
-                    <ChevronRight
-                      size={15}
-                      strokeWidth={1.75}
-                      className="shrink-0 text-mute-soft"
-                      aria-hidden="true"
-                    />
-                  )}
-                </Link>
-              </li>
-            ))}
-          </ul>
-        </Card>
-      ) : null}
-
-      <div className="grid gap-4 sm:grid-cols-3">
-        <Stat label="Money in the bank" value={money(totalCash)} note="across all accounts" />
-        {visibleFunds.map((f) => (
-          <Stat
-            key={f.fund_id}
-            label={
-              f.kind === "reserve"
-                ? "Reserve savings"
-                : f.kind === "operating"
-                  ? "Day-to-day account"
-                  : f.name
-            }
-            value={money(f.cash_balance)}
-            note={f.kind === "reserve" ? "set aside for big repairs" : "bills and running costs"}
+      {booksVisible ? (
+        <div className="grid items-start gap-4 lg:grid-cols-[3fr_2fr]">
+          <Standing
+            totalCents={totalCents}
+            operatingCents={operatingCents}
+            reserveCents={reserveCents}
+            reserveTarget={reserveTarget}
+            booksBalanced={booksBalanced}
+            tbTotalCents={tbDebitCents}
+            canSetTarget={canSetTarget}
           />
-        ))}
-      </div>
+          <YourList
+            derived={derived}
+            manual={manual}
+            persons={(persons ?? []).map((p) => ({ id: p.id, full_name: p.full_name }))}
+          />
+        </div>
+      ) : null}
 
-      <div className="grid items-start gap-4 lg:grid-cols-2">
-        <Card title="Units" hint="Click a unit to see its payment history.">
-          {!units || units.length === 0 ? (
-            <Empty>No units are visible to you.</Empty>
-          ) : (
-            <ul className="divide-y divide-line">
-              {units.map((u) => (
-                <li key={u.unit_id} className="flex items-center justify-between gap-3 py-3">
-                  <div className="min-w-0">
-                    <UnitLink id={u.unit_id} label={u.label} />
-                    {ownerName.get(u.unit_id) ? (
-                      <span className="ml-2 text-[13px] text-mute">
-                        {ownerName.get(u.unit_id)}
-                      </span>
-                    ) : null}
-                  </div>
-                  {u.visible_charges === 0 ? (
-                    <span className="shrink-0 text-[13px] text-mute-soft">not shown to you</span>
-                  ) : Number(u.balance_owed) > 0 ? (
-                    <span className="figures shrink-0 text-[13px] font-medium text-bad-text">
-                      owes {money(u.balance_owed)}
-                    </span>
-                  ) : (
-                    <span className="shrink-0 text-[13px] text-good-text">up to date</span>
-                  )}
-                </li>
-              ))}
-            </ul>
-          )}
-        </Card>
+      {booksVisible ? (
+        <>
+          <ShowcaseCards cash={cash} inOut={inOut} spending={spending} />
+          <StatStrip
+            cells={[
+              {
+                label: "Operating runway",
+                value: runwayMonths !== null ? `${runwayMonths.toFixed(1)} months` : null,
+                note:
+                  runwayMonths !== null
+                    ? "at the recent pace of spending"
+                    : "no spending recorded yet",
+              },
+              {
+                label: "Dues collected on time",
+                value: onTimeRate !== null ? `${Math.round(onTimeRate * 100)}%` : null,
+                note:
+                  onTimeRate !== null ? "arrived by their due date" : "nothing charged yet",
+              },
+              {
+                label: "Reserve funded",
+                value: reserveFunded !== null ? `${Math.round(reserveFunded * 100)}%` : null,
+                note: reserveFunded !== null ? "of the board's target" : "no target set",
+              },
+            ]}
+          />
+        </>
+      ) : null}
 
-        {booksVisible ? (
-          <Card
-            title="Are the books right?"
-            hint="Every transaction is recorded twice, once on each side. If the two sides ever disagree, something has gone wrong."
-          >
-            <div className="flex flex-wrap items-center gap-x-4 gap-y-2">
-              <span
-                className={`rounded-full border px-3 py-1 text-[13px] font-medium ${
-                  booksBalance
-                    ? "border-good-line bg-good-tint text-good-text"
-                    : "border-bad-line bg-bad-tint text-bad-text"
-                }`}
-              >
-                {booksBalance ? "Yes — the two sides match" : "No — something is wrong"}
-              </span>
-              <span className="tabular text-[13px] text-mute">
-                <Jargon term="trial balance">{money(t!.total_debits)} on each side</Jargon>
-              </span>
-            </div>
-            <p className="mt-3">
-              <Link
-                href="/ledger"
-                className="text-[13px] text-mute underline-offset-2 hover:underline"
-              >
-                See every transaction
-              </Link>
-            </p>
-          </Card>
-        ) : null}
+      <div className="grid items-start gap-4 lg:grid-cols-[3fr_2fr]">
+        {reminders.length > 0 ? <ComingUp reminders={reminders} today={today} /> : null}
+        <Building units={buildingUnits} duesLine={duesLine} />
       </div>
     </div>
   );
