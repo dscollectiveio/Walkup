@@ -11,6 +11,7 @@ import {
   Wrench,
   Shield,
   Folder,
+  Building2,
   type LucideIcon,
 } from "lucide-react";
 
@@ -55,6 +56,7 @@ export const NAV_GROUPS: NavGroupConfig[] = [
   {
     label: "Association",
     items: [
+      { href: "/building", label: "Building", icon: Building2 },
       { href: "/contractors", label: "Contractors", icon: Wrench },
       { href: "/insurance", label: "Insurance", icon: Shield },
       { href: "/documents", label: "Documents", icon: Folder },

@@ -33,6 +33,7 @@ export async function setReserveTarget(_prev: unknown, formData: FormData) {
   }
 
   revalidatePath("/");
+  revalidatePath("/building");
   return { ok: true };
 }
 
