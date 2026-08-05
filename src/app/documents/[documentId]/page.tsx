@@ -10,7 +10,13 @@ import {
 import { DownloadButton } from "../document-row";
 import { readableSize, visibilitySentence } from "@/lib/documents/format";
 import { TagChip, UnfiledChip } from "../tag-chip";
-import { PurgeButton, RenameForm, RestoreButton, VisibilityForm } from "./detail-actions";
+import {
+  PurgeButton,
+  RenameForm,
+  RerunButton,
+  RestoreButton,
+  VisibilityForm,
+} from "./detail-actions";
 
 export const dynamic = "force-dynamic";
 
@@ -128,16 +134,37 @@ export default async function DocumentDetailPage({
               </div>
             ) : null}
 
-            {/* Extraction lands in a later stage; until then this says what is
-                true rather than pretending the field is simply empty. */}
-            {doc.extraction_state === "pending" ? (
+            {/* Say what is actually true about the reading attempt rather than
+                leaving an empty space that could mean anything. */}
+            {doc.extraction_state === "pending" || doc.extraction_state === "running" ? (
               <p className="text-[12px] text-mute">
-                Nothing has been read out of this file yet.
+                {doc.extraction_state === "running"
+                  ? "Reading this file now."
+                  : "Nothing has been read out of this file yet."}
               </p>
+            ) : doc.extraction_state === "skipped" ? (
+              <div className="text-[12px] text-mute">
+                <p>{doc.extraction_error ?? "There was nothing to read in this file."}</p>
+                {canWrite ? (
+                  <div className="mt-2">
+                    <RerunButton id={doc.id} label="Try reading it again" />
+                  </div>
+                ) : null}
+              </div>
             ) : doc.extraction_state === "failed" ? (
-              <p className="text-[12px] text-bad-text">
-                Walkup could not read this file. The file itself is fine and downloads normally.
-              </p>
+              <div className="text-[12px] text-bad-text">
+                <p>
+                  {doc.extraction_error ?? "Walkup could not read this file."} The file itself is
+                  fine and downloads normally.
+                </p>
+                {canWrite ? (
+                  <div className="mt-2">
+                    <RerunButton id={doc.id} label="Try again" />
+                  </div>
+                ) : null}
+              </div>
+            ) : canWrite ? (
+              <RerunButton id={doc.id} label="Read it again" />
             ) : null}
 
             {versions.length > 1 ? (

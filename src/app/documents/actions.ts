@@ -1,9 +1,11 @@
 "use server";
 
 import { revalidatePath } from "next/cache";
+import { after } from "next/server";
 import { createClient } from "@/lib/supabase/server";
 import { checksum, verifyFile } from "@/lib/documents/file-type";
 import { currentAssociationId, signedUrlFor } from "@/lib/documents/access";
+import { runExtraction } from "@/lib/documents/pipeline";
 
 const MAX_BYTES = 25 * 1024 * 1024;
 
@@ -128,8 +130,50 @@ export async function uploadDocuments(_prev: unknown, formData: FormData) {
     results.push({ filename: file.name, status: "added", id: doc.id });
   }
 
+  // Read the files after the response is sent. The uploader sees them in the
+  // list straight away; the slow part happens behind them. Each document's
+  // progress is written to its own row, so a run that dies here is visible in
+  // the hub as "failed" and can be re-run — not silently lost.
+  const stored = results.filter((r) => r.status === "added").map((r) => r.id);
+  if (stored.length > 0) {
+    after(async () => {
+      const bg = await createClient();
+      for (const id of stored) {
+        try {
+          await runExtraction(bg, id);
+        } catch {
+          // runExtraction records its own failures; this only stops one bad
+          // document from abandoning the rest of the batch.
+        }
+      }
+      revalidatePath("/documents");
+    });
+  }
+
   revalidateDocuments();
   return { ok: true as const, results };
+}
+
+/**
+ * Read a document again — for one that failed, or was uploaded before the
+ * pipeline existed. Deliberately available to the board rather than automatic:
+ * a retry loop that nobody asked for is how a bad file becomes a bill.
+ */
+export async function rerunExtraction(
+  documentId: string,
+): Promise<{ ok?: true; error?: string; detail?: string }> {
+  const supabase = await createClient();
+
+  // The update inside runExtraction is RLS-gated, but checking first gives a
+  // plain-language refusal instead of a silent no-op.
+  const { data } = await supabase.from("documents").select("id").eq("id", documentId).limit(1);
+  if (!data?.length) return { error: "That document isn't visible to you." };
+
+  const result = await runExtraction(supabase, documentId);
+  revalidateDocuments();
+
+  if (result.state === "failed") return { error: result.detail ?? "Reading it failed." };
+  return { ok: true, detail: result.detail };
 }
 
 /** Mint a fresh signed URL on click rather than embedding one in the page. */
@@ -160,6 +204,31 @@ export async function retagDocument(_prev: unknown, formData: FormData) {
 
   if (error) return { error: error.message };
   if (!data?.length) return { error: "Only the board can refile a document." };
+
+  revalidateDocuments();
+  return { ok: true };
+}
+
+/**
+ * Accept the guess as it stands.
+ *
+ * The same write as refiling, minus the choosing — confirming is the common
+ * case in the review queue and shouldn't cost a dropdown. `tag_source` flips to
+ * manual, which is the whole point: from here on it renders as a decision a
+ * person made, not a guess.
+ */
+export async function confirmDocumentTag(
+  documentId: string,
+): Promise<{ ok?: true; error?: string }> {
+  const supabase = await createClient();
+  const { data, error } = await supabase
+    .from("documents")
+    .update({ tag_source: "manual", review_state: "ok" })
+    .eq("id", documentId)
+    .select("id");
+
+  if (error) return { error: error.message };
+  if (!data?.length) return { error: "Only the board can confirm a document's category." };
 
   revalidateDocuments();
   return { ok: true };

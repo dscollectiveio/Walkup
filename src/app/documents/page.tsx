@@ -9,6 +9,7 @@ import {
 } from "@/lib/documents/access";
 import { UploadForm } from "./upload-form";
 import { DocumentListRow } from "./document-row";
+import { ReviewRow } from "./review-row";
 
 export const dynamic = "force-dynamic";
 
@@ -220,7 +221,9 @@ export default async function DocumentHubPage({
         hint={
           isBinned
             ? "Binned documents stay here so a mistake is recoverable. Nothing is destroyed until someone says so."
-            : undefined
+            : isReview
+              ? "Walkup guessed at these and wasn't sure. Confirm or correct each one — it only takes a moment, and nothing is filed on a guess alone."
+              : undefined
         }
       >
         {documents.length === 0 ? (
@@ -237,9 +240,13 @@ export default async function DocumentHubPage({
           </Empty>
         ) : (
           <ul className="divide-y divide-line">
-            {documents.map((d) => (
-              <DocumentListRow key={d.id} doc={d} categories={categories} canWrite={canWrite} />
-            ))}
+            {documents.map((d) =>
+              isReview && canWrite ? (
+                <ReviewRow key={d.id} doc={d} categories={categories} />
+              ) : (
+                <DocumentListRow key={d.id} doc={d} categories={categories} canWrite={canWrite} />
+              ),
+            )}
           </ul>
         )}
       </Card>

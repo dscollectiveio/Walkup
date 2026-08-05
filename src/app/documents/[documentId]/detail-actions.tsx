@@ -5,6 +5,7 @@ import { useActionState, useState, useTransition } from "react";
 import {
   purgeDocument,
   renameDocument,
+  rerunExtraction,
   restoreDocument,
   setDocumentVisibility,
 } from "../actions";
@@ -149,6 +150,40 @@ export function VisibilityForm({
         </button>
       </div>
     </form>
+  );
+}
+
+/**
+ * Read the file again. Manual rather than automatic: retrying on a loop is how
+ * a file that will never parse turns into a recurring bill.
+ */
+export function RerunButton({ id, label }: { id: string; label: string }) {
+  const [pending, start] = useTransition();
+  const [message, setMessage] = useState<{ text: string; bad: boolean } | null>(null);
+
+  return (
+    <div>
+      <button
+        type="button"
+        disabled={pending}
+        onClick={() =>
+          start(async () => {
+            setMessage(null);
+            const r = await rerunExtraction(id);
+            if (r.error) setMessage({ text: r.error, bad: true });
+            else if (r.detail) setMessage({ text: r.detail, bad: false });
+          })
+        }
+        className="rounded-md border border-line-strong px-3 py-1.5 text-[12px] text-ink hover:bg-fill disabled:opacity-50"
+      >
+        {pending ? "Reading…" : label}
+      </button>
+      {message ? (
+        <p className={`mt-1 text-[11px] ${message.bad ? "text-bad-text" : "text-mute"}`}>
+          {message.text}
+        </p>
+      ) : null}
+    </div>
   );
 }
 

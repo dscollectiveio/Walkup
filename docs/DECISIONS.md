@@ -549,3 +549,40 @@ care about.
 - Connecting, syncing and disconnecting are board_admin only — not
   board_member. Viewing the resulting feed follows the same audience as the
   ledger (`can_read_financials`).
+
+---
+
+## 25. Document text is redacted before the model, not after
+*Decided: Claude, 2026-08-04, while building the document hub. Status: settled — invariant.*
+
+The hub reads text out of uploaded files so they can be searched and filed
+automatically. A W-9 is one of the documents a board is told to keep, and for
+a sole proprietor the TIN on it **is** a Social Security number.
+
+#4 keeps full TINs out of this database on purpose: `tin_last4` plus the W-9
+itself in Storage, and nothing else. Reading text out of that W-9 would have
+quietly undone it — the number would have landed in `documents.extracted_text`,
+been copied into `audit_log` by the row trigger, sent to a third party in every
+classification prompt, and become readable by board_admin forever. None of that
+is a decision anyone would have made on purpose; it would have arrived as a
+side effect of a search feature.
+
+So redaction happens at the extraction boundary, before the text is used for
+anything: before the prompt, before the database, before the search index. The
+classifier does not need somebody's SSN to recognise a W-9.
+
+**How to apply:**
+
+- `redactTaxIds()` runs inside `extractDocumentText()`, not in its callers.
+  There is no code path that returns un-redacted text, so no future caller can
+  forget.
+- It is deliberately over-inclusive: a bare nine-digit run is redacted even
+  though it is sometimes a reference number. A slightly worse search index and
+  one leaked SSN are not the same size of mistake.
+- `documents` is audited by `tg_audit_document()` (0019), which strips
+  `extracted_text` and `extraction` before writing to `audit_log` — belt as
+  well as braces, and it also stops the log becoming a second copy of every
+  document.
+- The same reasoning applies to anything added later that reads file contents:
+  export bundles, share links, email intake. Redaction belongs at the point the
+  bytes become text, once.

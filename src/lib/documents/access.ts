@@ -36,6 +36,7 @@ export const DOCUMENT_FIELDS = [
   "restricted_to_unit_id",
   "source",
   "extraction_state",
+  "extraction_error",
   "extraction",
   "version_group_id",
   "version_number",
@@ -62,6 +63,8 @@ export interface DocumentRow {
   restricted_to_unit_id: string | null;
   source: string;
   extraction_state: "pending" | "running" | "done" | "failed" | "skipped";
+  /** Why reading stopped — plain language, shown to the user as-is. */
+  extraction_error: string | null;
   extraction: Record<string, unknown> | null;
   version_group_id: string;
   version_number: number;
