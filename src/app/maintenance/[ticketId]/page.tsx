@@ -1,6 +1,8 @@
 import Link from "next/link";
 import { createClient } from "@/lib/supabase/server";
 import { Card, Restricted, money } from "@/components/ui";
+import { listLinkedDocuments } from "@/lib/documents/access";
+import { EntityDocuments } from "@/app/documents/entity-documents";
 import { TicketControls } from "./controls";
 
 export const dynamic = "force-dynamic";
@@ -24,7 +26,7 @@ export default async function TicketPage({
   const { data: tickets } = await supabase
     .from("tickets")
     .select(
-      "id, reference, title, description, status, priority, opened_on, resolved_at, estimated_cost, unit_id, units(label), vendors(id, name, contact_name, phone, email, insured_until)",
+      "id, association_id, reference, title, description, status, priority, opened_on, resolved_at, estimated_cost, unit_id, units(label), vendors(id, name, contact_name, phone, email, insured_until)",
     )
     .eq("id", ticketId)
     .limit(1);
@@ -32,7 +34,7 @@ export default async function TicketPage({
   const ticket = tickets?.[0];
   if (!ticket) return <Restricted what="this problem" />;
 
-  const [{ data: comments }, { data: messages }] = await Promise.all([
+  const [{ data: comments }, { data: messages }, documents, { data: isBoard }] = await Promise.all([
     supabase
       .from("ticket_comments")
       .select("id, body, created_at, persons(full_name)")
@@ -42,7 +44,15 @@ export default async function TicketPage({
       .from("contractor_messages")
       .select("id, subject, status, to_email")
       .eq("ticket_id", ticketId),
+    listLinkedDocuments(supabase, "tickets", ticketId),
+    // Attaching a document is a board write on document_links (0002's is_board
+    // insert policy) — gate on that, not on whether this ticket is visible.
+    supabase.rpc("has_role_in", {
+      assoc: ticket.association_id,
+      roles: ["board_admin", "board_member"],
+    }),
   ]);
+  const canWrite = isBoard === true;
 
   const unit = ticket.units as unknown as { label: string } | null;
   const vendor = ticket.vendors as unknown as {
@@ -141,6 +151,15 @@ export default async function TicketPage({
           </ul>
         </Card>
       ) : null}
+
+      <Card title="Documents" hint="Photos, quotes, or anything else that documents this problem.">
+        <EntityDocuments
+          targetTable="tickets"
+          targetId={ticket.id}
+          documents={documents}
+          canWrite={canWrite}
+        />
+      </Card>
 
       <TicketControls ticketId={ticket.id} status={ticket.status} />
     </div>

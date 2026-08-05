@@ -1,5 +1,7 @@
 import { createClient } from "@/lib/supabase/server";
 import { Card, MoneyOrDash, Restricted, money } from "@/components/ui";
+import { listLinkedDocuments } from "@/lib/documents/access";
+import { EntityDocuments } from "@/app/documents/entity-documents";
 
 export const dynamic = "force-dynamic";
 
@@ -23,29 +25,41 @@ export default async function UnitStatementPage({
   // and is indistinguishable from "does not exist", which is the point.
   const { data: ownership } = await supabase
     .from("unit_owners")
-    .select("unit_id, units(id, label)")
+    .select("unit_id, units(id, label, association_id)")
     .eq("unit_id", unitId)
     .limit(1);
 
-  const unit = ownership?.[0]?.units as { id: string; label: string } | undefined;
+  const unit = ownership?.[0]?.units as
+    | { id: string; label: string; association_id: string }
+    | undefined;
   if (!unit) {
     return <Restricted what="this unit's ledger" />;
   }
 
-  const [{ data: charges }, { data: payments }] = await Promise.all([
-    supabase
-      .from("charge_balances")
-      .select("id, charge_type, due_on, amount, amount_applied, balance, status, days_overdue")
-      .eq("unit_id", unitId)
-      .order("due_on"),
-    supabase
-      .from("payments")
-      .select("id, received_on, amount, method")
-      .eq("unit_id", unitId)
-      .order("received_on"),
-  ]);
+  const [{ data: charges }, { data: payments }, documents, { data: isBoard }] =
+    await Promise.all([
+      supabase
+        .from("charge_balances")
+        .select("id, charge_type, due_on, amount, amount_applied, balance, status, days_overdue")
+        .eq("unit_id", unitId)
+        .order("due_on"),
+      supabase
+        .from("payments")
+        .select("id, received_on, amount, method")
+        .eq("unit_id", unitId)
+        .order("received_on"),
+      listLinkedDocuments(supabase, "units", unitId),
+      // Attaching a document to a unit is a board_admin write on document_links
+      // (0002's is_board insert policy) — gate the control on the same test,
+      // not on whether the caller can merely see this page.
+      supabase.rpc("has_role_in", {
+        assoc: unit.association_id,
+        roles: ["board_admin", "board_member"],
+      }),
+    ]);
 
   const owed = (charges ?? []).reduce((s, c) => s + Number(c.balance), 0);
+  const canWrite = isBoard === true;
 
   return (
     <div className="space-y-6">
@@ -115,6 +129,15 @@ export default async function UnitStatementPage({
             </tbody>
           </table>
         </div>
+      </Card>
+
+      <Card title="Documents" hint="Anything filed against this unit specifically.">
+        <EntityDocuments
+          targetTable="units"
+          targetId={unit.id}
+          documents={documents}
+          canWrite={canWrite}
+        />
       </Card>
     </div>
   );

@@ -169,6 +169,53 @@ export async function listVersions(
   return (data ?? []) as unknown as DocumentRow[];
 }
 
+export interface LinkedDocument extends DocumentRow {
+  /** The document_links row id — needed to remove the link without touching the document. */
+  linkId: string;
+  relation: string | null;
+}
+
+/**
+ * Every document attached to one entity — a unit, a ticket, eventually a
+ * vendor or a transaction once those have detail pages to embed this in.
+ *
+ * `target_table` has been constrained since 0020 to a fixed list of real
+ * tables (DECISIONS: no meetings table exists, due dates are computed not
+ * stored, so neither can be a link target). Read access still runs through
+ * the caller's own `documents` row visibility — a link naming a document the
+ * caller can't see simply doesn't produce a row here, same as everywhere else
+ * in this module.
+ */
+export async function listLinkedDocuments(
+  supabase: Supabase,
+  targetTable: string,
+  targetId: string,
+): Promise<LinkedDocument[]> {
+  const { data } = await supabase
+    .from("document_links")
+    // A literal string, not DOCUMENT_FIELDS interpolated: supabase-js parses
+    // the select shape at the type level, and a template literal with a
+    // non-literal interpolation degrades to a plain `string` it can't parse.
+    // Kept in step with DOCUMENT_FIELDS by hand — the fields list rarely
+    // changes, and a mismatch here fails loudly (a missing property on
+    // DocumentRow) rather than silently.
+    .select(
+      "id, relation, documents!inner(id, title, filename, mime_type, byte_size, uploaded_at, uploaded_by, checksum, category_id, tag_source, tag_confidence, review_state, labels, folder_id, visibility, restricted_to_unit_id, source, extraction_state, extraction_error, extraction, version_group_id, version_number, is_current_version, deleted_at)",
+    )
+    .eq("target_table", targetTable)
+    .eq("target_id", targetId)
+    .eq("documents.is_current_version", true)
+    .is("documents.deleted_at", null);
+
+  return (data ?? [])
+    .map((row) => {
+      const doc = row.documents as unknown as DocumentRow | null;
+      if (!doc) return null;
+      return { ...doc, linkId: row.id, relation: row.relation } satisfies LinkedDocument;
+    })
+    .filter((d): d is LinkedDocument => d !== null);
+}
+
 /**
  * A short-lived URL for one document's file.
  *
