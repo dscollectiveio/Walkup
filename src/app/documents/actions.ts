@@ -11,7 +11,12 @@ const MAX_BYTES = 25 * 1024 * 1024;
  * Storage path is `<association_id>/<timestamp>-<filename>`. The storage policy
  * checks the first path segment against the caller's associations, so the path
  * itself is the tenancy boundary — a guessed path from another building is
- * refused by the database, not by this function.
+ * refused by the database, not by this function. That policy lives in
+ * 0019_document_storage_and_audit.sql; until then it existed only in the
+ * Supabase dashboard and this comment was a claim nothing in the repo proved.
+ *
+ * uploaded_by is deliberately not set here — 0019 defaults it to auth.uid(),
+ * which is harder to forget than an assignment.
  */
 export async function uploadDocument(_prev: unknown, formData: FormData) {
   const file = formData.get("file");
