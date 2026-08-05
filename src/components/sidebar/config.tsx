@@ -59,7 +59,7 @@ export const NAV_GROUPS: NavGroupConfig[] = [
       { href: "/building", label: "Building", icon: Building2 },
       { href: "/contractors", label: "Contractors", icon: Wrench },
       { href: "/insurance", label: "Insurance", icon: Shield },
-      { href: "/documents", label: "Documents", icon: Folder },
+      { href: "/documents", label: "Document Hub", icon: Folder },
     ],
   },
 ];
