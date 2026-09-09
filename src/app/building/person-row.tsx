@@ -2,6 +2,7 @@
 
 import { useActionState, useState } from "react";
 import { updatePerson } from "./actions";
+import { PhoneInput } from "@/components/phone-input";
 
 export interface PersonRecord {
   id: string;
@@ -71,11 +72,10 @@ export function PersonRow({
               <label htmlFor={`phone-${person.id}`} className="block text-[12px] font-medium text-ink">
                 Phone
               </label>
-              <input
+              <PhoneInput
                 id={`phone-${person.id}`}
                 name="phone"
-                type="tel"
-                defaultValue={person.phone ?? ""}
+                defaultValue={person.phone}
                 className="mt-1 w-full rounded-lg border border-line-strong px-3 py-2 text-[13px] text-ink"
               />
             </div>

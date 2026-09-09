@@ -3,7 +3,6 @@ import {
   AlertTriangle,
   BarChart3,
   Landmark,
-  List,
   Folder,
   Building2,
   type LucideIcon,
@@ -35,7 +34,6 @@ export const NAV_GROUPS: NavGroupConfig[] = [
     items: [
       { href: "/budget", label: "Budget", icon: BarChart3 },
       { href: "/bank-feed", label: "Bank Sync & Transactions", icon: Landmark },
-      { href: "/ledger", label: "All Transactions", icon: List },
     ],
   },
   {

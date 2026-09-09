@@ -45,3 +45,16 @@ export function plaidClient() {
     }),
   );
 }
+
+/** Plaid's own error shape carries a plain-English display_message. Falls
+ * back to something a board member can still act on when it doesn't. */
+export function describePlaidError(cause: unknown): string {
+  const plaidMessage = (
+    cause as { response?: { data?: { error_message?: string; display_message?: string } } }
+  )?.response?.data;
+  return (
+    plaidMessage?.display_message ??
+    plaidMessage?.error_message ??
+    "Couldn't reach the bank. Try again in a moment."
+  );
+}

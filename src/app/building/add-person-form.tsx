@@ -2,6 +2,7 @@
 
 import { useActionState, useState } from "react";
 import { addPerson } from "./actions";
+import { PhoneInput } from "@/components/phone-input";
 
 export function AddPersonForm() {
   const [open, setOpen] = useState(false);
@@ -57,10 +58,9 @@ export function AddPersonForm() {
             Phone
             <span className="ml-1 font-normal text-mute-soft">optional</span>
           </label>
-          <input
+          <PhoneInput
             id="phone"
             name="phone"
-            type="tel"
             className="mt-1 w-full rounded-lg border border-line-strong px-3 py-2 text-[13px] text-ink"
           />
         </div>

@@ -722,3 +722,56 @@ the bank) than to send a URI that will never match.
 - `client_user_id` on `linkTokenCreate` is still the association, not a
   person — every board member of a building shares one Plaid-side identity.
   Not addressed here; flagged so it isn't mistaken for an oversight later.
+
+---
+
+## 28. One narrow, explicit exception to "no service-role client anywhere" — the daily bank sync cron
+
+*Decided: Doug, 2026-09-09, adding an unattended daily sync (`src/app/api/cron/sync-bank-feeds/route.ts`)
+on top of the manual "Sync now" button. Doug chose this over the alternative
+(a Postgres-side job via `pg_cron`/`pg_net`, keeping the service-role key out
+of the app entirely) explicitly, after being shown the tradeoff.*
+
+Invariant #18 says no service-role client anywhere in the app, and until now
+that has held with zero exceptions — every write goes through RLS or a
+SECURITY DEFINER RPC that checks `auth.uid()`. A daily unattended sync breaks
+that premise at the root: there is no signed-in board member at noon for
+`auth.uid()` to resolve to, so every existing Plaid code path (which reads
+the access token via `get_bank_access_token()`, itself gated on
+`is_board(auth.uid())`) would simply refuse to run.
+
+The fix is not to weaken that gate — it's to accept that exactly one code
+path needs to bypass it, and keep that bypass as small and visible as
+possible:
+
+- `SUPABASE_SERVICE_ROLE_KEY` lives in Vercel's env vars again, scoped to
+  Production only, and is read by exactly one file:
+  `src/app/api/cron/sync-bank-feeds/route.ts`. It is not exported, not
+  re-used by any helper another route could import, and the route's own
+  header comment says explicitly that nothing else should touch it.
+- That route trusts nothing but a shared secret: Vercel Cron sends
+  `Authorization: Bearer $CRON_SECRET` automatically when `CRON_SECRET` is
+  set (`vercel.json`'s `crons` entry, `0 18 * * *` — see below for what that
+  schedule actually means), and the route 401s on anything else, 500s if
+  `CRON_SECRET` isn't configured at all rather than silently accepting
+  every request.
+- The actual Plaid-calling logic (the `transactionsSync` cursor loop, the
+  `bank_transactions` upsert) was extracted into `src/lib/plaid/sync.ts`'s
+  `syncOneConnection()` so the cron route and `syncBankTransactions()` (the
+  manual button, still running as the real signed-in user) share one tested
+  implementation — the cron route differs only in *how* it resolves the
+  access token (a direct `bank_connection_secrets` read, since
+  `bank_connection_secrets` has zero RLS policies by design and the RPC's
+  `is_board()` check would fail under a service-role session anyway) and
+  *who* it iterates over (every association's active connections, not one).
+
+**Known caveat, not fixed here:** `vercel.json`'s cron schedule
+(`0 18 * * *`) is a fixed UTC time — Vercel Cron does not shift for daylight
+saving. 18:00 UTC is genuinely noon Central only during Standard Time
+(roughly early Nov–early Mar); for the other ~8 months of the year, while
+Central is on Daylight Time, this actually fires at 1pm local, not noon.
+Fixing that for real means either updating the cron expression twice a year
+or computing the offset at request time and using it to decide whether to
+run — neither is implemented; the schedule was set to match "noon CST"
+literally, as asked, with this drift called out rather than silently
+accepted.

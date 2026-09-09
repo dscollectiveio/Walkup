@@ -2,7 +2,8 @@
 
 import { revalidatePath } from "next/cache";
 import { createClient } from "@/lib/supabase/server";
-import { plaidClient } from "@/lib/plaid";
+import { plaidClient, describePlaidError } from "@/lib/plaid";
+import { syncOneConnection } from "@/lib/plaid/sync";
 import { CountryCode, Products } from "plaid";
 
 async function currentAssociationId(): Promise<string | null> {
@@ -26,6 +27,11 @@ export async function createLinkToken(): Promise<{ linkToken?: string; error?: s
       products: [Products.Transactions],
       country_codes: [CountryCode.Us],
       language: "en",
+      // Ask for as much history as Plaid/the institution will give —
+      // 730 days (2 years) is the max Plaid accepts here. Some institutions
+      // cap actual history well below that regardless; this only requests
+      // the extended window, it doesn't guarantee it.
+      transactions: { days_requested: 730 },
       // Needed only for OAuth institutions (most large US banks in
       // production). Omitted, not defaulted, when unset — unlike PLAID_ENV,
       // a missing redirect_uri only breaks the OAuth handoff specifically;
@@ -189,68 +195,9 @@ export async function syncBankTransactions(
   );
   if (tokenError) return { error: tokenError.message };
 
-  const client = plaidClient();
-  let cursor = connection.sync_cursor ?? undefined;
-  const added: { transaction_id: string; date: string; amount: number; name: string; pending: boolean; category?: string[] | null }[] = [];
-  const removed: string[] = [];
-  let hasMore = true;
-
-  try {
-    while (hasMore) {
-      const response = await client.transactionsSync({
-        access_token: accessToken,
-        cursor,
-      });
-      added.push(...response.data.added, ...response.data.modified);
-      removed.push(...response.data.removed.map((r) => r.transaction_id));
-      hasMore = response.data.has_more;
-      cursor = response.data.next_cursor;
-    }
-  } catch (cause) {
-    return { error: describePlaidError(cause) };
-  }
-
-  if (removed.length > 0) {
-    await supabase.from("bank_transactions").delete().in("plaid_transaction_id", removed);
-  }
-
-  if (added.length > 0) {
-    const { error: upsertError } = await supabase.from("bank_transactions").upsert(
-      added.map((t) => ({
-        association_id: connection.association_id,
-        bank_connection_id: connectionId,
-        plaid_transaction_id: t.transaction_id,
-        posted_on: t.date,
-        // Inverted from Plaid's convention — see the migration 0016 comment.
-        // Plaid: positive = money out. Walkup: positive = money in.
-        amount: -1 * t.amount,
-        description: t.name,
-        pending: t.pending,
-        raw_category: t.category?.[0] ?? null,
-      })),
-      { onConflict: "plaid_transaction_id" },
-    );
-    if (upsertError) return { error: upsertError.message };
-  }
-
-  await supabase
-    .from("bank_connections")
-    .update({ sync_cursor: cursor, last_synced_at: new Date().toISOString() })
-    .eq("id", connectionId);
+  const result = await syncOneConnection(supabase, connection, accessToken);
+  if ("error" in result) return { error: result.error };
 
   revalidatePath("/bank-feed");
-  return { ok: true, count: added.length };
-}
-
-/** Plaid's own error shape carries a plain-English display_message. Falls
- * back to something a board member can still act on when it doesn't. */
-function describePlaidError(cause: unknown): string {
-  const plaidMessage = (
-    cause as { response?: { data?: { error_message?: string; display_message?: string } } }
-  )?.response?.data;
-  return (
-    plaidMessage?.display_message ??
-    plaidMessage?.error_message ??
-    "Couldn't reach the bank. Try again in a moment."
-  );
+  return { ok: true, count: result.count };
 }
