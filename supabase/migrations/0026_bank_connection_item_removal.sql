@@ -1,0 +1,24 @@
+-- ============================================================================
+-- Walkup — migration 0026: record when a Plaid Item was actually removed
+--
+-- disconnectBank() (src/app/bank-feed/actions.ts) is changing to call Plaid's
+-- itemRemove() before revoking the connection locally — deleting the access
+-- token without telling Plaid first would leave a live, billable credential
+-- against a real bank account with no way left to remove it (the removal
+-- call itself needs the token). See DECISIONS #27.
+--
+-- That call can fail (Plaid unreachable) without blocking the local
+-- disconnect — a live token sitting in Walkup's own database after a board
+-- admin asked to disconnect is worse than an Item that's merely still live
+-- at Plaid, because bank_connections.plaid_item_id survives forever (rows
+-- are never hard-deleted) and can be removed by hand in the Plaid dashboard.
+-- This column is the durable, queryable record of which disconnects still
+-- need that manual cleanup: `plaid_item_removed_at is null and status =
+-- 'disconnected'`.
+--
+-- No new function, no policy change: the existing bank_connections_update
+-- policy (0016) is already board_admin-scoped and covers writing this column
+-- via a plain update.
+-- ============================================================================
+
+alter table bank_connections add column plaid_item_removed_at timestamptz;

@@ -6,7 +6,12 @@ import { disconnectBank } from "./actions";
 export function DisconnectButton({ connectionId }: { connectionId: string }) {
   const [pending, start] = useTransition();
   const [error, setError] = useState<string | null>(null);
+  const [warning, setWarning] = useState<string | null>(null);
   const [confirming, setConfirming] = useState(false);
+
+  if (warning) {
+    return <p className="text-[13px] text-warning-text">{warning}</p>;
+  }
 
   if (!confirming) {
     return (
@@ -31,6 +36,7 @@ export function DisconnectButton({ connectionId }: { connectionId: string }) {
             setError(null);
             const result = await disconnectBank(connectionId);
             if (result.error) setError(result.error);
+            else if (result.warning) setWarning(result.warning);
             else setConfirming(false);
           })
         }

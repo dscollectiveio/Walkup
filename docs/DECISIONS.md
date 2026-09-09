@@ -640,3 +640,85 @@ different jobs:
   step-up auth just before a destructive action), that is a new decision —
   this one intentionally does not distinguish "MFA for Plaid" from "MFA for
   everything," on purpose, to keep one enforcement point.
+
+---
+
+## 27. Plaid production readiness: fail-closed environment, real disconnect
+
+*Decided: Doug, 2026-09-08, moving the bank feed from Plaid Sandbox to Plaid
+Production ahead of the first live deployment. Status: settled for the code
+changes below; the deployment itself (Vercel project, production Supabase
+project, Plaid dashboard registration) is tracked outside this file as
+operational setup, not a design decision.*
+
+Three problems specific to going live, none of which sandbox ever exercises:
+
+**`PLAID_ENV` had a silent default.** `plaidClient()` fell back to `"sandbox"`
+when the variable was unset. A missing env var in a deploy would not fail —
+it would quietly connect to sandbox in what everyone believed was production,
+which is a worse failure than a crash: Link opens, a token comes back, and
+nothing ever touches a real bank. Fixed to throw unconditionally when unset,
+in every environment including local dev. Deliberately **not** conditioned on
+`NODE_ENV`: `NODE_ENV` is `"production"` for `next build` run locally and for
+every Vercel Preview deployment, not only the one that matters, so branching
+on it would reintroduce the same class of bug one level up. One rule, no
+exceptions, is the only version of this that can't be gotten wrong.
+
+**Disconnecting a bank never told Plaid.** `disconnectBank()` called only
+`revoke_bank_connection()`, which deletes the locally-stored access token.
+Invisible in sandbox. Against a real account, this would mean the token
+needed to remove the Item at Plaid is destroyed *before* Plaid ever hears
+about it — `itemRemove()` requires an access token, and this would have just
+deleted the only copy. The Item stays live and billable at Plaid forever with
+no way left to retire it through the API.
+
+Fixed order: fetch the token, call `itemRemove()`, **then** revoke locally —
+revoking always runs regardless of whether Plaid could be reached. This is
+deliberately fail-open on the Plaid-side call: a live access token still
+sitting in Walkup's own database after a board admin explicitly asked to
+disconnect is worse than an Item that's merely still live at Plaid, because
+`bank_connections.plaid_item_id` survives forever (rows are never
+hard-deleted, per the note in `0016_bank_feed.sql`) and can be removed by
+hand in the Plaid dashboard if the API call ever fails. Migration `0026` adds
+`plaid_item_removed_at` as the durable, queryable record of which disconnects
+still need that manual cleanup — `plaid_item_removed_at is null and status =
+'disconnected'` is the whole query.
+
+**OAuth institutions can't complete without changes.** Most large US banks
+require an OAuth redirect in production; Plaid Link sends the browser away
+and expects to be reopened with the *same* link token plus
+`receivedRedirectUri` on return. The connect button minted a fresh token on
+every mount, which is the wrong token for that reopen. Fixed with a
+dedicated `/bank-feed/oauth` landing route and the link token stashed in
+`localStorage` before `open()` — not derived from a fresh `createLinkToken()`
+call, and not read from a `?oauth_state_id` query param on `/bank-feed`
+itself, so the registered redirect URI can stay query-free the way Plaid
+requires.
+
+**`redirect_uri` comes from one explicit env var, never `VERCEL_URL` or a
+request header.** Plaid requires exact pre-registration of every redirect
+URI. A per-deployment preview URL changes on every push and can never be
+registered, so deriving it dynamically would always be wrong for Preview
+deployments — better to omit the field there (non-OAuth institutions and
+local dev keep working; OAuth institutions fail loudly and specifically at
+the bank) than to send a URI that will never match.
+
+**How to apply:**
+
+- `src/lib/plaid.ts` throws naming exactly which variable is missing
+  (`PLAID_ENV`, `PLAID_CLIENT_ID`, or `PLAID_SECRET`) rather than sending
+  `undefined` into a header and surfacing a confusing error from inside the
+  Plaid SDK.
+- `disconnectBank()`'s three Plaid outcomes: token already gone (idempotent
+  re-click, no Plaid call needed), `itemRemove()` succeeds or the item was
+  already removed at Plaid's end (`ITEM_NOT_FOUND` / `INVALID_ACCESS_TOKEN`),
+  or an unknown failure — only the last one returns a `warning` alongside
+  `ok: true`, never blocking the local disconnect.
+- Known, accepted gaps carried forward, not fixed here: no webhook and no
+  `ITEM_LOGIN_REQUIRED` re-auth path (a stale connection surfaces only as a
+  sync error, not a proactive notice), and `syncBankTransactions()`'s
+  unbounded `while (hasMore)` loop could exceed a serverless function's
+  timeout against a real account's transaction history.
+- `client_user_id` on `linkTokenCreate` is still the association, not a
+  person — every board member of a building shares one Plaid-side identity.
+  Not addressed here; flagged so it isn't mistaken for an oversight later.

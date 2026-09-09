@@ -26,6 +26,16 @@ export async function createLinkToken(): Promise<{ linkToken?: string; error?: s
       products: [Products.Transactions],
       country_codes: [CountryCode.Us],
       language: "en",
+      // Needed only for OAuth institutions (most large US banks in
+      // production). Omitted, not defaulted, when unset — unlike PLAID_ENV,
+      // a missing redirect_uri only breaks the OAuth handoff specifically;
+      // everything else (local dev, non-OAuth institutions) keeps working.
+      // Never derived from VERCEL_URL or a request header: Plaid requires
+      // exact pre-registration, and a per-deployment preview URL changes
+      // every push, so it could never be registered. See DECISIONS #27.
+      ...(process.env.PLAID_REDIRECT_URI
+        ? { redirect_uri: process.env.PLAID_REDIRECT_URI }
+        : {}),
     });
     return { linkToken: response.data.link_token };
   } catch (cause) {
@@ -71,8 +81,69 @@ export async function connectBank(
   return { ok: true };
 }
 
-export async function disconnectBank(connectionId: string): Promise<{ ok?: true; error?: string }> {
+/**
+ * Disconnects a bank connection — but tells Plaid first.
+ *
+ * The old version only called revoke_bank_connection(), which deletes the
+ * local access token. In sandbox that's invisible; against a real bank it
+ * would mean the token needed to remove the Item is destroyed before Plaid
+ * ever hears about it, leaving a live, billable credential against a real
+ * account with no way left to retire it — itemRemove() takes an access
+ * token, and this would have just deleted the only copy.
+ *
+ * So: fetch the token, tell Plaid, THEN revoke locally. revoke_bank_connection
+ * always runs, whether or not Plaid could be reached — a live token sitting
+ * in Walkup's own database after someone asked to disconnect is worse than
+ * an Item that's merely still live at Plaid, because plaid_item_id survives
+ * in bank_connections forever (rows are never hard-deleted) and can be
+ * removed by hand in the Plaid dashboard if this call ever fails. See
+ * DECISIONS #27.
+ */
+export async function disconnectBank(
+  connectionId: string,
+): Promise<{ ok?: true; warning?: string; error?: string }> {
   const supabase = await createClient();
+
+  const { data: accessToken, error: tokenError } = await supabase.rpc(
+    "get_bank_access_token",
+    { p_connection_id: connectionId },
+  );
+
+  let warning: string | undefined;
+
+  // No stored token means it was already revoked (or never connected) —
+  // nothing to tell Plaid, so this is a no-op re-click, not a failure.
+  const alreadyRevoked = tokenError?.message?.includes("no stored access token");
+
+  if (tokenError && !alreadyRevoked) {
+    return { error: tokenError.message };
+  }
+
+  if (accessToken && !alreadyRevoked) {
+    try {
+      await plaidClient().itemRemove({ access_token: accessToken });
+      await supabase
+        .from("bank_connections")
+        .update({ plaid_item_removed_at: new Date().toISOString() })
+        .eq("id", connectionId);
+    } catch (cause) {
+      if (isItemAlreadyGone(cause)) {
+        await supabase
+          .from("bank_connections")
+          .update({ plaid_item_removed_at: new Date().toISOString() })
+          .eq("id", connectionId);
+      } else {
+        // Disconnect proceeds anyway — see the function comment. Surfaced as
+        // a warning, not blocked: the board admin still gets what they
+        // asked for locally, with an honest note that Plaid-side cleanup is
+        // still outstanding.
+        warning =
+          "Disconnected here, but couldn't confirm with the bank that the connection was closed on their end. " +
+          describePlaidError(cause);
+      }
+    }
+  }
+
   const { error } = await supabase.rpc("revoke_bank_connection", {
     p_connection_id: connectionId,
   });
@@ -80,7 +151,15 @@ export async function disconnectBank(connectionId: string): Promise<{ ok?: true;
   if (error) return { error: error.message };
 
   revalidatePath("/bank-feed");
-  return { ok: true };
+  return { ok: true, warning };
+}
+
+/** Plaid returns a specific code when the Item/token is already gone — that
+ * counts as success, not a failure to report. */
+function isItemAlreadyGone(cause: unknown): boolean {
+  const code = (cause as { response?: { data?: { error_code?: string } } })?.response?.data
+    ?.error_code;
+  return code === "ITEM_NOT_FOUND" || code === "INVALID_ACCESS_TOKEN";
 }
 
 /**

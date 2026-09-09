@@ -4,6 +4,7 @@ import { useCallback, useEffect, useState } from "react";
 import { usePlaidLink, type PlaidLinkOnSuccessMetadata } from "react-plaid-link";
 import { useRouter } from "next/navigation";
 import { connectBank, createLinkToken } from "./actions";
+import { clearLinkTokenForOAuth, storeLinkTokenForOAuth } from "./oauth-link-token";
 
 export function ConnectBankButton() {
   const [linkToken, setLinkToken] = useState<string | null>(null);
@@ -55,6 +56,7 @@ function PlaidLinkButton({
 
   const onSuccess = useCallback(
     async (publicToken: string | null, metadata: PlaidLinkOnSuccessMetadata) => {
+      clearLinkTokenForOAuth();
       if (!publicToken) return;
       setConnecting(true);
       onError("");
@@ -69,12 +71,22 @@ function PlaidLinkButton({
     [router, onError],
   );
 
-  const { open, ready } = usePlaidLink({ token: linkToken, onSuccess });
+  const { open, ready } = usePlaidLink({
+    token: linkToken,
+    onSuccess,
+    onExit: clearLinkTokenForOAuth,
+  });
 
   return (
     <button
       type="button"
-      onClick={() => open()}
+      onClick={() => {
+        // Stashed before open(), not on success — an OAuth institution
+        // leaves the page entirely, so this has to be in place before the
+        // redirect, not after it returns. /bank-feed/oauth reads it back.
+        storeLinkTokenForOAuth(linkToken);
+        open();
+      }}
       disabled={!ready || connecting}
       className="rounded-md bg-ink px-4 py-2 text-[13px] font-medium text-paper transition hover:bg-ink-mid disabled:opacity-50"
     >

@@ -3,7 +3,8 @@
 **Organization:** dscollectiveio (Doug Smart, sole operator of Walkup)
 **Scope:** The Walkup application, its infrastructure, and the credentials
 that control both.
-**Effective:** 2026-08-05. **Review cadence:** every 6 months, or
+**Effective:** 2026-08-05. **Last reviewed:** 2026-09-08 (Plaid production
+readiness — see §3, §6, §8). **Review cadence:** every 6 months, or
 immediately after any incident, new vendor integration, or change in who
 has access to production systems.
 
@@ -36,7 +37,7 @@ responsibilities below:
 
 | Data | Sensitivity | Where it lives |
 |---|---|---|
-| Plaid access tokens | Critical — a live credential that can read a real bank account | `bank_connection_secrets` table, RLS enabled with zero policies; reachable only through `SECURITY DEFINER` functions (`store_bank_connection`, `get_bank_access_token`). See `docs/DECISIONS.md` #24. |
+| Plaid access tokens | Critical — a live credential that can read a real bank account | `bank_connection_secrets` table, RLS enabled with zero policies; reachable only through `SECURITY DEFINER` functions (`store_bank_connection`, `get_bank_access_token`). See `docs/DECISIONS.md` #24, #27. |
 | Supabase service role key, Anthropic API key, Plaid client secret | Critical — full backend or paid-API access | Server-only env vars (`.env.local` locally, Vercel project settings in production). Never sent to the browser, never committed — `.env.local` is gitignored. |
 | Association financial records (ledger, tax figures, bank transactions) | Sensitive — financial/PII-adjacent | Postgres, protected by row-level security scoped to `association_id` on every table. |
 | Application source code | Low — no secrets committed | GitHub, `dscollectiveio/Walkup`, private repo. |
@@ -97,7 +98,14 @@ is observed:
 
 1. **Contain:** rotate the affected credential immediately (Plaid
    client secret/access tokens, Supabase service role key, Anthropic key,
-   or account password) at the source dashboard.
+   or account password) at the source dashboard. **Rotating the Plaid
+   client secret does not invalidate existing access tokens** — those are
+   per-Item and independent of the secret used to obtain them. If a token
+   itself is the suspected exposure, containment means calling
+   `/item/remove` for every affected connection (the app's `disconnectBank`
+   action does this — see `docs/DECISIONS.md` #27), or removing the Item by
+   `plaid_item_id` directly in the Plaid dashboard if the stored token is
+   already gone.
 2. **Assess:** check `audit_log` (append-only, per `CLAUDE.md` invariant
    #7) for what was read or written using the exposed access, and the
    relevant provider's own access logs (Supabase logs, Plaid dashboard
@@ -145,3 +153,17 @@ what's actually in place:
       `tests/db/mfa-enforcement.test.ts`. Doug's own account still needs to
       complete enrollment on first login after this deploys — the page
       (`/account/mfa`) forces that automatically.
+- [x] Plaid production readiness: `PLAID_ENV` fails closed instead of
+      defaulting to sandbox, `disconnectBank` calls Plaid's `/item/remove`
+      before revoking locally, and OAuth institutions are supported via a
+      dedicated redirect route. `docs/DECISIONS.md` #27,
+      `supabase/migrations/0026_bank_connection_item_removal.sql`.
+- [ ] No Plaid webhook, so a stale connection (`ITEM_LOGIN_REQUIRED`)
+      surfaces only as a sync error, not a proactive notice — a manual
+      check, not automated monitoring. Tracked, not yet built.
+- [ ] Live deployment (Vercel project, production Supabase project, Plaid
+      production credentials actually in use) — this policy's controls
+      apply to the code as written; §2's "review immediately after any...
+      new vendor integration" trigger fires again once the deployment
+      itself is live, to confirm the controls above actually hold in that
+      environment.

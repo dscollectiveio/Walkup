@@ -8,19 +8,23 @@ Not property management software. Not a general accounting package.
 
 ## Status
 
-**Slice 1 — ledger + 1120-H. Scaffold only.** No application code, no database.
+Well past scaffold: ledger, 1120-H, document hub, tax center, bank feed (Plaid,
+read-only), and MFA are built and tested. See `docs/DECISIONS.md` for what
+shipped and why.
 
 | | |
 |---|---|
-| Schema | `supabase/migrations/0001_core_schema.sql`, **not applied and not yet syntax-checked** |
-| Supabase project | not created |
-| GitHub remote | none |
-| Vercel project | none |
+| Schema | `supabase/migrations/0001`–`0026`, applied and tested (`tests/db/`) |
+| Supabase project (dev/staging) | created — see `.env.local` |
+| Supabase project (production) | see `docs/DECISIONS.md` #27 for the split rationale |
+| GitHub remote | `dscollectiveio/Walkup` |
+| Vercel project | see `docs/DECISIONS.md` #27 |
 
-`0001` creates tables with **no enforcement** — the balance trigger, posting and
-period immutability, the audit trigger and every RLS policy land in `0002`–`0004`,
-each paired with the test that proves it. The manifest at the bottom of `0001`
-lists them. Nothing real goes in this database until they are green.
+Every migration after `0001` is paired with the test that proves its
+enforcement — the balance trigger, posting and period immutability, the audit
+trigger, every RLS policy, and (since `0025`) mandatory MFA on every
+role-scoped query. Nothing bypasses RLS: there is no service-role client
+anywhere in this codebase, deliberately (`docs/DECISIONS.md` #18).
 
 ## Documents
 
@@ -49,15 +53,15 @@ The Supabase CLI is a dev dependency — use `npx supabase`, no global install.
 
 ```
 supabase/migrations/   versioned schema; never edit the database by hand
-src/lib/supabase/      typed clients (browser, server, service-role)
-src/lib/accounting/    pure functions — aging, allocation, balances
+src/lib/supabase/      typed clients (browser, server) — no service-role client
 src/lib/tax/           1120-H computation
-tests/unit/            Vitest — accounting and tax logic
-tests/e2e/             Playwright — critical accounting flows
+src/lib/documents/     document hub: extraction, classification, redaction
+tests/db/              Vitest against PGlite — schema, RLS, RPCs, run the real migrations
+tests/unit/            Vitest — pure functions (tax math, redaction)
+tests/e2e/             Playwright — currently empty
 ```
 
-`src/lib/accounting` and `src/lib/tax` are pure and heavily tested. They do not
-touch the database.
+`src/lib/tax` is pure and heavily tested; it does not touch the database.
 
 ## Two things that will bite you
 
