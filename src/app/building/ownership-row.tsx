@@ -1,7 +1,7 @@
 "use client";
 
-import { useActionState, useState } from "react";
-import { changeUnitOwner, endUnitOwnership } from "./actions";
+import { useActionState, useState, useTransition } from "react";
+import { changeUnitOwner, deleteUnitOwner, endUnitOwnership } from "./actions";
 
 export interface CurrentOwner {
   rowId: string;
@@ -111,18 +111,67 @@ function AssignOwnerForm({
   );
 }
 
+function DeleteOwnerButton({ rowId, unitId }: { rowId: string; unitId: string }) {
+  const [confirming, setConfirming] = useState(false);
+  const [pending, startDelete] = useTransition();
+  const [error, setError] = useState<string | null>(null);
+
+  if (!confirming) {
+    return (
+      <button
+        type="button"
+        onClick={() => setConfirming(true)}
+        className="ml-2 text-[11px] text-bad-text underline-offset-2 hover:underline"
+      >
+        Delete
+      </button>
+    );
+  }
+
+  return (
+    <span className="ml-2 inline-flex items-center gap-2">
+      <span className="text-[11px] text-mute">Remove this record entirely?</span>
+      <button
+        type="button"
+        disabled={pending}
+        onClick={() =>
+          startDelete(async () => {
+            setError(null);
+            const result = await deleteUnitOwner(rowId, unitId);
+            if (result.error) setError(result.error);
+            else setConfirming(false);
+          })
+        }
+        className="rounded-md border border-bad-line bg-bad-tint px-2 py-0.5 text-[11px] font-medium text-bad-text hover:bg-bad-tint/80"
+      >
+        {pending ? "Removing…" : "Confirm delete"}
+      </button>
+      <button
+        type="button"
+        onClick={() => setConfirming(false)}
+        className="text-[11px] text-mute underline-offset-2 hover:underline"
+      >
+        Cancel
+      </button>
+      {error ? <span className="block w-full text-[11px] text-bad-text">{error}</span> : null}
+    </span>
+  );
+}
+
 export function OwnershipRow({
   unitId,
   unitLabel,
   owners,
   persons,
   canEdit,
+  canDelete,
 }: {
   unitId: string;
   unitLabel: string;
   owners: CurrentOwner[];
   persons: { id: string; full_name: string }[];
   canEdit: boolean;
+  canDelete: boolean;
 }) {
   const [endingRow, setEndingRow] = useState<string | null>(null);
   const [assigning, setAssigning] = useState(false);
@@ -165,6 +214,9 @@ export function OwnershipRow({
                     End
                   </button>
                 )
+              ) : null}
+              {canDelete && endingRow !== o.rowId ? (
+                <DeleteOwnerButton rowId={o.rowId} unitId={unitId} />
               ) : null}
             </li>
           ))}

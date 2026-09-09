@@ -246,6 +246,7 @@ export default async function BuildingPage() {
                   owners={ownersByUnit.get(u.id) ?? []}
                   persons={personOptions}
                   canEdit={isBoard}
+                  canDelete={isBoardAdmin}
                 />
               ))}
             </ul>

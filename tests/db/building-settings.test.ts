@@ -325,4 +325,65 @@ describe("building settings (0018)", () => {
       ).rejects.toThrow();
     });
   });
+
+  // --------------------------------------------------------------------------
+  // unit_owners delete (0030) — correcting a misplaced owner, board_admin only
+  // --------------------------------------------------------------------------
+
+  it("lets a board_admin hard-delete a unit_owners row", async () => {
+    await asUser(db, f.cyUser, async () => {
+      const { rows: existing } = await db.query<{ id: string }>(
+        `select id from unit_owners where unit_id = $1::uuid and effective_to is null`,
+        [f.unit1],
+      );
+      const { affectedRows } = await db.query(`delete from unit_owners where id = $1::uuid`, [
+        existing[0].id,
+      ]);
+      expect(affectedRows).toBe(1);
+    });
+  });
+
+  it("refuses the delete from a board_member (board_admin only, unlike insert/update)", async () => {
+    await asUser(db, f.cyUser, async () => {
+      await db.query(
+        `insert into role_grants (association_id, person_id, role, granted_on, granted_by)
+         values ($1::uuid, $2::uuid, 'board_member', current_date, $3::uuid)`,
+        [f.damen, f.boPerson, f.cyUser],
+      );
+    });
+
+    await asUser(db, f.boUser, async () => {
+      const { rows: existing } = await db.query<{ id: string }>(
+        `select id from unit_owners where unit_id = $1::uuid and effective_to is null`,
+        [f.unit1],
+      );
+      const { affectedRows } = await db.query(`delete from unit_owners where id = $1::uuid`, [
+        existing[0].id,
+      ]);
+      expect(affectedRows).toBe(0); // RLS filtered the row, not an error
+    });
+  });
+
+  it("refuses the delete from an owner-only caller", async () => {
+    await asUser(db, f.adaUser, async () => {
+      const { rows: existing } = await db.query<{ id: string }>(
+        `select id from unit_owners where unit_id = $1::uuid and effective_to is null`,
+        [f.unit1],
+      );
+      const { affectedRows } = await db.query(`delete from unit_owners where id = $1::uuid`, [
+        existing[0].id,
+      ]);
+      expect(affectedRows).toBe(0);
+    });
+  });
+
+  it("refuses a cross-tenant delete", async () => {
+    await asUser(db, f.zaraUser, async () => {
+      const { rows: existing } = await db.query<{ id: string }>(
+        `select id from unit_owners where unit_id = $1::uuid and effective_to is null`,
+        [f.unit1],
+      );
+      expect(existing).toHaveLength(0); // zara can't even see damen's rows
+    });
+  });
 });

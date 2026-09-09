@@ -305,6 +305,33 @@ export async function endUnitOwnership(_prev: unknown, formData: FormData) {
   return { ok: true };
 }
 
+/**
+ * Hard-deletes a unit_owners row outright — for a data-entry mistake (the
+ * wrong person assigned to a unit), not a real ownership change. A real
+ * change should still go through endUnitOwnership, which closes the row
+ * with an effective_to date and keeps it on record; this exists only to
+ * remove a row that should never have been created. board_admin only
+ * (0030), one step stricter than endUnitOwnership/changeUnitOwner's is_board.
+ */
+export async function deleteUnitOwner(rowId: string, unitId: string) {
+  const supabase = await createClient();
+  const { data, error } = await supabase
+    .from("unit_owners")
+    .delete()
+    .eq("id", rowId)
+    .select("id");
+
+  if (error) return { error: error.message };
+  if (!data || data.length === 0) {
+    return { error: "Only a board admin can remove an ownership record." };
+  }
+
+  revalidateBuilding();
+  revalidatePath("/delinquency");
+  if (unitId) revalidatePath(`/units/${unitId}`);
+  return { ok: true as const };
+}
+
 // ============================================================================
 // OWNERSHIP PERCENTAGES (amendments — see DECISIONS #7)
 // ============================================================================
