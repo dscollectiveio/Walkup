@@ -138,8 +138,10 @@ describe("book-to-tax reconciliation", () => {
 
   it("does not leak another association's reconciliation", async () => {
     await asUser(db, f.zaraUser, async () => {
-      const { rows } = await db.query(`select association_id from book_to_tax_reconciliation`);
-      expect(rows.every((r: any) => r.association_id === f.hoyne)).toBe(true);
+      const { rows } = await db.query<{ association_id: string }>(
+        `select association_id from book_to_tax_reconciliation`,
+      );
+      expect(rows.every((r) => r.association_id === f.hoyne)).toBe(true);
     });
   });
 
@@ -306,11 +308,4 @@ describe("budget vs actual", () => {
     );
     expect(rows[0].n).toBe(1);
   });
-
-  function post(lines: unknown[], memo: string) {
-    return db.query<{ post_journal_entry: string }>(
-      `select public.post_journal_entry($1::uuid,$2::uuid,$3::date,$4,'manual',$5::jsonb)`,
-      [f.damen, "f1500000-0000-0000-0000-000000000001", "2026-03-01", memo, JSON.stringify(lines)],
-    );
-  }
 });
