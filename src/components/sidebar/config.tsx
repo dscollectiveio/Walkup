@@ -43,7 +43,7 @@ export const NAV_GROUPS: NavGroupConfig[] = [
       { href: "/delinquency", label: "Who owe the HOA", icon: Hourglass },
       { href: "/bills", label: "Bills", icon: Receipt },
       { href: "/budget", label: "Budget", icon: BarChart3 },
-      { href: "/bank-feed", label: "Bank Feed", icon: Landmark },
+      { href: "/bank-feed", label: "Bank Sync & Transactions", icon: Landmark },
       { href: "/ledger", label: "All Transactions", icon: List },
     ],
   },
