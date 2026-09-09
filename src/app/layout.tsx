@@ -1,6 +1,6 @@
 import type { Metadata } from "next";
 import "./globals.css";
-import { createClient, getUser } from "@/lib/supabase/server";
+import { createClient } from "@/lib/supabase/server";
 import { signOut } from "./login/actions";
 import { interTight, sourceSerif } from "@/lib/fonts";
 import { Sidebar } from "@/components/sidebar/sidebar";
@@ -14,13 +14,26 @@ export const metadata: Metadata = {
 export default async function RootLayout({
   children,
 }: Readonly<{ children: React.ReactNode }>) {
-  const user = await getUser();
+  const supabase = await createClient();
+
+  // getSession(), not getUser(), deliberately — unlike src/lib/supabase/server.ts's
+  // getUser() (used everywhere auth actually gates something), this layout
+  // never gates access itself; proxy.ts's middleware already ran a real,
+  // network-verified getUser() for this exact request moments ago and would
+  // have redirected an invalid session before this layout ever rendered. A
+  // second network round-trip here to re-verify what middleware just verified
+  // was pure duplicated latency on every single navigation. getSession() reads
+  // the already-refreshed cookie locally — no network call — which is safe
+  // here specifically because middleware is the real gate, not this display.
+  const {
+    data: { session },
+  } = await supabase.auth.getSession();
+  const user = session?.user ?? null;
 
   let associationName: string | null = null;
   let problemCount = 0;
 
   if (user) {
-    const supabase = await createClient();
     // Two lightweight queries the sidebar needs on every page: the
     // association name for the lockup, and a live count of open problems for
     // the Problems badge. Same "open" definition contractors/page.tsx uses.
