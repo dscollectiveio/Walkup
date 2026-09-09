@@ -51,6 +51,49 @@ describe("signup and invites (0027)", () => {
       });
     });
 
+    it("seeds funds, a chart of accounts, and a calendar-year fiscal year (0029)", async () => {
+      await newAuthUser(freshUser, "new@example.test");
+      await asUser(db, freshUser, async () => {
+        const { rows } = await db.query<{ create_association_and_owner: string }>(
+          `select public.create_association_and_owner($1, $2, $3, $4, $5)`,
+          ["New Condo Association", "New Condo", "IL", "New Person", "new@example.test"],
+        );
+        const assocId = rows[0].create_association_and_owner;
+
+        const { rows: fundRows } = await db.query<{ name: string; kind: string }>(
+          `select name, kind from public.funds where association_id = $1::uuid order by name`,
+          [assocId],
+        );
+        expect(fundRows).toEqual([
+          { name: "Operating", kind: "operating" },
+          { name: "Reserve", kind: "reserve" },
+        ]);
+
+        const { rows: accountRows } = await db.query<{ n: number }>(
+          `select count(*)::int n from public.accounts where association_id = $1::uuid`,
+          [assocId],
+        );
+        expect(accountRows[0].n).toBeGreaterThan(0);
+
+        const { rows: fyRows } = await db.query<{
+          label: string;
+          starts_on: string;
+          ends_on: string;
+        }>(
+          `select label, starts_on::text, ends_on::text from public.fiscal_years
+             where association_id = $1::uuid`,
+          [assocId],
+        );
+        expect(fyRows).toHaveLength(1);
+        const year = new Date().getFullYear();
+        expect(fyRows[0]).toEqual({
+          label: String(year),
+          starts_on: `${year}-01-01`,
+          ends_on: `${year}-12-31`,
+        });
+      });
+    });
+
     it("rejects a second call for a user who already has a building", async () => {
       await newAuthUser(freshUser, "new@example.test");
       await asUser(db, freshUser, async () => {
