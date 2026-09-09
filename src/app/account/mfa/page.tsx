@@ -48,8 +48,10 @@ export default async function MfaSetupPage() {
   }
 
   return (
-    <div className="mx-auto max-w-sm py-16">
-      <Lockup />
+    <div className="mx-auto max-w-sm py-16 text-center">
+      <div className="flex justify-center">
+        <Lockup />
+      </div>
       <h1 className="mt-4 text-[20px] font-semibold tracking-tight text-ink">
         Set up two-factor authentication
       </h1>
@@ -59,11 +61,13 @@ export default async function MfaSetupPage() {
         1Password, etc. — then enter the 6-digit code it shows.
       </p>
 
-      <MfaSetupForm
-        factorId={enrolled.id}
-        qrCode={enrolled.totp.qr_code}
-        secret={enrolled.totp.secret}
-      />
+      <div className="mt-6 rounded-xl border border-line bg-paper p-6 text-left shadow-sm">
+        <MfaSetupForm
+          factorId={enrolled.id}
+          qrCode={enrolled.totp.qr_code}
+          secret={enrolled.totp.secret}
+        />
+      </div>
     </div>
   );
 }

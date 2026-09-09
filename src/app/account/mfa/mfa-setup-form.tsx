@@ -16,11 +16,13 @@ export function MfaSetupForm({
 
   return (
     <div className="mt-8 space-y-6">
-      <div
-        className="h-48 w-48 [&_svg]:h-full [&_svg]:w-full"
-        dangerouslySetInnerHTML={{ __html: qrCode }}
-      />
-      <p className="text-[12px] text-mute-soft">
+      <div className="flex justify-center">
+        <div className="rounded-2xl border border-line bg-paper p-4 shadow-sm">
+          {/* eslint-disable-next-line @next/next/no-img-element -- qrCode is a data: URI, not a route-able asset */}
+          <img src={qrCode} alt="MFA setup QR code" className="h-48 w-48" />
+        </div>
+      </div>
+      <p className="text-center text-[12px] text-mute-soft">
         Can&rsquo;t scan? Enter this key manually:{" "}
         <span className="figures break-all">{secret}</span>
       </p>
@@ -37,7 +39,7 @@ export function MfaSetupForm({
             inputMode="numeric"
             autoComplete="one-time-code"
             required
-            className="mt-1 w-full rounded-lg border border-line-strong bg-paper px-3 py-2 text-[13px] text-ink"
+            className="mt-1 w-full rounded-lg border border-line-strong bg-paper px-3 py-2 text-center text-[16px] tracking-[0.3em] text-ink"
           />
         </div>
 
