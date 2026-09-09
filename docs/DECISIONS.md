@@ -586,3 +586,57 @@ classifier does not need somebody's SSN to recognise a W-9.
 - The same reasoning applies to anything added later that reads file contents:
   export bundles, share links, email intake. Redaction belongs at the point the
   bytes become text, once.
+
+---
+
+## 26. MFA is required for every Walkup user, enforced at the database
+
+*Decided: Doug, 2026-08-05, answering Plaid's production security
+questionnaire. Status: settled.*
+
+Plaid's review asks whether MFA is in place before a consumer can reach Plaid
+Link. Walkup had none — password-only login via Supabase Auth, no second
+factor anywhere. Rather than answer "no" or, worse, "yes" without it existing,
+this makes it real: TOTP-based MFA (authenticator app), required for every
+signed-in user, not only board_admin. Scope was Doug's call — the narrower
+option (board_admin/accountant only, since only they reach Plaid Link) was
+available and rejected in favor of a single enforcement point with no
+role-based branching to get wrong.
+
+A UI redirect alone would not have been a security control, only a
+suggestion — anyone with a password-only (AAL1) session could still call
+PostgREST directly and skip it. So enforcement is in two places doing two
+different jobs:
+
+- `src/proxy.ts` / `src/lib/supabase/proxy.ts` — routes a signed-in user to
+  `/account/mfa` (no verified factor yet) or `/login/mfa-challenge` (factor
+  exists, this session hasn't cleared it) before they reach anything else.
+  This is the UX: it is what makes "before Plaid Link is surfaced" true.
+- Migration `0025_mfa_enforcement.sql` — the real authorization. One new
+  helper, `session_is_aal2()`, reading the `aal` claim off `auth.jwt()`
+  exactly the way `auth.uid()` already was. It is wired into the three
+  functions nearly every policy already calls — `has_role_in`,
+  `owned_unit_ids`, `current_person_id` — rather than edited into every
+  policy individually, so it automatically covers `post_journal_entry()` and
+  `store_bank_connection()`/`get_bank_access_token()` (0016) along with every
+  `can_read_financials`/`is_board`/`is_member` read policy.
+
+**How to apply:**
+
+- New users (and Doug's own account, and the `walkup-dev@dscollective.io`
+  dev account) are forced through `/account/mfa` on first sign-in after this
+  ships — there is no grace period, per the "everyone" scope decision above.
+- **Known, accepted gap:** `persons_select` and `persons_update` (0002) also
+  allow `auth_user_id = auth.uid()` directly, for a person reading/editing
+  their own contact details. That path does not run through
+  `has_role_in`/`owned_unit_ids`/`current_person_id`, so it is reachable at
+  AAL1. It exposes only a person's own name/contact info, never financial
+  data — judged not worth the added complexity of gating right now, but
+  tracked here and in `docs/SECURITY_POLICY.md` rather than left silent.
+- `tests/db/harness.ts`'s `asUser()` defaults every test to `aal: "aal2"` so
+  existing tests keep asserting role-based access, not MFA state.
+  `tests/db/mfa-enforcement.test.ts` tests the gate itself at `aal1`.
+- If a future integration needs its own narrower MFA requirement (e.g.
+  step-up auth just before a destructive action), that is a new decision —
+  this one intentionally does not distinguish "MFA for Plaid" from "MFA for
+  everything," on purpose, to keep one enforcement point.

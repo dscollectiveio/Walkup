@@ -56,6 +56,17 @@ responsibilities below:
   `docs/DECISIONS.md` and the invariants in `CLAUDE.md`. This limits what a
   compromised end-user session, as opposed to a compromised infrastructure
   credential, can reach.
+- **Consumer MFA:** every Walkup user (not just board_admin) must complete
+  TOTP-based MFA before reaching any page, including the Plaid-connect flow
+  — `docs/DECISIONS.md` #26. Enforced twice: `src/proxy.ts` redirects a
+  session that hasn't cleared MFA before it can render anything, and
+  migration `0025_mfa_enforcement.sql` makes AAL2 a real database
+  requirement via `session_is_aal2()`, so the same access is refused even
+  to a direct API call that skips the UI entirely. One known, accepted gap:
+  a user can still read/edit their own contact details (not financial data)
+  at AAL1 via `persons_select`/`persons_update`'s
+  `auth_user_id = auth.uid()` path — documented in #26 rather than closed
+  silently.
 
 ## 5. Risk identification and mitigation
 
@@ -129,3 +140,8 @@ what's actually in place:
       `.env.local` with live secrets lives there. Confirmed on via
       `fdesetup status`.
 - [x] Dependency monitoring via Dependabot (`.github/dependabot.yml`).
+- [x] Consumer MFA before Plaid Link is reachable. `docs/DECISIONS.md` #26,
+      `supabase/migrations/0025_mfa_enforcement.sql`, `src/proxy.ts`,
+      `tests/db/mfa-enforcement.test.ts`. Doug's own account still needs to
+      complete enrollment on first login after this deploys — the page
+      (`/account/mfa`) forces that automatically.
