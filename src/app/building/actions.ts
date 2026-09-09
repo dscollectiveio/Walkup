@@ -429,3 +429,46 @@ export async function revokeRole(roleGrantId: string): Promise<{ ok?: true; erro
   revalidateBuilding();
   return { ok: true };
 }
+
+// ============================================================================
+// INVITES
+// ============================================================================
+
+export async function createInvite(_prev: unknown, formData: FormData) {
+  const role = String(formData.get("role") ?? "");
+  const email = String(formData.get("email") ?? "").trim() || null;
+
+  if (!ROLES.includes(role as (typeof ROLES)[number])) return { error: "Choose a role." };
+
+  const supabase = await createClient();
+  const associationId = await currentAssociationId(supabase);
+  if (!associationId) return { error: "No association is visible to you." };
+
+  const user = await getUser();
+  if (!user) return { error: "Not signed in." };
+
+  const { error } = await supabase.from("invites").insert({
+    association_id: associationId,
+    role,
+    email,
+    created_by: user.id,
+  });
+
+  if (error) return { error: error.message };
+
+  revalidateBuilding();
+  return { ok: true };
+}
+
+export async function deleteInvite(inviteId: string): Promise<{ ok?: true; error?: string }> {
+  const supabase = await createClient();
+  const { data, error } = await supabase.from("invites").delete().eq("id", inviteId).select("id");
+
+  if (error) return { error: error.message };
+  if (!data || data.length === 0) {
+    return { error: "Only a board admin can revoke an invite." };
+  }
+
+  revalidateBuilding();
+  return { ok: true };
+}

@@ -10,6 +10,8 @@ import { OwnershipAmendmentForm } from "./ownership-amendment-form";
 import { AmendmentHistory, type AmendmentHistoryEntry } from "./amendment-history";
 import { GrantRoleForm } from "./grant-role-form";
 import { RoleGrantRow, type RoleGrantRecord } from "./role-grant-row";
+import { GenerateInviteForm } from "./generate-invite-form";
+import { InviteRow, type InviteRecord } from "./invite-row";
 
 export const dynamic = "force-dynamic";
 
@@ -45,6 +47,7 @@ export default async function BuildingPage() {
     { data: roleGrantRows },
     { data: unitOwnerRows },
     { data: amendmentRows },
+    { data: inviteRows },
   ] = await Promise.all([
     supabase
       .from("units")
@@ -71,6 +74,10 @@ export default async function BuildingPage() {
         "id, effective_from, reason, ownership_amendment_lines(unit_id, percentage, units(label))",
       )
       .order("effective_from", { ascending: false }),
+    supabase
+      .from("invites")
+      .select("id, token, role, email, expires_at, redeemed_at")
+      .order("created_at", { ascending: false }),
   ]);
 
   const profile: AssociationProfile = {
@@ -145,6 +152,15 @@ export default async function BuildingPage() {
       revokedAt: g.revoked_at,
     };
   });
+
+  const invites: InviteRecord[] = (inviteRows ?? []).map((i) => ({
+    id: i.id,
+    token: i.token,
+    role: i.role,
+    email: i.email,
+    expiresAt: i.expires_at,
+    redeemedAt: i.redeemed_at,
+  }));
 
   return (
     <div className="space-y-6">
@@ -262,6 +278,26 @@ export default async function BuildingPage() {
               <ul className="divide-y divide-line">
                 {roleGrants.map((g) => (
                   <RoleGrantRow key={g.id} grant={g} />
+                ))}
+              </ul>
+            )}
+          </div>
+        </Card>
+      ) : null}
+
+      {isBoard ? (
+        <Card
+          title="Invites"
+          hint="Send a link instead of granting a role by hand — the person sets their own password and joins at the role you pick."
+        >
+          <div className="space-y-4">
+            <GenerateInviteForm />
+            {invites.length === 0 ? (
+              <Empty>No invites yet.</Empty>
+            ) : (
+              <ul className="divide-y divide-line">
+                {invites.map((i) => (
+                  <InviteRow key={i.id} invite={i} />
                 ))}
               </ul>
             )}
