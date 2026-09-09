@@ -1,5 +1,5 @@
 import { createClient } from "@/lib/supabase/server";
-import { Answer, Card, Jargon, Provisional, Restricted, money } from "@/components/ui";
+import { Answer, Card, Empty, Jargon, Provisional, Restricted, money } from "@/components/ui";
 import {
   computeForm1120h,
   formatMoney,
@@ -7,6 +7,9 @@ import {
   type TaxParameter,
   type TestResult,
 } from "@/lib/tax/form1120h";
+import { FilingStatus } from "./filing-status";
+import { AccountLineDrilldown, type DrilldownLine } from "./account-line-drilldown";
+import { ProvenancePanel, type ProvenanceRow, type ResolvedLine } from "./provenance-panel";
 
 export const dynamic = "force-dynamic";
 
@@ -128,26 +131,131 @@ export default async function TaxPage() {
   const fy = fiscalYears?.[0];
   if (!fy) return <Restricted what="the tax section" />;
 
-  const [{ data: figuresRows }, { data: paramRows }, { data: receipts }, { data: disbursements }] =
-    await Promise.all([
-      supabase.rpc("form_1120h_figures", {
-        p_association_id: fy.association_id,
-        p_fiscal_year_id: fy.id,
-      }),
-      supabase.from("tax_parameters").select("key, numeric_value, source_url, verified_on, notes"),
-      supabase
-        .from("tax_receipts_by_account")
-        .select("account_name, is_exempt, total")
-        .eq("fiscal_year_id", fy.id)
-        .order("is_exempt", { ascending: false })
-        .order("total", { ascending: false }),
-      supabase
-        .from("tax_disbursements_by_account")
-        .select("account_name, account_type, is_exempt, total")
-        .eq("fiscal_year_id", fy.id)
-        .order("is_exempt", { ascending: false })
-        .order("total", { ascending: false }),
-    ]);
+  const [
+    { data: figuresRows },
+    { data: paramRows },
+    { data: receipts },
+    { data: disbursements },
+    { data: form1099Totals },
+    { data: form1099ThresholdRows },
+    { data: filingRows },
+    { data: rawReceipts },
+    { data: rawDisbursements },
+    { data: classifications },
+    { data: canWriteRow },
+  ] = await Promise.all([
+    supabase.rpc("form_1120h_figures", {
+      p_association_id: fy.association_id,
+      p_fiscal_year_id: fy.id,
+    }),
+    supabase.from("tax_parameters").select("key, numeric_value, source_url, verified_on, notes"),
+    supabase
+      .from("tax_receipts_by_account")
+      .select("account_name, is_exempt, total")
+      .eq("fiscal_year_id", fy.id)
+      .order("is_exempt", { ascending: false })
+      .order("total", { ascending: false }),
+    supabase
+      .from("tax_disbursements_by_account")
+      .select("account_name, account_type, is_exempt, total")
+      .eq("fiscal_year_id", fy.id)
+      .order("is_exempt", { ascending: false })
+      .order("total", { ascending: false }),
+    supabase
+      .from("vendor_1099_totals")
+      .select("vendor_id, name, entity_type, w9_on_file, tin_last4, email, total_paid, payment_count")
+      .eq("fiscal_year_id", fy.id)
+      .order("total_paid", { ascending: false }),
+    supabase
+      .from("tax_parameters")
+      .select("numeric_value, verified_on")
+      .eq("key", "form_1099_nec_threshold")
+      .limit(1),
+    supabase
+      .from("tax_filings")
+      .select("id, computed_at, filed_on, locked_at")
+      .eq("association_id", fy.association_id)
+      .eq("fiscal_year_id", fy.id)
+      .eq("form", "1120-H")
+      .limit(1),
+    supabase
+      .from("cash_basis_receipts")
+      .select("journal_line_id, received_on, income_account_name, is_exempt, amount")
+      .eq("association_id", fy.association_id)
+      .eq("fiscal_year_id", fy.id),
+    supabase
+      .from("cash_basis_disbursements")
+      .select("journal_line_id, paid_on, account_name, is_exempt, amount")
+      .eq("association_id", fy.association_id)
+      .eq("fiscal_year_id", fy.id),
+    supabase
+      .from("tax_line_classifications")
+      .select("journal_line_id, is_exempt, note")
+      .eq("association_id", fy.association_id),
+    supabase.rpc("has_role_in", {
+      assoc: fy.association_id,
+      roles: ["board_admin", "board_member"],
+    }),
+  ]);
+
+  const filing = filingRows?.[0] ?? null;
+  const canWrite = canWriteRow === true;
+  // Once a filing is locked, the transactions that fed it stop being
+  // reclassifiable too — a saved, filed return should not keep drifting
+  // underneath itself.
+  const canReclassify = canWrite && !filing?.locked_at;
+
+  const overriddenLineIds = new Set((classifications ?? []).map((c) => c.journal_line_id));
+
+  const receiptLines = rawReceipts ?? [];
+  const disbursementLines = rawDisbursements ?? [];
+
+  const receiptsByAccount = new Map<string, DrilldownLine[]>();
+  for (const r of receiptLines) {
+    const list = receiptsByAccount.get(r.income_account_name) ?? [];
+    list.push({
+      journalLineId: r.journal_line_id,
+      date: r.received_on,
+      amount: money(r.amount),
+      isExempt: r.is_exempt,
+      overridden: overriddenLineIds.has(r.journal_line_id),
+    });
+    receiptsByAccount.set(r.income_account_name, list);
+  }
+
+  const disbursementsByAccount = new Map<string, DrilldownLine[]>();
+  for (const d of disbursementLines) {
+    const list = disbursementsByAccount.get(d.account_name) ?? [];
+    list.push({
+      journalLineId: d.journal_line_id,
+      date: d.paid_on,
+      amount: money(d.amount),
+      isExempt: d.is_exempt,
+      overridden: overriddenLineIds.has(d.journal_line_id),
+    });
+    disbursementsByAccount.set(d.account_name, list);
+  }
+
+  const lineIndex = new Map<string, ResolvedLine>();
+  for (const r of receiptLines) {
+    lineIndex.set(r.journal_line_id, {
+      date: r.received_on,
+      label: r.income_account_name,
+      amount: r.amount,
+    });
+  }
+  for (const d of disbursementLines) {
+    lineIndex.set(d.journal_line_id, { date: d.paid_on, label: d.account_name, amount: d.amount });
+  }
+
+  let provenanceRows: ProvenanceRow[] = [];
+  if (filing) {
+    const { data } = await supabase
+      .from("tax_figure_provenance")
+      .select("figure_key, value, derivation, source_journal_line_ids, formula_description")
+      .eq("filing_id", filing.id);
+    provenanceRows = data ?? [];
+  }
 
   const f = Array.isArray(figuresRows) ? figuresRows[0] : figuresRows;
   if (!f) return <Restricted what="the tax section" />;
@@ -171,11 +279,21 @@ export default async function TaxPage() {
     parameters,
   );
 
+  // The threshold is read, never hardcoded, same as every other tax figure
+  // in this app (CLAUDE.md invariant 8) -- $600 only appears here as a
+  // fallback if the parameter is somehow missing, so the section still
+  // renders something useful rather than crashing.
+  const form1099Threshold = Number(form1099ThresholdRows?.[0]?.numeric_value ?? 600);
+  const form1099ThresholdVerified = form1099ThresholdRows?.[0]?.verified_on ?? null;
+  const form1099Rows = form1099Totals ?? [];
+  const form1099OwesForm = form1099Rows.filter((v) => Number(v.total_paid) >= form1099Threshold);
+  const form1099MissingW9 = form1099OwesForm.filter((v) => !v.w9_on_file);
+
   return (
     <div className="space-y-6">
       <div>
         <h1 className="text-[20px] font-semibold tracking-tight text-ink">
-          Tax filing for {fy.label}
+          Tax Center for {fy.label}
         </h1>
         <p className="mt-1 text-mute">
           Associations like yours can use a short tax form{" "}
@@ -203,6 +321,8 @@ export default async function TaxPage() {
       )}
 
       {result.usesUnverifiedParameters ? <Provisional /> : null}
+
+      <FilingStatus fiscalYearId={fy.id} filing={filing} canWrite={canWrite} />
 
       <div className="grid gap-4 lg:grid-cols-2">
         <Rule
@@ -257,24 +377,34 @@ export default async function TaxPage() {
         </p>
       </Card>
 
+      <ProvenancePanel rows={provenanceRows} lineIndex={lineIndex} />
+
       <div className="grid gap-4 lg:grid-cols-2">
         <Card title="Money you collected" hint="What Rule 1 is worked out from.">
           <ul className="divide-y divide-line text-[13px]">
             {(receipts ?? []).map((r) => (
-              <li key={r.account_name} className="flex items-center justify-between gap-3 py-2.5">
-                <span className="text-ink">{r.account_name}</span>
-                <span className="flex items-center gap-3">
-                  <span
-                    className={`rounded-full px-2 py-0.5 text-[11px] ${
-                      r.is_exempt
-                        ? "bg-good-tint text-good-text"
-                        : "bg-warning-tint text-warning-text"
-                    }`}
-                  >
-                    {r.is_exempt ? "owner fees" : "taxable"}
+              <li key={r.account_name} className="py-2.5">
+                <div className="flex items-center justify-between gap-3">
+                  <span className="text-ink">{r.account_name}</span>
+                  <span className="flex items-center gap-3">
+                    <span
+                      className={`rounded-full px-2 py-0.5 text-[11px] ${
+                        r.is_exempt
+                          ? "bg-good-tint text-good-text"
+                          : "bg-warning-tint text-warning-text"
+                      }`}
+                    >
+                      {r.is_exempt ? "owner fees" : "taxable"}
+                    </span>
+                    <span className="figures text-ink">{money(r.total)}</span>
                   </span>
-                  <span className="figures text-ink">{money(r.total)}</span>
-                </span>
+                </div>
+                <AccountLineDrilldown
+                  lines={receiptsByAccount.get(r.account_name) ?? []}
+                  canWrite={canReclassify}
+                  exemptLabel="owner fees"
+                  nonExemptLabel="taxable"
+                />
               </li>
             ))}
           </ul>
@@ -283,25 +413,33 @@ export default async function TaxPage() {
         <Card title="Money you spent" hint="What Rule 2 is worked out from.">
           <ul className="divide-y divide-line text-[13px]">
             {(disbursements ?? []).map((d) => (
-              <li key={d.account_name} className="flex items-center justify-between gap-3 py-2.5">
-                <span className="text-ink">
-                  {d.account_name}
-                  {d.account_type === "asset" ? (
-                    <span className="ml-2 text-[11px] text-mute-soft">major improvement</span>
-                  ) : null}
-                </span>
-                <span className="flex items-center gap-3">
-                  <span
-                    className={`rounded-full px-2 py-0.5 text-[11px] ${
-                      d.is_exempt
-                        ? "bg-good-tint text-good-text"
-                        : "bg-warning-tint text-warning-text"
-                    }`}
-                  >
-                    {d.is_exempt ? "on the building" : "doesn't count"}
+              <li key={d.account_name} className="py-2.5">
+                <div className="flex items-center justify-between gap-3">
+                  <span className="text-ink">
+                    {d.account_name}
+                    {d.account_type === "asset" ? (
+                      <span className="ml-2 text-[11px] text-mute-soft">major improvement</span>
+                    ) : null}
                   </span>
-                  <span className="figures text-ink">{money(d.total)}</span>
-                </span>
+                  <span className="flex items-center gap-3">
+                    <span
+                      className={`rounded-full px-2 py-0.5 text-[11px] ${
+                        d.is_exempt
+                          ? "bg-good-tint text-good-text"
+                          : "bg-warning-tint text-warning-text"
+                      }`}
+                    >
+                      {d.is_exempt ? "on the building" : "doesn't count"}
+                    </span>
+                    <span className="figures text-ink">{money(d.total)}</span>
+                  </span>
+                </div>
+                <AccountLineDrilldown
+                  lines={disbursementsByAccount.get(d.account_name) ?? []}
+                  canWrite={canReclassify}
+                  exemptLabel="on the building"
+                  nonExemptLabel="doesn't count"
+                />
               </li>
             ))}
           </ul>
@@ -337,6 +475,106 @@ export default async function TaxPage() {
           ))}
         </ul>
       </Card>
+
+      <div className="border-t border-line pt-6">
+        <div>
+          <h2 className="text-[16px] font-semibold tracking-tight text-ink">
+            1099s for {fy.label}
+          </h2>
+          <p className="mt-1 text-mute">
+            Contractors you paid {money(form1099Threshold)} or more for work this year
+            need a 1099-NEC in January.
+          </p>
+        </div>
+
+        <div className="mt-4">
+          {form1099Rows.length === 0 ? (
+            <Answer
+              status="good"
+              headline="Nothing to file"
+              detail="No contractor was paid for services this year."
+            />
+          ) : form1099MissingW9.length > 0 ? (
+            <Answer
+              status="bad"
+              headline={`${form1099MissingW9.length} contractor${form1099MissingW9.length === 1 ? " needs" : "s need"} a W-9 before you can file`}
+              detail={`${form1099MissingW9.map((v) => v.name).join(", ")} — get these on file now rather than chasing them in January.`}
+            />
+          ) : (
+            <Answer
+              status="good"
+              headline={`${form1099OwesForm.length} contractor${form1099OwesForm.length === 1 ? "" : "s"} will need a 1099-NEC`}
+              detail="Everyone who crosses the threshold already has a W-9 on file."
+            />
+          )}
+        </div>
+
+        <div className="mt-4">
+        <Card
+          title="Everyone paid for services"
+          hint={`The threshold is ${money(form1099Threshold)} per contractor per year. ${form1099ThresholdVerified ? `Checked ${form1099ThresholdVerified}.` : "Not yet checked against this year's IRS instructions."}`}
+        >
+          {form1099Rows.length === 0 ? (
+            <Empty>No service payments recorded yet.</Empty>
+          ) : (
+            <div className="overflow-x-auto">
+              <table className="w-full min-w-[28rem] text-[13px]">
+                <thead>
+                  <tr className="border-b border-line text-left text-mute">
+                    <th className="pb-2 font-medium">Contractor</th>
+                    <th className="pb-2 text-right font-medium">Paid this year</th>
+                    <th className="pb-2 text-right font-medium">Payments</th>
+                    <th className="pb-2 text-right font-medium">Status</th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-line">
+                  {form1099Rows.map((v) => {
+                    const needsForm = Number(v.total_paid) >= form1099Threshold;
+                    return (
+                      <tr key={v.vendor_id}>
+                        <td className="py-3">
+                          <div className="font-medium text-ink">{v.name}</div>
+                          {v.tin_last4 ? (
+                            <div className="figures text-[11px] text-mute-soft">
+                              TIN ending {v.tin_last4}
+                            </div>
+                          ) : null}
+                        </td>
+                        <td className="figures py-3 text-right text-ink">{money(v.total_paid)}</td>
+                        <td className="figures py-3 text-right text-mute">
+                          {v.payment_count}
+                        </td>
+                        <td className="py-3 text-right">
+                          {!needsForm ? (
+                            <span className="text-[11px] text-mute-soft">
+                              under {money(form1099Threshold)}
+                            </span>
+                          ) : v.w9_on_file ? (
+                            <span className="rounded-full border border-good-line bg-good-tint px-2.5 py-0.5 text-[11px] text-good-text">
+                              ready to file
+                            </span>
+                          ) : (
+                            <span className="rounded-full border border-bad-line bg-bad-tint px-2.5 py-0.5 text-[11px] font-medium text-bad-text">
+                              needs a W-9
+                            </span>
+                          )}
+                        </td>
+                      </tr>
+                    );
+                  })}
+                </tbody>
+              </table>
+            </div>
+          )}
+        </Card>
+        </div>
+
+        <p className="mt-4 text-[11px] leading-relaxed text-mute">
+          This is a candidate list, not a filed form. Corporations are usually
+          exempt from 1099-NEC — mark a contractor exempt on the Contractors
+          page rather than assuming from the totals here.
+        </p>
+      </div>
     </div>
   );
 }
