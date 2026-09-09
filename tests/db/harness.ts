@@ -42,6 +42,13 @@ export async function freshDb(): Promise<PGlite> {
       language sql stable
     as $$ select nullif(current_setting('request.jwt.claim.sub', true), '')::uuid $$;
 
+    -- Same idea for auth.jwt() — real Supabase exposes the full claim set as
+    -- jsonb. Migration 0025's session_is_aal2() reads the 'aal' claim from
+    -- this the same way production does.
+    create or replace function auth.jwt() returns jsonb
+      language sql stable
+    as $$ select nullif(current_setting('request.jwt.claims', true), '')::jsonb $$;
+
     -- Roles PostgREST connects as. Policies reference them by name.
     do $$ begin
       if not exists (select 1 from pg_roles where rolname = 'anon') then
@@ -83,18 +90,28 @@ export async function migrationFiles(): Promise<string[]> {
   return entries.filter((f) => f.endsWith(".sql")).sort();
 }
 
-/** Run `fn` as the given auth user, restoring the previous identity after. */
+/**
+ * Run `fn` as the given auth user, restoring the previous identity after.
+ *
+ * Defaults to aal2 (MFA already completed) so every pre-existing test keeps
+ * asserting what it always asserted — role-based access, not MFA state. Pass
+ * `{ aal: "aal1" }` to test the migration 0025 gate itself.
+ */
 export async function asUser<T>(
   db: PGlite,
   userId: string | null,
   fn: () => Promise<T>,
+  opts: { aal?: "aal1" | "aal2" } = {},
 ): Promise<T> {
+  const claims = JSON.stringify({ sub: userId ?? "", aal: opts.aal ?? "aal2" }).replace(/'/g, "''");
   await db.exec(`select set_config('request.jwt.claim.sub', '${userId ?? ""}', false);`);
+  await db.exec(`select set_config('request.jwt.claims', '${claims}', false);`);
   await db.exec(`set role authenticated;`);
   try {
     return await fn();
   } finally {
     await db.exec(`reset role;`);
     await db.exec(`select set_config('request.jwt.claim.sub', '', false);`);
+    await db.exec(`select set_config('request.jwt.claims', '', false);`);
   }
 }
