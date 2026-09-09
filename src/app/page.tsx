@@ -150,7 +150,7 @@ export default async function HomePage() {
   }
 
   const statusLine = !booksVisible
-    ? "Here's where your unit stands."
+    ? "No financial activity has been recorded yet."
     : behind > 0
       ? `${moneyRounded(owedCents / 100)} is owed across ${behind} unit${behind === 1 ? "" : "s"}. Everything else looks in order.`
       : "Every unit is current and nothing is overdue.";
@@ -169,18 +169,20 @@ export default async function HomePage() {
     (v) => !v.w9_on_file && !v.is_1099_exempt,
   ).length;
 
-  const urgent = booksVisible
-    ? urgentItems({
-        booksVisible,
-        booksBalance: booksBalanced,
-        aging: aging ?? [],
-        vendorsMissingW9,
-        nec1099Due: nextOccurrence(1, 31, today),
-        insuranceExpiry: soonestExpiry ?? null,
-        bankConnected: (bankConnections ?? []).some((c) => c.status === "active"),
-        today,
-      })
-    : [];
+  // Safe to call regardless of booksVisible — urgentItems only raises the
+  // "books don't match" item when booksVisible is true itself; every other
+  // check (delinquency, W-9s, insurance, bank connection) doesn't depend on
+  // any activity having been posted yet.
+  const urgent = urgentItems({
+    booksVisible,
+    booksBalance: booksBalanced,
+    aging: aging ?? [],
+    vendorsMissingW9,
+    nec1099Due: nextOccurrence(1, 31, today),
+    insuranceExpiry: soonestExpiry ?? null,
+    bankConnected: (bankConnections ?? []).some((c) => c.status === "active"),
+    today,
+  });
 
   // --------------------------------------------------------------------------
   // Standing + checklist
@@ -194,28 +196,26 @@ export default async function HomePage() {
     .reduce((s, f) => s + looseCents(f.cash_balance), 0);
   const totalCents = visibleFunds.reduce((s, f) => s + looseCents(f.cash_balance), 0);
 
-  let canSetTarget = false;
-  if (booksVisible) {
-    const { data: isAdmin } = await supabase.rpc("has_role_in", {
-      assoc: association.id,
-      roles: ["board_admin"],
-    });
-    canSetTarget = isAdmin === true;
-  }
+  // Setting a reserve target is governance, not a books-derived figure —
+  // available regardless of whether anything's been posted yet.
+  const { data: isAdmin } = await supabase.rpc("has_role_in", {
+    assoc: association.id,
+    roles: ["board_admin"],
+  });
+  const canSetTarget = isAdmin === true;
 
   const declarationDoc = declarationLinks?.[0]?.documents as unknown as {
     uploaded_at: string;
   } | null;
 
-  const derived = booksVisible
-    ? derivedTasks({
-        bankConnections: bankConnections ?? [],
-        policies: policies ?? [],
-        vendors: vendors ?? [],
-        declarationUploadedAt: declarationDoc?.uploaded_at ?? null,
-        today,
-      })
-    : [];
+  // None of these inputs require any posted activity either.
+  const derived = derivedTasks({
+    bankConnections: bankConnections ?? [],
+    policies: policies ?? [],
+    vendors: vendors ?? [],
+    declarationUploadedAt: declarationDoc?.uploaded_at ?? null,
+    today,
+  });
 
   const manual: ManualTask[] = (boardTasks ?? []).map((task) => ({
     id: task.id,
@@ -353,15 +353,14 @@ export default async function HomePage() {
   // --------------------------------------------------------------------------
   // Coming up + the building
   // --------------------------------------------------------------------------
-  const reminders = booksVisible
-    ? assembleReminders({
-        association,
-        bills: bills ?? [],
-        policies: policies ?? [],
-        upcomingChargeDates: (futureCharges ?? []).map((c) => c.due_on as string),
-        today,
-      })
-    : [];
+  // Compliance/bill deadlines don't depend on any activity having been posted.
+  const reminders = assembleReminders({
+    association,
+    bills: bills ?? [],
+    policies: policies ?? [],
+    upcomingChargeDates: (futureCharges ?? []).map((c) => c.due_on as string),
+    today,
+  });
 
   const buildingUnits: BuildingUnit[] = (units ?? []).map((u) => {
     const name = ownerName.get(u.unit_id) ?? null;
@@ -400,63 +399,57 @@ export default async function HomePage() {
         books={booksVisible ? { visible: true, balanced: booksBalanced } : null}
       />
 
-      {booksVisible ? (
-        urgent.length > 0 ? (
-          <WorthAMinute items={urgent} />
-        ) : (
-          <p className="rounded-lg border border-good-line bg-good-tint px-4 py-2.5 text-[13px] text-good-text">
-            Nothing needs you today. The books balance and every unit is current.
-          </p>
-        )
-      ) : null}
+      {urgent.length > 0 ? (
+        <WorthAMinute items={urgent} />
+      ) : booksVisible ? (
+        <p className="rounded-lg border border-good-line bg-good-tint px-4 py-2.5 text-[13px] text-good-text">
+          Nothing needs you today. The books balance and every unit is current.
+        </p>
+      ) : (
+        <p className="rounded-lg border border-line bg-fill px-4 py-2.5 text-[13px] text-mute">
+          Nothing to flag yet — no activity has been recorded.
+        </p>
+      )}
 
-      {booksVisible ? (
-        <div className="grid items-start gap-4 lg:grid-cols-[3fr_2fr]">
-          <Standing
-            totalCents={totalCents}
-            operatingCents={operatingCents}
-            reserveCents={reserveCents}
-            reserveTarget={reserveTarget}
-            booksBalanced={booksBalanced}
-            tbTotalCents={tbDebitCents}
-            canSetTarget={canSetTarget}
-          />
-          <YourList
-            derived={derived}
-            manual={manual}
-            persons={(persons ?? []).map((p) => ({ id: p.id, full_name: p.full_name }))}
-          />
-        </div>
-      ) : null}
+      <div className="grid items-start gap-4 lg:grid-cols-[3fr_2fr]">
+        <Standing
+          totalCents={totalCents}
+          operatingCents={operatingCents}
+          reserveCents={reserveCents}
+          reserveTarget={reserveTarget}
+          booksBalanced={booksBalanced}
+          tbTotalCents={tbDebitCents}
+          canSetTarget={canSetTarget}
+          hasActivity={booksVisible}
+        />
+        <YourList
+          derived={derived}
+          manual={manual}
+          persons={(persons ?? []).map((p) => ({ id: p.id, full_name: p.full_name }))}
+        />
+      </div>
 
-      {booksVisible ? (
-        <>
-          <ShowcaseCards cash={cash} inOut={inOut} spending={spending} />
-          <StatStrip
-            cells={[
-              {
-                label: "Operating runway",
-                value: runwayMonths !== null ? `${runwayMonths.toFixed(1)} months` : null,
-                note:
-                  runwayMonths !== null
-                    ? "at the recent pace of spending"
-                    : "no spending recorded yet",
-              },
-              {
-                label: "Dues collected on time",
-                value: onTimeRate !== null ? `${Math.round(onTimeRate * 100)}%` : null,
-                note:
-                  onTimeRate !== null ? "arrived by their due date" : "nothing charged yet",
-              },
-              {
-                label: "Reserve funded",
-                value: reserveFunded !== null ? `${Math.round(reserveFunded * 100)}%` : null,
-                note: reserveFunded !== null ? "of the board's target" : "no target set",
-              },
-            ]}
-          />
-        </>
-      ) : null}
+      <ShowcaseCards cash={cash} inOut={inOut} spending={spending} />
+      <StatStrip
+        cells={[
+          {
+            label: "Operating runway",
+            value: runwayMonths !== null ? `${runwayMonths.toFixed(1)} months` : null,
+            note:
+              runwayMonths !== null ? "at the recent pace of spending" : "no spending recorded yet",
+          },
+          {
+            label: "Dues collected on time",
+            value: onTimeRate !== null ? `${Math.round(onTimeRate * 100)}%` : null,
+            note: onTimeRate !== null ? "arrived by their due date" : "nothing charged yet",
+          },
+          {
+            label: "Reserve funded",
+            value: reserveFunded !== null ? `${Math.round(reserveFunded * 100)}%` : null,
+            note: reserveFunded !== null ? "of the board's target" : "no target set",
+          },
+        ]}
+      />
 
       <div className="grid items-start gap-4 lg:grid-cols-[3fr_2fr]">
         {reminders.length > 0 ? <ComingUp reminders={reminders} today={today} /> : null}

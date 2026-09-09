@@ -15,6 +15,7 @@ export function Standing({
   booksBalanced,
   tbTotalCents,
   canSetTarget,
+  hasActivity,
 }: {
   totalCents: number;
   operatingCents: number;
@@ -23,6 +24,10 @@ export function Standing({
   booksBalanced: boolean;
   tbTotalCents: number;
   canSetTarget: boolean;
+  /** False for a building with nothing posted yet — the balanced/imbalanced
+   * banner below would otherwise show a false "don't match" alarm for a
+   * books that simply doesn't have anything in it to disagree with itself. */
+  hasActivity: boolean;
 }) {
   const targetCents = reserveTarget ? Math.round(reserveTarget * 100) : null;
   const funded =
@@ -80,12 +85,16 @@ export function Standing({
 
         <div
           className={`mt-4 rounded-lg border px-3 py-2 text-[12px] ${
-            booksBalanced
-              ? "border-good-line bg-good-tint text-good-text"
-              : "border-bad-line bg-bad-tint text-bad-text"
+            !hasActivity
+              ? "border-line bg-fill text-mute"
+              : booksBalanced
+                ? "border-good-line bg-good-tint text-good-text"
+                : "border-bad-line bg-bad-tint text-bad-text"
           }`}
         >
-          {booksBalanced ? (
+          {!hasActivity ? (
+            "No activity recorded yet — nothing to check."
+          ) : booksBalanced ? (
             <Jargon term="trial balance">
               The books balance — {formatMoney(tbTotalCents)} on each side
             </Jargon>

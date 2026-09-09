@@ -1,5 +1,6 @@
 import Link from "next/link";
 import { formatMoney } from "@/lib/tax/form1120h";
+import { Empty } from "@/components/ui";
 import { LineChart, type LinePoint } from "./charts/line-chart";
 import { BarChart, type BarGroup } from "./charts/bar-chart";
 import { DonutChart, type DonutSlice } from "./charts/donut-chart";
@@ -86,6 +87,19 @@ export function ShowcaseCards({
   inOut: InOutCardData | null;
   spending: SpendingCardData | null;
 }) {
+  const hasAny =
+    (cash && cash.points.length > 0) ||
+    (inOut && inOut.groups.length > 0) ||
+    (spending && spending.slices.length > 0);
+
+  if (!hasAny) {
+    return (
+      <div className="rounded-xl border border-line bg-paper">
+        <Empty>No monthly activity recorded yet — these fill in once something posts.</Empty>
+      </div>
+    );
+  }
+
   return (
     <div className="space-y-4">
       {cash && cash.points.length > 0 ? (
