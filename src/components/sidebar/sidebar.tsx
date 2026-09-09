@@ -4,7 +4,7 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { LogOut } from "lucide-react";
 import { Mark } from "@/components/mark";
-import { NAV_GROUPS, UNGROUPED_NAV, type NavItemConfig } from "./config";
+import { NAV_GROUPS, TRAILING_NAV, UNGROUPED_NAV, type NavItemConfig } from "./config";
 
 function isActive(pathname: string, href: string) {
   return href === "/" ? pathname === "/" : pathname.startsWith(href);
@@ -122,6 +122,17 @@ export function Sidebar({
             </div>
           </div>
         ))}
+
+        <div className="mt-4 space-y-0.5">
+          {TRAILING_NAV.map((item) => (
+            <NavItemLink
+              key={item.href}
+              item={item}
+              active={isActive(pathname, item.href)}
+              badgeCount={item.badgeKey ? badges[item.badgeKey as keyof typeof badges] : undefined}
+            />
+          ))}
+        </div>
       </div>
 
       <form
