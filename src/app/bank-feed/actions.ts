@@ -201,3 +201,31 @@ export async function syncBankTransactions(
   revalidatePath("/bank-feed");
   return { ok: true, count: result.count };
 }
+
+/**
+ * Overrides a transaction's displayed category and/or tags it as a specific
+ * unit's dues payment. Board-admin only (bank_transactions_update, 0016) —
+ * purely a label on the feed itself; never touches assessment_charges,
+ * payments, or the ledger. Both fields are cleared with an empty selection,
+ * not required together.
+ */
+export async function tagBankTransaction(
+  transactionId: string,
+  category: string | null,
+  unitId: string | null,
+): Promise<{ ok?: true; error?: string }> {
+  const supabase = await createClient();
+  const { data, error } = await supabase
+    .from("bank_transactions")
+    .update({ category_override: category, matched_unit_id: unitId })
+    .eq("id", transactionId)
+    .select("id");
+
+  if (error) return { error: error.message };
+  if (!data || data.length === 0) {
+    return { error: "Only a board admin can tag a transaction." };
+  }
+
+  revalidatePath("/bank-feed");
+  return { ok: true };
+}

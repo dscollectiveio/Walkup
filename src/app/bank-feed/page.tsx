@@ -1,12 +1,56 @@
 import { createClient } from "@/lib/supabase/server";
 import { Card, Empty, Restricted, Stat, money } from "@/components/ui";
+import { plaidClient } from "@/lib/plaid";
 import { ConnectBankButton } from "./connect-bank-button";
 import { SyncButton } from "./sync-button";
 import { DisconnectButton } from "./disconnect-button";
+import { TransactionRow } from "./transaction-row";
 
 export const dynamic = "force-dynamic";
 
 type Range = "this_month" | "last_30" | "all";
+
+interface ConnectionBalance {
+  connectionId: string;
+  accounts: { name: string; mask: string | null; currentCents: number | null }[];
+  error?: string;
+}
+
+/**
+ * Live balance, straight from Plaid — not derived from bank_transactions and
+ * never written anywhere. Purely a display fetch: nothing here touches the
+ * ledger, same "read-only, not part of the books" posture as the rest of
+ * this page.
+ */
+async function getConnectionBalance(
+  supabase: Awaited<ReturnType<typeof createClient>>,
+  connectionId: string,
+): Promise<ConnectionBalance> {
+  const { data: accessToken, error: tokenError } = await supabase.rpc(
+    "get_bank_access_token",
+    { p_connection_id: connectionId },
+  );
+  if (tokenError || !accessToken) {
+    return { connectionId, accounts: [], error: tokenError?.message ?? "No access token on file." };
+  }
+
+  try {
+    const response = await plaidClient().accountsBalanceGet({ access_token: accessToken });
+    return {
+      connectionId,
+      accounts: response.data.accounts.map((a) => ({
+        name: a.name,
+        mask: a.mask,
+        currentCents:
+          a.balances.current !== null && a.balances.current !== undefined
+            ? Math.round(a.balances.current * 100)
+            : null,
+      })),
+    };
+  } catch {
+    return { connectionId, accounts: [], error: "Couldn't reach the bank for a balance." };
+  }
+}
 
 function rangeStart(range: Range): string | null {
   const now = new Date();
@@ -41,9 +85,26 @@ export default async function BankFeedPage({
 
   const active = connections.filter((c) => c.status !== "disconnected");
 
+  const [{ data: associations }, { data: units }] = await Promise.all([
+    supabase.from("associations").select("id").limit(1),
+    supabase.from("units").select("id, label").order("sort_order"),
+  ]);
+  const associationId = associations?.[0]?.id ?? null;
+  const { data: isBoardAdminRes } = associationId
+    ? await supabase.rpc("has_role_in", {
+        assoc: associationId,
+        roles: ["board_admin"],
+      })
+    : { data: false };
+  const canTag = isBoardAdminRes === true;
+  const unitOptions = units ?? [];
+  const unitLabelById = new Map(unitOptions.map((u) => [u.id, u.label]));
+
   let transactionsQuery = supabase
     .from("bank_transactions")
-    .select("id, posted_on, description, amount, pending, raw_category")
+    .select(
+      "id, posted_on, description, amount, pending, raw_category, category_override, matched_unit_id",
+    )
     .order("posted_on", { ascending: false })
     .limit(200);
 
@@ -60,6 +121,17 @@ export default async function BankFeedPage({
   const moneyOut = (transactions ?? [])
     .filter((t) => Number(t.amount) < 0)
     .reduce((s, t) => s + Math.abs(Number(t.amount)), 0);
+
+  const balances =
+    active.length > 0
+      ? await Promise.all(active.map((c) => getConnectionBalance(supabase, c.id)))
+      : [];
+  const balanceByConnection = new Map(balances.map((b) => [b.connectionId, b]));
+  const totalBalanceCents = balances.reduce(
+    (sum, b) => sum + b.accounts.reduce((s, a) => s + (a.currentCents ?? 0), 0),
+    0,
+  );
+  const anyBalance = balances.some((b) => b.accounts.length > 0);
 
   return (
     <div className="space-y-6">
@@ -87,24 +159,56 @@ export default async function BankFeedPage({
         </Card>
       ) : (
         <>
-          {active.map((c) => (
-            <Card
-              key={c.id}
-              title={c.institution_name}
-              hint={
-                c.last_synced_at
-                  ? `Last synced ${new Date(c.last_synced_at).toLocaleString()}`
-                  : "Not yet synced"
-              }
-            >
-              <div className="flex flex-wrap items-center gap-2">
-                <SyncButton connectionId={c.id} />
-                <DisconnectButton connectionId={c.id} />
-              </div>
-            </Card>
-          ))}
+          {active.map((c) => {
+            const balance = balanceByConnection.get(c.id);
+            return (
+              <Card
+                key={c.id}
+                title={c.institution_name}
+                hint={
+                  c.last_synced_at
+                    ? `Last synced ${new Date(c.last_synced_at).toLocaleString()}`
+                    : "Not yet synced"
+                }
+              >
+                {balance?.error ? (
+                  <p className="mb-3 text-[12px] text-mute-soft">{balance.error}</p>
+                ) : balance && balance.accounts.length > 0 ? (
+                  <ul className="mb-3 space-y-1">
+                    {balance.accounts.map((a, i) => (
+                      <li
+                        key={i}
+                        className="flex items-baseline justify-between gap-3 text-[13px]"
+                      >
+                        <span className="text-ink">
+                          {a.name}
+                          {a.mask ? (
+                            <span className="ml-1 text-[11px] text-mute-soft">···{a.mask}</span>
+                          ) : null}
+                        </span>
+                        <span className="figures text-ink">
+                          {a.currentCents !== null ? money(a.currentCents / 100) : "—"}
+                        </span>
+                      </li>
+                    ))}
+                  </ul>
+                ) : null}
+                <div className="flex flex-wrap items-center gap-2">
+                  <SyncButton connectionId={c.id} />
+                  <DisconnectButton connectionId={c.id} />
+                </div>
+              </Card>
+            );
+          })}
 
-          <div className="grid gap-4 sm:grid-cols-2">
+          <div className="grid gap-4 sm:grid-cols-3">
+            {anyBalance ? (
+              <Stat
+                label="Bank balance"
+                value={money(totalBalanceCents / 100)}
+                note="Live from Plaid, just now"
+              />
+            ) : null}
             <Stat label="Money in" value={money(moneyIn)} note="In the filtered range below" />
             <Stat label="Money out" value={money(moneyOut)} note="In the filtered range below" />
           </div>
@@ -168,24 +272,13 @@ export default async function BankFeedPage({
                   </thead>
                   <tbody className="divide-y divide-line">
                     {transactions.map((t) => (
-                      <tr key={t.id}>
-                        <td className="figures py-2 text-ink">{t.posted_on}</td>
-                        <td className="py-2 text-ink">
-                          {t.description}
-                          {t.raw_category ? (
-                            <span className="ml-2 rounded-full bg-neutral-tint px-2 py-0.5 text-[11px] text-neutral-text">
-                              {t.raw_category}
-                            </span>
-                          ) : null}
-                          {t.pending ? (
-                            <span className="ml-2 text-[11px] text-mute-soft">pending</span>
-                          ) : null}
-                        </td>
-                        <td className="figures py-2 text-right text-ink">
-                          {Number(t.amount) < 0 ? "−" : ""}
-                          {money(Math.abs(Number(t.amount)))}
-                        </td>
-                      </tr>
+                      <TransactionRow
+                        key={t.id}
+                        transaction={t}
+                        units={unitOptions}
+                        unitLabel={t.matched_unit_id ? (unitLabelById.get(t.matched_unit_id) ?? null) : null}
+                        canEdit={canTag}
+                      />
                     ))}
                   </tbody>
                 </table>

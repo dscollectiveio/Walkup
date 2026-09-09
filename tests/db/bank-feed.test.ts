@@ -117,4 +117,87 @@ describe("bank feed", () => {
       ).rejects.toThrow(); // the secret row is gone, so the select into finds nothing
     });
   });
+
+  // --------------------------------------------------------------------------
+  // Manual transaction tags (0031) — category override, unit dues match
+  // --------------------------------------------------------------------------
+
+  describe("transaction tags", () => {
+    async function seedTransaction() {
+      const connectionId = await asUser(db, f.cyUser, async () => {
+        const { rows } = await db.query<{ store_bank_connection: string }>(
+          `select public.store_bank_connection($1::uuid, 'BMO Harris', 'item-1', 'access-token-secret')`,
+          [f.damen],
+        );
+        return rows[0].store_bank_connection;
+      });
+
+      const transactionId = await asUser(db, f.cyUser, async () => {
+        const { rows } = await db.query<{ id: string }>(
+          `insert into public.bank_transactions
+             (association_id, bank_connection_id, plaid_transaction_id, posted_on, amount, description)
+           values ($1::uuid, $2::uuid, 'plaid-tx-1', '2026-03-01'::date, 500.00, 'Assessment deposit')
+           returning id`,
+          [f.damen, connectionId],
+        );
+        return rows[0].id;
+      });
+
+      return transactionId;
+    }
+
+    it("lets board_admin set a category override and tag a unit's dues payment", async () => {
+      const transactionId = await seedTransaction();
+
+      await asUser(db, f.cyUser, async () => {
+        const { rows } = await db.query<{
+          category_override: string | null;
+          matched_unit_id: string | null;
+        }>(
+          `update public.bank_transactions
+              set category_override = 'Landscaping', matched_unit_id = $2::uuid
+            where id = $1::uuid
+            returning category_override, matched_unit_id`,
+          [transactionId, f.unit1],
+        );
+        expect(rows[0]).toEqual({ category_override: "Landscaping", matched_unit_id: f.unit1 });
+      });
+    });
+
+    it("refuses the update from an owner-only caller", async () => {
+      const transactionId = await seedTransaction();
+
+      await asUser(db, f.adaUser, async () => {
+        const { affectedRows } = await db.query(
+          `update public.bank_transactions set category_override = 'Snuck in' where id = $1::uuid`,
+          [transactionId],
+        );
+        expect(affectedRows).toBe(0); // RLS filtered the row, not an error
+      });
+    });
+
+    it("clears both fields back to null", async () => {
+      const transactionId = await seedTransaction();
+
+      await asUser(db, f.cyUser, async () => {
+        await db.query(
+          `update public.bank_transactions
+              set category_override = 'Landscaping', matched_unit_id = $2::uuid
+            where id = $1::uuid`,
+          [transactionId, f.unit1],
+        );
+        const { rows } = await db.query<{
+          category_override: string | null;
+          matched_unit_id: string | null;
+        }>(
+          `update public.bank_transactions
+              set category_override = null, matched_unit_id = null
+            where id = $1::uuid
+            returning category_override, matched_unit_id`,
+          [transactionId],
+        );
+        expect(rows[0]).toEqual({ category_override: null, matched_unit_id: null });
+      });
+    });
+  });
 });
