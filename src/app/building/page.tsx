@@ -8,8 +8,6 @@ import { PersonRow, type PersonRecord } from "./person-row";
 import { OwnershipRow, type CurrentOwner } from "./ownership-row";
 import { OwnershipAmendmentForm } from "./ownership-amendment-form";
 import { AmendmentHistory, type AmendmentHistoryEntry } from "./amendment-history";
-import { GrantRoleForm } from "./grant-role-form";
-import { RoleGrantRow, type RoleGrantRecord } from "./role-grant-row";
 import { GenerateInviteForm } from "./generate-invite-form";
 import { InviteRow, type InviteRecord } from "./invite-row";
 
@@ -61,7 +59,7 @@ export default async function BuildingPage() {
       .order("full_name"),
     supabase
       .from("role_grants")
-      .select("id, person_id, role, granted_on, expires_on, revoked_at, persons(full_name)")
+      .select("person_id, role, expires_on, revoked_at")
       .order("granted_on", { ascending: false }),
     supabase
       .from("unit_owners")
@@ -141,18 +139,6 @@ export default async function BuildingPage() {
     };
   });
 
-  const roleGrants: RoleGrantRecord[] = (roleGrantRows ?? []).map((g) => {
-    const person = g.persons as unknown as { full_name: string } | null;
-    return {
-      id: g.id,
-      personName: person?.full_name ?? "Unknown",
-      role: g.role,
-      grantedOn: g.granted_on,
-      expiresOn: g.expires_on,
-      revokedAt: g.revoked_at,
-    };
-  });
-
   const invites: InviteRecord[] = (inviteRows ?? []).map((i) => ({
     id: i.id,
     token: i.token,
@@ -208,7 +194,7 @@ export default async function BuildingPage() {
 
       <Card
         title="People"
-        hint="Owners, board members, and anyone else on file — with the roles each one holds."
+        hint="Owners, board members, and anyone else on file — with who has access to the books and what they can do with it."
       >
         <div className="space-y-4">
           <AddPersonForm />
@@ -222,6 +208,7 @@ export default async function BuildingPage() {
                   person={p}
                   roles={rolesByPerson.get(p.id) ?? []}
                   canEdit={isBoard}
+                  canEditRoles={isBoardAdmin}
                 />
               ))}
             </ul>
@@ -265,26 +252,6 @@ export default async function BuildingPage() {
           </div>
         </div>
       </Card>
-
-      {isBoardAdmin ? (
-        <Card
-          title="Role grants"
-          hint="Who has access to the books, and what they can do with it."
-        >
-          <div className="space-y-4">
-            <GrantRoleForm persons={personOptions} />
-            {roleGrants.length === 0 ? (
-              <Empty>No roles granted yet.</Empty>
-            ) : (
-              <ul className="divide-y divide-line">
-                {roleGrants.map((g) => (
-                  <RoleGrantRow key={g.id} grant={g} />
-                ))}
-              </ul>
-            )}
-          </div>
-        </Card>
-      ) : null}
 
       {isBoard ? (
         <Card

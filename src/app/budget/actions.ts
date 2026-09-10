@@ -28,3 +28,21 @@ export async function saveBudgetLine(_prev: unknown, formData: FormData) {
   revalidatePath("/budget");
   return { ok: true };
 }
+
+export async function addExpenseCategory(_prev: unknown, formData: FormData) {
+  const associationId = String(formData.get("association_id") ?? "");
+  const name = String(formData.get("name") ?? "").trim();
+
+  if (!name) return { error: "Enter a category name." };
+
+  const supabase = await createClient();
+  const { error } = await supabase.rpc("create_expense_account", {
+    p_association_id: associationId,
+    p_name: name,
+  });
+
+  if (error) return { error: error.message };
+
+  revalidatePath("/budget");
+  return { ok: true };
+}

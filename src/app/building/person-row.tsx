@@ -19,14 +19,23 @@ const ROLE_LABEL: Record<string, string> = {
   owner: "Owner",
 };
 
+const ROLE_OPTIONS: { value: string; label: string; hint: string }[] = [
+  { value: "board_admin", label: "Board admin", hint: "full read/write" },
+  { value: "board_member", label: "Board member", hint: "full read, limited write" },
+  { value: "accountant", label: "Accountant", hint: "financials, expires after 90 days" },
+  { value: "owner", label: "Owner", hint: "read-only, own unit" },
+];
+
 export function PersonRow({
   person,
   roles,
   canEdit,
+  canEditRoles,
 }: {
   person: PersonRecord;
   roles: string[];
   canEdit: boolean;
+  canEditRoles: boolean;
 }) {
   const [editing, setEditing] = useState(false);
   const [state, action, pending] = useActionState(updatePerson, null);
@@ -91,6 +100,27 @@ export function PersonRow({
               />
             </div>
           </div>
+          {canEditRoles ? (
+            <div>
+              <input type="hidden" name="roles_submitted" value="1" />
+              <span className="block text-[12px] font-medium text-ink">Access</span>
+              <div className="mt-1.5 flex flex-wrap gap-x-4 gap-y-1.5">
+                {ROLE_OPTIONS.map((r) => (
+                  <label key={r.value} className="flex items-center gap-1.5 text-[12px] text-ink">
+                    <input
+                      type="checkbox"
+                      name="roles"
+                      value={r.value}
+                      defaultChecked={roles.includes(r.value)}
+                      className="rounded border-line-strong"
+                    />
+                    {r.label}
+                    <span className="text-mute-soft">({r.hint})</span>
+                  </label>
+                ))}
+              </div>
+            </div>
+          ) : null}
           {state?.error ? <p className="text-[12px] text-bad-text">{state.error}</p> : null}
           <div className="flex gap-2">
             <button

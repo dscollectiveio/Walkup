@@ -218,8 +218,95 @@ export async function updatePerson(_prev: unknown, formData: FormData) {
     return { error: "You can only edit your own contact details, or you're not on the board." };
   }
 
+  // Roles inputs only render for a board_admin (person-row.tsx) — this
+  // sentinel is how a board_member's submission (contact info only) is told
+  // apart from a board_admin submission with every role box unchecked, which
+  // would otherwise look identical to formData.getAll("roles") and revoke
+  // everyone's access.
+  if (formData.get("roles_submitted") === "1") {
+    const roleError = await syncPersonRoles(
+      supabase,
+      personId,
+      formData.getAll("roles").map(String),
+    );
+    if (roleError) return { error: roleError };
+  }
+
   revalidateBuilding();
   return { ok: true };
+}
+
+/**
+ * Reconciles a person's role_grants against the checked roles from the
+ * building page's People section (merged with role granting/revoking per
+ * Doug's request — previously a separate "Role grants" card). Only the
+ * roles that actually changed are touched, so an unchanged role keeps its
+ * original granted_on/expires_on rather than resetting on every save.
+ */
+async function syncPersonRoles(
+  supabase: Awaited<ReturnType<typeof createClient>>,
+  personId: string,
+  selectedRoles: string[],
+): Promise<string | null> {
+  for (const r of selectedRoles) {
+    if (!ROLES.includes(r as (typeof ROLES)[number])) return "Unrecognized role.";
+  }
+
+  const associationId = await currentAssociationId(supabase);
+  if (!associationId) return "No association is visible to you.";
+
+  const user = await getUser();
+  if (!user) return "Not signed in.";
+
+  const { data: currentGrants, error: fetchError } = await supabase
+    .from("role_grants")
+    .select("id, role")
+    .eq("person_id", personId)
+    .is("revoked_at", null);
+  if (fetchError) return fetchError.message;
+
+  const selected = new Set(selectedRoles);
+  const currentRoles = new Set((currentGrants ?? []).map((g) => g.role));
+
+  for (const role of selected) {
+    if (currentRoles.has(role)) continue;
+
+    // "accountant grants expire; default 90d set in app" — see the comment
+    // on role_grants.expires_on in 0001_core_schema.sql.
+    let expiresOn: string | null = null;
+    if (role === "accountant") {
+      const d = new Date();
+      d.setDate(d.getDate() + 90);
+      expiresOn = d.toISOString().slice(0, 10);
+    }
+
+    const { error } = await supabase.from("role_grants").upsert(
+      {
+        association_id: associationId,
+        person_id: personId,
+        role,
+        granted_on: new Date().toISOString().slice(0, 10),
+        granted_by: user.id,
+        expires_on: expiresOn,
+        revoked_at: null,
+        revoked_by: null,
+      },
+      { onConflict: "association_id,person_id,role" },
+    );
+    if (error) return error.message;
+  }
+
+  for (const grant of currentGrants ?? []) {
+    if (selected.has(grant.role)) continue;
+
+    const { error } = await supabase
+      .from("role_grants")
+      .update({ revoked_at: new Date().toISOString(), revoked_by: user.id })
+      .eq("id", grant.id);
+    if (error) return error.message;
+  }
+
+  return null;
 }
 
 // ============================================================================
@@ -376,82 +463,6 @@ export async function recordOwnershipAmendment(_prev: unknown, formData: FormDat
     p_recorded_document_ref: recordedDocumentRef,
   });
   if (error) return { error: error.message };
-
-  revalidateBuilding();
-  return { ok: true };
-}
-
-// ============================================================================
-// ROLE GRANTS
-// ============================================================================
-
-/**
- * Grants a role, or re-grants one that was previously revoked. role_grants
- * has UNIQUE(association_id, person_id, role), so re-granting is an upsert —
- * every field that should "reset" is set explicitly, since Postgres column
- * defaults don't apply on the ON CONFLICT DO UPDATE path.
- */
-export async function grantRole(_prev: unknown, formData: FormData) {
-  const personId = String(formData.get("person_id") ?? "");
-  const role = String(formData.get("role") ?? "");
-  const expiresOnRaw = String(formData.get("expires_on") ?? "").trim();
-
-  if (!personId) return { error: "Choose a person." };
-  if (!ROLES.includes(role as (typeof ROLES)[number])) return { error: "Choose a role." };
-
-  const supabase = await createClient();
-  const associationId = await currentAssociationId(supabase);
-  if (!associationId) return { error: "No association is visible to you." };
-
-  const user = await getUser();
-  if (!user) return { error: "Not signed in." };
-
-  // "accountant grants expire; default 90d set in app" — see the comment on
-  // role_grants.expires_on in 0001_core_schema.sql.
-  let expiresOn: string | null = expiresOnRaw || null;
-  if (!expiresOn && role === "accountant") {
-    const d = new Date();
-    d.setDate(d.getDate() + 90);
-    expiresOn = d.toISOString().slice(0, 10);
-  }
-
-  const { error } = await supabase
-    .from("role_grants")
-    .upsert(
-      {
-        association_id: associationId,
-        person_id: personId,
-        role,
-        granted_on: new Date().toISOString().slice(0, 10),
-        granted_by: user.id,
-        expires_on: expiresOn,
-        revoked_at: null,
-        revoked_by: null,
-      },
-      { onConflict: "association_id,person_id,role" },
-    );
-
-  if (error) return { error: error.message };
-
-  revalidateBuilding();
-  return { ok: true };
-}
-
-export async function revokeRole(roleGrantId: string): Promise<{ ok?: true; error?: string }> {
-  const user = await getUser();
-  if (!user) return { error: "Not signed in." };
-
-  const supabase = await createClient();
-  const { data, error } = await supabase
-    .from("role_grants")
-    .update({ revoked_at: new Date().toISOString(), revoked_by: user.id })
-    .eq("id", roleGrantId)
-    .select("id");
-
-  if (error) return { error: error.message };
-  if (!data || data.length === 0) {
-    return { error: "Only a board admin can revoke a role." };
-  }
 
   revalidateBuilding();
   return { ok: true };

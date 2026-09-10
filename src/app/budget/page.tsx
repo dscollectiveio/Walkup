@@ -1,6 +1,7 @@
 import { createClient } from "@/lib/supabase/server";
-import { Card, Empty, Restricted, money } from "@/components/ui";
+import { Card, Empty, Restricted, Stat, money } from "@/components/ui";
 import { BudgetRow } from "./budget-row";
+import { AddCategoryForm } from "./add-category-form";
 
 export const dynamic = "force-dynamic";
 
@@ -107,6 +108,17 @@ export default async function BudgetPage() {
 
   const accountList = accounts ?? [];
 
+  const categoriesBudgeted = accountList.filter((a) => annualByAccount.has(a.id)).length;
+  const totalBudgeted = accountList.reduce(
+    (sum, a) => sum + (annualByAccount.get(a.id)?.budgeted ?? 0),
+    0,
+  );
+  const totalActual = accountList.reduce(
+    (sum, a) => sum + (annualByAccount.get(a.id)?.actual ?? 0),
+    0,
+  );
+  const totalRemaining = totalBudgeted - totalActual;
+
   return (
     <div className="space-y-6">
       <div>
@@ -115,6 +127,24 @@ export default async function BudgetPage() {
           {fiscalYear.label} — spending against the operating budget the
           board approved, tracked by month and for the year.
         </p>
+      </div>
+
+      <div className="grid gap-4 sm:grid-cols-3">
+        <Stat
+          label="Annual budget"
+          value={money(totalBudgeted)}
+          note={`${categoriesBudgeted} of ${accountList.length} categories budgeted`}
+        />
+        {canSeeActuals ? (
+          <>
+            <Stat label="Spent YTD" value={money(totalActual)} note={fiscalYear.label} />
+            <Stat
+              label="Remaining"
+              value={money(totalRemaining)}
+              tone={totalRemaining < 0 ? "bad" : "good"}
+            />
+          </>
+        ) : null}
       </div>
 
       <Card
@@ -209,6 +239,7 @@ export default async function BudgetPage() {
             </table>
           </div>
         )}
+        {canEdit ? <AddCategoryForm associationId={association.id} /> : null}
       </Card>
     </div>
   );
