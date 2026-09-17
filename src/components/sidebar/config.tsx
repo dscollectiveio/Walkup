@@ -6,6 +6,7 @@ import {
   Folder,
   Building2,
   HandCoins,
+  FileBarChart,
   type LucideIcon,
 } from "lucide-react";
 
@@ -35,6 +36,7 @@ export const NAV_GROUPS: NavGroupConfig[] = [
     items: [
       { href: "/dues", label: "HOA Dues", icon: HandCoins },
       { href: "/budget", label: "Budget", icon: BarChart3 },
+      { href: "/financial-statements", label: "Financial Statements", icon: FileBarChart },
       { href: "/bank-feed", label: "Bank Sync & Transactions", icon: Landmark },
     ],
   },
