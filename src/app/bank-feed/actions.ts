@@ -74,7 +74,7 @@ export async function connectBank(
   }
 
   const supabase = await createClient();
-  const { error } = await supabase.rpc("store_bank_connection", {
+  const { data: connectionId, error } = await supabase.rpc("store_bank_connection", {
     p_association_id: associationId,
     p_institution_name: institutionName,
     p_plaid_item_id: itemId,
@@ -82,6 +82,19 @@ export async function connectBank(
   });
 
   if (error) return { error: error.message };
+
+  // Every posting needs a cash leg. Default to Operating Cash / Operating
+  // fund so the first sync can post; the board can change it on the page.
+  const [{ data: cashAccounts }, { data: funds }] = await Promise.all([
+    supabase.from("accounts").select("id").eq("code", "1000").eq("is_cash_account", true).limit(1),
+    supabase.from("funds").select("id").eq("kind", "operating").limit(1),
+  ]);
+  if (cashAccounts?.[0] && funds?.[0]) {
+    await supabase
+      .from("bank_connections")
+      .update({ cash_account_id: cashAccounts[0].id, fund_id: funds[0].id })
+      .eq("id", connectionId);
+  }
 
   revalidatePath("/bank-feed");
   return { ok: true };
@@ -168,15 +181,24 @@ function isItemAlreadyGone(cause: unknown): boolean {
   return code === "ITEM_NOT_FOUND" || code === "INVALID_ACCESS_TOKEN";
 }
 
+function revalidateLedgerPages() {
+  revalidatePath("/bank-feed");
+  revalidatePath("/financial-statements");
+  revalidatePath("/budget");
+  revalidatePath("/dues");
+  revalidatePath("/delinquency");
+  revalidatePath("/");
+}
+
 /**
- * Pulls new activity for one connection via Plaid's cursor-based sync and
- * writes it into bank_transactions. Manually triggered by a "Sync now"
- * button rather than a background job or webhook — this is a v1 read-only
- * feed, not infrastructure worth running unattended yet.
+ * Pulls new activity for one connection via Plaid's cursor-based sync.
+ * Because this runs as the signed-in board member, rows matched by an
+ * auto-post rule are posted to the ledger here too — the cron never does
+ * that (DECISIONS #29).
  */
 export async function syncBankTransactions(
   connectionId: string,
-): Promise<{ ok?: true; count?: number; error?: string }> {
+): Promise<{ ok?: true; count?: number; posted?: number; warning?: string; error?: string }> {
   const supabase = await createClient();
 
   const { data: connectionRows, error: connectionError } = await supabase
@@ -195,37 +217,209 @@ export async function syncBankTransactions(
   );
   if (tokenError) return { error: tokenError.message };
 
-  const result = await syncOneConnection(supabase, connection, accessToken);
+  const result = await syncOneConnection(supabase, connection, accessToken, { autoPost: true });
   if ("error" in result) return { error: result.error };
 
-  revalidatePath("/bank-feed");
-  return { ok: true, count: result.count };
+  revalidateLedgerPages();
+  return {
+    ok: true,
+    count: result.count,
+    posted: result.posted,
+    warning: result.postErrors.length > 0 ? result.postErrors.join(" · ") : undefined,
+  };
 }
 
+export type PostingKind = "expense" | "income" | "dues" | "transfer" | "excluded";
+
+const POSTING_KINDS: PostingKind[] = ["expense", "income", "dues", "transfer", "excluded"];
+
 /**
- * Overrides a transaction's displayed category and/or tags it as a specific
- * unit's dues payment. Board-admin only (bank_transactions_update, 0016) —
- * purely a label on the feed itself; never touches assessment_charges,
- * payments, or the ledger. Both fields are cleared with an empty selection,
- * not required together.
+ * Records how a bank transaction should hit the books, optionally remembers
+ * that as a rule for future rows with the same description, and optionally
+ * posts it right now. The categorization itself is a board_admin UPDATE
+ * (bank_transactions_update, 0016); the posting is post_bank_transaction()
+ * (0036), which does its own checks and is the only thing that ever sets
+ * journal_entry_id.
  */
-export async function tagBankTransaction(
+export async function categorizeBankTransaction(input: {
+  transactionId: string;
+  kind: PostingKind;
+  accountId: string | null;
+  unitId: string | null;
+  vendorId: string | null;
+  saveRule: boolean;
+  autoPostRule: boolean;
+  postNow: boolean;
+}): Promise<{ ok?: true; posted?: boolean; error?: string }> {
+  if (!POSTING_KINDS.includes(input.kind)) return { error: "Choose how this should be recorded." };
+  if (["expense", "income", "transfer"].includes(input.kind) && !input.accountId) {
+    return { error: "Choose an account." };
+  }
+  if (input.kind === "dues" && !input.unitId) return { error: "Choose the unit this is dues for." };
+
+  const supabase = await createClient();
+
+  const categorization = {
+    posting_kind: input.kind,
+    account_id: ["expense", "income", "transfer"].includes(input.kind) ? input.accountId : null,
+    matched_unit_id: input.kind === "dues" ? input.unitId : null,
+    vendor_id: input.kind === "expense" ? input.vendorId : null,
+  };
+
+  const { data, error } = await supabase
+    .from("bank_transactions")
+    .update(categorization)
+    .eq("id", input.transactionId)
+    .is("journal_entry_id", null)
+    .select("id, association_id, description");
+
+  if (error) return { error: error.message };
+  const row = data?.[0];
+  if (!row) return { error: "Only a board admin can categorize a transaction, and it can't already be posted." };
+
+  if (input.saveRule) {
+    const pattern = row.description.trim();
+    if (pattern.length >= 3) {
+      const { error: ruleError } = await supabase.from("bank_categorization_rules").upsert(
+        {
+          association_id: row.association_id,
+          pattern,
+          ...categorization,
+          auto_post: input.autoPostRule,
+        },
+        { onConflict: "association_id,pattern" },
+      );
+      if (ruleError) return { error: `Categorized, but the rule couldn't be saved: ${ruleError.message}` };
+    }
+  }
+
+  let posted = false;
+  if (input.postNow) {
+    const { error: postError } = await supabase.rpc("post_bank_transaction", {
+      p_transaction_id: input.transactionId,
+    });
+    if (postError) return { error: `Categorized, but not posted: ${postError.message}` };
+    posted = true;
+  }
+
+  revalidateLedgerPages();
+  return { ok: true, posted };
+}
+
+export async function postBankTransaction(
   transactionId: string,
-  category: string | null,
-  unitId: string | null,
+): Promise<{ ok?: true; error?: string }> {
+  const supabase = await createClient();
+  const { error } = await supabase.rpc("post_bank_transaction", { p_transaction_id: transactionId });
+  if (error) return { error: error.message };
+  revalidateLedgerPages();
+  return { ok: true };
+}
+
+export async function unpostBankTransaction(
+  transactionId: string,
+): Promise<{ ok?: true; error?: string }> {
+  const supabase = await createClient();
+  const { error } = await supabase.rpc("unpost_bank_transaction", { p_transaction_id: transactionId });
+  if (error) return { error: error.message };
+  revalidateLedgerPages();
+  return { ok: true };
+}
+
+/** Posts every categorized, settled, un-retracted row that isn't in the books yet. */
+export async function postAllReady(): Promise<{
+  ok?: true;
+  posted?: number;
+  errors?: string[];
+  error?: string;
+}> {
+  const supabase = await createClient();
+  const { data: ready, error } = await supabase
+    .from("bank_transactions")
+    .select("id, description")
+    .not("posting_kind", "is", null)
+    .is("journal_entry_id", null)
+    .is("removed_at", null)
+    .is("excluded_at", null)
+    .eq("pending", false)
+    .order("posted_on");
+  if (error) return { error: error.message };
+
+  let posted = 0;
+  const errors: string[] = [];
+  for (const row of ready ?? []) {
+    const { error: postError } = await supabase.rpc("post_bank_transaction", {
+      p_transaction_id: row.id,
+    });
+    if (postError) errors.push(`${row.description}: ${postError.message}`);
+    else posted += 1;
+  }
+
+  revalidateLedgerPages();
+  return { ok: true, posted, errors };
+}
+
+export async function setConnectionLedgerAccount(
+  connectionId: string,
+  cashAccountId: string,
+): Promise<{ ok?: true; error?: string }> {
+  const supabase = await createClient();
+
+  const { data: account } = await supabase
+    .from("accounts")
+    .select("id, name, is_cash_account")
+    .eq("id", cashAccountId)
+    .limit(1);
+  if (!account?.[0]?.is_cash_account) return { error: "Choose a cash account." };
+
+  // Reserve Cash belongs to the Reserve fund; anything else is Operating.
+  const kind = /reserve/i.test(account[0].name) ? "reserve" : "operating";
+  const { data: funds } = await supabase.from("funds").select("id").eq("kind", kind).limit(1);
+  if (!funds?.[0]) return { error: `No ${kind} fund is set up.` };
+
+  const { data, error } = await supabase
+    .from("bank_connections")
+    .update({ cash_account_id: cashAccountId, fund_id: funds[0].id })
+    .eq("id", connectionId)
+    .select("id");
+  if (error) return { error: error.message };
+  if (!data || data.length === 0) return { error: "Only a board admin can change this." };
+
+  revalidatePath("/bank-feed");
+  return { ok: true };
+}
+
+export async function createCashAccount(
+  name: string,
+): Promise<{ ok?: true; accountId?: string; error?: string }> {
+  const trimmed = name.trim();
+  if (!trimmed) return { error: "Give the account a name." };
+
+  const supabase = await createClient();
+  const associationId = await currentAssociationId();
+  if (!associationId) return { error: "No association is visible to you." };
+
+  const { data, error } = await supabase.rpc("create_cash_account", {
+    p_association_id: associationId,
+    p_name: trimmed,
+  });
+  if (error) return { error: error.message };
+
+  revalidatePath("/bank-feed");
+  return { ok: true, accountId: (data as { id: string } | null)?.id };
+}
+
+export async function deleteCategorizationRule(
+  ruleId: string,
 ): Promise<{ ok?: true; error?: string }> {
   const supabase = await createClient();
   const { data, error } = await supabase
-    .from("bank_transactions")
-    .update({ category_override: category, matched_unit_id: unitId })
-    .eq("id", transactionId)
+    .from("bank_categorization_rules")
+    .delete()
+    .eq("id", ruleId)
     .select("id");
-
   if (error) return { error: error.message };
-  if (!data || data.length === 0) {
-    return { error: "Only a board admin can tag a transaction." };
-  }
-
+  if (!data || data.length === 0) return { error: "Only a board admin can remove a rule." };
   revalidatePath("/bank-feed");
   return { ok: true };
 }

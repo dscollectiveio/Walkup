@@ -775,3 +775,105 @@ or computing the offset at request time and using it to decide whether to
 run — neither is implemented; the schedule was set to match "noon CST"
 literally, as asked, with this drift called out rather than silently
 accepted.
+
+## 29. The bank feed is how entries reach the ledger (supersedes the "never posted" half of #24)
+
+*Decided: Doug, 2026-09-17. Asked directly whether the new Financial
+Statements should read the hand-kept ledger or the bank feed, and shown the
+difference — the ledger is what a board member types in; the feed is what the
+bank says happened — Doug chose: "the transactions from the bank should feed
+the ledger. That should be the source of truth. Once the bank is linked, the
+transactions should be saved even if the bank is disconnected … and if it is
+reconnected, then the transactions should not be double counted."*
+
+#24 built the feed as a read-only cache "shown alongside the books, never
+posted into the ledger", and said that if draft-entry import were wanted
+later "that is a new decision, not an extension of this one." This is that
+decision. What it does NOT change: #1 (the 1120-H is computed from cash
+movements), #5 (only SECURITY DEFINER functions write the ledger), #18/#28
+(no service-role writes except the one cron read path), the token handling
+in #24's own "how to apply" bullets, and the immutability of posted entries.
+
+How a bank transaction becomes a ledger entry (0035 schema, 0036 functions):
+
+- **A row is categorized, then posted, as two separate steps.** The board
+  sets `posting_kind` (`expense` / `income` / `dues` / `transfer` /
+  `excluded`) plus its target on the `bank_transactions` row itself — a real,
+  queryable "ready but not yet in the books" state. `post_bank_transaction()`
+  then writes the entry and sets `journal_entry_id` exactly once. A row with
+  a `journal_entry_id` cannot be posted again; that column is the whole
+  double-posting guard.
+- **Posting goes through the existing RPCs wherever a subsidiary table
+  exists.** Expenses through `record_expense()` (so `expenses` — which
+  `/budget`'s monthly actuals, the dashboard, and the 1099 view read — stays
+  correct); dues through `record_payment()` when the unit has an open
+  charge (FIFO by due date, so unit balances and delinquency clear). A
+  journal-only expense would balance perfectly and still be invisible to the
+  budget page. Only non-dues income and cash-to-cash transfers go straight
+  to `post_journal_entry()`, because they have no subsidiary table.
+- **Dues are cash-basis unless there is something to apply them to.** No
+  open charge ⇒ debit cash / credit 4000 Regular Assessments on the day the
+  deposit landed, `unit_id` on both lines. This matches #1: the 1120-H reads
+  cash movements, and a deposit into a cash account classified by an
+  exempt-income credit leg is exactly what the 60% test counts.
+- **Transfers stay off the P&L.** A move between the association's own
+  accounts posts cash-to-cash with `source = 'transfer'`. That needs the
+  other account to exist in the chart as cash; `create_cash_account()`
+  (asset, `is_cash_account = true`, 10xx code) exists for "Chase Checking"
+  and the like. Every connection carries `cash_account_id` + `fund_id` —
+  which ledger account the bank account *is* — defaulting to 1000 Operating
+  Cash / Operating fund at connect time.
+- **Undo is a reversal, never a deletion.** `unpost_bank_transaction()` posts
+  a mirror entry (`source = 'reversal'`, `reverses_entry_id`, same date and
+  fiscal year so the pair nets to zero in the period of the mistake), deletes
+  the subsidiary `expenses`/`payments` row so budget and balances reflect the
+  correction, and clears `journal_entry_id` so the row can be re-categorized.
+  The journal keeps both halves forever.
+- **Pending never posts.** Plaid replaces a pending transaction with a
+  settled one under a new ID; posting the pending one would double-post.
+- **Plaid retractions never delete a posted row.** `sync.ts` sets
+  `removed_at` instead; a retracted-but-posted row is flagged for the board
+  to undo by hand if the bank was right. (Un-posted pending rows being
+  replaced by their settled twin are also just marked — nothing is hard
+  deleted from `bank_transactions` any more.)
+- **Reconnecting adopts, it does not duplicate.** Plaid transaction IDs are
+  scoped to an Item; a disconnect/reconnect gives every transaction a new
+  ID, and on 2026-09-16 that put all 12 prior BMO transactions into
+  production twice. `src/lib/plaid/dedupe.ts` fingerprints on
+  `(posted_on, amount, description)`: an incoming row that matches an
+  unclaimed row from a *prior* connection re-points that row's
+  `plaid_transaction_id` and `bank_connection_id` instead of inserting, so
+  its categorization and `journal_entry_id` survive the reconnect. Identical
+  same-day transactions pair one-to-one.
+- **Rules pre-fill; a person posts.** `bank_categorization_rules`
+  ("description contains X ⇒ this kind/target", saved from the row's
+  "Remember this" checkbox) are applied at sync time by both the manual path
+  and the cron. `auto_post = true` rows are posted only during a board
+  member's own manual sync or "Post all ready" click. The cron always passes
+  `autoPost: false`: an unattended process with no human behind it fetches
+  and pre-categorizes, but does not write to a tax-relevant ledger. This
+  keeps #5's "every ledger write has an `auth.uid()`" literally true.
+- **`bank_transactions` UPDATEs are now audited** (`tg_audit`, update only —
+  inserts are still the sync writing external data). Categorization carries
+  accounting weight now; #24's "closer to a cache than a record" no longer
+  describes it.
+- **Financial Statements (0034) did not change.** It reads
+  `income_statement_lines` over the real ledger; the feed simply became how
+  that ledger gets written. The page shows how many bank transactions in
+  the period are not yet posted, so the reader knows what the figures leave
+  out. Manual `record_payment`/`record_expense` remain for anything that
+  never touches the connected bank.
+
+**Known limits, called out rather than papered over:**
+
+- One connection = one ledger cash account. A Plaid Item with checking +
+  savings maps both to the same cash account today; `plaid_account_id` is
+  persisted on every row so a per-sub-account mapping can be added without
+  a re-sync.
+- Fingerprint collisions across a reconnect (two genuinely identical
+  transactions on one day, where the prior connection had only one) fall
+  back to inserting the surplus — the safe direction.
+- There is no automatic detection of "this bank transaction is the same
+  event as an expense someone already recorded by hand." Posting both
+  double-counts. The bank feed is the intended entry point now; the manual
+  forms are for what the bank never sees.

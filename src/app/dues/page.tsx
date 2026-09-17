@@ -74,13 +74,17 @@ export default async function DuesPage() {
       supabase
         .from("bank_transactions")
         .select("id, posted_on, description, amount, matched_unit_id")
-        .not("matched_unit_id", "is", null)
+        .eq("posting_kind", "dues")
+        .not("journal_entry_id", "is", null)
+        .is("removed_at", null)
         .order("posted_on", { ascending: false })
         .limit(15),
       supabase
         .from("bank_transactions")
         .select("id, posted_on, description, amount")
-        .is("matched_unit_id", null)
+        .is("posting_kind", null)
+        .is("removed_at", null)
+        .eq("pending", false)
         .gt("amount", 0)
         .order("posted_on", { ascending: false })
         .limit(10),
@@ -201,7 +205,7 @@ export default async function DuesPage() {
       {canReadFinancials ? (
         <Card
           title="Recent dues activity"
-          hint="Incoming bank transactions already tagged to a unit — informational, from the bank feed."
+          hint="Dues deposits from the bank feed that have been posted to the books."
         >
           {recentActivity.length === 0 ? (
             <Empty>No tagged dues payments yet.</Empty>
@@ -229,7 +233,7 @@ export default async function DuesPage() {
       {canReadFinancials ? (
         <Card
           title="Needs review"
-          hint="Money came in but isn't tagged to a unit yet — tag it on the bank feed so it shows up here."
+          hint="Money came in that hasn't been categorized yet — mark it as a unit's dues on the bank feed and post it."
         >
           {needsReview.length === 0 ? (
             <Empty>Nothing waiting on review.</Empty>
@@ -248,10 +252,10 @@ export default async function DuesPage() {
           )}
           <div className="mt-3">
             <Link
-              href="/bank-feed"
+              href="/bank-feed?status=needs"
               className="text-[12px] text-mute underline-offset-2 hover:underline"
             >
-              Tag transactions on the bank feed →
+              Categorize on the bank feed →
             </Link>
           </div>
         </Card>

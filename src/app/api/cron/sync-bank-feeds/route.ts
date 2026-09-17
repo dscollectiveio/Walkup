@@ -66,10 +66,17 @@ export async function GET(request: NextRequest) {
       continue;
     }
 
-    const result = await syncOneConnection(supabase, connection, secretRow.plaid_access_token);
+    // autoPost: false, always. This runs with no human behind it; it may
+    // fetch and pre-categorize, but writing to the ledger waits for a board
+    // member's own sync or "post all ready" click — DECISIONS #29.
+    const result = await syncOneConnection(supabase, connection, secretRow.plaid_access_token, {
+      autoPost: false,
+    });
     results.push({
       connectionId: connection.id,
-      ...("error" in result ? { error: result.error } : { count: result.count }),
+      ...("error" in result
+        ? { error: result.error }
+        : { count: result.count, categorized: result.categorized }),
     });
   }
 

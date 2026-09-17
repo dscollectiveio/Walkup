@@ -98,14 +98,28 @@ export default async function FinancialStatementsPage({
     bounds = monthBounds(offset);
   }
 
-  const { data: lineRows } = bounds
-    ? await supabase
-        .from("income_statement_lines")
-        .select("account_id, code, account_name, account_type, amount")
-        .eq("association_id", association.id)
-        .gte("entry_date", bounds.start)
-        .lte("entry_date", bounds.end)
-    : { data: [] };
+  const [{ data: lineRows }, { count: unpostedCount }] = bounds
+    ? await Promise.all([
+        supabase
+          .from("income_statement_lines")
+          .select("account_id, code, account_name, account_type, amount")
+          .eq("association_id", association.id)
+          .gte("entry_date", bounds.start)
+          .lte("entry_date", bounds.end),
+        // Bank transactions in this period that haven't reached the books —
+        // the statement below is only as complete as this number is small.
+        supabase
+          .from("bank_transactions")
+          .select("id", { count: "exact", head: true })
+          .eq("association_id", association.id)
+          .gte("posted_on", bounds.start)
+          .lte("posted_on", bounds.end)
+          .is("journal_entry_id", null)
+          .is("excluded_at", null)
+          .is("removed_at", null)
+          .eq("pending", false),
+      ])
+    : [{ data: [] }, { count: 0 }];
 
   const byAccount = new Map<string, AccountLine>();
   for (const l of lineRows ?? []) {
@@ -152,9 +166,21 @@ export default async function FinancialStatementsPage({
           Financial Statements
         </h1>
         <p className="mt-1 text-mute">
-          Built from the posted ledger — the same numbers as your tax filing and budget pages.
+          Built from bank transactions that have been posted to the books — the same numbers as
+          your tax filing and budget pages.
         </p>
       </div>
+
+      {unpostedCount && unpostedCount > 0 ? (
+        <p className="border-l-[3px] border-warning bg-warning-tint px-3 py-2 text-[13px] text-warning-text">
+          {unpostedCount} bank transaction{unpostedCount === 1 ? "" : "s"} in this period{" "}
+          {unpostedCount === 1 ? "hasn't" : "haven't"} been posted to the books yet — the figures
+          below leave {unpostedCount === 1 ? "it" : "them"} out.{" "}
+          <Link href="/bank-feed?status=needs" className="underline underline-offset-2">
+            Categorize on the bank feed →
+          </Link>
+        </p>
+      ) : null}
 
       <div className="flex flex-wrap items-center justify-between gap-3">
         <div className="flex flex-wrap gap-2">
