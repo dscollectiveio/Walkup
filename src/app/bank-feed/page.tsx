@@ -1,6 +1,6 @@
 import { createClient } from "@/lib/supabase/server";
 import { Card, Empty, Restricted, Stat, money } from "@/components/ui";
-import { plaidClient } from "@/lib/plaid";
+import { plaidClient, describePlaidError } from "@/lib/plaid";
 import { ConnectBankButton } from "./connect-bank-button";
 import { SyncButton } from "./sync-button";
 import { DisconnectButton } from "./disconnect-button";
@@ -47,8 +47,13 @@ async function getConnectionBalance(
             : null,
       })),
     };
-  } catch {
-    return { connectionId, accounts: [], error: "Couldn't reach the bank for a balance." };
+  } catch (cause) {
+    // Logged, not just returned — this was previously swallowed into a
+    // fixed "couldn't reach the bank" string, which made a real Plaid error
+    // (e.g. PRODUCT_NOT_READY right after a fresh Link) indistinguishable
+    // from every other failure, for both the board and for debugging.
+    console.error("Plaid accountsBalanceGet failed", cause);
+    return { connectionId, accounts: [], error: describePlaidError(cause) };
   }
 }
 
