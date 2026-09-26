@@ -73,9 +73,12 @@ export default async function RootLayout({
               against this year&rsquo;s IRS rules. Have an accountant look before
               you file anything.
             </p>
-            <p className="mt-3">
+            <p className="mt-3 space-x-3">
               <Link href="/security" className="underline-offset-2 hover:underline">
-                Security &amp; Privacy
+                Security
+              </Link>
+              <Link href="/privacy" className="underline-offset-2 hover:underline">
+                Privacy Policy
               </Link>
             </p>
           </footer>

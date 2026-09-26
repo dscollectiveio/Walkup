@@ -1,5 +1,6 @@
 "use client";
 
+import Link from "next/link";
 import { useActionState } from "react";
 import { signUp } from "@/app/login/actions";
 
@@ -61,6 +62,23 @@ export function InviteSignupForm({ token }: { token: string }) {
           minLength={8}
           className="mt-1 w-full rounded-lg border border-line-strong bg-paper px-3 py-2 text-[13px] text-ink"
         />
+      </div>
+
+      <div className="flex items-start gap-2">
+        <input
+          id="privacy_consent"
+          name="privacy_consent"
+          type="checkbox"
+          required
+          className="mt-0.5 rounded border-line-strong"
+        />
+        <label htmlFor="privacy_consent" className="text-[12px] text-mute">
+          I agree to the{" "}
+          <Link href="/privacy" target="_blank" className="text-ink underline-offset-2 hover:underline">
+            Privacy Policy
+          </Link>
+          .
+        </label>
       </div>
 
       {state?.error ? (

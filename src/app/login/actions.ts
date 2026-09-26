@@ -47,9 +47,13 @@ export async function signUp(_prev: unknown, formData: FormData) {
   const confirmPassword = String(formData.get("confirm_password") ?? "");
   // Present only when signing up from /invite/[token] — see that route.
   const inviteToken = String(formData.get("invite_token") ?? "").trim() || null;
+  const privacyConsent = formData.get("privacy_consent") === "on";
 
   if (!email || !password) {
     return { error: "Email and password are both required." };
+  }
+  if (!privacyConsent) {
+    return { error: "You need to agree to the Privacy Policy to create an account." };
   }
   if (password.length < 8) {
     return { error: "Password must be at least 8 characters." };
