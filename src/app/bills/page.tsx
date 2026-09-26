@@ -33,7 +33,7 @@ export default async function BillsPage() {
   return (
     <div className="space-y-6">
       <div>
-        <h1 className="text-[20px] font-semibold tracking-tight text-ink">Regular bills</h1>
+        <h1 className="text-[20px] font-black tracking-tight text-ink">Regular bills</h1>
         <p className="mt-1 text-mute">
           What the building pays out, how often, and which ones are on autopay.
         </p>

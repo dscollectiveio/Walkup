@@ -39,7 +39,7 @@ function ShowcaseCard({
     >
       <div className="flex flex-col justify-between gap-5 px-5 py-5">
         <div>
-          <h2 className={`text-[16px] font-semibold tracking-tight ${t.heading}`}>{heading}</h2>
+          <h2 className={`text-[16px] font-black tracking-tight ${t.heading}`}>{heading}</h2>
           <p className={`mt-1 text-[12px] leading-relaxed ${t.heading} opacity-85`}>{line}</p>
         </div>
         <div>

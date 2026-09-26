@@ -73,7 +73,7 @@ export default async function TicketPage({
         <Link href="/maintenance" className="text-[13px] text-mute hover:underline">
           ← All problems
         </Link>
-        <h1 className="mt-2 text-[20px] font-semibold tracking-tight text-ink">{ticket.title}</h1>
+        <h1 className="mt-2 text-[20px] font-black tracking-tight text-ink">{ticket.title}</h1>
         <p className="mt-1 text-mute">
           #{ticket.reference} · {unit ? unit.label : "Shared area"} · reported{" "}
           {ticket.opened_on} · {STATUS_LABEL[ticket.status] ?? ticket.status}

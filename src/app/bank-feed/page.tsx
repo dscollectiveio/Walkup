@@ -226,7 +226,7 @@ export default async function BankFeedPage({
   return (
     <div className="space-y-6">
       <div>
-        <h1 className="text-[20px] font-semibold tracking-tight text-ink">Bank feed</h1>
+        <h1 className="text-[20px] font-black tracking-tight text-ink">Bank feed</h1>
         <p className="mt-1 text-mute">
           What your bank reports is how the books get written. Categorize each transaction once
           and post it — the ledger, budget, dues balances, and financial statements all follow.

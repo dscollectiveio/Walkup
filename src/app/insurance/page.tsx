@@ -57,7 +57,7 @@ export default async function InsurancePage() {
   return (
     <div className="space-y-6">
       <div>
-        <h1 className="text-[20px] font-semibold tracking-tight text-ink">Insurance</h1>
+        <h1 className="text-[20px] font-black tracking-tight text-ink">Insurance</h1>
         <p className="mt-1 text-mute">
           What you&rsquo;re paying, what you paid before, and what else was
           offered.

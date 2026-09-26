@@ -45,7 +45,7 @@ export default async function MaintenancePage() {
     <div className="space-y-6">
       <div className="flex flex-wrap items-start justify-between gap-4">
         <div>
-          <h1 className="text-[20px] font-semibold tracking-tight text-ink">Building problems</h1>
+          <h1 className="text-[20px] font-black tracking-tight text-ink">Building problems</h1>
           <p className="mt-1 text-mute">
             Anything that needs fixing, and who&rsquo;s dealing with it.
           </p>

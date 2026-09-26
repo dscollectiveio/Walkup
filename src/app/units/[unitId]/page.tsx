@@ -64,7 +64,7 @@ export default async function UnitStatementPage({
   return (
     <div className="space-y-6">
       <div>
-        <h1 className="text-[20px] font-semibold tracking-tight text-ink">
+        <h1 className="text-[20px] font-black tracking-tight text-ink">
           {unit.label}
         </h1>
         <p className="mt-1 text-mute">

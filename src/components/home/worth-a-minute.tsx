@@ -21,7 +21,7 @@ export function WorthAMinute({ items }: { items: UrgentItem[] }) {
   return (
     <section className="border-l-[3px] border-brass bg-warning-tint px-5 py-4">
       <header className="flex items-center gap-2.5">
-        <h2 className="text-[14px] font-semibold tracking-tight text-warning-text">
+        <h2 className="text-[14px] font-black tracking-tight text-warning-text">
           Worth a minute today
         </h2>
         <span className="rounded-full border border-warning-line bg-paper px-2 py-0.5 text-[11px] font-medium text-warning-text">

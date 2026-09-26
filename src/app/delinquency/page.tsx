@@ -39,7 +39,7 @@ export default async function DelinquencyPage() {
   return (
     <div className="space-y-6">
       <div>
-        <h1 className="text-[20px] font-semibold tracking-tight text-ink">Who owes money</h1>
+        <h1 className="text-[20px] font-black tracking-tight text-ink">Who owes money</h1>
         <p className="mt-1 text-mute">
           Unpaid fees, grouped by how overdue they are.
         </p>

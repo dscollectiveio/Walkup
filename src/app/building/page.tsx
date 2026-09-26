@@ -178,7 +178,7 @@ export default async function BuildingPage() {
   return (
     <div className="space-y-6">
       <div>
-        <h1 className="text-[20px] font-semibold tracking-tight text-ink">Building</h1>
+        <h1 className="text-[20px] font-black tracking-tight text-ink">Building</h1>
         <p className="mt-1 text-mute">
           The association&rsquo;s own profile, the unit roster, who lives where, and who has
           access to the books.

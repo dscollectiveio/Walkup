@@ -3,7 +3,6 @@ import "./globals.css";
 import { createClient } from "@/lib/supabase/server";
 import { signOut } from "./login/actions";
 import Link from "next/link";
-import { interTight, sourceSerif } from "@/lib/fonts";
 import { Sidebar } from "@/components/sidebar/sidebar";
 
 export const metadata: Metadata = {
@@ -50,7 +49,7 @@ export default async function RootLayout({
   }
 
   return (
-    <html lang="en" className={`${interTight.variable} ${sourceSerif.variable}`}>
+    <html lang="en">
       <body className="min-h-screen bg-bone text-ink antialiased">
         {user ? (
           <Sidebar

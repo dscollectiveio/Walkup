@@ -38,7 +38,7 @@ export default async function LedgerPage() {
   return (
     <div className="space-y-6">
       <div>
-        <h1 className="text-[20px] font-semibold tracking-tight text-ink">All transactions</h1>
+        <h1 className="text-[20px] font-black tracking-tight text-ink">All transactions</h1>
         <p className="mt-1 text-mute">
           Every account, with its totals for the year. Your accountant will
           want this; you probably only need it if a number elsewhere looks

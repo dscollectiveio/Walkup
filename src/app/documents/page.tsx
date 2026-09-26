@@ -119,7 +119,7 @@ export default async function DocumentHubPage({
   return (
     <div className="space-y-6">
       <div>
-        <h1 className="text-[20px] font-semibold tracking-tight text-ink">Document Hub</h1>
+        <h1 className="text-[20px] font-black tracking-tight text-ink">Document Hub</h1>
         <p className="mt-1 text-mute">
           Insurance certificates, minutes, W-9s, invoices — anything the next board will need and
           nobody can find in an old inbox.

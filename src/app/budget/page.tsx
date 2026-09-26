@@ -59,7 +59,7 @@ export default async function BudgetPage() {
     return (
       <div className="space-y-6">
         <div>
-          <h1 className="text-[20px] font-semibold tracking-tight text-ink">Budget</h1>
+          <h1 className="text-[20px] font-black tracking-tight text-ink">Budget</h1>
         </div>
         <Card title="Budget">
           <Empty>
@@ -122,7 +122,7 @@ export default async function BudgetPage() {
   return (
     <div className="space-y-6">
       <div>
-        <h1 className="text-[20px] font-semibold tracking-tight text-ink">Budget</h1>
+        <h1 className="text-[20px] font-black tracking-tight text-ink">Budget</h1>
         <p className="mt-1 text-mute">
           {fiscalYear.label} — spending against the operating budget the
           board approved, tracked by month and for the year.

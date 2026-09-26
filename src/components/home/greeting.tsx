@@ -21,7 +21,7 @@ export function Greeting({
   return (
     <div className="flex flex-wrap items-start justify-between gap-x-6 gap-y-3">
       <div>
-        <h1 className="text-[20px] font-semibold tracking-tight text-ink">
+        <h1 className="text-[20px] font-black tracking-tight text-ink">
           Good {timeOfDay}, {firstName}.
         </h1>
         <p className="mt-1 text-[13px] text-mute">{statusLine}</p>

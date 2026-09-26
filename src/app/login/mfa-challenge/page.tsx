@@ -24,7 +24,7 @@ export default async function MfaChallengePage() {
   return (
     <div className="mx-auto max-w-sm py-16">
       <Lockup />
-      <h1 className="mt-4 text-[20px] font-semibold tracking-tight text-ink">
+      <h1 className="mt-4 text-[20px] font-black tracking-tight text-ink">
         Enter your authentication code
       </h1>
       <p className="mt-2 text-mute">

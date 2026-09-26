@@ -30,7 +30,7 @@ export default async function InvitePage({
     return (
       <div className="mx-auto max-w-sm py-16">
         <Lockup />
-        <h1 className="mt-4 text-[20px] font-semibold tracking-tight text-ink">
+        <h1 className="mt-4 text-[20px] font-black tracking-tight text-ink">
           You&rsquo;ve been invited
         </h1>
         <p className="mt-2 text-mute">
@@ -52,7 +52,7 @@ export default async function InvitePage({
     return (
       <div className="mx-auto max-w-sm py-16">
         <Lockup />
-        <h1 className="mt-4 text-[20px] font-semibold tracking-tight text-ink">
+        <h1 className="mt-4 text-[20px] font-black tracking-tight text-ink">
           This account already belongs to a building
         </h1>
         <p className="mt-2 text-mute">
@@ -67,7 +67,7 @@ export default async function InvitePage({
   return (
     <div className="mx-auto max-w-sm py-16">
       <Lockup />
-      <h1 className="mt-4 text-[20px] font-semibold tracking-tight text-ink">
+      <h1 className="mt-4 text-[20px] font-black tracking-tight text-ink">
         Join this building
       </h1>
       <p className="mt-2 text-mute">One more step — confirm your name.</p>

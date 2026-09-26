@@ -46,7 +46,7 @@ function Rule({
     <div className="rounded-xl border border-line bg-paper">
       <header className="flex flex-wrap items-center justify-between gap-2 border-b border-line px-5 py-4">
         <div>
-          <h3 className="font-semibold text-ink">{heading}</h3>
+          <h3 className="font-black text-ink">{heading}</h3>
           <p className="mt-0.5 text-[13px] text-mute">{plainQuestion}</p>
         </div>
         <span
@@ -292,7 +292,7 @@ export default async function TaxPage() {
   return (
     <div className="space-y-6">
       <div>
-        <h1 className="text-[20px] font-semibold tracking-tight text-ink">
+        <h1 className="text-[20px] font-black tracking-tight text-ink">
           Tax Center for {fy.label}
         </h1>
         <p className="mt-1 text-mute">
@@ -478,7 +478,7 @@ export default async function TaxPage() {
 
       <div className="border-t border-line pt-6">
         <div>
-          <h2 className="text-[16px] font-semibold tracking-tight text-ink">
+          <h2 className="text-[16px] font-black tracking-tight text-ink">
             1099s for {fy.label}
           </h2>
           <p className="mt-1 text-mute">

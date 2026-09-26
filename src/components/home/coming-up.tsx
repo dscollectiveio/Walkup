@@ -15,7 +15,7 @@ export function ComingUp({ reminders, today }: { reminders: Reminder[]; today: D
   return (
     <section className="rounded-xl border border-line bg-paper">
       <header className="border-b border-line px-5 py-4">
-        <h2 className="font-semibold tracking-tight text-ink">Coming up</h2>
+        <h2 className="font-black tracking-tight text-ink">Coming up</h2>
         <p className="mt-1 text-[13px] text-mute">
           Deadlines from your own records, plus the filings every association has.
         </p>

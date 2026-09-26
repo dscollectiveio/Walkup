@@ -37,7 +37,7 @@ export function Standing({
   return (
     <section className="rounded-xl border border-line bg-paper">
       <header className="border-b border-line px-5 py-4">
-        <h2 className="font-semibold tracking-tight text-ink">Where the association stands</h2>
+        <h2 className="font-black tracking-tight text-ink">Where the association stands</h2>
       </header>
 
       <div className="px-5 py-4">
