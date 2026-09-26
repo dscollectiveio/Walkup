@@ -4,8 +4,10 @@ import { PENDING_INVITE_COOKIE } from "@/lib/invite-cookie";
 
 // /invite is public because a redeemer may not have an account yet — the
 // invite page itself handles sign-up, and the redemption RPC is the real
-// authorization check, not this list.
-const PUBLIC_PATHS = ["/login", "/signup", "/auth", "/invite"];
+// authorization check, not this list. /security is public because it's a
+// static trust page (no data access) — a prospective board reads it before
+// deciding to sign up at all.
+const PUBLIC_PATHS = ["/login", "/signup", "/auth", "/invite", "/security"];
 
 // Reachable while signed in but not yet at AAL2, so a user can actually
 // complete enrollment or the challenge instead of being redirected in place.

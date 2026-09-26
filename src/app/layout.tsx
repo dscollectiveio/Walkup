@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import "./globals.css";
 import { createClient } from "@/lib/supabase/server";
 import { signOut } from "./login/actions";
+import Link from "next/link";
 import { interTight, sourceSerif } from "@/lib/fonts";
 import { Sidebar } from "@/components/sidebar/sidebar";
 
@@ -71,6 +72,11 @@ export default async function RootLayout({
               worked out from your own records, but nobody has checked them
               against this year&rsquo;s IRS rules. Have an accountant look before
               you file anything.
+            </p>
+            <p className="mt-3">
+              <Link href="/security" className="underline-offset-2 hover:underline">
+                Security &amp; Privacy
+              </Link>
             </p>
           </footer>
         </div>
