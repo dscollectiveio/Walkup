@@ -13,6 +13,9 @@ export interface Reminder {
 
 export type ReminderRail = "bad" | "warning" | "neutral";
 
+/** Board admins re-review who holds access at least this often (0037). */
+export const ACCESS_REVIEW_INTERVAL_DAYS = 90;
+
 export function daysUntil(due: Date, today: Date): number {
   return Math.max(0, Math.ceil((due.getTime() - today.getTime()) / 86400000));
 }
@@ -49,6 +52,11 @@ interface ReminderInputs {
   policies: { coverage: string; effective_to: string }[];
   upcomingChargeDates: string[]; // due_on of open/partial charges after today
   today: Date;
+  /**
+   * Board admins only: when the last access review was recorded (null =
+   * never). Omit for everyone else — the reminder is theirs to act on.
+   */
+  lastAccessReviewAt?: string | null;
 }
 
 export function assembleReminders({
@@ -57,6 +65,7 @@ export function assembleReminders({
   policies,
   upcomingChargeDates,
   today,
+  lastAccessReviewAt,
 }: ReminderInputs): Reminder[] {
   const reminders: Reminder[] = [];
   const horizon = new Date(today.getTime() + 120 * 86400000);
@@ -121,6 +130,24 @@ export function assembleReminders({
       due: nextOccurrence(inc.getMonth() + 1, inc.getDate(), today),
       unverified: true,
     });
+  }
+
+  if (lastAccessReviewAt !== undefined) {
+    // Calendar days, not 90×24h — the latter drifts an hour across a DST
+    // change and can land on the previous date.
+    const last = lastAccessReviewAt ? new Date(lastAccessReviewAt) : null;
+    const next = last
+      ? new Date(last.getFullYear(), last.getMonth(), last.getDate() + ACCESS_REVIEW_INTERVAL_DAYS)
+      : today;
+    // Overdue reads as due today rather than dropping off the list.
+    const due = next < today ? today : next;
+    if (due <= horizon) {
+      reminders.push({
+        name: lastAccessReviewAt ? "Access review" : "First access review",
+        kind: "Confirm who can see the books",
+        due,
+      });
+    }
   }
 
   return reminders.sort((a, b) => a.due.getTime() - b.due.getTime());

@@ -80,5 +80,18 @@ export async function GET(request: NextRequest) {
     });
   }
 
-  return NextResponse.json({ synced: results.length, results });
+  // Automated deprovisioning (0037, DECISIONS #30): revoke owner access once
+  // a sale/transfer has closed and record expired accountant grants. Runs
+  // here because this is the one scheduled, service-role path — it touches
+  // role_grants only, never the ledger.
+  const { data: deprovisioned, error: deprovisionError } = await supabase.rpc(
+    "deprovision_stale_access",
+    { p_association_id: null },
+  );
+
+  return NextResponse.json({
+    synced: results.length,
+    results,
+    deprovisioned: deprovisionError ? { error: deprovisionError.message } : deprovisioned,
+  });
 }

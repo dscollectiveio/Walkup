@@ -1,7 +1,7 @@
 "use client";
 
-import { useActionState, useState } from "react";
-import { updatePerson } from "./actions";
+import { useActionState, useState, useTransition } from "react";
+import { redactPerson, updatePerson } from "./actions";
 import { PhoneInput } from "@/components/phone-input";
 
 export interface PersonRecord {
@@ -31,13 +31,19 @@ export function PersonRow({
   roles,
   canEdit,
   canEditRoles,
+  canRedact = false,
 }: {
   person: PersonRecord;
   roles: string[];
   canEdit: boolean;
   canEditRoles: boolean;
+  /** Board admin viewing someone with no access and no current unit. */
+  canRedact?: boolean;
 }) {
   const [editing, setEditing] = useState(false);
+  const [confirmingRedact, setConfirmingRedact] = useState(false);
+  const [redacting, startRedact] = useTransition();
+  const [redactError, setRedactError] = useState<string | null>(null);
   const [state, action, pending] = useActionState(updatePerson, null);
 
   // Close only on a *new* successful submission — see add-unit-form.tsx.
@@ -164,15 +170,55 @@ export function PersonRow({
           <div className="text-[11px] text-mute-soft">{person.mailing_address}</div>
         ) : null}
       </div>
-      {canEdit ? (
-        <button
-          type="button"
-          onClick={() => setEditing(true)}
-          className="shrink-0 text-[12px] text-mute underline-offset-2 hover:underline"
-        >
-          Edit
-        </button>
-      ) : null}
+      <div className="flex shrink-0 flex-col items-end gap-1">
+        {canEdit ? (
+          <button
+            type="button"
+            onClick={() => setEditing(true)}
+            className="text-[12px] text-mute underline-offset-2 hover:underline"
+          >
+            Edit
+          </button>
+        ) : null}
+        {canRedact ? (
+          confirmingRedact ? (
+            <span className="flex items-center gap-2">
+              <button
+                type="button"
+                disabled={redacting}
+                onClick={() =>
+                  startRedact(async () => {
+                    setRedactError(null);
+                    const result = await redactPerson(person.id);
+                    if (result.error) setRedactError(result.error);
+                    else setConfirmingRedact(false);
+                  })
+                }
+                className="rounded-md border border-bad-line bg-bad-tint px-2.5 py-1 text-[11px] font-medium text-bad-text"
+              >
+                {redacting ? "Removing…" : "Permanently remove"}
+              </button>
+              <button
+                type="button"
+                onClick={() => setConfirmingRedact(false)}
+                className="text-[11px] text-mute underline-offset-2 hover:underline"
+              >
+                Cancel
+              </button>
+            </span>
+          ) : (
+            <button
+              type="button"
+              onClick={() => setConfirmingRedact(true)}
+              title="Clears name, email, phone, and address here and in the audit log. Their payment and ownership history stays, as “Former member.”"
+              className="text-[11px] text-bad-text underline-offset-2 hover:underline"
+            >
+              Remove personal data
+            </button>
+          )
+        ) : null}
+        {redactError ? <p className="max-w-[16rem] text-right text-[11px] text-bad-text">{redactError}</p> : null}
+      </div>
     </li>
   );
 }

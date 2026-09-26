@@ -354,12 +354,23 @@ export default async function HomePage() {
   // Coming up + the building
   // --------------------------------------------------------------------------
   // Compliance/bill deadlines don't depend on any activity having been posted.
+  let lastAccessReviewAt: string | null | undefined;
+  if (canSetTarget) {
+    const { data: lastReview } = await supabase
+      .from("access_reviews")
+      .select("reviewed_at")
+      .order("reviewed_at", { ascending: false })
+      .limit(1);
+    lastAccessReviewAt = lastReview?.[0]?.reviewed_at ?? null;
+  }
+
   const reminders = assembleReminders({
     association,
     bills: bills ?? [],
     policies: policies ?? [],
     upcomingChargeDates: (futureCharges ?? []).map((c) => c.due_on as string),
     today,
+    lastAccessReviewAt,
   });
 
   const buildingUnits: BuildingUnit[] = (units ?? []).map((u) => {

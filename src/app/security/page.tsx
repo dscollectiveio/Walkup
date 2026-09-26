@@ -114,6 +114,28 @@ export default function SecurityPage() {
         </p>
       </Section>
 
+      <Section title="Access reviews and removal">
+        <p>
+          Every 90 days a board admin reviews who has access to their
+          association&rsquo;s books, and each review is recorded with a
+          snapshot of who had access that day. Access that should have ended
+          is removed automatically: an owner&rsquo;s access ends once their
+          sale closes, and an accountant&rsquo;s ends when their grant
+          expires.
+        </p>
+      </Section>
+
+      <Section title="Keeping software patched">
+        <p>
+          Every dependency Walkup uses is scanned for known vulnerabilities
+          automatically, on every change and weekly. Critical issues are
+          patched within 7 days and high-severity ones within 14. The
+          platforms Walkup runs on are also checked weekly against their
+          end-of-support dates, so nothing runs on software that no longer
+          gets security fixes.
+        </p>
+      </Section>
+
       <Section title="Vendors">
         <p>
           Walkup runs on Supabase (database and authentication), Vercel

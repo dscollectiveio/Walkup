@@ -3,8 +3,9 @@
 **Organization:** dscollectiveio (Doug Smart, sole operator of Walkup)
 **Scope:** The Walkup application, its infrastructure, and the credentials
 that control both.
-**Effective:** 2026-08-05. **Last reviewed:** 2026-09-08 (Plaid production
-readiness — see §3, §6, §8). **Review cadence:** every 6 months, or
+**Effective:** 2026-08-05. **Last reviewed:** 2026-09-26 (remediation of
+Plaid's security review findings, due 2027-03-27 — see §4, §5, §9, §10,
+§11). **Review cadence:** every 6 months, or
 immediately after any incident, new vendor integration, or change in who
 has access to production systems.
 
@@ -69,14 +70,52 @@ responsibilities below:
   `auth_user_id = auth.uid()` path — documented in #26 rather than closed
   silently.
 
+### 4a. Periodic access reviews
+
+Every 90 days a board admin reviews who holds access to their association
+and records it on the Building page ("Access review"). Recording a review
+(`record_access_review()`, migration 0037) writes an append-only row with a
+snapshot of every active grant that day — evidence of the review, not a
+claim that one happened — and first runs the automated deprovisioning in
+§4b. The home page reminds a board admin when a review is due or overdue.
+
+Infrastructure access (GitHub, Vercel, Supabase, Plaid, Google/Anthropic)
+is reviewed on this policy's own 6-month cadence: confirm no account other
+than the operator's exists, confirm each account's second factors, and
+remove any that are no longer needed.
+
+### 4b. Deprovisioning
+
+Walkup has no employees or contractors — the operator is the only person
+with infrastructure access, so there is no staff offboarding to automate.
+The equivalent control is on the people who hold access to association
+data, and it is automated (`deprovision_stale_access()`, 0037):
+
+- **Transferred owners.** When a unit sale or transfer closes (the
+  ownership record's end date passes) and that person owns no other unit,
+  their owner access is revoked automatically. Owners who have not yet been
+  assigned a unit are left alone — that access is pending, not stale.
+- **Time-boxed access.** Accountant grants expire after 90 days by default;
+  access checks refuse an expired grant immediately (`has_role_in`, 0025),
+  and the revocation is then recorded as an event.
+- **When it runs.** Daily, from the scheduled bank-sync job, and at the
+  start of every recorded access review. Revocations by the system carry no
+  `revoked_by`, which is how the audit log tells them apart from a person's.
+- **Manual removal** of any role is immediate from the People section.
+
+### 4c. Multi-factor authentication on infrastructure
+
+Every infrastructure account has MFA and a registered passkey. The target
+is that no account still accepts SMS as a second factor, since SMS is
+phishable and SIM-swappable — tracked in §8 until done on GitHub and the
+Google account.
+
 ## 5. Risk identification and mitigation
 
 Ongoing, not one-time:
 
-- **Dependency vulnerabilities:** Dependabot is enabled on the repository
-  (`.github/dependabot.yml`) for npm dependencies and GitHub Actions,
-  weekly. Alerts are reviewed and applied promptly for anything rated high
-  or critical.
+- **Dependency vulnerabilities** — see "Vulnerability and patch
+  management" below.
 - **Schema/access changes:** every schema change is a reviewed migration
   file, never a dashboard edit (`CLAUDE.md` invariant #10), so there is a
   durable record of every change to who-can-read-what.
@@ -90,6 +129,49 @@ Ongoing, not one-time:
   only through narrow `SECURITY DEFINER` functions, and those functions
   pin `search_path` to prevent privilege-escalation (`CLAUDE.md` invariant
   #11).
+
+### Vulnerability and patch management
+
+**Scanning.** Three independent sources, all automated:
+
+- `.github/workflows/security.yml` runs `npm audit --audit-level=high`
+  against the full dependency tree on every push to `main`, every pull
+  request, and weekly (Mondays). A failure emails the repository owner.
+- Dependabot alerts and security updates on the GitHub repository flag
+  known-vulnerable dependencies and open patch pull requests
+  automatically; `.github/dependabot.yml` additionally keeps npm packages
+  and GitHub Actions current weekly.
+- The same workflow runs `scripts/check-eol.mjs` weekly, checking Node.js
+  (`.nvmrc`), Next.js (`package.json`), and the Supabase Postgres major
+  version against endoflife.date.
+
+Walkup runs on managed platforms with no servers or VMs of its own —
+Vercel and Supabase patch the operating system and database engine; there
+is no separately managed production host to scan. The one workstation with
+production access has automatic update checks and automatic installation of
+macOS and security updates turned on, and FileVault on (verified
+2026-09-26). Updates that need a restart are applied within the SLA above
+by their own severity.
+
+**Patch SLA,** measured from the first alert or failing scan:
+
+| Severity | Patched in production within |
+|---|---|
+| Critical | 7 days |
+| High | 14 days |
+| Moderate | 30 days |
+| Low | Next routine update |
+
+If a fix isn't available upstream within the SLA, the exposure is
+assessed and mitigated (disable the affected feature, pin away from the
+vulnerable code path) and the decision is written down in `docs/`.
+First application: on 2026-09-26 a critical Next.js advisory
+(GHSA-2xp9-vwfh-vxw4) and three high-severity advisories were patched the
+same day they were found (commit `0e3001d`).
+
+**End-of-life software.** A runtime within 90 days of end of support fails
+the weekly check; the upgrade is planned then and completed before the
+end-of-support date. Nothing in use may run past end of support.
 
 ## 6. Incident response
 
@@ -147,7 +229,12 @@ what's actually in place:
 - [x] Enable disk encryption (FileVault) on the development machine, since
       `.env.local` with live secrets lives there. Confirmed on via
       `fdesetup status`.
-- [x] Dependency monitoring via Dependabot (`.github/dependabot.yml`).
+- [x] Dependency monitoring: automated `npm audit` + end-of-life checks in
+      CI (`.github/workflows/security.yml`), Dependabot version updates
+      (`.github/dependabot.yml`). **Correction, 2026-09-26:** earlier
+      versions of this policy said Dependabot alerts were enabled; the
+      repository settings showed alerts and security updates were off.
+      Tracked below until turned on.
 - [x] Consumer MFA before Plaid Link is reachable. `docs/DECISIONS.md` #26,
       `supabase/migrations/0025_mfa_enforcement.sql`, `src/proxy.ts`,
       `tests/db/mfa-enforcement.test.ts`. Doug's own account still needs to
@@ -167,3 +254,64 @@ what's actually in place:
       new vendor integration" trigger fires again once the deployment
       itself is live, to confirm the controls above actually hold in that
       environment.
+- [ ] Turn on Dependabot alerts and Dependabot security updates in the
+      GitHub repository settings (Settings → Advanced Security).
+- [ ] Remove SMS as a second factor on GitHub and on the Google account
+      (§4c), leaving passkeys and an authenticator app.
+- [ ] Confirm the Vercel project's Node.js version matches `.nvmrc` (24).
+- [ ] Install the pending macOS Sequoia 15.8 and Safari 27 updates on the
+      workstation (found 2026-09-26: auto-install is on, but both are
+      waiting on a restart).
+- [ ] Confirm `CRON_SECRET` and `SUPABASE_SERVICE_ROLE_KEY` are set in
+      Vercel so the daily job — bank sync and automated deprovisioning
+      (§4b) — actually runs.
+
+## 9. Data retention and deletion
+
+What is kept, for how long, and how it is removed:
+
+| Data | Retention | Deletion |
+|---|---|---|
+| Ledger, payments, charges, budgets, tax filings, bank transactions | For the life of the association's account, then 7 years after the account is closed (tax-record retention) | Purged by the operator at the end of that period. Never altered in the meantime — mistakes are corrected with a reversing entry. |
+| Plaid access tokens | Only while the bank connection is active | Deleted the moment the bank is disconnected, after Plaid is told to close the connection (`disconnectBank`, #27). |
+| A person's name, email, phone, mailing address | While they hold access or own a unit | Removed on request, or by a board admin once the person has no access and no current ownership — "Remove personal data" (`redact_person()`, 0037). The name becomes "Former member"; payment and ownership history stays attached. The same fields are scrubbed from the audit log (DECISIONS #30). |
+| Audit log | Same as the financial records it describes | Personal fields scrubbed as above; the events themselves are kept. |
+| Pending invites | Until redeemed or expired | An invite's email is cleared when that person's data is removed. |
+
+**Requests.** Anyone can ask for their data to be removed or corrected by
+emailing the address on `/privacy`. The operator handles it within 30
+days: removing personal data through the same mechanism a board admin
+uses, and telling the requester what was removed and what must be kept
+(financial records, for the reason above).
+
+**Review.** This section is reviewed on the policy's 6-month cadence,
+against the privacy laws that apply to the associations using Walkup
+(currently Illinois).
+
+## 10. Access architecture
+
+Walkup does not rely on network location for trust. There is no internal
+network, VPN, or "inside" — every request, from the app's own pages or
+directly against the API, is authenticated and then authorized row by row
+by the database (row-level security), with MFA required at the database
+level (0025). Service-to-service calls use scoped credentials over TLS,
+and the only elevated credential is confined to one scheduled job (#28).
+
+That is the substance of a zero-trust approach, and it is what Walkup
+claims. It is not a formally certified zero-trust architecture — there is
+no device-posture checking or identity-aware proxy in front of the
+infrastructure dashboards, which rely on those vendors' own controls plus
+the MFA in §4c.
+
+## 11. Remediation tracker (Plaid security review, due 2027-03-27)
+
+| Finding | Status |
+|---|---|
+| Patch vulnerabilities within a defined SLA | Done — SLA and scanning in §5 |
+| Monitor end-of-life software | Done — weekly check, §5 |
+| Periodic access reviews and audits | Done — §4a |
+| Automated deprovisioning | Done — §4b |
+| Zero-trust access architecture | Written statement, §10 |
+| Data deletion and retention policy | Done — §9 |
+| Robust MFA on the consumer app | In place since 0025 (TOTP, enforced in the database) |
+| Robust MFA on internal systems | Passkeys on every account; SMS removal pending (§8) |

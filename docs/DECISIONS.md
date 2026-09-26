@@ -877,3 +877,54 @@ How a bank transaction becomes a ledger entry (0035 schema, 0036 functions):
   event as an expense someone already recorded by hand." Posting both
   double-counts. The bank feed is the intended entry point now; the manual
   forms are for what the bank never sees.
+
+## 30. Access reviews, automated deprovisioning, and personal-data redaction — including the one path that edits the audit log
+
+*Decided: Doug, 2026-09-26. Plaid's security review (submitted the same
+day) came back with eight attestations due 2027-03-27. Doug asked for
+everything buildable to be built rather than attested to on paper.*
+
+Three mechanisms, all in migration 0037:
+
+- **Access reviews are recorded, not asserted.** `record_access_review()`
+  writes an append-only `access_reviews` row (no insert/update/delete
+  policy for any role) holding a snapshot of every active grant. The home
+  page raises "Access review" for board admins 90 calendar days after the
+  last one — calendar days specifically, because 90×24h drifts across a DST
+  change and displayed the wrong date in the first version.
+- **Deprovisioning is automatic where the facts are unambiguous.**
+  `deprovision_stale_access()` revokes an `owner` grant once that person's
+  last ownership record has ended, and records the revocation of grants
+  past `expires_on`. It deliberately does **not** revoke owners who have
+  never had an ownership record — an invite redeemed before the board
+  records the sale is pending access, and guessing wrong there locks a real
+  owner out. It runs daily from the cron route (extending #28's single
+  service-role path to one more narrow task; `role_grants` is not the
+  ledger, so #29's "the cron never writes the books" still holds) and at
+  the start of every access review. System revocations leave `revoked_by`
+  null.
+- **Personal data can actually be removed.** `redact_person()` clears a
+  former member's name, email, phone, mailing address, and login link,
+  keeping the row (ownership and payment history reference it) as "Former
+  member". Refused while the person holds any active grant or current
+  ownership, and on the caller's own record.
+
+**The exception to `CLAUDE.md` invariant #7 (append-only audit log).** `redact_person()` also
+scrubs those same fields out of `audit_log.before_data`/`after_data` for
+that person's `persons` rows and for `invites` rows carrying their email.
+Without that, a "deletion" leaves the deleted data in the one table
+designed to keep everything forever. The exception is as narrow as it can
+be: one SECURITY DEFINER function, board_admin only, touching only named
+personal-data keys, on rows about that one person. The events survive —
+who changed what and when — and so does the redaction itself (the
+`persons` update it performs is audited, with the removed values scrubbed).
+Every other role and path still has no way to modify the audit log.
+
+**How to apply:**
+
+- Anything new that stores a person's personal data must either reference
+  `persons` (and so be covered here) or be added to `redact_person()`.
+- A new audited table that copies personal fields into its rows needs its
+  audit rows added to the scrub, or the deletion is incomplete.
+- Financial records are never redacted or deleted while an association is
+  active; retention is in `docs/SECURITY_POLICY.md` §9.

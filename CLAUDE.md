@@ -50,7 +50,9 @@ Postgres RLS for authorization · Tailwind · Vercel · Anthropic API
 6. **Posted entries are immutable**, immediately — not merely at period close.
    Corrections are reversing entries. Closed periods are immutable too.
 7. **Every financial mutation writes to `audit_log`**, which is append-only for
-   every role including `board_admin`.
+   every role including `board_admin`. One exception: `redact_person()`
+   scrubs a former member's personal-data fields from their audit rows
+   (DECISIONS #30). Nothing else may modify the audit log.
 8. **Tax rates and thresholds are never hardcoded** — `tax_parameters`, with
    `effective_from`, `source_url`, `verified_on`.
 9. **No secrets client-side.** Service role and Anthropic keys are server-only.

@@ -10,6 +10,7 @@ import { OwnershipAmendmentForm } from "./ownership-amendment-form";
 import { AmendmentHistory, type AmendmentHistoryEntry } from "./amendment-history";
 import { GenerateInviteForm } from "./generate-invite-form";
 import { InviteRow, type InviteRecord } from "./invite-row";
+import { AccessReviewCard, type AccessReviewRecord } from "./access-review-card";
 
 export const dynamic = "force-dynamic";
 
@@ -46,6 +47,7 @@ export default async function BuildingPage() {
     { data: unitOwnerRows },
     { data: amendmentRows },
     { data: inviteRows },
+    { data: reviewRows },
   ] = await Promise.all([
     supabase
       .from("units")
@@ -55,7 +57,7 @@ export default async function BuildingPage() {
       .order("sort_order"),
     supabase
       .from("persons")
-      .select("id, full_name, email, phone, mailing_address")
+      .select("id, full_name, email, phone, mailing_address, auth_user_id")
       .order("full_name"),
     supabase
       .from("role_grants")
@@ -76,6 +78,12 @@ export default async function BuildingPage() {
       .from("invites")
       .select("id, token, role, email, expires_at, redeemed_at")
       .order("created_at", { ascending: false }),
+    // RLS returns nothing to a non-admin; the card only renders for admins.
+    supabase
+      .from("access_reviews")
+      .select("id, reviewed_at, reviewed_by, notes, active_grants, revoked_count")
+      .order("reviewed_at", { ascending: false })
+      .limit(5),
   ]);
 
   const profile: AssociationProfile = {
@@ -104,6 +112,25 @@ export default async function BuildingPage() {
   }
 
   const personRecords: PersonRecord[] = persons ?? [];
+
+  const currentOwnerIds = new Set((unitOwnerRows ?? []).map((r) => r.person_id));
+  const nameByAuthUser = new Map(
+    (persons ?? [])
+      .filter((p) => p.auth_user_id)
+      .map((p) => [p.auth_user_id as string, p.full_name]),
+  );
+  const accessReviews: AccessReviewRecord[] = (reviewRows ?? []).map((r) => ({
+    id: r.id,
+    reviewedAt: r.reviewed_at,
+    reviewerName: r.reviewed_by ? (nameByAuthUser.get(r.reviewed_by) ?? null) : null,
+    notes: r.notes,
+    grantCount: Array.isArray(r.active_grants) ? r.active_grants.length : 0,
+    revokedCount: r.revoked_count,
+  }));
+  const daysSinceReview = accessReviews[0]
+    ? Math.floor((Date.parse(`${todayIso}T00:00:00Z`) - Date.parse(accessReviews[0].reviewedAt)) / 86400000)
+    : null;
+  const activeGrantCount = [...rolesByPerson.values()].reduce((n, roles) => n + roles.length, 0);
 
   const ownersByUnit = new Map<string, CurrentOwner[]>();
   for (const row of unitOwnerRows ?? []) {
@@ -209,6 +236,12 @@ export default async function BuildingPage() {
                   roles={rolesByPerson.get(p.id) ?? []}
                   canEdit={isBoard}
                   canEditRoles={isBoardAdmin}
+                  canRedact={
+                    isBoardAdmin &&
+                    (rolesByPerson.get(p.id) ?? []).length === 0 &&
+                    !currentOwnerIds.has(p.id) &&
+                    !(p.full_name === "Former member" && !p.email)
+                  }
                 />
               ))}
             </ul>
@@ -252,6 +285,19 @@ export default async function BuildingPage() {
           </div>
         </div>
       </Card>
+
+      {isBoardAdmin ? (
+        <Card
+          title="Access review"
+          hint="Every 90 days, confirm everyone who can see the books still should."
+        >
+          <AccessReviewCard
+            reviews={accessReviews}
+            activeGrantCount={activeGrantCount}
+            daysSince={daysSinceReview === null ? null : Math.max(0, daysSinceReview)}
+          />
+        </Card>
+      ) : null}
 
       {isBoard ? (
         <Card

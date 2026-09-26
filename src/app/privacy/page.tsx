@@ -23,12 +23,11 @@ function Section({
 /**
  * A real privacy policy, not a restatement of docs/SECURITY_POLICY.md (which
  * covers controls, not data practices). Every claim here is checked against
- * what the app actually does before being written down - in particular
- * retention/deletion is stated honestly as a known gap (DECISIONS.md: soft
- * deletes and immutable journal entries are deliberate for audit integrity,
- * and there is no consumer-initiated deletion flow yet) rather than glossed
- * over. Public (PUBLIC_PATHS in src/lib/supabase/proxy.ts) and linked from
- * signup - consent to this page is required to create an account.
+ * what the app actually does before being written down; retention and
+ * removal match SECURITY_POLICY.md §9 and redact_person() (0037,
+ * DECISIONS #30). Public (PUBLIC_PATHS in src/lib/supabase/proxy.ts) and
+ * linked from signup - consent to this page is required to create an
+ * account.
  */
 export default function PrivacyPage() {
   return (
@@ -96,30 +95,36 @@ export default function PrivacyPage() {
 
       <Section title="How long we keep it">
         <p>
-          Financial records are kept indefinitely by design &mdash; an
-          association&rsquo;s books and tax history need to remain available
-          for years, and Walkup&rsquo;s ledger is built to never silently
-          lose or alter a posted record (mistakes are corrected with a
-          visible reversal, not a deletion).
+          Financial records &mdash; the ledger, payments, charges, budgets, tax
+          filings, and bank transactions &mdash; are kept for the life of your
+          association&rsquo;s account, and for 7 years after the account is
+          closed, because tax records have to be. They&rsquo;re never
+          silently altered in the meantime: a mistake is corrected with a
+          visible reversing entry, not a deletion.
         </p>
         <p>
-          <strong className="text-ink">Known gap, stated plainly:</strong>{" "}
-          there is currently no self-service way to delete your personal data
-          from Walkup. If you want your information removed or corrected,
-          email us (below) and we&rsquo;ll handle it by hand &mdash; this is
-          manual today, not automated, and we&rsquo;re telling you that
-          rather than implying otherwise.
+          Bank access tokens are deleted the moment your board disconnects a
+          bank, after Plaid is told to close the connection.
+        </p>
+        <p>
+          Personal details &mdash; a person&rsquo;s name, email, phone, and
+          mailing address &mdash; are kept only while that person has access
+          or owns a unit. After that, a board admin can remove them, or you
+          can ask us to. Removal clears them everywhere Walkup stores them,
+          including its internal change log; the person&rsquo;s payment and
+          ownership history stays, attributed to &ldquo;Former
+          member.&rdquo;
         </p>
       </Section>
 
       <Section title="Your rights">
         <p>
           You can ask to see what information we hold about you, correct it,
-          or request its deletion, subject to the retention needs described
-          above (an association&rsquo;s financial and tax records generally
+          or have your personal details removed. Email us (below) and
+          we&rsquo;ll act on it within 30 days and tell you what was removed.
+          Financial and tax records your association is required to keep
           can&rsquo;t be deleted while the association is active, for the
-          same audit-integrity reasons). Contact us using the email below and
-          we&rsquo;ll respond directly.
+          reason above &mdash; we&rsquo;ll say so if that applies.
         </p>
       </Section>
 

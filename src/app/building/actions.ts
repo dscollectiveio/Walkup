@@ -510,3 +510,34 @@ export async function deleteInvite(inviteId: string): Promise<{ ok?: true; error
   revalidateBuilding();
   return { ok: true };
 }
+
+// ============================================================================
+// ACCESS REVIEWS AND PERSONAL-DATA REDACTION (0037, DECISIONS #30)
+// ============================================================================
+
+export async function recordAccessReview(_prev: unknown, formData: FormData) {
+  const notes = String(formData.get("notes") ?? "").trim() || null;
+
+  const supabase = await createClient();
+  const associationId = await currentAssociationId(supabase);
+  if (!associationId) return { error: "No association is visible to you." };
+
+  const { data, error } = await supabase.rpc("record_access_review", {
+    p_association_id: associationId,
+    p_notes: notes,
+  });
+  if (error) return { error: error.message };
+
+  revalidateBuilding();
+  const revoked = (data as { revoked_count?: number } | null)?.revoked_count ?? 0;
+  return { ok: true, revoked };
+}
+
+export async function redactPerson(personId: string): Promise<{ ok?: true; error?: string }> {
+  const supabase = await createClient();
+  const { error } = await supabase.rpc("redact_person", { p_person_id: personId });
+  if (error) return { error: error.message };
+
+  revalidateBuilding();
+  return { ok: true };
+}
