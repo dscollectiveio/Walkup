@@ -80,6 +80,9 @@ export default async function RootLayout({
               <Link href="/privacy" className="underline-offset-2 hover:underline">
                 Privacy Policy
               </Link>
+              <Link href="/policies" className="underline-offset-2 hover:underline">
+                More policies
+              </Link>
             </p>
           </footer>
         </div>

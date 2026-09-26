@@ -121,7 +121,11 @@ export default function SecurityPage() {
           snapshot of who had access that day. Access that should have ended
           is removed automatically: an owner&rsquo;s access ends once their
           sale closes, and an accountant&rsquo;s ends when their grant
-          expires.
+          expires. The full{" "}
+          <Link href="/policies/access-controls" className="text-ink underline-offset-2 hover:underline">
+            Access Controls Policy
+          </Link>{" "}
+          has the detail.
         </p>
       </Section>
 
@@ -132,7 +136,11 @@ export default function SecurityPage() {
           patched within 7 days and high-severity ones within 14. The
           platforms Walkup runs on are also checked weekly against their
           end-of-support dates, so nothing runs on software that no longer
-          gets security fixes.
+          gets security fixes. The full{" "}
+          <Link href="/policies/vulnerability-management" className="text-ink underline-offset-2 hover:underline">
+            Vulnerability and Patch Management Policy
+          </Link>{" "}
+          has the detail.
         </p>
       </Section>
 

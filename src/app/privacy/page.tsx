@@ -113,7 +113,11 @@ export default function PrivacyPage() {
           can ask us to. Removal clears them everywhere Walkup stores them,
           including its internal change log; the person&rsquo;s payment and
           ownership history stays, attributed to &ldquo;Former
-          member.&rdquo;
+          member.&rdquo; The full{" "}
+          <Link href="/policies/data-retention" className="text-ink underline-offset-2 hover:underline">
+            Data Retention and Deletion Policy
+          </Link>{" "}
+          has the schedule for every category of data.
         </p>
       </Section>
 
