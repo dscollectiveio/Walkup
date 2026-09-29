@@ -88,6 +88,9 @@ remove any that are no longer needed.
 
 Walkup has no employees or contractors — the operator is the only person
 with infrastructure access, so there is no staff offboarding to automate.
+The manual runbook for if that changes is `docs/OFFBOARDING.md`; it stays
+"currently applicable to no one" until it isn't.
+
 The equivalent control is on the people who hold access to association
 data, and it is automated (`deprovision_stale_access()`, 0037):
 
