@@ -1,10 +1,17 @@
 import {
   Home,
   AlertTriangle,
+  Hourglass,
+  Receipt,
   BarChart3,
   Landmark,
+  FileText,
+  Wrench,
+  Shield,
   Folder,
   Building2,
+  Hammer,
+  CalendarClock,
   HandCoins,
   FileBarChart,
   type LucideIcon,
@@ -35,14 +42,28 @@ export const NAV_GROUPS: NavGroupConfig[] = [
     label: "Money In & Money Out",
     items: [
       { href: "/dues", label: "HOA Dues", icon: HandCoins },
+      { href: "/delinquency", label: "Who owe the HOA", icon: Hourglass },
+      { href: "/bills", label: "Bills", icon: Receipt },
       { href: "/budget", label: "Budget", icon: BarChart3 },
       { href: "/financial-statements", label: "Financial Statements", icon: FileBarChart },
       { href: "/bank-feed", label: "Bank Sync & Transactions", icon: Landmark },
     ],
   },
   {
+    label: "Taxes & Insurance",
+    items: [
+      { href: "/tax", label: "Tax Center", icon: FileText },
+      { href: "/insurance", label: "Insurance Marketplace", icon: Shield },
+    ],
+  },
+  {
     label: "Building",
-    items: [{ href: "/building", label: "Building Info", icon: Building2 }],
+    items: [
+      { href: "/building", label: "Building Info", icon: Building2 },
+      { href: "/repairs", label: "Repairs", icon: Hammer },
+      { href: "/upkeep-schedule", label: "Upkeep Schedule", icon: CalendarClock },
+      { href: "/contractors", label: "Contractor Directory", icon: Wrench },
+    ],
   },
 ];
 
