@@ -1,5 +1,6 @@
 "use client";
 
+import Link from "next/link";
 import { useMemo, useState, useTransition } from "react";
 import { categorizeBankTransactionsBulk } from "./actions";
 import { TransactionRow, type Pickers, type TransactionRecord } from "./transaction-row";
@@ -161,14 +162,47 @@ function BulkForm({
   );
 }
 
+export type Sort = "date_desc" | "date_asc" | "name_asc" | "name_desc" | "amount_desc" | "amount_asc";
+
+function SortableHeader({
+  href,
+  active,
+  ascending,
+  children,
+  align,
+}: {
+  href: string;
+  active: boolean;
+  ascending: boolean;
+  children: React.ReactNode;
+  align?: "right";
+}) {
+  return (
+    <th className={`pb-2 font-medium ${align === "right" ? "text-right" : ""}`}>
+      <Link href={href} className={`hover:text-ink ${active ? "text-ink" : ""}`}>
+        {children}
+        {active ? <span className="ml-0.5">{ascending ? "▲" : "▼"}</span> : null}
+      </Link>
+    </th>
+  );
+}
+
 export function TransactionsTable({
   transactions,
   pickers,
   canEdit,
+  sort,
+  dateHref,
+  nameHref,
+  amountHref,
 }: {
   transactions: SuggestedTransaction[];
   pickers: Pickers;
   canEdit: boolean;
+  sort: Sort;
+  dateHref: string;
+  nameHref: string;
+  amountHref: string;
 }) {
   const [selected, setSelected] = useState<Set<string>>(new Set());
   const [prefill, setPrefill] = useState<{ kind: PostingKind; accountId: string | null; label: string } | null>(
@@ -296,9 +330,20 @@ export function TransactionsTable({
           <thead>
             <tr className="border-b border-line text-left text-mute">
               {canEdit ? <th className="w-8 pb-2" /> : null}
-              <th className="pb-2 font-medium">Date</th>
-              <th className="pb-2 font-medium">Description</th>
-              <th className="pb-2 text-right font-medium">Amount</th>
+              <SortableHeader href={dateHref} active={sort === "date_asc" || sort === "date_desc"} ascending={sort === "date_asc"}>
+                Date
+              </SortableHeader>
+              <SortableHeader href={nameHref} active={sort === "name_asc" || sort === "name_desc"} ascending={sort === "name_asc"}>
+                Description
+              </SortableHeader>
+              <SortableHeader
+                href={amountHref}
+                active={sort === "amount_asc" || sort === "amount_desc"}
+                ascending={sort === "amount_asc"}
+                align="right"
+              >
+                Amount
+              </SortableHeader>
             </tr>
           </thead>
           <tbody className="divide-y divide-line">

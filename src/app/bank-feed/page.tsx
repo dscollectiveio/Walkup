@@ -16,6 +16,7 @@ export const dynamic = "force-dynamic";
 
 type Range = "this_month" | "last_30" | "all";
 type Status = "all" | "needs" | "ready" | "posted" | "excluded" | "retracted";
+type Sort = "date_desc" | "date_asc" | "name_asc" | "name_desc" | "amount_desc" | "amount_asc";
 
 const STATUS_LABEL: Record<Status, string> = {
   all: "All",
@@ -96,25 +97,52 @@ function statusOf(t: TransactionRecord): Status {
   return "needs";
 }
 
-function hrefFor(q: string | undefined, range: Range, status: Status): string {
+function hrefFor(q: string | undefined, range: Range, status: Status, sort: Sort): string {
   const params = new URLSearchParams();
   if (q) params.set("q", q);
   if (range !== "all") params.set("range", range);
   if (status !== "all") params.set("status", status);
+  if (sort !== "date_desc") params.set("sort", sort);
   const qs = params.toString();
   return `/bank-feed${qs ? `?${qs}` : ""}`;
+}
+
+function nextSort(current: Sort, column: "date" | "name" | "amount"): Sort {
+  if (column === "date") return current === "date_desc" ? "date_asc" : "date_desc";
+  if (column === "name") return current === "name_asc" ? "name_desc" : "name_asc";
+  return current === "amount_desc" ? "amount_asc" : "amount_desc";
+}
+
+function compareBySort(a: TransactionRecord, b: TransactionRecord, sort: Sort): number {
+  switch (sort) {
+    case "name_asc":
+      return a.description.localeCompare(b.description);
+    case "name_desc":
+      return b.description.localeCompare(a.description);
+    case "amount_asc":
+      return Number(a.amount) - Number(b.amount);
+    case "amount_desc":
+      return Number(b.amount) - Number(a.amount);
+    case "date_asc":
+      return a.posted_on.localeCompare(b.posted_on);
+    case "date_desc":
+    default:
+      return b.posted_on.localeCompare(a.posted_on);
+  }
 }
 
 export default async function BankFeedPage({
   searchParams,
 }: {
-  searchParams: Promise<{ q?: string; range?: string; status?: string }>;
+  searchParams: Promise<{ q?: string; range?: string; status?: string; sort?: string }>;
 }) {
-  const { q, range: rangeParam, status: statusParam } = await searchParams;
+  const { q, range: rangeParam, status: statusParam, sort: sortParam } = await searchParams;
   const range: Range =
     rangeParam === "this_month" || rangeParam === "last_30" ? rangeParam : "all";
   const status: Status =
     statusParam && statusParam in STATUS_LABEL ? (statusParam as Status) : "all";
+  const SORTS: Sort[] = ["date_desc", "date_asc", "name_asc", "name_desc", "amount_desc", "amount_asc"];
+  const sort: Sort = sortParam && SORTS.includes(sortParam as Sort) ? (sortParam as Sort) : "date_desc";
 
   const supabase = await createClient();
 
@@ -201,10 +229,11 @@ export default async function BankFeedPage({
     counts.all += 1;
     counts[statusOf(t)] += 1;
   }
-  const transactions =
+  const transactions = (
     status === "all"
       ? allTransactions.filter((t) => !t.removed_at || t.journal_entry_id)
-      : allTransactions.filter((t) => statusOf(t) === status);
+      : allTransactions.filter((t) => statusOf(t) === status)
+  ).sort((a, b) => compareBySort(a, b, sort));
 
   const transactionsWithSuggestions: SuggestedTransaction[] = transactions.map((t) => {
     if (t.posting_kind || t.journal_entry_id || t.removed_at) return { ...t, suggestion: null };
@@ -345,7 +374,7 @@ export default async function BankFeedPage({
                 {(Object.keys(STATUS_LABEL) as Status[]).map((s) => (
                   <Link
                     key={s}
-                    href={hrefFor(q, range, s)}
+                    href={hrefFor(q, range, s, sort)}
                     className={
                       status === s
                         ? "rounded-full bg-ink px-3 py-1 text-[12px] font-medium text-paper"
@@ -362,6 +391,7 @@ export default async function BankFeedPage({
 
             <form className="mb-4 flex flex-wrap items-end gap-2" method="get">
               {status !== "all" ? <input type="hidden" name="status" value={status} /> : null}
+              {sort !== "date_desc" ? <input type="hidden" name="sort" value={sort} /> : null}
               <div className="min-w-[10rem] flex-1">
                 <label htmlFor="q" className="block text-[12px] font-medium text-ink">
                   Search
@@ -405,7 +435,15 @@ export default async function BankFeedPage({
                   : "No transactions synced yet. Click “Sync now” above."}
               </Empty>
             ) : (
-              <TransactionsTable transactions={transactionsWithSuggestions} pickers={pickers} canEdit={canEdit} />
+              <TransactionsTable
+                transactions={transactionsWithSuggestions}
+                pickers={pickers}
+                canEdit={canEdit}
+                sort={sort}
+                dateHref={hrefFor(q, range, status, nextSort(sort, "date"))}
+                nameHref={hrefFor(q, range, status, nextSort(sort, "name"))}
+                amountHref={hrefFor(q, range, status, nextSort(sort, "amount"))}
+              />
             )}
           </Card>
 
