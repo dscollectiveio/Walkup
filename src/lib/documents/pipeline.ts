@@ -1,9 +1,54 @@
 import "server-only";
 import type { createClient } from "@/lib/supabase/server";
-import { extractDocumentText } from "./extract-text";
-import { classifyDocument, CONFIDENCE_THRESHOLD } from "./classify";
+import { extractDocumentText, extractPdfPages } from "./extract-text";
+import { classifyDocument, CONFIDENCE_THRESHOLD, extractDeclarations } from "./classify";
+import { FIELD_DEFS } from "@/lib/insurance/declarations";
 
 type Supabase = Awaited<ReturnType<typeof createClient>>;
+
+export interface DeclarationsRead {
+  state: "done" | "unreadable" | "failed" | "skipped";
+  reason?: string;
+  pages?: number;
+  fields?: { name: string; candidates: { value: string; page: number | null; snippet: string }[]; confidence: number }[];
+  read_at: string;
+}
+
+/**
+ * Documents filed as insurance get a second, field-by-field read of the
+ * declarations (limits, deductibles, dates), page by page so each value can
+ * say where it came from. Stored alongside the general extraction; nothing is
+ * written to insurance_policies until a person reviews it and saves.
+ */
+async function readDeclarationsIfInsurance(
+  supabase: Supabase,
+  doc: { mime_type: string | null },
+  categoryId: string | null,
+  bytes: Uint8Array,
+): Promise<DeclarationsRead | null> {
+  if (!categoryId) return null;
+  const { data: cat } = await supabase.from("document_categories").select("slug").eq("id", categoryId).limit(1);
+  if (cat?.[0]?.slug !== "insurance") return null;
+
+  let declarations: DeclarationsRead;
+  const pages = await extractPdfPages(doc.mime_type, bytes);
+  if (!pages) {
+    declarations = {
+      state: "unreadable",
+      reason: "This file has no readable text, so the details need entering by hand.",
+      read_at: new Date().toISOString(),
+    };
+  } else {
+    const result = await extractDeclarations({
+      pages,
+      fields: FIELD_DEFS.map((f) => ({ key: f.key, label: f.label })),
+    });
+    declarations = result.ok
+      ? { state: "done", pages: pages.length, fields: result.fields, read_at: new Date().toISOString() }
+      : { state: result.configured ? "failed" : "skipped", reason: result.reason, pages: pages.length, read_at: new Date().toISOString() };
+  }
+  return declarations;
+}
 
 /**
  * Read a stored document and file it.
@@ -86,6 +131,8 @@ export async function runExtraction(
   });
 
   if (matched?.set_category_id) {
+    // Read before marking done, in one write — "done" always means complete.
+    const declarations = await readDeclarationsIfInsurance(supabase, doc, matched.set_category_id, bytes);
     await supabase
       .from("documents")
       .update({
@@ -95,6 +142,7 @@ export async function runExtraction(
         tag_source: "manual",
         tag_confidence: null,
         review_state: "ok",
+        ...(declarations ? { extraction: { declarations } } : {}),
         extraction_state: "done",
         extraction_error: null,
       })
@@ -145,11 +193,16 @@ export async function runExtraction(
   // extracted fields still get saved — those are additive.
   const alreadyFiled = doc.category_id !== null && doc.tag_source === "manual";
 
+  // Only on a category a person chose or the model was sure of — an unsure
+  // guess goes to the review queue first, and re-running reads it then.
+  const filedAs = alreadyFiled ? doc.category_id : confident ? guessedId : null;
+  const declarations = await readDeclarationsIfInsurance(supabase, doc, filedAs, bytes);
+
   await supabase
     .from("documents")
     .update({
       extracted_text: extracted.text,
-      extraction: e,
+      extraction: declarations ? { ...e, declarations } : e,
       extraction_state: "done",
       extraction_error: null,
       ...(alreadyFiled

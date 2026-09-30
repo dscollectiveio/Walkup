@@ -139,6 +139,98 @@ export async function classifyDocument(opts: {
   }
 }
 
+// ----------------------------------------------------------------------------
+// Insurance declarations — a second, narrower read for documents filed as
+// insurance. Same model, same honesty rules, one field list
+// (src/lib/insurance/declarations.ts). The caller decides what to trust.
+// ----------------------------------------------------------------------------
+
+const DECLARATIONS_SYSTEM = `You are reading an insurance declarations page (or a quote) for a small condominium association.
+
+For each field you are asked about, report every place the document states it:
+- value: exactly as printed, including $ and commas. Dates as printed. Do not convert, round, or abbreviate.
+- page: the page number it appears on (pages are marked "=== Page N ===").
+- snippet: the surrounding text, under 160 characters, copied verbatim.
+
+Rules:
+- Only report what the document actually says. If a field isn't stated, return it with no candidates.
+- If two different figures appear for one field (per occurrence and aggregate, two deductibles), report both as
+  separate candidates. Do not choose between them.
+- Never infer a limit, deductible, date, or coverage form. A blank is correct; a wrong number is harmful — these
+  figures decide what the board tells owners to insure themselves.
+- For policy_type use one of: property (a condo master policy), general_liability, directors_officers, umbrella,
+  flood, workers_comp, other. For coverage_form: bare_walls, single_entity, all_in — only if the document names it.
+  For payment_schedule: annual, semi_annual, quarterly, monthly. For yes/no fields: yes or no, only if stated.
+- Numbers replaced with [redacted] are absent. Never guess them.
+- confidence: how sure you are that the candidates are the right figure for that field, 0 to 1. Be honest.`;
+
+function declarationsSchema(fieldNames: [string, ...string[]]) {
+  return z.object({
+    fields: z.array(
+      z.object({
+        name: z.enum(fieldNames),
+        candidates: z.array(
+          z.object({
+            value: z.string(),
+            page: z.number().nullable(),
+            snippet: z.string(),
+          }),
+        ),
+        confidence: z.number(),
+      }),
+    ),
+  });
+}
+
+export type DeclarationsResult =
+  | { ok: true; fields: { name: string; candidates: { value: string; page: number | null; snippet: string }[]; confidence: number }[] }
+  | { ok: false; reason: string; configured: boolean };
+
+export async function extractDeclarations(opts: {
+  pages: string[];
+  fields: { key: string; label: string }[];
+}): Promise<DeclarationsResult> {
+  const apiKey = process.env.ANTHROPIC_API_KEY;
+  if (!apiKey) return { ok: false, configured: false, reason: "No Anthropic API key is configured." };
+
+  const client = new Anthropic({ apiKey });
+  const text = opts.pages
+    .map((p, i) => `=== Page ${i + 1} ===\n${p}`)
+    .join("\n\n")
+    .slice(0, 80_000);
+  const catalogue = opts.fields.map((f) => `- ${f.key}: ${f.label}`).join("\n");
+
+  try {
+    const response = await client.messages.parse({
+      model: MODEL,
+      max_tokens: 16000,
+      system: DECLARATIONS_SYSTEM,
+      thinking: { type: "adaptive" },
+      output_config: {
+        format: zodOutputFormat(declarationsSchema(opts.fields.map((f) => f.key) as [string, ...string[]])),
+        effort: "medium",
+      },
+      messages: [{ role: "user", content: `Fields to report:\n${catalogue}\n\nDocument follows.\n\n${text}` }],
+    });
+    const parsed = response.parsed_output;
+    if (!parsed) return { ok: false, configured: true, reason: "The model's answer didn't match the schema." };
+    return {
+      ok: true,
+      fields: parsed.fields.map((f) => ({
+        ...f,
+        confidence: Math.min(1, Math.max(0, f.confidence)),
+        candidates: f.candidates.map((c) => ({
+          ...c,
+          page: c.page !== null && Number.isInteger(c.page) && c.page >= 1 && c.page <= opts.pages.length ? c.page : null,
+          snippet: c.snippet.slice(0, 240),
+        })),
+      })),
+    };
+  } catch (cause) {
+    return { ok: false, configured: true, reason: (cause as Error).message };
+  }
+}
+
 /**
  * The line between "filed" and "someone should look at this".
  *

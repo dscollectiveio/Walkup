@@ -28,6 +28,24 @@ export async function updateAssociationProfile(_prev: unknown, formData: FormDat
   const city = String(formData.get("city") ?? "").trim() || null;
   const streetAddress = String(formData.get("street_address") ?? "").trim() || null;
   const postalCode = String(formData.get("postal_code") ?? "").trim() || null;
+  const optionalInt = (key: string, min: number, max: number): number | null | "invalid" => {
+    const raw = String(formData.get(key) ?? "").trim();
+    if (raw === "") return null;
+    const n = Number(raw);
+    return Number.isInteger(n) && n >= min && n <= max ? n : "invalid";
+  };
+  const yearBuilt = optionalInt("year_built", 1700, 2100);
+  const stories = optionalInt("stories", 1, 200);
+  const roofYear = optionalInt("roof_replaced_year", 1700, 2100);
+  if (yearBuilt === "invalid" || roofYear === "invalid") return { error: "Years must be four digits, like 1924." };
+  if (stories === "invalid") return { error: "Stories must be a whole number." };
+  const constructionType = String(formData.get("construction_type") ?? "").trim() || null;
+  if (
+    constructionType &&
+    !["frame", "joisted_masonry", "masonry_noncombustible", "fire_resistive", "other"].includes(constructionType)
+  ) {
+    return { error: "Choose a construction type from the list." };
+  }
   const ein = String(formData.get("ein") ?? "").trim() || null;
   const incorporatedOn = String(formData.get("incorporated_on") ?? "").trim() || null;
   const fyEndMonth = Number(formData.get("fiscal_year_end_month") ?? "");
@@ -91,6 +109,10 @@ export async function updateAssociationProfile(_prev: unknown, formData: FormDat
       street_address: streetAddress,
       postal_code: postalCode,
       ...coordinates,
+      year_built: yearBuilt,
+      construction_type: constructionType,
+      stories,
+      roof_replaced_year: roofYear,
       ein,
       incorporated_on: incorporatedOn,
       fiscal_year_end_month: fyEndMonth,

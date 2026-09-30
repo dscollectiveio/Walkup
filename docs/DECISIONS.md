@@ -928,3 +928,51 @@ Every other role and path still has no way to modify the audit log.
   audit rows added to the scrub, or the deletion is incomplete.
 - Financial records are never redacted or deleted while an association is
   active; retention is in `docs/SECURITY_POLICY.md` §9.
+
+---
+
+## 31. A platform-admin role for records shared by every association
+
+**Decided 2026-09-30 by Doug**, while building Insurance "Get quotes" and the
+Taxes form templates (docs/reference/build-prompt-budget-contractors-insurance-taxes.md).
+
+Some records belong to no association: the insurance brokers quote
+requests go to, and (Part 4) the official IRS/Illinois form templates and
+their field maps. No `board_admin` should be able to edit what every other
+association relies on, so there is one role above it:
+
+- `platform_admins(user_id)` plus `is_platform_admin()` (SECURITY DEFINER,
+  pinned search_path). The table has RLS on and **no policies** — nobody
+  reads or writes it through the API; it's consulted only by the function.
+- Global tables (`insurance_partners`, later `tax_form_templates`) are
+  readable as needed by boards and writable only when `is_platform_admin()`.
+  They're listed as deliberate exceptions in the association-scoping lint
+  (`tests/db/migrations.test.ts`) and are not on `tg_audit()`, whose log is
+  per association.
+- **Ships with no rows.** The migration hardcodes nobody: Doug's account has
+  a different email in each environment (`doug.smart6@gmail.com` on
+  dev/staging, `doug@dscollective.io` on production). Each environment's row
+  is added by hand:
+
+  ```sql
+  insert into public.platform_admins (user_id, note)
+  select id, 'Doug' from auth.users where email = '<that environment''s email>';
+  ```
+
+**Related choices made in the same build:**
+
+- **Quote requests are mailto drafts**, not sent by Walkup — same as
+  contractor emails. Walkup still has no email-sending service. A request is
+  a `draft` until the board opens it in their email app and marks it sent;
+  the database refuses `sent` without a `sent_at`.
+- **Google Places** ("Find a contractor") sends Google the building's street
+  address and the trade searched, server-side only. Hidden entirely until
+  `GOOGLE_PLACES_KEY` is set. Listed in the privacy policy.
+- **Contractor reviews are board-only.** Owners still can't read `vendors`
+  (W-9 and tax-ID data live there).
+
+**How to apply:**
+
+- A new table with no `association_id` needs a reason to be global, a
+  platform-admin-only write policy, and an entry in the scoping lint.
+- Never grant `platform_admins` rows from app code or a migration.

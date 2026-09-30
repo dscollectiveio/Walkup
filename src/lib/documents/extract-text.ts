@@ -16,6 +16,25 @@ import { redactTaxIds } from "./redact";
  * handle un-redacted text (see redact.ts).
  */
 
+/**
+ * The same PDF text layer, kept page by page, so a value read from it can say
+ * which page it came from. Redacted like everything else read here. Null when
+ * there's no text layer (a scan) or the file isn't a PDF.
+ */
+export async function extractPdfPages(mimeType: string | null, bytes: Uint8Array): Promise<string[] | null> {
+  if (mimeType !== "application/pdf") return null;
+  try {
+    const pdf = await getDocumentProxy(bytes);
+    const { text } = await extractPdfText(pdf, { mergePages: false });
+    const pages = (Array.isArray(text) ? text : [text]).map(
+      (p) => redactTaxIds(p.replace(/[ \t]+/g, " ").replace(/\n{3,}/g, "\n\n").trim()).text,
+    );
+    return pages.some((p) => p.length > 0) ? pages : null;
+  } catch {
+    return null;
+  }
+}
+
 export type ExtractionOutcome =
   | { ok: true; text: string; redactedCount: number }
   | { ok: false; reason: string };

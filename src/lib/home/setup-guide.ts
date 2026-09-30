@@ -327,8 +327,8 @@ export function buildSetupGuide(input: SetupInputs): SetupSection[] {
           done: insuranceDone,
           doneOn: activePolicy?.effective_from ?? null,
           instructions: [
-            "On Insurance, click “Record a policy” and copy the declarations page: carrier, policy number, dates, premium.",
-            "One entry per policy — property, liability and D&O are usually separate.",
+            "On Insurance, upload the declarations page (usually the first 1–3 pages of the policy). Walkup reads the limits, deductibles and dates, and you check each one before saving.",
+            "No PDF handy? Enter the details by hand instead. One entry per policy — the master policy, liability and D&O are often separate.",
           ],
         },
       ],

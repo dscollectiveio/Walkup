@@ -11,6 +11,10 @@ export interface AssociationProfile {
   city: string | null;
   street_address: string | null;
   postal_code: string | null;
+  year_built: number | null;
+  construction_type: string | null;
+  stories: number | null;
+  roof_replaced_year: number | null;
   ein: string | null;
   incorporated_on: string | null;
   fiscal_year_end_month: number;
@@ -185,6 +189,41 @@ export function AssociationProfileForm({ profile }: { profile: AssociationProfil
               </option>
             ))}
           </select>
+        </div>
+
+        <p className="text-[12px] font-medium text-ink sm:col-span-2">
+          The building <span className="font-normal text-mute-soft">— used to pre-fill insurance quote requests</span>
+        </p>
+        <div>
+          <label htmlFor="year_built" className="block text-[12px] font-medium text-ink">
+            Year built <span className="ml-1 font-normal text-mute-soft">optional</span>
+          </label>
+          <input id="year_built" name="year_built" type="number" min="1700" max="2100" defaultValue={profile.year_built ?? ""} className="figures mt-1 w-full rounded-lg border border-line-strong px-3 py-2 text-[13px] text-ink" />
+        </div>
+        <div>
+          <label htmlFor="construction_type" className="block text-[12px] font-medium text-ink">
+            Construction <span className="ml-1 font-normal text-mute-soft">optional</span>
+          </label>
+          <select id="construction_type" name="construction_type" defaultValue={profile.construction_type ?? ""} className="mt-1 w-full rounded-lg border border-line-strong bg-paper px-3 py-2 text-[13px] text-ink">
+            <option value="">Not sure</option>
+            <option value="frame">Frame (wood)</option>
+            <option value="joisted_masonry">Brick or block walls, wood floors</option>
+            <option value="masonry_noncombustible">Masonry, non-combustible</option>
+            <option value="fire_resistive">Fire resistive (concrete / steel)</option>
+            <option value="other">Other</option>
+          </select>
+        </div>
+        <div>
+          <label htmlFor="stories" className="block text-[12px] font-medium text-ink">
+            Stories <span className="ml-1 font-normal text-mute-soft">optional</span>
+          </label>
+          <input id="stories" name="stories" type="number" min="1" max="200" defaultValue={profile.stories ?? ""} className="figures mt-1 w-full rounded-lg border border-line-strong px-3 py-2 text-[13px] text-ink" />
+        </div>
+        <div>
+          <label htmlFor="roof_replaced_year" className="block text-[12px] font-medium text-ink">
+            Roof last replaced (year) <span className="ml-1 font-normal text-mute-soft">optional</span>
+          </label>
+          <input id="roof_replaced_year" name="roof_replaced_year" type="number" min="1700" max="2100" defaultValue={profile.roof_replaced_year ?? ""} className="figures mt-1 w-full rounded-lg border border-line-strong px-3 py-2 text-[13px] text-ink" />
         </div>
 
         <div>

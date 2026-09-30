@@ -49,7 +49,7 @@ interface ReminderInputs {
     incorporated_on: string | null;
   };
   bills: { name: string; next_due_on: string | null; autopay_arranged: boolean }[];
-  policies: { coverage: string; effective_to: string }[];
+  policies: { coverage: string; effective_to: string; renewal_reminder_days?: number | null }[];
   upcomingChargeDates: string[]; // due_on of open/partial charges after today
   today: Date;
   /**
@@ -78,15 +78,33 @@ export function assembleReminders({
     }
   }
 
-  const nextRenewal = policies
-    .map((p) => ({ coverage: p.coverage, due: new Date(`${p.effective_to}T00:00:00`) }))
-    .filter((p) => p.due >= today && p.due <= horizon)
-    .sort((a, b) => a.due.getTime() - b.due.getTime())[0];
+  const renewals = policies
+    .map((p) => ({
+      coverage: p.coverage,
+      due: new Date(`${p.effective_to}T00:00:00`),
+      leadDays: p.renewal_reminder_days ?? 60,
+    }))
+    .filter((p) => p.due >= today)
+    .sort((a, b) => a.due.getTime() - b.due.getTime());
+  const nextRenewal = renewals.find((p) => p.due <= horizon);
   if (nextRenewal) {
     reminders.push({
       name: "Insurance renewal",
       kind: String(nextRenewal.coverage).replace(/_/g, " "),
       due: nextRenewal.due,
+    });
+  }
+  // The board's own lead time (renewal_reminder_days, per policy) is when to
+  // start shopping — overdue reads as today, like the access review below.
+  for (const r of renewals) {
+    const start = new Date(r.due.getFullYear(), r.due.getMonth(), r.due.getDate() - r.leadDays);
+    const due = start < today ? today : start;
+    if (due > horizon) continue;
+    const kind = r.coverage === "property" ? "master" : String(r.coverage).replace(/_/g, " ");
+    reminders.push({
+      name: "Get insurance quotes",
+      kind: `Your ${kind} policy renews on ${formatDueDate(r.due, today)}. This is a good time to get quotes.`,
+      due,
     });
   }
 

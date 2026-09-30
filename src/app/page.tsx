@@ -88,7 +88,10 @@ export default async function HomePage() {
       .select("visible_tb_rows, total_debits, total_credits, total_owed, units_behind"),
     supabase.from("unit_owners").select("unit_id, effective_from, effective_to, persons(full_name)"),
     supabase.from("bank_connections").select("id, status, created_at, last_synced_at"),
-    supabase.from("insurance_policies").select("coverage, effective_from, effective_to"),
+    supabase
+      .from("insurance_policies")
+      .select("coverage, effective_from, effective_to, renewal_reminder_days")
+      .is("replaced_at", null),
     supabase.from("vendors").select("id, w9_on_file, w9_received_on, is_1099_exempt"),
     supabase
       .from("documents")

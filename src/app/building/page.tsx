@@ -20,7 +20,7 @@ export default async function BuildingPage() {
   const { data: associations } = await supabase
     .from("associations")
     .select(
-      "id, legal_name, display_name, state_code, county, city, street_address, postal_code, ein, incorporated_on, fiscal_year_end_month, capitalization_threshold, capitalization_threshold_source",
+      "id, legal_name, display_name, state_code, county, city, street_address, postal_code, year_built, construction_type, stories, roof_replaced_year, ein, incorporated_on, fiscal_year_end_month, capitalization_threshold, capitalization_threshold_source",
     );
   const association = associations?.[0];
   if (!association) return <Restricted what="building settings" />;
@@ -94,6 +94,10 @@ export default async function BuildingPage() {
     city: association.city,
     street_address: association.street_address,
     postal_code: association.postal_code,
+    year_built: association.year_built,
+    construction_type: association.construction_type,
+    stories: association.stories,
+    roof_replaced_year: association.roof_replaced_year,
     ein: association.ein,
     incorporated_on: association.incorporated_on,
     fiscal_year_end_month: association.fiscal_year_end_month,
