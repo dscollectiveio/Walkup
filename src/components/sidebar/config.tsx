@@ -19,7 +19,7 @@ export interface NavItemConfig {
   href: string;
   label: string;
   icon: LucideIcon;
-  /** Key into the badges map passed to the sidebar — currently only "problems". */
+  /** Key into the badges map passed to the sidebar: "problems" or "uncategorized". */
   badgeKey?: string;
 }
 
@@ -39,9 +39,9 @@ export const NAV_GROUPS: NavGroupConfig[] = [
   {
     label: "Money In & Money Out",
     items: [
-      { href: "/bank-feed", label: "Bank Sync & Transactions", icon: Landmark },
+      { href: "/bank-feed", label: "Bank Sync & Transactions", icon: Landmark, badgeKey: "uncategorized" },
       { href: "/financial-statements", label: "Financial Statements", icon: FileBarChart },
-      { href: "/budget", label: "Budget", icon: BarChart3 },
+      { href: "/budget", label: "Budget & spending", icon: BarChart3, badgeKey: "uncategorized" },
       { href: "/dues", label: "HOA Dues", icon: HandCoins },
     ],
   },

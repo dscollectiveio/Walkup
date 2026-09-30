@@ -82,9 +82,9 @@ export function BudgetRow({
           <td className="figures py-2 text-right">
             {budgeted === null ? (
               <span className="text-[11px] text-mute-soft">no budget set</span>
-            ) : (
-              <span className={variance !== null && variance > 0 ? "font-medium text-warning-text" : "text-good-text"}>
-                {variance !== null ? money(variance) : ""}
+            ) : variance === null ? null : (
+              <span className={variance > 0 ? "font-medium text-warning-text" : "text-good-text"}>
+                {money(Math.abs(variance))} {variance > 0 ? "over" : "under"}
               </span>
             )}
           </td>

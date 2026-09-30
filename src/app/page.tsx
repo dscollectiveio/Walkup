@@ -12,6 +12,9 @@ import {
 } from "@/lib/home/setup-guide";
 import { Greeting } from "@/components/home/greeting";
 import { SetupGuidePanel } from "@/components/home/setup-guide-panel";
+import { cashByMonth } from "@/lib/money/cash";
+import { spendByAccount } from "@/lib/money/spending";
+import { dateOfKey, monthLongLabel, monthShortLabel } from "@/lib/money/months";
 import { WorthAMinute } from "@/components/home/worth-a-minute";
 import { Standing } from "@/components/home/standing";
 import { YourList, type ManualTask } from "@/components/home/your-list";
@@ -31,7 +34,6 @@ export const dynamic = "force-dynamic";
 // strict toCents instead (DECISIONS #20).
 const looseCents = (v: string | number | null) => Math.round(Number(v ?? 0) * 100);
 
-const monthShort = (d: Date) => d.toLocaleDateString("en-US", { month: "short" });
 
 export default async function HomePage() {
   const supabase = await createClient();
@@ -126,15 +128,15 @@ export default async function HomePage() {
       .order("created_at"),
     supabase
       .from("monthly_cash_activity")
-      .select("month, fund_kind, inflow, outflow, visible_lines")
+      .select("month, fund_kind, inflow, outflow, transfer_inflow, transfer_outflow")
       .order("month"),
     supabase
       .from("monthly_dues_collection")
       .select("month, charge_count, charged, collected, collected_on_time")
       .order("month"),
     supabase
-      .from("monthly_spending_by_account")
-      .select("month, account_name, expense_count, total")
+      .from("monthly_expense_actuals")
+      .select("month, account_id, account_name, fund_id, total")
       .order("month"),
     supabase.from("budget_vs_actual").select("type, variance"),
   ]);
@@ -276,60 +278,30 @@ export default async function HomePage() {
   // --------------------------------------------------------------------------
   // Charts. All 0017-view money is text → strict cents (DECISIONS #20).
   // --------------------------------------------------------------------------
-  const netByMonth = new Map<string, { inCents: number; outCents: number }>();
-  for (const row of cashActivity ?? []) {
-    const key = row.month as string;
-    const entry = netByMonth.get(key) ?? { inCents: 0, outCents: 0 };
-    entry.inCents += toCents(row.inflow);
-    entry.outCents += toCents(row.outflow);
-    netByMonth.set(key, entry);
-  }
-
+  // Shared with Budget & spending (src/lib/money) so the two pages can't
+  // disagree. Transfers between the association's own accounts are excluded
+  // from "in" and "out" but still carried in the balance.
   let cash: CashCardData | null = null;
   let inOut: InOutCardData | null = null;
-  const monthKeys = [...netByMonth.keys()].sort();
+  const series = cashByMonth(cashActivity ?? []);
 
-  if (monthKeys.length > 0) {
-    // Fill month gaps carrying the balance forward — a quiet month still has
-    // a balance; that is the balance persisting, not fabricated data.
-    const first = new Date(`${monthKeys[0]}T00:00:00`);
-    const last = new Date(`${monthKeys[monthKeys.length - 1]}T00:00:00`);
-    const series: { date: Date; balanceCents: number; inCents: number; outCents: number }[] = [];
-    let running = 0;
-    for (let d = new Date(first); d <= last; d.setMonth(d.getMonth() + 1)) {
-      const key = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-01`;
-      const entry = netByMonth.get(key);
-      running += (entry?.inCents ?? 0) - (entry?.outCents ?? 0);
-      series.push({
-        date: new Date(d),
-        balanceCents: running,
-        inCents: entry?.inCents ?? 0,
-        outCents: entry?.outCents ?? 0,
-      });
-    }
-
+  if (series.length > 0) {
     const window = series.slice(-12);
     const beforeWindowCents =
       window.length < series.length ? series[series.length - window.length - 1].balanceCents : 0;
-    const sinceLabel = `Since ${window[0].date.toLocaleDateString("en-US", {
-      month: "long",
-      ...(window[0].date.getFullYear() !== today.getFullYear() ? { year: "numeric" } : {}),
-    })}`;
+    const sinceLabel = `Since ${monthLongLabel(window[0].key, dateOfKey(window[0].key).getFullYear() !== today.getFullYear())}`;
 
     cash = {
-      points: window.map((s) => ({ label: monthShort(s.date), valueCents: s.balanceCents })),
+      points: window.map((s) => ({ label: monthShortLabel(s.key), valueCents: s.balanceCents })),
       netChangeCents: window[window.length - 1].balanceCents - beforeWindowCents,
       sinceLabel,
     };
 
     // Spending by month, for shortfall captions.
     const topSpendByMonth = new Map<string, { name: string; cents: number }>();
-    for (const row of spendingRows ?? []) {
-      const cents = toCents(row.total);
-      const cur = topSpendByMonth.get(row.month as string);
-      if (!cur || cents > cur.cents) {
-        topSpendByMonth.set(row.month as string, { name: row.account_name, cents });
-      }
+    for (const month of new Set((spendingRows ?? []).map((r) => r.month))) {
+      const top = spendByAccount(spendingRows ?? [], month, month)[0];
+      if (top) topSpendByMonth.set(month, { name: top.name, cents: top.cents });
     }
 
     let varianceCents: number | null = null;
@@ -340,11 +312,10 @@ export default async function HomePage() {
 
     inOut = {
       groups: window.slice(-6).map((s) => {
-        const key = `${s.date.getFullYear()}-${String(s.date.getMonth() + 1).padStart(2, "0")}-01`;
         const shortfall = s.outCents > s.inCents;
-        const top = topSpendByMonth.get(key);
+        const top = topSpendByMonth.get(s.key);
         return {
-          label: monthShort(s.date),
+          label: monthShortLabel(s.key),
           aCents: s.inCents,
           bCents: s.outCents,
           shortfall,
@@ -358,21 +329,13 @@ export default async function HomePage() {
 
   let spending: SpendingCardData | null = null;
   if ((spendingRows ?? []).length > 0) {
-    const byAccount = new Map<string, number>();
-    const months = new Set<string>();
-    for (const row of spendingRows ?? []) {
-      months.add(row.month as string);
-      byAccount.set(row.account_name, (byAccount.get(row.account_name) ?? 0) + toCents(row.total));
-    }
-    const totalSpendCents = [...byAccount.values()].reduce((s, v) => s + v, 0);
-    const firstSpendMonth = new Date(`${[...months.values()].sort()[0]}T00:00:00`);
+    const months = [...new Set((spendingRows ?? []).map((r) => r.month))].sort();
+    const byAccount = spendByAccount(spendingRows ?? [], months[0], months[months.length - 1]);
+    const totalSpendCents = byAccount.reduce((s, a) => s + a.cents, 0);
     spending = {
-      slices: [...byAccount.entries()].map(([label, valueCents]) => ({ label, valueCents })),
-      avgMonthlyCents: Math.round(totalSpendCents / months.size),
-      sinceLabel: `Since ${firstSpendMonth.toLocaleDateString("en-US", {
-        month: "long",
-        ...(firstSpendMonth.getFullYear() !== today.getFullYear() ? { year: "numeric" } : {}),
-      })}`,
+      slices: byAccount.map((a) => ({ label: a.name, valueCents: a.cents })),
+      avgMonthlyCents: Math.round(totalSpendCents / months.length),
+      sinceLabel: `Since ${monthLongLabel(months[0], dateOfKey(months[0]).getFullYear() !== today.getFullYear())}`,
     };
   }
 
