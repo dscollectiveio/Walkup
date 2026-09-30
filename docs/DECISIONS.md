@@ -976,3 +976,45 @@ association relies on, so there is one role above it:
 - A new table with no `association_id` needs a reason to be global, a
   platform-admin-only write policy, and an entry in the scoping lint.
 - Never grant `platform_admins` rows from app code or a migration.
+
+---
+
+## 32. Taxes: determination, official forms, and income classification
+
+**Decided 2026-09-30** (Doug chose the classification approach; the rest follows
+the Taxes prompt adapted in docs/reference/build-prompt-budget-contractors-insurance-taxes.md).
+
+- **Income classification is pre-filled, confirmed once.** The seed chart
+  (0005) sets `is_exempt_function_income` per account — which is classifying
+  by name, and the prompt forbids relying on that. The flags and their CHECK
+  constraints keep their meaning; each income account with activity now needs
+  a board member to confirm it once (`accounts.tax_classification_confirmed_at`,
+  via `confirm_income_classification()` only). Until every one is confirmed,
+  1120-H is `ask_cpa`: "Some income isn't classified yet."
+- **Thresholds stay in `tax_parameters`**, cited by source URL and shown as
+  unverified until someone sets `verified_on`. The one hardcoded `600`
+  fallback on the tax page is gone; a missing threshold now says "ask your CPA".
+- **1099-NEC is calendar-year** (`vendor_1099_calendar_totals`). January and
+  February look at the year just ended.
+- **Due dates come from rule strings on verified templates** (`lib/tax/due-rules`,
+  e.g. `FY_END + 4 MONTHS, DAY 15`), each with a citation. Home's "Coming up"
+  keeps its built-in estimates, labeled unverified, until a verified template
+  replaces them.
+- **Illinois:** IL-1120 is always `ask_cpa`; the SOS annual report is `ask_cpa`
+  until a verified template records its due rule.
+- **Official PDFs only, verified by a person.** `tax_form_templates` is global
+  (DECISIONS #31), ships empty, accepts only https irs.gov / tax.illinois.gov /
+  ilsos.gov sources, and can't be active until verified. Every mapped field
+  cites its instructions line; unmapped fields print blank. Recipient TINs are
+  never filled (last four only, #4). Templates live in the private
+  `tax-templates` bucket, not the per-association Document Hub; filled packets
+  go in each association's hub, linked to the form.
+- **No scheduled re-fetch job.** The prompt's January job would need the
+  service role, and #28 keeps that exception to one file. Instead the admin
+  page prompts each January and "Check active forms for updates" re-downloads
+  and checksums them as the admin; a changed file becomes a new inactive
+  template, never an automatic switch.
+- **No filing, no advice.** Exports are a signable packet (cover sheet +
+  flattened official form) and a CPA packet (editable PDF + provenance
+  worksheet). "Mark as filed" records a date and optional proof, and locks the
+  1120-H figures (0022).

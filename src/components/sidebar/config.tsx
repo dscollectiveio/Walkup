@@ -48,7 +48,7 @@ export const NAV_GROUPS: NavGroupConfig[] = [
   {
     label: "Taxes & Insurance",
     items: [
-      { href: "/tax", label: "Tax Center", icon: FileText },
+      { href: "/tax", label: "Taxes", icon: FileText },
       { href: "/insurance", label: "Insurance Marketplace", icon: Shield },
     ],
   },

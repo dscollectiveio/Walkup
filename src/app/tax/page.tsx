@@ -10,6 +10,10 @@ import {
 import { FilingStatus } from "./filing-status";
 import { AccountLineDrilldown, type DrilldownLine } from "./account-line-drilldown";
 import { ProvenancePanel, type ProvenanceRow, type ResolvedLine } from "./provenance-panel";
+import { loadTaxContext } from "./data";
+import { ClassifyIncomeRow, FormCard } from "./tax-client";
+import { FORM_LABEL, FORM_PLAIN, nextDeadline } from "@/lib/tax/determine";
+import { TAX_FOOTER } from "@/lib/tax/copy";
 
 export const dynamic = "force-dynamic";
 
@@ -122,22 +126,18 @@ function Rule({
 export default async function TaxPage() {
   const supabase = await createClient();
 
-  const { data: fiscalYears } = await supabase
-    .from("fiscal_years")
-    .select("id, label, association_id")
-    .order("starts_on", { ascending: false })
-    .limit(1);
-
-  const fy = fiscalYears?.[0];
-  if (!fy) return <Restricted what="the tax section" />;
+  // One context for the whole tab (and the form pages and exports), so the
+  // forms list, the 1120-H check and the 1099 table can't disagree.
+  const ctx = await loadTaxContext(supabase);
+  if (!ctx) return <Restricted what="the tax section" />;
+  const fy = { id: ctx.fiscalYear.id, label: ctx.fiscalYear.label, association_id: ctx.association.id };
 
   const [
     { data: figuresRows },
     { data: paramRows },
     { data: receipts },
     { data: disbursements },
-    { data: form1099Totals },
-    { data: form1099ThresholdRows },
+    { data: taxForms },
     { data: filingRows },
     { data: rawReceipts },
     { data: rawDisbursements },
@@ -162,15 +162,9 @@ export default async function TaxPage() {
       .order("is_exempt", { ascending: false })
       .order("total", { ascending: false }),
     supabase
-      .from("vendor_1099_totals")
-      .select("vendor_id, name, entity_type, w9_on_file, tin_last4, email, total_paid, payment_count")
-      .eq("fiscal_year_id", fy.id)
-      .order("total_paid", { ascending: false }),
-    supabase
-      .from("tax_parameters")
-      .select("numeric_value, verified_on")
-      .eq("key", "form_1099_nec_threshold")
-      .limit(1),
+      .from("tax_forms")
+      .select("id, form_code, tax_year, vendor_id, status, filed_on, filed_proof_document_id, signable_document_id, vendors(name)")
+      .order("tax_year", { ascending: false }),
     supabase
       .from("tax_filings")
       .select("id, computed_at, filed_on, locked_at")
@@ -279,28 +273,123 @@ export default async function TaxPage() {
     parameters,
   );
 
-  // The threshold is read, never hardcoded, same as every other tax figure
-  // in this app (CLAUDE.md invariant 8) -- $600 only appears here as a
-  // fallback if the parameter is somehow missing, so the section still
-  // renders something useful rather than crashing.
-  const form1099Threshold = Number(form1099ThresholdRows?.[0]?.numeric_value ?? 600);
-  const form1099ThresholdVerified = form1099ThresholdRows?.[0]?.verified_on ?? null;
-  const form1099Rows = form1099Totals ?? [];
-  const form1099OwesForm = form1099Rows.filter((v) => Number(v.total_paid) >= form1099Threshold);
-  const form1099MissingW9 = form1099OwesForm.filter((v) => !v.w9_on_file);
+  // The 1099 threshold is read from tax_parameters and never hardcoded
+  // (CLAUDE.md invariant 8). If it's missing, the section says so instead of
+  // assuming a number.
+  const thresholdParam = ctx.input.parameters.find((p) => p.key === "form_1099_nec_threshold") ?? null;
+  const thresholdCents = thresholdParam ? Math.round(thresholdParam.value * 100) : null;
+  const contractorRows = ctx.contractorRows;
+  const owesForm = thresholdCents === null ? [] : contractorRows.filter((c) => c.totalCents >= thresholdCents);
+  const missingW9 = owesForm.filter((c) => !c.w9OnFile);
+
+  // ---- Your forms -----------------------------------------------------------
+  const startedForms = taxForms ?? [];
+  const startedFor = (code: string, year: number, vendorId?: string) =>
+    startedForms.find((t) => t.form_code === code && t.tax_year === year && (t.vendor_id ?? undefined) === vendorId);
+  const deadline = nextDeadline(ctx.forms, new Date());
+  const daysLeft = deadline?.dueOn
+    ? Math.ceil((new Date(`${deadline.dueOn}T00:00:00`).getTime() - new Date(new Date().toDateString()).getTime()) / 86_400_000)
+    : null;
+  const nextAction =
+    ctx.input.unconfirmedIncomeAccounts.length > 0
+      ? { text: "Classify your income so the 1120-H check can run", href: "#income" }
+      : missingW9.length > 0
+        ? { text: `Get a W-9 from ${missingW9[0].name}`, href: "/contractors" }
+        : deadline
+          ? { text: `Start ${FORM_LABEL[deadline.formCode]}`, href: "#forms" }
+          : null;
+  const pastForms = startedForms.filter((t) => t.status === "filed");
 
   return (
     <div className="space-y-6">
       <div>
-        <h1 className="text-[20px] font-black tracking-tight text-ink">
-          Tax Center for {fy.label}
-        </h1>
+        <h1 className="text-[20px] font-black tracking-tight text-ink">Taxes</h1>
+        <p className="mt-1 text-mute">
+          Fiscal year {ctx.fiscalYear.label} ({ctx.fiscalYear.starts_on} to {ctx.fiscalYear.ends_on}) — which forms you
+          need, why, and when.
+        </p>
+      </div>
+
+      <section className="rounded-xl border border-line bg-paper px-5 py-4">
+        <h2 className="text-[11px] font-medium uppercase tracking-[0.07em] text-section-label">This year</h2>
+        {deadline && daysLeft !== null ? (
+          <p className="mt-1 text-[15px] text-ink">
+            Next deadline: <span className="font-medium">{FORM_LABEL[deadline.formCode]}</span> on {deadline.dueOn} —{" "}
+            {daysLeft} day{daysLeft === 1 ? "" : "s"} left.
+          </p>
+        ) : (
+          <p className="mt-1 text-[15px] text-ink">
+            No deadline is on file yet — due dates appear once each official form has been checked in Walkup.
+          </p>
+        )}
+        {nextAction ? (
+          <a href={nextAction.href} className="mt-2 inline-block text-[13px] font-medium text-ink underline underline-offset-2">
+            {nextAction.text} →
+          </a>
+        ) : null}
+      </section>
+
+      <section id="forms" className="space-y-3">
+        <h2 className="text-[16px] font-black tracking-tight text-ink">Your forms</h2>
+        <div className="grid gap-3 md:grid-cols-2">
+          {ctx.forms.map((f) => {
+            const started = startedFor(f.formCode, f.taxYear, f.vendorId);
+            const vendorName = f.vendorId ? contractorRows.find((c) => c.vendorId === f.vendorId)?.name : null;
+            return (
+              <FormCard
+                key={`${f.formCode}-${f.taxYear}-${f.vendorId ?? ""}`}
+                outcome={f}
+                title={`${FORM_LABEL[f.formCode]} · ${f.taxYear}${vendorName ? ` · ${vendorName}` : ""}`}
+                plain={FORM_PLAIN[f.formCode]}
+                started={started ? { id: started.id, status: started.status, filedOn: started.filed_on } : null}
+                canWrite={canWrite}
+              />
+            );
+          })}
+        </div>
+        <p className="text-[12px] text-mute">Other filings may apply. Ask your CPA.</p>
+      </section>
+
+      <Card
+        title="Your income, classified"
+        hint="The 1120-H tests depend on which income is from members (dues, assessments) and which isn't (interest, rentals). Walkup suggests a classification; a board member confirms each one once."
+      >
+        <div id="income" />
+        {ctx.incomeAccounts.length === 0 ? (
+          <Empty>No income recorded this fiscal year yet.</Empty>
+        ) : (
+          <ul className="divide-y divide-line">
+            {ctx.incomeAccounts.map((a) => (
+              <ClassifyIncomeRow
+                key={a.id}
+                accountId={a.id}
+                name={a.name}
+                total={formatMoney(a.totalCents)}
+                isExempt={a.isExempt}
+                confirmedAt={a.confirmedAt}
+                canWrite={canWrite}
+              />
+            ))}
+          </ul>
+        )}
+      </Card>
+
+      <div className="border-t border-line pt-6">
+        <h2 className="text-[16px] font-black tracking-tight text-ink">1120-H check</h2>
         <p className="mt-1 text-mute">
           Associations like yours can use a short tax form{" "}
           <Jargon term="Form 1120-H">instead of a full company return</Jargon>,
-          as long as two rules are met.
+          as long as two rules are met. This runs all year from your records.
         </p>
       </div>
+
+      {ctx.input.unconfirmedIncomeAccounts.length > 0 ? (
+        <Answer
+          status="attention"
+          headline="Ask your CPA — some income isn't classified yet"
+          detail={`Classify ${ctx.input.unconfirmedIncomeAccounts.join(", ")} above to check whether you qualify. The figures below use Walkup's suggestions until then.`}
+        />
+      ) : null}
 
       {result.qualifies ? (
         <Answer
@@ -479,102 +568,129 @@ export default async function TaxPage() {
       <div className="border-t border-line pt-6">
         <div>
           <h2 className="text-[16px] font-black tracking-tight text-ink">
-            1099s for {fy.label}
+            Contractors and 1099s — payments in {ctx.contractorYear}
           </h2>
           <p className="mt-1 text-mute">
-            Contractors you paid {money(form1099Threshold)} or more for work this year
-            need a 1099-NEC in January.
+            1099-NEC is a calendar-year form: contractors paid for services during {ctx.contractorYear} at or above the
+            threshold need one early in {ctx.contractorYear + 1}.
           </p>
         </div>
 
         <div className="mt-4">
-          {form1099Rows.length === 0 ? (
+          {thresholdCents === null ? (
             <Answer
-              status="good"
-              headline="Nothing to file"
-              detail="No contractor was paid for services this year."
+              status="attention"
+              headline="Ask your CPA which contractors need a 1099"
+              detail="The 1099-NEC reporting threshold isn't on file in Walkup, so it can't tell you which contractors cross it."
             />
-          ) : form1099MissingW9.length > 0 ? (
+          ) : contractorRows.length === 0 ? (
+            <Answer status="good" headline="Nothing to file" detail={`No contractor was paid for services in ${ctx.contractorYear}.`} />
+          ) : missingW9.length > 0 ? (
             <Answer
               status="bad"
-              headline={`${form1099MissingW9.length} contractor${form1099MissingW9.length === 1 ? " needs" : "s need"} a W-9 before you can file`}
-              detail={`${form1099MissingW9.map((v) => v.name).join(", ")} — get these on file now rather than chasing them in January.`}
+              headline={`${missingW9.length} contractor${missingW9.length === 1 ? " needs" : "s need"} a W-9 before you can file`}
+              detail={`${missingW9.map((v) => v.name).join(", ")} — get these on file now rather than chasing them in January.`}
             />
           ) : (
             <Answer
               status="good"
-              headline={`${form1099OwesForm.length} contractor${form1099OwesForm.length === 1 ? "" : "s"} will need a 1099-NEC`}
+              headline={`${owesForm.length} contractor${owesForm.length === 1 ? "" : "s"} will need a 1099-NEC`}
               detail="Everyone who crosses the threshold already has a W-9 on file."
             />
           )}
         </div>
 
         <div className="mt-4">
-        <Card
-          title="Everyone paid for services"
-          hint={`The threshold is ${money(form1099Threshold)} per contractor per year. ${form1099ThresholdVerified ? `Checked ${form1099ThresholdVerified}.` : "Not yet checked against this year's IRS instructions."}`}
-        >
-          {form1099Rows.length === 0 ? (
-            <Empty>No service payments recorded yet.</Empty>
-          ) : (
-            <div className="overflow-x-auto">
-              <table className="w-full min-w-[28rem] text-[13px]">
-                <thead>
-                  <tr className="border-b border-line text-left text-mute">
-                    <th className="pb-2 font-medium">Contractor</th>
-                    <th className="pb-2 text-right font-medium">Paid this year</th>
-                    <th className="pb-2 text-right font-medium">Payments</th>
-                    <th className="pb-2 text-right font-medium">Status</th>
-                  </tr>
-                </thead>
-                <tbody className="divide-y divide-line">
-                  {form1099Rows.map((v) => {
-                    const needsForm = Number(v.total_paid) >= form1099Threshold;
-                    return (
-                      <tr key={v.vendor_id}>
-                        <td className="py-3">
-                          <div className="font-medium text-ink">{v.name}</div>
-                          {v.tin_last4 ? (
-                            <div className="figures text-[11px] text-mute-soft">
-                              TIN ending {v.tin_last4}
+          <Card
+            title="Everyone paid for services"
+            hint={
+              thresholdParam
+                ? `The threshold is ${money(thresholdParam.value)} per contractor per calendar year. ${thresholdParam.verifiedOn ? `Checked ${thresholdParam.verifiedOn}.` : "Not yet checked against this year's IRS instructions."}`
+                : undefined
+            }
+          >
+            {contractorRows.length === 0 ? (
+              <Empty>No service payments recorded for {ctx.contractorYear}.</Empty>
+            ) : (
+              <div className="overflow-x-auto">
+                <table className="w-full min-w-[28rem] text-[13px]">
+                  <thead>
+                    <tr className="border-b border-line text-left text-mute">
+                      <th className="pb-2 font-medium">Contractor</th>
+                      <th className="pb-2 text-right font-medium">Paid in {ctx.contractorYear}</th>
+                      <th className="pb-2 text-right font-medium">W-9</th>
+                      <th className="pb-2 text-right font-medium">1099 needed</th>
+                    </tr>
+                  </thead>
+                  <tbody className="divide-y divide-line">
+                    {contractorRows.map((v) => {
+                      const needsForm = thresholdCents !== null && v.totalCents >= thresholdCents;
+                      return (
+                        <tr key={v.vendorId}>
+                          <td className="py-3">
+                            <a href={`/contractors/${v.vendorId}`} className="font-medium text-ink underline-offset-2 hover:underline">
+                              {v.name}
+                            </a>
+                            <div className="text-[11px] text-mute-soft">
+                              {v.paymentCount} payment{v.paymentCount === 1 ? "" : "s"}
                             </div>
-                          ) : null}
-                        </td>
-                        <td className="figures py-3 text-right text-ink">{money(v.total_paid)}</td>
-                        <td className="figures py-3 text-right text-mute">
-                          {v.payment_count}
-                        </td>
-                        <td className="py-3 text-right">
-                          {!needsForm ? (
-                            <span className="text-[11px] text-mute-soft">
-                              under {money(form1099Threshold)}
-                            </span>
-                          ) : v.w9_on_file ? (
-                            <span className="rounded-full border border-good-line bg-good-tint px-2.5 py-0.5 text-[11px] text-good-text">
-                              ready to file
-                            </span>
-                          ) : (
-                            <span className="rounded-full border border-bad-line bg-bad-tint px-2.5 py-0.5 text-[11px] font-medium text-bad-text">
-                              needs a W-9
-                            </span>
-                          )}
-                        </td>
-                      </tr>
-                    );
-                  })}
-                </tbody>
-              </table>
-            </div>
-          )}
-        </Card>
+                          </td>
+                          <td className="figures py-3 text-right text-ink">{formatMoney(v.totalCents)}</td>
+                          <td className="py-3 text-right text-[12px]">
+                            {v.w9OnFile ? <span className="text-good-text">On file</span> : <span className="text-bad-text">Missing</span>}
+                          </td>
+                          <td className="py-3 text-right text-[12px]">
+                            {thresholdCents === null ? (
+                              <span className="text-mute">Ask your CPA</span>
+                            ) : needsForm ? (
+                              <span className="font-medium text-ink">Yes</span>
+                            ) : (
+                              <span className="text-mute-soft">No</span>
+                            )}
+                          </td>
+                        </tr>
+                      );
+                    })}
+                  </tbody>
+                </table>
+              </div>
+            )}
+          </Card>
         </div>
 
         <p className="mt-4 text-[11px] leading-relaxed text-mute">
-          This is a candidate list, not a filed form. Corporations are usually
-          exempt from 1099-NEC — mark a contractor exempt on the Contractors
-          page rather than assuming from the totals here.
+          Corporations are usually exempt from 1099-NEC — mark a contractor exempt on the Contractors page rather than
+          assuming from the totals here.
         </p>
       </div>
+
+      <Card title="Past years" hint="Forms marked as filed, with their proof.">
+        {pastForms.length === 0 ? (
+          <Empty>Nothing marked as filed yet.</Empty>
+        ) : (
+          <ul className="divide-y divide-line text-[13px]">
+            {pastForms.map((t) => (
+              <li key={t.id} className="flex flex-wrap items-center justify-between gap-2 py-2.5">
+                <a href={`/tax/forms/${t.id}`} className="text-ink underline-offset-2 hover:underline">
+                  {FORM_LABEL[t.form_code as keyof typeof FORM_LABEL] ?? t.form_code} · {t.tax_year}
+                  {(t.vendors as unknown as { name: string } | null)?.name ? ` · ${(t.vendors as unknown as { name: string }).name}` : ""}
+                </a>
+                <span className="flex items-center gap-3 text-[12px] text-mute">
+                  Filed on {t.filed_on}
+                  {t.filed_proof_document_id ? (
+                    <a href={`/documents/${t.filed_proof_document_id}`} className="underline underline-offset-2">Proof</a>
+                  ) : null}
+                  {t.signable_document_id ? (
+                    <a href={`/documents/${t.signable_document_id}`} className="underline underline-offset-2">The form</a>
+                  ) : null}
+                </span>
+              </li>
+            ))}
+          </ul>
+        )}
+      </Card>
+
+      <p className="text-[11px] text-mute">{TAX_FOOTER}</p>
     </div>
   );
 }

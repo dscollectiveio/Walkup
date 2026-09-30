@@ -310,13 +310,14 @@ export function buildSetupGuide(input: SetupInputs): SetupSection[] {
         },
         {
           key: "tax",
-          name: "Review the Tax Center at year end",
+          name: "Review Taxes at year end",
           detail: "Nothing to enter now — the figures come from posted activity.",
           href: "/tax",
           done: taxDone,
           doneOn: isoDay(input.taxFilingComputedAt),
           instructions: [
-            "After the fiscal year closes, open Tax Center and compute the 1120-H figures. Your accountant files from there.",
+            "Now: on Taxes, confirm how each kind of income is classified — once, and Walkup remembers.",
+            "After the fiscal year closes, start each form under “Your forms,” confirm the figures, and export a packet to sign or to hand your CPA. Walkup never files anything itself.",
           ],
         },
         {

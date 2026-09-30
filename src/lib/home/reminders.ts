@@ -57,6 +57,14 @@ interface ReminderInputs {
    * never). Omit for everyone else — the reminder is theirs to act on.
    */
   lastAccessReviewAt?: string | null;
+  /**
+   * Due dates from verified official-form templates (lib/tax/due-rules),
+   * keyed by form code. When one exists it replaces the built-in estimate
+   * below and is no longer marked unverified.
+   */
+  verifiedTaxDeadlines?: Partial<Record<"irs_1120h" | "irs_1099_nec" | "il_sos_annual_report", string>>;
+  /** Contractors paid this calendar year with no W-9 on file — nudged every December 1. */
+  contractorsMissingW9?: number;
 }
 
 export function assembleReminders({
@@ -66,6 +74,8 @@ export function assembleReminders({
   upcomingChargeDates,
   today,
   lastAccessReviewAt,
+  verifiedTaxDeadlines = {},
+  contractorsMissingW9 = 0,
 }: ReminderInputs): Reminder[] {
   const reminders: Reminder[] = [];
   const horizon = new Date(today.getTime() + 120 * 86400000);
@@ -118,35 +128,51 @@ export function assembleReminders({
     });
   }
 
-  // Federal filing dates, computed rather than read from tax_parameters —
-  // that table holds numerics, and "the 15th day of the 4th month after the
-  // fiscal year ends" is a rule, not a number. Labeled unverified for the
-  // same reason every other tax figure in this app is provisional.
+  // Tax deadlines. A verified official-form template carries a cited due rule
+  // (lib/tax/due-rules); until one exists for a form, the built-in estimate
+  // is shown and labeled unverified — stale legal information is worse than
+  // absent, so it says so rather than reading as authoritative.
+  const verified = (code: keyof typeof verifiedTaxDeadlines) => {
+    const iso = verifiedTaxDeadlines[code];
+    return iso ? new Date(`${iso}T00:00:00`) : null;
+  };
   const fyEndMonth = association.fiscal_year_end_month ?? 12;
   const due1120hMonth = ((fyEndMonth + 3) % 12) + 1;
+  const d1120h = verified("irs_1120h");
   reminders.push({
     name: "Form 1120-H",
     kind: "Federal tax return",
-    due: nextOccurrence(due1120hMonth, 15, today),
-    unverified: true,
+    due: d1120h ?? nextOccurrence(due1120hMonth, 15, today),
+    unverified: !d1120h,
   });
+  const d1099 = verified("irs_1099_nec");
   reminders.push({
     name: "1099-NEC to contractors",
     kind: "Federal filing",
-    due: nextOccurrence(1, 31, today),
-    unverified: true,
+    due: d1099 ?? nextOccurrence(1, 31, today),
+    unverified: !d1099,
   });
 
-  // The one state rule on record. Only shown when the state matches and the
-  // incorporation date exists — implying coverage of other states would be
-  // worse than staying quiet.
+  // Only shown when the state matches and the incorporation date exists —
+  // implying coverage of other states would be worse than staying quiet.
   if (association.state_code === "IL" && association.incorporated_on) {
     const inc = new Date(`${association.incorporated_on}T00:00:00`);
+    const dSos = verified("il_sos_annual_report");
     reminders.push({
       name: "Illinois annual report",
       kind: "Filed on the incorporation anniversary",
-      due: nextOccurrence(inc.getMonth() + 1, inc.getDate(), today),
-      unverified: true,
+      due: dSos ?? nextOccurrence(inc.getMonth() + 1, inc.getDate(), today),
+      unverified: !dSos,
+    });
+  }
+
+  // W-9s are far easier to collect before January's 1099s than during them.
+  if (contractorsMissingW9 > 0) {
+    const dec1 = new Date(today.getFullYear(), 11, 1);
+    reminders.push({
+      name: `Collect ${contractorsMissingW9} W-9${contractorsMissingW9 === 1 ? "" : "s"}`,
+      kind: "Contractors paid this year without one on file",
+      due: dec1 < today ? today : dec1,
     });
   }
 

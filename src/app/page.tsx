@@ -13,6 +13,7 @@ import {
 import { Greeting } from "@/components/home/greeting";
 import { SetupGuidePanel } from "@/components/home/setup-guide-panel";
 import { cashByMonth } from "@/lib/money/cash";
+import { dueDate } from "@/lib/tax/due-rules";
 import { spendByAccount } from "@/lib/money/spending";
 import { dateOfKey, monthLongLabel, monthShortLabel } from "@/lib/money/months";
 import { WorthAMinute } from "@/components/home/worth-a-minute";
@@ -74,7 +75,7 @@ export default async function HomePage() {
       .select(
         "id, display_name, state_code, fiscal_year_end_month, incorporated_on, reserve_target, ein, city, county, dues_payee_name, dues_account_number, dues_zelle_handle, setup_dismissed_at",
       ),
-    supabase.from("fiscal_years").select("id, label").order("starts_on", { ascending: false }).limit(1),
+    supabase.from("fiscal_years").select("id, label, ends_on").order("starts_on", { ascending: false }).limit(1),
     supabase
       .from("fund_cash_balances")
       .select("fund_id, name, kind, cash_balance, visible_lines")
@@ -358,6 +359,35 @@ export default async function HomePage() {
     lastAccessReviewAt = lastReview?.[0]?.reviewed_at ?? null;
   }
 
+  // Tax deadlines from verified official-form templates, when they exist.
+  const [{ data: dueTemplates }, { data: w9Gaps }] = await Promise.all([
+    supabase
+      .from("tax_form_templates")
+      .select("form_code, tax_year, due_rule")
+      .eq("active", true)
+      .in("form_code", ["irs_1120h", "irs_1099_nec", "il_sos_annual_report"]),
+    supabase
+      .from("vendor_1099_calendar_totals")
+      .select("vendor_id")
+      .eq("calendar_year", today.getFullYear())
+      .eq("w9_on_file", false),
+  ]);
+  const fyEndsOn = fiscalYears?.[0]?.ends_on ?? null;
+  const verifiedTaxDeadlines: Partial<Record<"irs_1120h" | "irs_1099_nec" | "il_sos_annual_report", string>> = {};
+  for (const t of dueTemplates ?? []) {
+    const due = dueDate(t.due_rule, {
+      fiscalYearEnd: t.form_code === "irs_1120h" ? fyEndsOn : null,
+      calendarYear: t.form_code === "irs_1099_nec" ? t.tax_year : null,
+      incorporatedOn: association.incorporated_on,
+      today,
+    });
+    const matchesYear =
+      t.form_code === "il_sos_annual_report" ||
+      (t.form_code === "irs_1120h" && fyEndsOn?.startsWith(String(t.tax_year))) ||
+      t.form_code === "irs_1099_nec";
+    if (due && matchesYear) verifiedTaxDeadlines[t.form_code as keyof typeof verifiedTaxDeadlines] = due;
+  }
+
   const reminders = assembleReminders({
     association,
     bills: bills ?? [],
@@ -365,6 +395,8 @@ export default async function HomePage() {
     upcomingChargeDates: (futureCharges ?? []).map((c) => c.due_on as string),
     today,
     lastAccessReviewAt,
+    verifiedTaxDeadlines,
+    contractorsMissingW9: (w9Gaps ?? []).length,
   });
 
   const buildingUnits: BuildingUnit[] = (units ?? []).map((u) => {

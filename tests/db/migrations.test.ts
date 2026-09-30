@@ -56,14 +56,14 @@ describe("migrations", () => {
     // Global reference data and the append-only log are the documented
     // exceptions: tax_parameters is not association-scoped, and audit_log
     // carries association_id without a foreign key so it outlives its subject.
-    // platform_admins and insurance_partners (0041) are global by design and
-    // writable only by a platform admin.
+    // platform_admins, insurance_partners (0041) and tax_form_templates (0042)
+    // are global by design and writable only by a platform admin.
     const { rows } = await db.query<{ table_name: string }>(
       `select t.table_name
          from information_schema.tables t
         where t.table_schema = 'public'
           and t.table_type = 'BASE TABLE'
-          and t.table_name not in ('associations', 'tax_parameters', 'platform_admins', 'insurance_partners')
+          and t.table_name not in ('associations', 'tax_parameters', 'platform_admins', 'insurance_partners', 'tax_form_templates')
           and not exists (
             select 1 from information_schema.columns c
              where c.table_schema = 'public'
@@ -109,6 +109,24 @@ describe("migrations", () => {
     );
     expect(anon[0].ok).toBe(false);
 
+    await db.close();
+  });
+
+  it("never let the anon role execute a SECURITY DEFINER function", async () => {
+    // Postgres grants EXECUTE to PUBLIC on every new function, so a SECURITY
+    // DEFINER function is callable over /rest/v1/rpc without signing in unless
+    // someone remembers to revoke it (0023, 0043). This catches the forgetting.
+    const db = await freshDb();
+    const { rows } = await db.query<{ fn: string }>(
+      `select p.oid::regprocedure::text as fn
+         from pg_proc p
+         join pg_namespace n on n.oid = p.pronamespace
+        where n.nspname = 'public'
+          and p.prosecdef
+          and has_function_privilege('anon', p.oid, 'execute')
+        order by 1`,
+    );
+    expect(rows.map((r) => r.fn)).toEqual([]);
     await db.close();
   });
 
