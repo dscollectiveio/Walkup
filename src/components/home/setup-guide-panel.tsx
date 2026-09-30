@@ -141,7 +141,7 @@ export function SetupGuidePanel({
 
   return (
     <>
-    <section className="flex max-h-[34rem] flex-col rounded-xl border border-brass bg-paper">
+    <section className="flex max-h-[34rem] flex-col rounded-xl border border-brass bg-paper lg:max-h-none lg:min-h-[34rem]">
       <header className="border-b border-line px-5 py-4">
         <div className="flex flex-wrap items-baseline justify-between gap-3">
           <div>
@@ -183,7 +183,10 @@ export function SetupGuidePanel({
         {error ? <p className="mt-2 text-[12px] text-bad-text">{error}</p> : null}
       </header>
 
-      <div className="min-h-0 flex-1 divide-y divide-line overflow-y-auto">
+      {/* On desktop the list is absolutely positioned so it never sets the row's
+          height — the row is as tall as the taller card (min 34rem) and this scrolls. */}
+      <div className="relative min-h-0 flex-1 overflow-y-auto lg:overflow-visible">
+      <div className="divide-y divide-line lg:absolute lg:inset-0 lg:overflow-y-auto">
         {sections.map((section, i) => {
           const counts = sectionCounts(section);
           const complete = counts.done === counts.total;
@@ -223,6 +226,7 @@ export function SetupGuidePanel({
             </div>
           );
         })}
+      </div>
       </div>
     </section>
 

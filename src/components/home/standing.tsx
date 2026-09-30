@@ -16,6 +16,7 @@ export function Standing({
   tbTotalCents,
   canSetTarget,
   hasActivity,
+  matchSetupGuide = false,
 }: {
   totalCents: number;
   operatingCents: number;
@@ -28,6 +29,8 @@ export function Standing({
    * banner below would otherwise show a false "don't match" alarm for a
    * books that simply doesn't have anything in it to disagree with itself. */
   hasActivity: boolean;
+  /** Sits beside the setup guide on desktop: share its 34rem height and pin the books banner to the bottom. */
+  matchSetupGuide?: boolean;
 }) {
   const targetCents = reserveTarget ? Math.round(reserveTarget * 100) : null;
   const funded =
@@ -35,12 +38,14 @@ export function Standing({
   const remainingCents = targetCents ? Math.max(0, targetCents - reserveCents) : 0;
 
   return (
-    <section className="rounded-xl border border-line bg-paper">
+    <section
+      className={`flex flex-col rounded-xl border border-line bg-paper ${matchSetupGuide ? "lg:min-h-[34rem]" : ""}`}
+    >
       <header className="border-b border-line px-5 py-4">
         <h2 className="font-black tracking-tight text-ink">Where the association stands</h2>
       </header>
 
-      <div className="px-5 py-4">
+      <div className="flex flex-1 flex-col px-5 py-4">
         <div className="figures text-[26px] text-ink">{formatMoney(totalCents)}</div>
         <p className="text-[12px] text-mute">across all accounts</p>
 
@@ -55,7 +60,7 @@ export function Standing({
           </div>
         </div>
 
-        <div className="mt-4 border-t border-line pt-4">
+        <div className="mb-4 mt-4 border-t border-line pt-4">
           {funded !== null ? (
             <>
               <div className="flex items-baseline justify-between gap-3">
@@ -84,7 +89,7 @@ export function Standing({
         </div>
 
         <div
-          className={`mt-4 rounded-lg border px-3 py-2 text-[12px] ${
+          className={`mt-auto rounded-lg border px-3 py-2 text-[12px] ${
             !hasActivity
               ? "border-line bg-fill text-mute"
               : booksBalanced

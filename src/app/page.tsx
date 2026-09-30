@@ -450,7 +450,9 @@ export default async function HomePage() {
         </p>
       )}
 
-      <div className="grid items-start gap-4 lg:grid-cols-[3fr_2fr]">
+      <div
+        className={`grid items-start gap-4 lg:grid-cols-[3fr_2fr] ${showSetupGuide ? "lg:items-stretch" : ""}`}
+      >
         <Standing
           totalCents={totalCents}
           operatingCents={operatingCents}
@@ -460,6 +462,7 @@ export default async function HomePage() {
           tbTotalCents={tbDebitCents}
           canSetTarget={canSetTarget}
           hasActivity={booksVisible}
+          matchSetupGuide={showSetupGuide}
         />
         {showSetupGuide ? (
           <SetupGuidePanel
