@@ -1,8 +1,6 @@
 import {
   Home,
   AlertTriangle,
-  Hourglass,
-  Receipt,
   BarChart3,
   Landmark,
   FileText,
@@ -41,12 +39,10 @@ export const NAV_GROUPS: NavGroupConfig[] = [
   {
     label: "Money In & Money Out",
     items: [
-      { href: "/dues", label: "HOA Dues", icon: HandCoins },
-      { href: "/delinquency", label: "Who owe the HOA", icon: Hourglass },
-      { href: "/bills", label: "Bills", icon: Receipt },
-      { href: "/budget", label: "Budget", icon: BarChart3 },
-      { href: "/financial-statements", label: "Financial Statements", icon: FileBarChart },
       { href: "/bank-feed", label: "Bank Sync & Transactions", icon: Landmark },
+      { href: "/financial-statements", label: "Financial Statements", icon: FileBarChart },
+      { href: "/budget", label: "Budget", icon: BarChart3 },
+      { href: "/dues", label: "HOA Dues", icon: HandCoins },
     ],
   },
   {
