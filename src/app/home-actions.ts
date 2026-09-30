@@ -37,6 +37,31 @@ export async function setReserveTarget(_prev: unknown, formData: FormData) {
   return { ok: true };
 }
 
+/**
+ * Hides the setup guide for everyone on this association. The guide is
+ * otherwise derived entirely from real rows, so this is the one bit of
+ * preference it keeps. associations_update is board_admin-only, same as
+ * setReserveTarget above.
+ */
+export async function dismissSetupGuide() {
+  const supabase = await createClient();
+  const { data: associations } = await supabase.from("associations").select("id").limit(1);
+  const associationId = associations?.[0]?.id;
+  if (!associationId) return { error: "No association is visible to you." };
+
+  const { data, error } = await supabase
+    .from("associations")
+    .update({ setup_dismissed_at: new Date().toISOString() })
+    .eq("id", associationId)
+    .select("id");
+
+  if (error) return { error: error.message };
+  if (!data || data.length === 0) return { error: "Only a board admin can hide the setup guide." };
+
+  revalidatePath("/");
+  return { ok: true };
+}
+
 export async function addBoardTask(_prev: unknown, formData: FormData) {
   const title = String(formData.get("title") ?? "").trim();
   const ownerPersonId = String(formData.get("owner_person_id") ?? "").trim() || null;

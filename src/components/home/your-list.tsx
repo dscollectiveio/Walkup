@@ -3,7 +3,7 @@
 import Link from "next/link";
 import { useActionState, useOptimistic, useState, useTransition } from "react";
 import { Check, ChevronRight } from "lucide-react";
-import type { DerivedTask } from "@/lib/home/setup-tasks";
+import type { SetupStep } from "@/lib/home/setup-guide";
 import { addBoardTask, toggleBoardTask } from "@/app/home-actions";
 
 export interface ManualTask {
@@ -20,17 +20,21 @@ function formatDone(iso: string): string {
 
 /**
  * The checklist. Two kinds of rows, deliberately different:
- * - Derived rows tick themselves from actual state and are not toggleable —
- *   completing one happens by doing the thing, so the row links there.
+ * - Derived rows are the setup guide's still-open steps. They tick themselves
+ *   from actual state and are not toggleable — completing one happens by
+ *   doing the thing, so the row links there. Finished steps aren't listed
+ *   (the full guide shows them), but they count toward the progress bar.
  * - Manual rows persist to board_tasks and toggle optimistically, then
  *   reconcile with the server response.
  */
 export function YourList({
   derived,
+  derivedDoneCount,
   manual,
   persons,
 }: {
-  derived: DerivedTask[];
+  derived: SetupStep[];
+  derivedDoneCount: number;
   manual: ManualTask[];
   persons: { id: string; full_name: string }[];
 }) {
@@ -50,9 +54,8 @@ export function YourList({
 
   if (addState?.ok && adding) setAdding(false);
 
-  const done =
-    derived.filter((t) => t.done).length + optimisticManual.filter((t) => t.completedAt).length;
-  const total = derived.length + optimisticManual.length;
+  const done = derivedDoneCount + optimisticManual.filter((t) => t.completedAt).length;
+  const total = derivedDoneCount + derived.length + optimisticManual.length;
   const pct = total > 0 ? Math.round((done / total) * 100) : 0;
 
   function toggle(id: string, completed: boolean) {
@@ -81,7 +84,7 @@ export function YourList({
 
       <ul className="divide-y divide-line px-5">
         {derived.map((task) => (
-          <li key={task.name} className="flex items-center gap-3 py-3">
+          <li key={task.key} className="flex items-center gap-3 py-3">
             <span
               aria-hidden="true"
               className={`flex h-4 w-4 shrink-0 items-center justify-center rounded border ${

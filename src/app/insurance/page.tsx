@@ -1,5 +1,6 @@
 import { createClient } from "@/lib/supabase/server";
 import { Answer, Card, Empty, Restricted, money } from "@/components/ui";
+import { AddPolicyForm } from "./add-policy-form";
 
 export const dynamic = "force-dynamic";
 
@@ -16,7 +17,7 @@ const COVERAGE: Record<string, string> = {
 export default async function InsurancePage() {
   const supabase = await createClient();
 
-  const [{ data: history }, { data: quotes }] = await Promise.all([
+  const [{ data: history }, { data: quotes }, { data: associations }] = await Promise.all([
     supabase
       .from("insurance_year_over_year")
       .select(
@@ -30,9 +31,16 @@ export default async function InsurancePage() {
         "id, coverage, carrier_name, quoted_on, covers_from, annual_premium, deductible, coverage_limit, was_selected, declined_reason",
       )
       .order("quoted_on", { ascending: false }),
+    supabase.from("associations").select("id").limit(1),
   ]);
 
   if (!history) return <Restricted what="insurance records" />;
+
+  const associationId = associations?.[0]?.id;
+  const { data: isBoardRes } = associationId
+    ? await supabase.rpc("is_board", { assoc: associationId })
+    : { data: false };
+  const isBoard = isBoardRes === true;
 
   const today = new Date();
   const current = history.filter(
@@ -105,8 +113,17 @@ export default async function InsurancePage() {
         title="Year by year"
         hint="Each renewal, what it cost, and whether you looked at alternatives before signing."
       >
+        {isBoard ? (
+          <div className="mb-4">
+            <AddPolicyForm />
+          </div>
+        ) : null}
         {history.length === 0 ? (
-          <Empty>No policies recorded yet.</Empty>
+          <Empty>
+            {isBoard
+              ? "No policies recorded yet — record the current one from its declarations page."
+              : "No policies recorded yet."}
+          </Empty>
         ) : (
           <div className="overflow-x-auto">
             <table className="w-full min-w-[40rem] text-[13px]">

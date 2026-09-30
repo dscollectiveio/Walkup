@@ -3,8 +3,15 @@ import { Empty, money, moneyRounded } from "@/components/ui";
 import { toCents } from "@/lib/tax/form1120h";
 import { assembleReminders, nextOccurrence } from "@/lib/home/reminders";
 import { urgentItems } from "@/lib/home/urgent-items";
-import { derivedTasks } from "@/lib/home/setup-tasks";
+import {
+  buildSetupGuide,
+  countSteps,
+  isSetupComplete,
+  nextStep,
+  openSteps,
+} from "@/lib/home/setup-guide";
 import { Greeting } from "@/components/home/greeting";
+import { SetupGuidePanel } from "@/components/home/setup-guide-panel";
 import { WorthAMinute } from "@/components/home/worth-a-minute";
 import { Standing } from "@/components/home/standing";
 import { YourList, type ManualTask } from "@/components/home/your-list";
@@ -42,7 +49,15 @@ export default async function HomePage() {
     { data: bankConnections },
     { data: policies },
     { data: vendors },
-    { data: declarationLinks },
+    { data: setupDocuments },
+    { data: unitRows },
+    { data: roleGrants },
+    { count: inviteCount },
+    { data: budgetLines },
+    { count: scheduleCount },
+    { data: taxFilings },
+    { count: uncategorizedCount },
+    { count: postedEntryCount },
     { data: bills },
     { data: futureCharges },
     { data: aging },
@@ -56,9 +71,9 @@ export default async function HomePage() {
     supabase
       .from("associations")
       .select(
-        "id, display_name, state_code, fiscal_year_end_month, incorporated_on, reserve_target",
+        "id, display_name, state_code, fiscal_year_end_month, incorporated_on, reserve_target, ein, city, county, dues_payee_name, dues_account_number, dues_zelle_handle, setup_dismissed_at",
       ),
-    supabase.from("fiscal_years").select("label").order("starts_on", { ascending: false }).limit(1),
+    supabase.from("fiscal_years").select("id, label").order("starts_on", { ascending: false }).limit(1),
     supabase
       .from("fund_cash_balances")
       .select("fund_id, name, kind, cash_balance, visible_lines")
@@ -70,15 +85,30 @@ export default async function HomePage() {
     supabase
       .from("association_totals")
       .select("visible_tb_rows, total_debits, total_credits, total_owed, units_behind"),
-    supabase.from("unit_owners").select("unit_id, persons(full_name)"),
-    supabase.from("bank_connections").select("id, status, created_at"),
+    supabase.from("unit_owners").select("unit_id, effective_from, effective_to, persons(full_name)"),
+    supabase.from("bank_connections").select("id, status, created_at, last_synced_at"),
     supabase.from("insurance_policies").select("coverage, effective_from, effective_to"),
     supabase.from("vendors").select("id, w9_on_file, w9_received_on, is_1099_exempt"),
     supabase
-      .from("document_links")
-      .select("id, documents(uploaded_at)")
-      .eq("relation", "declaration")
-      .limit(1),
+      .from("documents")
+      .select("uploaded_at, document_categories(slug)")
+      .is("deleted_at", null)
+      .eq("is_current_version", true),
+    supabase.from("units").select("id"),
+    supabase.from("role_grants").select("person_id, granted_on, revoked_at, expires_on"),
+    supabase.from("invites").select("id", { count: "exact", head: true }),
+    supabase.from("budget_lines").select("id, budgets(fiscal_year_id)"),
+    supabase.from("assessment_schedules").select("id", { count: "exact", head: true }),
+    supabase.from("tax_filings").select("fiscal_year_id, computed_at").eq("form", "1120-H"),
+    supabase
+      .from("bank_transactions")
+      .select("id", { count: "exact", head: true })
+      .is("posting_kind", null)
+      .is("journal_entry_id", null)
+      .is("excluded_at", null)
+      .is("removed_at", null)
+      .eq("pending", false),
+    supabase.from("journal_entries").select("id", { count: "exact", head: true }).eq("is_posted", true),
     supabase.from("upcoming_bills").select("name, next_due_on, autopay_arranged"),
     supabase
       .from("charge_balances")
@@ -204,18 +234,37 @@ export default async function HomePage() {
   });
   const canSetTarget = isAdmin === true;
 
-  const declarationDoc = declarationLinks?.[0]?.documents as unknown as {
-    uploaded_at: string;
-  } | null;
-
   // None of these inputs require any posted activity either.
-  const derived = derivedTasks({
+  const currentFyId = fiscalYears?.[0]?.id ?? null;
+  const setupSections = buildSetupGuide({
+    today,
+    association,
+    units: unitRows ?? [],
+    unitOwners: unitOwners ?? [],
+    persons: persons ?? [],
+    roleGrants: roleGrants ?? [],
+    myPersonId: me?.id ?? null,
+    inviteCount: inviteCount ?? 0,
     bankConnections: bankConnections ?? [],
+    uncategorizedCount: uncategorizedCount ?? 0,
+    postedEntryCount: postedEntryCount ?? 0,
+    budgetLineCount: (budgetLines ?? []).filter(
+      (l) => (l.budgets as unknown as { fiscal_year_id: string } | null)?.fiscal_year_id === currentFyId,
+    ).length,
+    assessmentScheduleCount: scheduleCount ?? 0,
+    taxFilingComputedAt:
+      (taxFilings ?? []).find((f) => f.fiscal_year_id === currentFyId && f.computed_at)?.computed_at ?? null,
     policies: policies ?? [],
     vendors: vendors ?? [],
-    declarationUploadedAt: declarationDoc?.uploaded_at ?? null,
-    today,
+    documents: (setupDocuments ?? []).map((d) => ({
+      uploaded_at: d.uploaded_at,
+      category_slug: (d.document_categories as unknown as { slug: string } | null)?.slug ?? null,
+    })),
   });
+  const setupCounts = countSteps(setupSections);
+  const showSetupGuide =
+    canSetTarget && !isSetupComplete(setupSections) && association.setup_dismissed_at === null;
+  const derived = openSteps(setupSections);
 
   const manual: ManualTask[] = (boardTasks ?? []).map((task) => ({
     id: task.id,
@@ -410,6 +459,15 @@ export default async function HomePage() {
         books={booksVisible ? { visible: true, balanced: booksBalanced } : null}
       />
 
+      {showSetupGuide ? (
+        <SetupGuidePanel
+          sections={setupSections}
+          activeStepKey={nextStep(setupSections)?.key ?? null}
+          done={setupCounts.done}
+          total={setupCounts.total}
+        />
+      ) : null}
+
       {urgent.length > 0 ? (
         <WorthAMinute items={urgent} />
       ) : booksVisible ? (
@@ -435,6 +493,7 @@ export default async function HomePage() {
         />
         <YourList
           derived={derived}
+          derivedDoneCount={setupCounts.done}
           manual={manual}
           persons={(persons ?? []).map((p) => ({ id: p.id, full_name: p.full_name }))}
         />

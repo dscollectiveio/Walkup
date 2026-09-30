@@ -1,17 +1,19 @@
 import { createClient } from "@/lib/supabase/server";
 import { Answer, Card, Empty, Restricted } from "@/components/ui";
 import { DraftPanel } from "./draft-panel";
+import { AddVendorForm } from "./add-vendor-form";
+import { VendorRow } from "./vendor-row";
 
 export const dynamic = "force-dynamic";
 
 export default async function ContractorsPage() {
   const supabase = await createClient();
 
-  const [{ data: vendors }, { data: drafts }, { data: openTickets }] = await Promise.all([
+  const [{ data: vendors }, { data: drafts }, { data: openTickets }, { data: associations }] = await Promise.all([
     supabase
       .from("vendors")
       .select(
-        "id, name, trade, contact_name, phone, email, is_preferred, insured_until, license_number, w9_on_file, is_1099_exempt",
+        "id, name, trade, contact_name, phone, email, entity_type, is_preferred, insured_until, license_number, w9_on_file, w9_received_on, tin_last4, is_1099_exempt",
       )
       .order("is_preferred", { ascending: false })
       .order("name"),
@@ -24,11 +26,19 @@ export default async function ContractorsPage() {
       .select("id, reference, title")
       .not("status", "in", '("resolved","closed")')
       .order("opened_on", { ascending: false }),
+    supabase.from("associations").select("id").limit(1),
   ]);
 
   if (!vendors) return <Restricted what="contractors" />;
 
+  const associationId = associations?.[0]?.id;
+  const { data: isBoardRes } = associationId
+    ? await supabase.rpc("is_board", { assoc: associationId })
+    : { data: false };
+  const isBoard = isBoardRes === true;
+
   const today = new Date();
+  const todayIso = today.toISOString().slice(0, 10);
   const lapsed = vendors.filter(
     (v) => v.insured_until && new Date(v.insured_until) < today,
   );
@@ -60,53 +70,22 @@ export default async function ContractorsPage() {
       ) : null}
 
       <Card title="Your contractors">
+        {isBoard ? (
+          <div className="mb-4">
+            <AddVendorForm />
+          </div>
+        ) : null}
         {vendors.length === 0 ? (
-          <Empty>Nobody saved yet.</Empty>
+          <Empty>
+            {isBoard
+              ? "Nobody saved yet — start with whoever you already pay: plumber, snow, cleaning."
+              : "Nobody saved yet."}
+          </Empty>
         ) : (
           <ul className="divide-y divide-line">
-            {vendors.map((v) => {
-              const isLapsed = v.insured_until && new Date(v.insured_until) < today;
-              return (
-                <li key={v.id} className="flex flex-wrap items-start justify-between gap-3 py-3">
-                  <div className="min-w-0">
-                    <div className="flex items-center gap-2">
-                      <span className="font-medium text-ink">{v.name}</span>
-                      {v.is_preferred ? (
-                        <span className="rounded-full border border-good-line bg-good-tint px-2 py-0.5 text-[11px] text-good-text">
-                          preferred
-                        </span>
-                      ) : null}
-                    </div>
-                    <div className="mt-1 text-[13px] text-mute">
-                      {[v.trade, v.contact_name, v.phone, v.email].filter(Boolean).join(" · ")}
-                    </div>
-                    {v.license_number ? (
-                      <div className="mt-0.5 text-[11px] text-mute-soft">
-                        Licence {v.license_number}
-                      </div>
-                    ) : null}
-                  </div>
-                  <div className="shrink-0 text-right text-[11px]">
-                    {isLapsed ? (
-                      <div className="font-medium text-bad-text">
-                        Insurance expired {v.insured_until}
-                      </div>
-                    ) : v.insured_until ? (
-                      <div className="text-mute">Insured to {v.insured_until}</div>
-                    ) : (
-                      <div className="text-warning-text">No insurance on file</div>
-                    )}
-                    <div className={v.w9_on_file ? "text-mute" : "text-warning-text"}>
-                      {v.w9_on_file
-                        ? "W-9 on file"
-                        : v.is_1099_exempt
-                          ? "1099 exempt"
-                          : "W-9 missing"}
-                    </div>
-                  </div>
-                </li>
-              );
-            })}
+            {vendors.map((v) => (
+              <VendorRow key={v.id} vendor={v} canEdit={isBoard} todayIso={todayIso} />
+            ))}
           </ul>
         )}
       </Card>

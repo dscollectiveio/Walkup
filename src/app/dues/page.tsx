@@ -2,6 +2,8 @@ import Link from "next/link";
 import { createClient } from "@/lib/supabase/server";
 import { Card, Empty, Restricted, UnitLink, money } from "@/components/ui";
 import { PaymentInstructionsForm } from "./payment-instructions-form";
+import { DuesScheduleCard, type ScheduleView } from "./dues-schedule-card";
+import { currentPeriodStart, periodLabel, type DuesFrequency } from "@/lib/dues/period";
 
 export const dynamic = "force-dynamic";
 
@@ -66,11 +68,14 @@ export default async function DuesPage() {
   }[] = [];
   let needsReview: { id: string; posted_on: string; description: string; amount: string | number }[] =
     [];
+  let schedules: ScheduleView[] = [];
+  let unitCount = 0;
 
   if (canReadFinancials) {
     const unitLabelById = new Map(unitRows.map((u) => [u.unit_id, u.label]));
+    const today = new Date();
 
-    const [{ data: matched }, { data: unmatched }] = await Promise.all([
+    const [{ data: matched }, { data: unmatched }, { data: scheduleRows }, { count: units }] = await Promise.all([
       supabase
         .from("bank_transactions")
         .select("id, posted_on, description, amount, matched_unit_id")
@@ -88,7 +93,41 @@ export default async function DuesPage() {
         .gt("amount", 0)
         .order("posted_on", { ascending: false })
         .limit(10),
+      supabase
+        .from("assessment_schedules")
+        .select("id, name, frequency, allocation_method, total_amount, starts_on, ends_on")
+        .eq("is_special", false)
+        .order("starts_on", { ascending: false }),
+      supabase.from("units").select("id", { count: "exact", head: true }),
     ]);
+
+    unitCount = units ?? 0;
+    const scheduleIds = (scheduleRows ?? []).map((s) => s.id);
+    const { data: charges } =
+      scheduleIds.length > 0
+        ? await supabase
+            .from("assessment_charges")
+            .select("schedule_id, period_start")
+            .in("schedule_id", scheduleIds)
+        : { data: [] as { schedule_id: string | null; period_start: string }[] };
+
+    schedules = (scheduleRows ?? []).map((s) => {
+      const frequency = s.frequency as DuesFrequency;
+      const periodStart = currentPeriodStart(frequency, today, s.starts_on, s.ends_on);
+      return {
+        id: s.id,
+        name: s.name,
+        frequency: s.frequency,
+        allocation_method: s.allocation_method,
+        total_amount: Number(s.total_amount ?? 0),
+        starts_on: s.starts_on,
+        periodStart,
+        periodLabel: periodStart ? periodLabel(frequency, periodStart) : null,
+        chargedUnits: periodStart
+          ? (charges ?? []).filter((c) => c.schedule_id === s.id && c.period_start === periodStart).length
+          : 0,
+      };
+    });
 
     recentActivity = (matched ?? []).map((t) => ({
       id: t.id,
@@ -108,6 +147,10 @@ export default async function DuesPage() {
           Send a payment straight from your own bank — no processor, no fee for anyone.
         </p>
       </div>
+
+      {canReadFinancials ? (
+        <DuesScheduleCard schedules={schedules} unitCount={unitCount} canManage={isBoardAdmin} />
+      ) : null}
 
       <Card
         title="How to pay"
