@@ -35,6 +35,8 @@ function revalidateLinked(targetTable: string, targetId: string) {
   revalidatePath("/documents");
   if (targetTable === "units") revalidatePath(`/units/${targetId}`);
   if (targetTable === "tickets") revalidatePath(`/maintenance/${targetId}`);
+  if (targetTable === "vendors") revalidatePath(`/contractors/${targetId}`);
+  if (targetTable === "insurance_policies") revalidatePath("/insurance");
 }
 
 /**

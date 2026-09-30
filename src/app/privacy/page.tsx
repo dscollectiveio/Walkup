@@ -40,7 +40,7 @@ export default function PrivacyPage() {
         Privacy Policy
       </h1>
       <p className="mt-2 text-[13px] text-mute-soft">
-        Last updated 2026-09-26.
+        Last updated 2026-09-30.
       </p>
 
       <p className="mt-6 text-[13px] leading-relaxed text-mute">
@@ -90,6 +90,12 @@ export default function PrivacyPage() {
           do their job: Supabase (database and authentication), Vercel
           (hosting), and Plaid (bank connections). Walkup does not sell data,
           share it for marketing, or give any other company access to it.
+        </p>
+        <p>
+          If your board uses &ldquo;Find a contractor,&rdquo; Google receives
+          the building&rsquo;s street address (to place it on a map, once) and
+          the kind of work being searched for. Nothing else about your
+          association, its owners, or its finances is sent to Google.
         </p>
       </Section>
 

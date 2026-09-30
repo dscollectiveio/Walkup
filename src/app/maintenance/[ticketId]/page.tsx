@@ -4,6 +4,8 @@ import { Card, Restricted, money } from "@/components/ui";
 import { listLinkedDocuments } from "@/lib/documents/access";
 import { EntityDocuments } from "@/app/documents/entity-documents";
 import { TicketControls } from "./controls";
+import { ContractorPicker } from "./contractor-picker";
+import { googleKey } from "@/lib/google/places";
 
 export const dynamic = "force-dynamic";
 
@@ -34,7 +36,7 @@ export default async function TicketPage({
   const ticket = tickets?.[0];
   if (!ticket) return <Restricted what="this problem" />;
 
-  const [{ data: comments }, { data: messages }, documents, { data: isBoard }] = await Promise.all([
+  const [{ data: comments }, { data: messages }, documents, { data: isBoard }, { data: contractors }] = await Promise.all([
     supabase
       .from("ticket_comments")
       .select("id, body, created_at, persons(full_name)")
@@ -51,6 +53,8 @@ export default async function TicketPage({
       assoc: ticket.association_id,
       roles: ["board_admin", "board_member"],
     }),
+    // RLS returns nothing to owners, who can't see contractors.
+    supabase.from("vendors").select("id, name, status").order("name"),
   ]);
   const canWrite = isBoard === true;
 
@@ -87,10 +91,38 @@ export default async function TicketPage({
         </Card>
       ) : null}
 
+      {canWrite ? (
+        <Card title="Who's handling it" hint="Pick someone from your contractors, or find someone nearby.">
+          <div className="flex flex-wrap items-end gap-3">
+            <div className="min-w-[14rem] flex-1">
+              <ContractorPicker
+                ticketId={ticket.id}
+                currentVendorId={vendor?.id ?? null}
+                contractors={(contractors ?? []).map((c) => ({ id: c.id, name: c.name, doNotUse: c.status === "do_not_use" }))}
+              />
+            </div>
+            {googleKey() ? (
+              <Link
+                href="/contractors?tab=find"
+                className="inline-flex min-h-[44px] items-center rounded-md border border-line-strong bg-paper px-4 text-[13px] font-medium text-ink hover:bg-fill"
+              >
+                Find someone for this
+              </Link>
+            ) : null}
+          </div>
+        </Card>
+      ) : null}
+
       {vendor ? (
-        <Card title="Who's handling it">
+        <Card title={canWrite ? "Their details" : "Who's handling it"}>
           <div className="text-[13px]">
-            <div className="font-medium text-ink">{vendor.name}</div>
+            <div className="font-medium text-ink">
+              {canWrite ? (
+                <Link href={`/contractors/${vendor.id}`} className="underline-offset-2 hover:underline">{vendor.name}</Link>
+              ) : (
+                vendor.name
+              )}
+            </div>
             <div className="mt-1 text-mute">
               {[vendor.contact_name, vendor.phone, vendor.email].filter(Boolean).join(" · ")}
             </div>

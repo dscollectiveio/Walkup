@@ -9,6 +9,8 @@ export interface AssociationProfile {
   state_code: string;
   county: string | null;
   city: string | null;
+  street_address: string | null;
+  postal_code: string | null;
   ein: string | null;
   incorporated_on: string | null;
   fiscal_year_end_month: number;
@@ -75,6 +77,32 @@ export function AssociationProfileForm({ profile }: { profile: AssociationProfil
           />
         </div>
 
+        <div className="sm:col-span-2">
+          <label htmlFor="street_address" className="block text-[12px] font-medium text-ink">
+            Street address
+            <span className="ml-1 font-normal text-mute-soft">used to find contractors nearby</span>
+          </label>
+          <input
+            id="street_address"
+            name="street_address"
+            placeholder="2158 N. Damen Ave"
+            defaultValue={profile.street_address ?? ""}
+            className="mt-1 w-full rounded-lg border border-line-strong px-3 py-2 text-[13px] text-ink"
+          />
+        </div>
+        <div>
+          <label htmlFor="postal_code" className="block text-[12px] font-medium text-ink">
+            ZIP code
+            <span className="ml-1 font-normal text-mute-soft">optional</span>
+          </label>
+          <input
+            id="postal_code"
+            name="postal_code"
+            inputMode="numeric"
+            defaultValue={profile.postal_code ?? ""}
+            className="mt-1 w-full rounded-lg border border-line-strong px-3 py-2 text-[13px] text-ink"
+          />
+        </div>
         <div>
           <label htmlFor="state_code" className="block text-[12px] font-medium text-ink">
             State

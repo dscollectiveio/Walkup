@@ -2,6 +2,7 @@
 
 import { revalidatePath } from "next/cache";
 import { createClient, getUser } from "@/lib/supabase/server";
+import { geocode } from "@/lib/google/places";
 
 const ROLES = ["board_admin", "board_member", "accountant", "owner"] as const;
 
@@ -25,6 +26,8 @@ export async function updateAssociationProfile(_prev: unknown, formData: FormDat
   const stateCode = String(formData.get("state_code") ?? "").trim().toUpperCase();
   const county = String(formData.get("county") ?? "").trim() || null;
   const city = String(formData.get("city") ?? "").trim() || null;
+  const streetAddress = String(formData.get("street_address") ?? "").trim() || null;
+  const postalCode = String(formData.get("postal_code") ?? "").trim() || null;
   const ein = String(formData.get("ein") ?? "").trim() || null;
   const incorporatedOn = String(formData.get("incorporated_on") ?? "").trim() || null;
   const fyEndMonth = Number(formData.get("fiscal_year_end_month") ?? "");
@@ -46,6 +49,37 @@ export async function updateAssociationProfile(_prev: unknown, formData: FormDat
   const associationId = await currentAssociationId(supabase);
   if (!associationId) return { error: "No association is visible to you." };
 
+  // A changed address invalidates the stored coordinates. Re-geocode only when
+  // a Google key exists; otherwise they stay empty until contractor search
+  // does it on first use.
+  const { data: before } = await supabase
+    .from("associations")
+    .select("street_address, city, state_code, postal_code")
+    .eq("id", associationId)
+    .limit(1);
+  const prev = before?.[0];
+  const addressChanged =
+    !prev ||
+    prev.street_address !== streetAddress ||
+    prev.city !== city ||
+    prev.state_code !== stateCode ||
+    prev.postal_code !== postalCode;
+  let coordinates: { latitude: number | null; longitude: number | null } | Record<string, never> = {};
+  if (addressChanged) {
+    coordinates = { latitude: null, longitude: null };
+    if (streetAddress) {
+      try {
+        const loc = await geocode([streetAddress, city, stateCode, postalCode].filter(Boolean).join(", "));
+        if (loc) {
+          coordinates = loc;
+          await supabase.from("google_api_calls").insert({ association_id: associationId, kind: "geocode" });
+        }
+      } catch (cause) {
+        console.error("Geocoding failed; address saved without coordinates", cause);
+      }
+    }
+  }
+
   const { data, error } = await supabase
     .from("associations")
     .update({
@@ -54,6 +88,9 @@ export async function updateAssociationProfile(_prev: unknown, formData: FormDat
       state_code: stateCode,
       county,
       city,
+      street_address: streetAddress,
+      postal_code: postalCode,
+      ...coordinates,
       ein,
       incorporated_on: incorporatedOn,
       fiscal_year_end_month: fyEndMonth,
