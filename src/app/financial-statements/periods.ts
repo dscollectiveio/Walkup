@@ -48,3 +48,24 @@ export function fiscalYearBounds(
   if (!fy) return null;
   return { start: fy.starts_on, end: fy.ends_on, label: fy.label };
 }
+
+/**
+ * Builds a URL carrying view/period/offset as query params against any
+ * base path — the statement page's own nav links, the Excel export, and
+ * the PDF export all need the exact same encoding so an export always
+ * matches whatever's currently on screen. Defaults omitted, matching the
+ * page's own URLs.
+ */
+export function statementHref(
+  base: string,
+  view: ViewMode,
+  period: PeriodGrain,
+  offset: number,
+): string {
+  const params = new URLSearchParams();
+  if (view !== "total") params.set("view", view);
+  if (period !== "monthly") params.set("period", period);
+  if (offset !== 0) params.set("offset", String(offset));
+  const qs = params.toString();
+  return `${base}${qs ? `?${qs}` : ""}`;
+}

@@ -306,6 +306,66 @@ export async function categorizeBankTransaction(input: {
   return { ok: true, posted };
 }
 
+/**
+ * Same as categorizeBankTransaction, but for many rows at once with one
+ * shared categorization — the bulk-review tool on the bank feed. No rule is
+ * saved here (a rule is one pattern → one target; a batch of differently-
+ * worded transactions sharing a category doesn't have a single pattern to
+ * save). Same board_admin-gated UPDATE, same post_bank_transaction() per
+ * row if postNow is set.
+ */
+export async function categorizeBankTransactionsBulk(input: {
+  transactionIds: string[];
+  kind: PostingKind;
+  accountId: string | null;
+  unitId: string | null;
+  vendorId: string | null;
+  postNow: boolean;
+}): Promise<{ ok?: true; posted?: number; errors?: string[]; error?: string }> {
+  if (input.transactionIds.length === 0) return { error: "Nothing selected." };
+  if (!POSTING_KINDS.includes(input.kind)) return { error: "Choose how these should be recorded." };
+  if (["expense", "income", "transfer"].includes(input.kind) && !input.accountId) {
+    return { error: "Choose an account." };
+  }
+  if (input.kind === "dues" && !input.unitId) return { error: "Choose the unit this is dues for." };
+
+  const supabase = await createClient();
+
+  const categorization = {
+    posting_kind: input.kind,
+    account_id: ["expense", "income", "transfer"].includes(input.kind) ? input.accountId : null,
+    matched_unit_id: input.kind === "dues" ? input.unitId : null,
+    vendor_id: input.kind === "expense" ? input.vendorId : null,
+  };
+
+  const { data, error } = await supabase
+    .from("bank_transactions")
+    .update(categorization)
+    .in("id", input.transactionIds)
+    .is("journal_entry_id", null)
+    .select("id, description");
+
+  if (error) return { error: error.message };
+  if (!data || data.length === 0) {
+    return { error: "None of those could be categorized — only a board admin can, and none can already be posted." };
+  }
+
+  let posted = 0;
+  const errors: string[] = [];
+  if (input.postNow) {
+    for (const row of data) {
+      const { error: postError } = await supabase.rpc("post_bank_transaction", {
+        p_transaction_id: row.id,
+      });
+      if (postError) errors.push(`${row.description}: ${postError.message}`);
+      else posted += 1;
+    }
+  }
+
+  revalidateLedgerPages();
+  return { ok: true, posted, errors };
+}
+
 export async function postBankTransaction(
   transactionId: string,
 ): Promise<{ ok?: true; error?: string }> {

@@ -1,31 +1,15 @@
 import Link from "next/link";
 import { createClient } from "@/lib/supabase/server";
 import { Card, Empty, Restricted, Stat, money } from "@/components/ui";
-import { fiscalYearBounds, monthBounds, quarterBounds, type PeriodBounds, type PeriodGrain, type ViewMode } from "./periods";
+import { statementHref, type PeriodBounds, type PeriodGrain, type ViewMode } from "./periods";
+import { loadStatement, type AccountLine } from "./data";
 
 export const dynamic = "force-dynamic";
-
-interface AccountLine {
-  account_id: string;
-  code: string;
-  account_name: string;
-  account_type: "income" | "expense";
-  amount: number;
-}
 
 function pillClass(active: boolean): string {
   return active
     ? "rounded-full bg-ink px-3 py-1.5 text-[12px] font-medium text-paper"
     : "rounded-full border border-line-strong px-3 py-1.5 text-[12px] text-ink hover:bg-fill";
-}
-
-function hrefFor(view: ViewMode, period: PeriodGrain, offset: number): string {
-  const params = new URLSearchParams();
-  if (view !== "total") params.set("view", view);
-  if (period !== "monthly") params.set("period", period);
-  if (offset !== 0) params.set("offset", String(offset));
-  const qs = params.toString();
-  return `/financial-statements${qs ? `?${qs}` : ""}`;
 }
 
 function buildEmailDraft(
@@ -39,7 +23,13 @@ function buildEmailDraft(
 ): string {
   const title = view === "total" ? "Profit & Loss" : "Expenses";
   const subject = `${associationName} — ${title} — ${bounds.label}`;
-  const lines: string[] = [`${associationName}`, `${title} — ${bounds.label}`, ""];
+  const lines: string[] = [
+    `${associationName}`,
+    `${title} — ${bounds.label}`,
+    "",
+    "A PDF of this statement is attached — download it from the Financial Statements page and attach it here before sending.",
+    "",
+  ];
 
   if (view === "total") {
     lines.push("Income");
@@ -70,82 +60,22 @@ export default async function FinancialStatementsPage({
   const offset = Math.max(0, Math.trunc(Number(sp.offset ?? 0)) || 0);
 
   const supabase = await createClient();
+  const statement = await loadStatement(supabase, view, period, offset);
+  if ("restricted" in statement) return <Restricted what="financial statements" />;
 
-  const { data: associations } = await supabase
-    .from("associations")
-    .select("id, display_name")
-    .limit(1);
-  const association = associations?.[0];
-  if (!association) return <Restricted what="financial statements" />;
-
-  const { data: canReadFinancialsRes } = await supabase.rpc("can_read_financials", {
-    assoc: association.id,
-  });
-  if (canReadFinancialsRes !== true) return <Restricted what="financial statements" />;
-
-  let bounds: PeriodBounds | null;
-  let fiscalYearCount = 0;
-  if (period === "annual") {
-    const { data: fiscalYears } = await supabase
-      .from("fiscal_years")
-      .select("label, starts_on, ends_on")
-      .order("starts_on", { ascending: false });
-    fiscalYearCount = fiscalYears?.length ?? 0;
-    bounds = fiscalYearBounds(fiscalYears ?? [], offset);
-  } else if (period === "quarterly") {
-    bounds = quarterBounds(offset);
-  } else {
-    bounds = monthBounds(offset);
-  }
-
-  const [{ data: lineRows }, { count: unpostedCount }] = bounds
-    ? await Promise.all([
-        supabase
-          .from("income_statement_lines")
-          .select("account_id, code, account_name, account_type, amount")
-          .eq("association_id", association.id)
-          .gte("entry_date", bounds.start)
-          .lte("entry_date", bounds.end),
-        // Bank transactions in this period that haven't reached the books —
-        // the statement below is only as complete as this number is small.
-        supabase
-          .from("bank_transactions")
-          .select("id", { count: "exact", head: true })
-          .eq("association_id", association.id)
-          .gte("posted_on", bounds.start)
-          .lte("posted_on", bounds.end)
-          .is("journal_entry_id", null)
-          .is("excluded_at", null)
-          .is("removed_at", null)
-          .eq("pending", false),
-      ])
-    : [{ data: [] }, { count: 0 }];
-
-  const byAccount = new Map<string, AccountLine>();
-  for (const l of lineRows ?? []) {
-    const existing = byAccount.get(l.account_id);
-    const amount = Number(l.amount);
-    if (existing) existing.amount += amount;
-    else
-      byAccount.set(l.account_id, {
-        account_id: l.account_id,
-        code: l.code,
-        account_name: l.account_name,
-        account_type: l.account_type as "income" | "expense",
-        amount,
-      });
-  }
-  const rows = [...byAccount.values()].sort((a, b) => a.code.localeCompare(b.code));
-  const incomeRows = rows.filter((r) => r.account_type === "income");
-  const expenseRows = rows
-    .filter((r) => r.account_type === "expense")
-    .sort((a, b) => (view === "expenses" ? b.amount - a.amount : a.code.localeCompare(b.code)));
-  const totalIncome = incomeRows.reduce((s, r) => s + r.amount, 0);
-  const totalExpenses = expenseRows.reduce((s, r) => s + r.amount, 0);
-  const netIncome = totalIncome - totalExpenses;
-
-  const canGoNewer = offset > 0;
-  const canGoOlder = period !== "annual" || offset + 1 < fiscalYearCount;
+  const {
+    association,
+    bounds,
+    incomeRows,
+    expenseRows,
+    totalIncome,
+    totalExpenses,
+    netIncome,
+    unpostedCount,
+    canGoNewer,
+    canGoOlder,
+  } = statement;
+  const rows = [...incomeRows, ...expenseRows];
 
   const emailHref = bounds
     ? buildEmailDraft(
@@ -158,6 +88,8 @@ export default async function FinancialStatementsPage({
         totalExpenses,
       )
     : null;
+  const excelHref = statementHref("/financial-statements/export", view, period, offset);
+  const pdfHref = statementHref("/financial-statements/export/pdf", view, period, offset);
 
   return (
     <div className="space-y-6">
@@ -171,7 +103,7 @@ export default async function FinancialStatementsPage({
         </p>
       </div>
 
-      {unpostedCount && unpostedCount > 0 ? (
+      {unpostedCount > 0 ? (
         <p className="border-l-[3px] border-warning bg-warning-tint px-3 py-2 text-[13px] text-warning-text">
           {unpostedCount} bank transaction{unpostedCount === 1 ? "" : "s"} in this period{" "}
           {unpostedCount === 1 ? "hasn't" : "haven't"} been posted to the books yet — the figures
@@ -184,22 +116,22 @@ export default async function FinancialStatementsPage({
 
       <div className="flex flex-wrap items-center justify-between gap-3">
         <div className="flex flex-wrap gap-2">
-          <Link href={hrefFor(view, "monthly", 0)} className={pillClass(period === "monthly")}>
+          <Link href={statementHref("/financial-statements", view, "monthly", 0)} className={pillClass(period === "monthly")}>
             Monthly
           </Link>
-          <Link href={hrefFor(view, "quarterly", 0)} className={pillClass(period === "quarterly")}>
+          <Link href={statementHref("/financial-statements", view, "quarterly", 0)} className={pillClass(period === "quarterly")}>
             Quarterly
           </Link>
-          <Link href={hrefFor(view, "annual", 0)} className={pillClass(period === "annual")}>
+          <Link href={statementHref("/financial-statements", view, "annual", 0)} className={pillClass(period === "annual")}>
             Annual
           </Link>
         </div>
         <div className="flex flex-wrap gap-2">
-          <Link href={hrefFor("total", period, offset)} className={pillClass(view === "total")}>
+          <Link href={statementHref("/financial-statements", "total", period, offset)} className={pillClass(view === "total")}>
             Total P&amp;L
           </Link>
           <Link
-            href={hrefFor("expenses", period, offset)}
+            href={statementHref("/financial-statements", "expenses", period, offset)}
             className={pillClass(view === "expenses")}
           >
             Expenses
@@ -218,7 +150,7 @@ export default async function FinancialStatementsPage({
         <div className="mb-4 flex flex-wrap items-center justify-between gap-2">
           <div className="flex gap-2">
             <Link
-              href={hrefFor(view, period, offset + 1)}
+              href={statementHref("/financial-statements", view, period, offset + 1)}
               aria-disabled={!canGoOlder}
               className={`rounded-md border border-line-strong px-3 py-1.5 text-[12px] text-ink hover:bg-fill ${
                 canGoOlder ? "" : "pointer-events-none opacity-40"
@@ -227,7 +159,7 @@ export default async function FinancialStatementsPage({
               ← Earlier
             </Link>
             <Link
-              href={hrefFor(view, period, Math.max(0, offset - 1))}
+              href={statementHref("/financial-statements", view, period, Math.max(0, offset - 1))}
               aria-disabled={!canGoNewer}
               className={`rounded-md border border-line-strong px-3 py-1.5 text-[12px] text-ink hover:bg-fill ${
                 canGoNewer ? "" : "pointer-events-none opacity-40"
@@ -236,15 +168,38 @@ export default async function FinancialStatementsPage({
               Later →
             </Link>
           </div>
-          {emailHref && rows.length > 0 ? (
-            <a
-              href={emailHref}
-              className="rounded-md border border-line-strong px-3 py-1.5 text-[12px] text-ink hover:bg-fill"
-            >
-              Draft email
-            </a>
+          {rows.length > 0 ? (
+            <div className="flex flex-wrap gap-2">
+              <a
+                href={excelHref}
+                className="rounded-md border border-line-strong px-3 py-1.5 text-[12px] text-ink hover:bg-fill"
+              >
+                Export to Excel
+              </a>
+              <a
+                href={pdfHref}
+                className="rounded-md border border-line-strong px-3 py-1.5 text-[12px] text-ink hover:bg-fill"
+              >
+                Download PDF
+              </a>
+              {emailHref ? (
+                <a
+                  href={emailHref}
+                  className="rounded-md border border-line-strong px-3 py-1.5 text-[12px] text-ink hover:bg-fill"
+                >
+                  Draft email
+                </a>
+              ) : null}
+            </div>
           ) : null}
         </div>
+
+        {rows.length > 0 ? (
+          <p className="mb-4 text-[12px] text-mute-soft">
+            A mailto: link can&rsquo;t carry an attachment — download the PDF above, then attach it
+            to the drafted email yourself before sending.
+          </p>
+        ) : null}
 
         {!bounds ? (
           <Empty>No fiscal year is set up yet.</Empty>

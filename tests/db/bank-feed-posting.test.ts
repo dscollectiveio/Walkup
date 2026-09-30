@@ -252,4 +252,56 @@ describe("bank feed posting (0035/0036)", () => {
       expect(rows).toHaveLength(1);
     });
   });
+
+  describe("bulk categorization (categorizeBankTransactionsBulk's underlying query)", () => {
+    it("lets board_admin categorize many rows in one UPDATE", async () => {
+      const a = await insertTx(-46, "PPD ComEd PAYMENTS");
+      const b = await insertTx(-51, "PPD ComEd PAYMENTS");
+      const c = await insertTx(-40, "PPD ComEd PAYMENTS");
+
+      await asUser(db, f.cyUser, async () => {
+        const { rows } = await db.query<{ id: string }>(
+          `update public.bank_transactions
+              set posting_kind = 'expense', account_id = $2::uuid
+            where id = any($1::uuid[]) and journal_entry_id is null
+            returning id`,
+          [[a, b, c], UTILITIES],
+        );
+        expect(rows.map((r) => r.id).sort()).toEqual([a, b, c].sort());
+      });
+    });
+
+    it("excludes an already-posted row from the batch, even if its id is included", async () => {
+      const posted = await insertTx(-46, "PPD ComEd PAYMENTS", { posting_kind: "expense", account_id: UTILITIES });
+      const unposted = await insertTx(-51, "PPD ComEd PAYMENTS");
+
+      await asUser(db, f.cyUser, async () => {
+        await db.query(`select public.post_bank_transaction($1::uuid)`, [posted]);
+
+        const { rows } = await db.query<{ id: string }>(
+          `update public.bank_transactions
+              set posting_kind = 'excluded'
+            where id = any($1::uuid[]) and journal_entry_id is null
+            returning id`,
+          [[posted, unposted]],
+        );
+        expect(rows.map((r) => r.id)).toEqual([unposted]);
+      });
+    });
+
+    it("refuses an owner-only caller — RLS filters the whole batch to zero rows, not an error", async () => {
+      const a = await insertTx(-46, "PPD ComEd PAYMENTS");
+      const b = await insertTx(-51, "PPD ComEd PAYMENTS");
+
+      await asUser(db, f.adaUser, async () => {
+        const { affectedRows } = await db.query(
+          `update public.bank_transactions
+              set posting_kind = 'expense', account_id = $2::uuid
+            where id = any($1::uuid[]) and journal_entry_id is null`,
+          [[a, b], UTILITIES],
+        );
+        expect(affectedRows).toBe(0);
+      });
+    });
+  });
 });

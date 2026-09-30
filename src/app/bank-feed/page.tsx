@@ -5,10 +5,12 @@ import { plaidClient, describePlaidError } from "@/lib/plaid";
 import { ConnectBankButton } from "./connect-bank-button";
 import { SyncButton } from "./sync-button";
 import { DisconnectButton } from "./disconnect-button";
-import { TransactionRow, type Pickers, type TransactionRecord } from "./transaction-row";
+import { type Pickers, type TransactionRecord } from "./transaction-row";
+import { TransactionsTable, type SuggestedTransaction } from "./transactions-table";
 import { PostAllButton } from "./post-all-button";
 import { LedgerAccountSelect } from "./ledger-account-select";
 import { RulesList, type RuleRecord } from "./rules-list";
+import { suggestCategorization } from "@/lib/plaid/suggest";
 
 export const dynamic = "force-dynamic";
 
@@ -161,7 +163,22 @@ export default async function BankFeedPage({
     vendors: (vendors ?? []).map((v) => ({ id: v.id, label: v.name })),
   };
   const accountLabelById = new Map(accountList.map((a) => [a.id, label(a)]));
+  const accountNameById = new Map(accountList.map((a) => [a.id, a.name]));
   const unitLabelById = new Map((units ?? []).map((u) => [u.id, u.label]));
+
+  const expenseSuggestable = accountList
+    .filter((a) => a.type === "expense")
+    .map((a) => ({ id: a.id, name: a.name }));
+  const incomeSuggestable = accountList
+    .filter((a) => a.type === "income")
+    .map((a) => ({ id: a.id, name: a.name }));
+
+  function suggestionLabel(s: { kind: string; accountId: string | null }): string {
+    if (s.kind === "expense" || s.kind === "income") {
+      return accountNameById.get(s.accountId ?? "") ?? KIND_LABEL[s.kind];
+    }
+    return KIND_LABEL[s.kind];
+  }
 
   let transactionsQuery = supabase
     .from("bank_transactions")
@@ -188,6 +205,12 @@ export default async function BankFeedPage({
     status === "all"
       ? allTransactions.filter((t) => !t.removed_at || t.journal_entry_id)
       : allTransactions.filter((t) => statusOf(t) === status);
+
+  const transactionsWithSuggestions: SuggestedTransaction[] = transactions.map((t) => {
+    if (t.posting_kind || t.journal_entry_id || t.removed_at) return { ...t, suggestion: null };
+    const raw = suggestCategorization(t.description, Number(t.amount), expenseSuggestable, incomeSuggestable);
+    return { ...t, suggestion: raw ? { ...raw, label: suggestionLabel(raw) } : null };
+  });
 
   const settledReady = allTransactions.filter(
     (t) => statusOf(t) === "ready" && !t.pending,
@@ -382,22 +405,7 @@ export default async function BankFeedPage({
                   : "No transactions synced yet. Click “Sync now” above."}
               </Empty>
             ) : (
-              <div className="overflow-x-auto">
-                <table className="w-full text-[13px]">
-                  <thead>
-                    <tr className="border-b border-line text-left text-mute">
-                      <th className="pb-2 font-medium">Date</th>
-                      <th className="pb-2 font-medium">Description</th>
-                      <th className="pb-2 text-right font-medium">Amount</th>
-                    </tr>
-                  </thead>
-                  <tbody className="divide-y divide-line">
-                    {transactions.map((t) => (
-                      <TransactionRow key={t.id} transaction={t} pickers={pickers} canEdit={canEdit} />
-                    ))}
-                  </tbody>
-                </table>
-              </div>
+              <TransactionsTable transactions={transactionsWithSuggestions} pickers={pickers} canEdit={canEdit} />
             )}
           </Card>
 

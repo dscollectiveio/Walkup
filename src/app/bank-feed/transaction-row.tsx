@@ -257,10 +257,13 @@ export function TransactionRow({
   transaction: t,
   pickers,
   canEdit,
+  leadingCell,
 }: {
   transaction: TransactionRecord;
   pickers: Pickers;
   canEdit: boolean;
+  /** Extra <td> rendered before the date column — used by TransactionsTable for its bulk-select checkbox. */
+  leadingCell?: React.ReactNode;
 }) {
   const [editing, setEditing] = useState(false);
   const [busy, start] = useTransition();
@@ -279,6 +282,7 @@ export function TransactionRow({
 
   return (
     <tr className={t.removed_at && !t.journal_entry_id ? "opacity-60" : ""}>
+      {leadingCell !== undefined ? <td className="py-2 align-top">{leadingCell}</td> : null}
       <td className="figures py-2 align-top text-ink">{t.posted_on}</td>
       <td className="py-2 align-top text-ink">
         <div className="flex flex-wrap items-center gap-2">
