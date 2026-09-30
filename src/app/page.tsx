@@ -21,7 +21,6 @@ import {
   type InOutCardData,
   type SpendingCardData,
 } from "@/components/home/showcase-cards";
-import { StatStrip } from "@/components/home/stat-strip";
 import { ComingUp } from "@/components/home/coming-up";
 import { Building, type BuildingUnit } from "@/components/home/building";
 
@@ -377,27 +376,7 @@ export default async function HomePage() {
     };
   }
 
-  // --------------------------------------------------------------------------
-  // Stat strip
-  // --------------------------------------------------------------------------
-  const operatingOutflows = (cashActivity ?? [])
-    .filter((r) => r.fund_kind === "operating")
-    .map((r) => toCents(r.outflow))
-    .filter((c) => c > 0)
-    .slice(-6);
-  const avgOutflow =
-    operatingOutflows.length > 0
-      ? operatingOutflows.reduce((s, c) => s + c, 0) / operatingOutflows.length
-      : 0;
-  const runwayMonths = avgOutflow > 0 ? operatingCents / avgOutflow : null;
-
-  const chargedCents = (duesCollection ?? []).reduce((s, r) => s + toCents(r.charged), 0);
-  const onTimeCents = (duesCollection ?? []).reduce((s, r) => s + toCents(r.collected_on_time), 0);
-  const onTimeRate = chargedCents > 0 ? onTimeCents / chargedCents : null;
-
   const reserveTarget = association.reserve_target as number | null;
-  const reserveFunded =
-    reserveTarget && reserveTarget > 0 ? reserveCents / Math.round(reserveTarget * 100) : null;
 
   // --------------------------------------------------------------------------
   // Coming up + the building
@@ -500,26 +479,6 @@ export default async function HomePage() {
       </div>
 
       <ShowcaseCards cash={cash} inOut={inOut} spending={spending} />
-      <StatStrip
-        cells={[
-          {
-            label: "Operating runway",
-            value: runwayMonths !== null ? `${runwayMonths.toFixed(1)} months` : null,
-            note:
-              runwayMonths !== null ? "at the recent pace of spending" : "no spending recorded yet",
-          },
-          {
-            label: "Dues collected on time",
-            value: onTimeRate !== null ? `${Math.round(onTimeRate * 100)}%` : null,
-            note: onTimeRate !== null ? "arrived by their due date" : "nothing charged yet",
-          },
-          {
-            label: "Reserve funded",
-            value: reserveFunded !== null ? `${Math.round(reserveFunded * 100)}%` : null,
-            note: reserveFunded !== null ? "of the board's target" : "no target set",
-          },
-        ]}
-      />
 
       <div className="grid items-start gap-4 lg:grid-cols-[3fr_2fr]">
         {reminders.length > 0 ? <ComingUp reminders={reminders} today={today} /> : null}
