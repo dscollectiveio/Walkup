@@ -91,14 +91,12 @@ export function SetupGuidePanel({
   const pct = total > 0 ? Math.round((done / total) * 100) : 0;
 
   return (
-    <section className="rounded-xl border border-brass bg-paper">
+    <section className="flex max-h-[34rem] flex-col rounded-xl border border-brass bg-paper">
       <header className="border-b border-line px-5 py-4">
         <div className="flex flex-wrap items-baseline justify-between gap-3">
           <div>
             <h2 className="font-black tracking-tight text-ink">Set up your building</h2>
-            <p className="mt-0.5 text-[13px] text-mute">
-              Work through these in order — each section builds on the one before it.
-            </p>
+            <p className="mt-0.5 text-[12px] text-mute">In order — each section builds on the last.</p>
           </div>
           <div className="flex items-center gap-3">
             <span className="tabular text-[12px] text-mute">
@@ -126,13 +124,13 @@ export function SetupGuidePanel({
         {error ? <p className="mt-2 text-[12px] text-bad-text">{error}</p> : null}
       </header>
 
-      <div className="grid gap-px bg-line md:grid-cols-2">
+      <div className="min-h-0 flex-1 divide-y divide-line overflow-y-auto">
         {sections.map((section, i) => {
           const counts = sectionCounts(section);
           const complete = counts.done === counts.total;
           const isCollapsed = collapsed[section.key] ?? complete;
           return (
-            <div key={section.key} className="bg-paper px-5 py-4">
+            <div key={section.key} className="px-5 py-4">
               <button
                 type="button"
                 onClick={() => setCollapsed((c) => ({ ...c, [section.key]: !isCollapsed }))}

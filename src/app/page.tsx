@@ -459,15 +459,6 @@ export default async function HomePage() {
         books={booksVisible ? { visible: true, balanced: booksBalanced } : null}
       />
 
-      {showSetupGuide ? (
-        <SetupGuidePanel
-          sections={setupSections}
-          activeStepKey={nextStep(setupSections)?.key ?? null}
-          done={setupCounts.done}
-          total={setupCounts.total}
-        />
-      ) : null}
-
       {urgent.length > 0 ? (
         <WorthAMinute items={urgent} />
       ) : booksVisible ? (
@@ -491,12 +482,21 @@ export default async function HomePage() {
           canSetTarget={canSetTarget}
           hasActivity={booksVisible}
         />
-        <YourList
-          derived={derived}
-          derivedDoneCount={setupCounts.done}
-          manual={manual}
-          persons={(persons ?? []).map((p) => ({ id: p.id, full_name: p.full_name }))}
-        />
+        {showSetupGuide ? (
+          <SetupGuidePanel
+            sections={setupSections}
+            activeStepKey={nextStep(setupSections)?.key ?? null}
+            done={setupCounts.done}
+            total={setupCounts.total}
+          />
+        ) : (
+          <YourList
+            derived={derived}
+            derivedDoneCount={setupCounts.done}
+            manual={manual}
+            persons={(persons ?? []).map((p) => ({ id: p.id, full_name: p.full_name }))}
+          />
+        )}
       </div>
 
       <ShowcaseCards cash={cash} inOut={inOut} spending={spending} />
