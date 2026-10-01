@@ -188,6 +188,7 @@ export function DuesScheduleCard({
 }) {
   return (
     <Card
+      navy
       title="Dues schedule"
       hint="How much each unit owes and how often. Charging a period is what makes “What's owed” real."
     >
