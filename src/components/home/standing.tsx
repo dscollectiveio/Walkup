@@ -24,7 +24,6 @@ export function Standing({
   reserveCents,
   reserveTarget, // display-only: drives a meter, not a ledger figure
   canSetTarget,
-  matchSetupGuide = false,
   tiles = [],
 }: {
   totalCents: number;
@@ -32,8 +31,6 @@ export function Standing({
   reserveCents: number;
   reserveTarget: number | null;
   canSetTarget: boolean;
-  /** Sits beside the setup guide on desktop: share its 34rem height and pin the books banner to the bottom. */
-  matchSetupGuide?: boolean;
   /** "Right now" tiles — real figures, or a nudge to set the thing up. */
   tiles?: SnapshotTile[];
 }) {
@@ -44,7 +41,7 @@ export function Standing({
 
   return (
     <section
-      className={`flex flex-col rounded-xl border border-line bg-paper ${matchSetupGuide ? "lg:min-h-[34rem]" : ""}`}
+      className={`flex flex-col rounded-xl border border-line bg-paper `}
     >
       <header className="flex min-h-[4.75rem] flex-col justify-center rounded-t-[11px] bg-ink px-5 py-4">
         <div className="flex items-center justify-between gap-3">

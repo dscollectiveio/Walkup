@@ -141,7 +141,7 @@ export function SetupGuidePanel({
 
   return (
     <>
-    <section className="flex max-h-[34rem] flex-col rounded-xl border border-line bg-paper lg:max-h-none lg:min-h-[34rem]">
+    <section className="flex max-h-[34rem] flex-col rounded-xl border border-line bg-paper lg:max-h-none">
       <header className="flex min-h-[4.75rem] flex-col justify-center rounded-t-[11px] bg-ink px-5 py-4 text-paper">
         <h2 className="font-bold tracking-tight text-paper">Set up your building</h2>
         <p className="mt-0.5 text-[12px] text-ondark-mute">In order — each section builds on the last.</p>
@@ -185,7 +185,7 @@ export function SetupGuidePanel({
       </div>
 
       {/* On desktop the list is absolutely positioned so it never sets the row's
-          height — the row is as tall as the taller card (min 34rem) and this scrolls. */}
+          height — the row is as tall as the taller card (set by the Standing card) and this scrolls. */}
       <div className="relative min-h-0 flex-1 overflow-y-auto lg:overflow-visible">
       <div className="divide-y divide-line lg:absolute lg:inset-0 lg:overflow-y-auto">
         {sections.map((section, i) => {

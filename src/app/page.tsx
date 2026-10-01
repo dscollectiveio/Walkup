@@ -483,7 +483,6 @@ export default async function HomePage() {
           reserveCents={reserveCents}
           reserveTarget={reserveTarget}
           canSetTarget={canSetTarget}
-          matchSetupGuide={showSetupGuide}
           tiles={snapshotTiles}
         />
         {showSetupGuide ? (
