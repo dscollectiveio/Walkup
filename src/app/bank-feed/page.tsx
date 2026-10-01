@@ -36,9 +36,24 @@ const KIND_LABEL: Record<string, string> = {
   excluded: "Not for the books",
 };
 
+const ACCOUNT_TYPE_ORDER = ["depository", "credit", "loan", "investment", "other"];
+const ACCOUNT_TYPE_LABEL: Record<string, string> = {
+  depository: "Cash",
+  credit: "Owed",
+  loan: "Loan",
+  investment: "Investment",
+  other: "Other",
+};
+
 interface ConnectionBalance {
   connectionId: string;
-  accounts: { name: string; mask: string | null; currentCents: number | null }[];
+  accounts: {
+    name: string;
+    mask: string | null;
+    currentCents: number | null;
+    /** Plaid's account type: depository (checking/savings/CD/money market), credit, loan, investment. */
+    type: string;
+  }[];
   error?: string;
 }
 
@@ -65,6 +80,7 @@ async function getConnectionBalance(
       accounts: response.data.accounts.map((a) => ({
         name: a.name,
         mask: a.mask,
+        type: String(a.type),
         currentCents:
           a.balances.current !== null && a.balances.current !== undefined
             ? Math.round(a.balances.current * 100)
@@ -301,11 +317,15 @@ export default async function BankFeedPage({
       ? await Promise.all(active.map((c) => getConnectionBalance(supabase, c.id)))
       : [];
   const balanceByConnection = new Map(balances.map((b) => [b.connectionId, b]));
+  // "Bank balance" means cash the association can spend: depository accounts
+  // only. A credit card balance is money owed and a retirement/brokerage
+  // account isn't operating cash, so neither belongs in this total.
   const totalBalanceCents = balances.reduce(
-    (sum, b) => sum + b.accounts.reduce((s, a) => s + (a.currentCents ?? 0), 0),
+    (sum, b) =>
+      sum + b.accounts.filter((a) => a.type === "depository").reduce((s, a) => s + (a.currentCents ?? 0), 0),
     0,
   );
-  const anyBalance = balances.some((b) => b.accounts.length > 0);
+  const anyBalance = balances.some((b) => b.accounts.some((a) => a.type === "depository"));
 
   const ruleRecords: RuleRecord[] = (rules ?? []).map((r) => ({
     id: r.id,
@@ -347,29 +367,64 @@ export default async function BankFeedPage({
         <section className="divide-y divide-line rounded-xl border border-line bg-paper">
           {active.map((c) => {
             const balance = balanceByConnection.get(c.id);
+            const accts = [...(balance?.accounts ?? [])].sort(
+              (x, y) => ACCOUNT_TYPE_ORDER.indexOf(x.type) - ACCOUNT_TYPE_ORDER.indexOf(y.type),
+            );
+            const cashCents = accts
+              .filter((a) => a.type === "depository")
+              .reduce((sum, a) => sum + (a.currentCents ?? 0), 0);
             return (
-              <div key={c.id} className="px-5 py-3">
-                <div className="flex flex-wrap items-center gap-x-4 gap-y-2">
-                  <div className="min-w-0 flex-1">
-                    <div className="flex flex-wrap items-baseline gap-x-3 gap-y-0.5 text-[13px]">
-                      <span className="font-medium text-ink">{c.institution_name}</span>
-                      {balance?.accounts.map((a, i) => (
-                        <span key={i} className="text-mute">
-                          {a.name}
-                          {a.mask ? <span className="text-[11px] text-mute-soft"> ···{a.mask}</span> : null}{" "}
-                          <span className="figures text-ink">
-                            {a.currentCents !== null ? money(a.currentCents / 100) : "—"}
-                          </span>
+              <div key={c.id} className="px-5 py-4">
+                <div className="flex flex-wrap items-center justify-between gap-3">
+                  <div className="min-w-0">
+                    <div className="flex flex-wrap items-baseline gap-x-2">
+                      <span className="font-bold tracking-tight text-ink">{c.institution_name}</span>
+                      {accts.length > 0 ? (
+                        <span className="text-[12px] text-mute">
+                          {accts.length} account{accts.length === 1 ? "" : "s"}
+                          {cashCents > 0 ? (
+                            <>
+                              {" · "}
+                              <span className="figures text-ink">{money(cashCents / 100)}</span> in cash
+                            </>
+                          ) : null}
                         </span>
-                      ))}
-                      {balance?.error ? <span className="text-[11px] text-mute-soft">{balance.error}</span> : null}
+                      ) : null}
                     </div>
-                    <div className="text-[11px] text-mute-soft">{syncedAgo(c.last_synced_at)}</div>
+                    <div className="mt-0.5 text-[11px] text-mute-soft">{syncedAgo(c.last_synced_at)}</div>
                   </div>
                   <SyncButton connectionId={c.id} />
                 </div>
+
+                {balance?.error ? <p className="mt-3 text-[12px] text-mute-soft">{balance.error}</p> : null}
+
+                {accts.length > 0 ? (
+                  <ul className="mt-3 grid gap-2 sm:grid-cols-2 lg:grid-cols-4">
+                    {accts.map((a, i) => (
+                      <li key={`${a.mask ?? ""}-${i}`} className="rounded-lg border border-line bg-fill/40 px-3 py-2">
+                        <div className="flex items-baseline justify-between gap-2">
+                          <span className="truncate text-[12px] text-ink" title={a.name}>
+                            {a.name}
+                          </span>
+                          {a.mask ? (
+                            <span className="figures shrink-0 text-[11px] text-mute-soft">···{a.mask}</span>
+                          ) : null}
+                        </div>
+                        <div className="mt-0.5 flex items-baseline justify-between gap-2">
+                          <span className="figures text-[15px] text-ink">
+                            {a.currentCents !== null ? money(a.currentCents / 100) : "—"}
+                          </span>
+                          <span className="text-[10px] uppercase tracking-[0.07em] text-mute-soft">
+                            {ACCOUNT_TYPE_LABEL[a.type] ?? a.type}
+                          </span>
+                        </div>
+                      </li>
+                    ))}
+                  </ul>
+                ) : null}
+
                 {canEdit && !c.cash_account_id ? (
-                  <div className="mt-2">
+                  <div className="mt-3">
                     <LedgerAccountSelect
                       connectionId={c.id}
                       cashAccounts={pickers.cashAccounts}
@@ -378,9 +433,9 @@ export default async function BankFeedPage({
                   </div>
                 ) : null}
                 {canEdit && c.cash_account_id ? (
-                  <details className="mt-1">
+                  <details className="mt-3">
                     <summary className="cursor-pointer select-none text-[11px] text-mute-soft hover:text-ink">
-                      Manage
+                      Manage connection
                     </summary>
                     <div className="mt-2 flex flex-wrap items-center gap-3">
                       <LedgerAccountSelect
