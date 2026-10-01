@@ -1,3 +1,5 @@
+import { axisMoney, niceAxis } from "./axis";
+
 export interface BarGroup {
   label: string; // short month label from a real date
   aCents: number; // first series (money in)
@@ -7,7 +9,8 @@ export interface BarGroup {
 }
 
 /**
- * Grouped monthly bars. Series colors come from the brand data-series ramp;
+ * Grouped monthly bars with a dollar scale, light gridlines and axis lines.
+ * Series colors come from the brand data-series ramp;
  * a shortfall month's outflow bar switches to Rust and gets a caption, so
  * color is never the only carrier (the caption and figures say it in words).
  */
@@ -25,21 +28,43 @@ export function BarChart({
   if (groups.length === 0) return null;
 
   const W = 560;
-  const H = 190;
+  const H = 200;
+  const PAD_LEFT = 46;
+  const PAD_RIGHT = 8;
   const PAD_TOP = 12;
   const PAD_BOTTOM = groups.some((g) => g.caption) ? 44 : 28;
 
-  const max = Math.max(...groups.flatMap((g) => [g.aCents, g.bCents]), 1);
-  const groupWidth = W / groups.length;
+  const axis = niceAxis(0, Math.max(...groups.flatMap((g) => [g.aCents, g.bCents]), 1));
+  const plotW = W - PAD_LEFT - PAD_RIGHT;
+  const groupWidth = plotW / groups.length;
   const barWidth = Math.min(26, groupWidth / 3);
   const chartH = H - PAD_TOP - PAD_BOTTOM;
-  const scaled = (v: number) => Math.max(v > 0 ? 2 : 0, (v / max) * chartH);
+  const baseY = PAD_TOP + chartH;
+  const yOf = (v: number) => PAD_TOP + (1 - v / (axis.hi || 1)) * chartH;
+  const scaled = (v: number) => Math.max(v > 0 ? 2 : 0, (v / (axis.hi || 1)) * chartH);
 
   return (
     <div>
       <svg viewBox={`0 0 ${W} ${H}`} className="w-full" role="img" aria-label={ariaLabel}>
+        {axis.ticks.map((t) => (
+          <g key={t}>
+            <line
+              x1={PAD_LEFT}
+              x2={W - PAD_RIGHT}
+              y1={yOf(t)}
+              y2={yOf(t)}
+              stroke={t === 0 ? "var(--color-line-strong)" : "var(--color-line)"}
+              strokeWidth="1"
+              strokeDasharray={t === 0 ? undefined : "3 3"}
+            />
+            <text x={PAD_LEFT - 6} y={yOf(t) + 3} fontSize="9" fill="var(--color-mute)" textAnchor="end">
+              {axisMoney(t)}
+            </text>
+          </g>
+        ))}
+        <line x1={PAD_LEFT} x2={PAD_LEFT} y1={PAD_TOP} y2={baseY} stroke="var(--color-line-strong)" strokeWidth="1" />
         {groups.map((g, i) => {
-          const cx = i * groupWidth + groupWidth / 2;
+          const cx = PAD_LEFT + i * groupWidth + groupWidth / 2;
           const aH = scaled(g.aCents);
           const bH = scaled(g.bCents);
           return (

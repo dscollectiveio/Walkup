@@ -322,7 +322,7 @@ export function ShowcaseCards({
         className="border-t border-line bg-paper px-4 py-4 md:border-l md:border-t-0"
       >
         <Stack views={views} activeKey={view.key} animated={animated}>
-          {(v) => v.chart}
+          {(v) => <div className="rounded-lg border border-line p-3">{v.chart}</div>}
         </Stack>
       </div>
       {rotating ? (

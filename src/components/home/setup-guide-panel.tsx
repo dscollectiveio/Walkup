@@ -141,7 +141,7 @@ export function SetupGuidePanel({
 
   return (
     <>
-    <section className="flex max-h-[34rem] flex-col rounded-xl bg-paper lg:max-h-none lg:min-h-[34rem]">
+    <section className="flex max-h-[34rem] flex-col rounded-xl border border-line bg-paper lg:max-h-none lg:min-h-[34rem]">
       <header className="border-b border-line px-5 py-4">
         <div className="flex flex-wrap items-baseline justify-between gap-3">
           <div>

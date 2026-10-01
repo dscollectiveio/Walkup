@@ -86,13 +86,16 @@ export function DonutChart({
             <g key={s.label}>{circle}</g>
           );
         })}
+        {/* Light outline around the ring */}
+        <circle cx="21" cy="21" r={R + 3.2} fill="none" stroke="var(--color-line-strong)" strokeWidth="0.3" />
+        <circle cx="21" cy="21" r={R - 3.2} fill="none" stroke="var(--color-line-strong)" strokeWidth="0.3" />
         {centerLabel ? (
           <text x="21" y="22.4" textAnchor="middle" className="figures" fontSize="4.2" fill="var(--color-ink)">
             {centerLabel}
           </text>
         ) : null}
       </svg>
-      <ul className="min-w-0 flex-1 space-y-1.5">
+      <ul className="min-w-0 flex-1 divide-y divide-line rounded-lg border border-line px-2.5">
         {arcs.map((s, i) => {
           const label = (
             <span className="inline-flex min-w-0 items-center gap-1.5 text-mute">
@@ -105,7 +108,7 @@ export function DonutChart({
             </span>
           );
           return (
-            <li key={s.label} className="flex items-baseline justify-between gap-3 text-[12px]">
+            <li key={s.label} className="flex items-baseline justify-between gap-3 py-1.5 text-[12px]">
               {s.href ? (
                 <a href={s.href} className="min-w-0 underline-offset-2 hover:underline">
                   {label}
