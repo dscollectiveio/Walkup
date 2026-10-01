@@ -46,15 +46,18 @@ export function Standing({
     <section
       className={`flex flex-col rounded-xl border border-line bg-paper ${matchSetupGuide ? "lg:min-h-[34rem]" : ""}`}
     >
-      <header className="border-b border-line px-5 py-4">
-        <h2 className="font-bold tracking-tight text-ink">Where the association stands</h2>
+      <header className="flex min-h-[4.75rem] flex-col justify-center rounded-t-[11px] bg-ink px-5 py-4">
+        <div className="flex items-center justify-between gap-3">
+          <div>
+            <h2 className="font-bold tracking-tight text-paper">Where the association stands</h2>
+            <p className="mt-0.5 text-[12px] text-ondark-mute">Balance across all accounts</p>
+          </div>
+          <div className="figures text-[24px] leading-none text-paper">{formatMoney(totalCents)}</div>
+        </div>
       </header>
 
       <div className="flex flex-1 flex-col px-5 py-4">
-        <div className="figures text-[26px] text-ink">{formatMoney(totalCents)}</div>
-        <p className="text-[12px] text-mute">across all accounts</p>
-
-        <div className="mt-4 grid grid-cols-2 gap-4">
+        <div className="grid grid-cols-2 gap-4">
           <div>
             <div className="figures text-[16px] text-ink">{formatMoney(operatingCents)}</div>
             <p className="text-[11px] text-mute">day-to-day · bills and running costs</p>

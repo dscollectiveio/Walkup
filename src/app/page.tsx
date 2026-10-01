@@ -339,6 +339,7 @@ export default async function HomePage() {
     spending = {
       slices: byAccount.map((a) => ({ label: a.name, valueCents: a.cents })),
       avgMonthlyCents: Math.round(totalSpendCents / months.length),
+      monthCount: months.length,
       sinceLabel: `Since ${monthLongLabel(months[0], dateOfKey(months[0]).getFullYear() !== today.getFullYear())}`,
     };
   }

@@ -7,7 +7,8 @@ import { formatMoney } from "@/lib/tax/form1120h";
 import { Empty } from "@/components/ui";
 import { LineChart, type LinePoint } from "./charts/line-chart";
 import { BarChart, type BarGroup } from "./charts/bar-chart";
-import { DonutChart, type DonutSlice } from "./charts/donut-chart";
+import type { DonutSlice } from "./charts/donut-chart";
+import { SpendingBreakdown } from "./charts/spending-breakdown";
 
 // Flat tinted panels, not the mockup's gradients — gradients are banned by
 // the brand guide, and the tint families carry the same warm/cool split.
@@ -32,6 +33,8 @@ export interface InOutCardData {
 export interface SpendingCardData {
   slices: DonutSlice[];
   avgMonthlyCents: number;
+  /** How many months of spending the slices cover. */
+  monthCount: number;
   sinceLabel: string;
 }
 
@@ -118,8 +121,11 @@ function buildViews(
       figureCaption: `average monthly spend ${spending.sinceLabel.replace(/^Since/, "since")}`,
       button: { label: "See all spending", href: "/ledger" },
       chart: (
-        <DonutChart
+        <SpendingBreakdown
           slices={spending.slices}
+          avgMonthlyCents={spending.avgMonthlyCents}
+          monthCount={spending.monthCount}
+          sinceLabel={spending.sinceLabel}
           ariaLabel={`Spending by category ${spending.sinceLabel.toLowerCase()}, averaging ${formatMoney(
             spending.avgMonthlyCents,
           )} a month.`}

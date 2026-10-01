@@ -142,14 +142,14 @@ export function SetupGuidePanel({
   return (
     <>
     <section className="flex max-h-[34rem] flex-col rounded-xl border border-line bg-paper lg:max-h-none lg:min-h-[34rem]">
-      <header className="border-b border-line px-5 py-4">
+      <header className="flex min-h-[4.75rem] flex-col justify-center rounded-t-[11px] bg-ink px-5 py-4 text-paper">
         <div className="flex flex-wrap items-baseline justify-between gap-3">
           <div>
-            <h2 className="font-bold tracking-tight text-ink">Set up your building</h2>
-            <p className="mt-0.5 text-[12px] text-mute">In order — each section builds on the last.</p>
+            <h2 className="font-bold tracking-tight text-paper">Set up your building</h2>
+            <p className="mt-0.5 text-[12px] text-ondark-mute">In order — each section builds on the last.</p>
           </div>
           <div className="flex items-center gap-3">
-            <span className="tabular text-[12px] text-mute">
+            <span className="tabular text-[12px] text-paper">
               {done} of {total} done
             </span>
             <button
@@ -157,7 +157,7 @@ export function SetupGuidePanel({
               onClick={() => dialogRef.current?.showModal()}
               aria-label="Expand the setup guide"
               title="See every step in detail"
-              className="flex h-7 w-7 items-center justify-center rounded-md text-mute hover:bg-fill hover:text-ink"
+              className="flex h-7 w-7 items-center justify-center rounded-md text-ondark-mute hover:bg-ink-mid hover:text-paper"
             >
               <Maximize2 size={14} strokeWidth={1.75} aria-hidden="true" />
             </button>
@@ -171,14 +171,14 @@ export function SetupGuidePanel({
                   if (result.error) setError(result.error);
                 })
               }
-              className="text-[12px] text-mute underline-offset-2 hover:underline disabled:opacity-50"
+              className="text-[12px] text-ondark-mute underline-offset-2 hover:text-paper hover:underline disabled:opacity-50"
             >
               {pending ? "Hiding…" : "Skip for now"}
             </button>
           </div>
         </div>
-        <div className="mt-2 h-1.5 overflow-hidden rounded-full bg-fill">
-          <div className="h-full rounded-full bg-moss transition-all" style={{ width: `${pct}%` }} />
+        <div className="mt-2 h-1.5 overflow-hidden rounded-full bg-ink-mid">
+          <div className="h-full rounded-full bg-brass transition-all" style={{ width: `${pct}%` }} />
         </div>
         {error ? <p className="mt-2 text-[12px] text-bad-text">{error}</p> : null}
       </header>
@@ -192,12 +192,12 @@ export function SetupGuidePanel({
           const complete = counts.done === counts.total;
           const isCollapsed = collapsed[section.key] ?? complete;
           return (
-            <div key={section.key} className="px-5 py-4">
+            <div key={section.key}>
               <button
                 type="button"
                 onClick={() => setCollapsed((c) => ({ ...c, [section.key]: !isCollapsed }))}
                 aria-expanded={!isCollapsed}
-                className="flex w-full items-baseline justify-between gap-3 text-left"
+                className="flex w-full items-baseline justify-between gap-3 bg-fill/60 px-5 py-3 text-left hover:bg-fill"
               >
                 <span>
                   <span className="text-[10px] font-medium uppercase tracking-[0.07em] text-section-label">
@@ -207,21 +207,21 @@ export function SetupGuidePanel({
                 </span>
                 <span
                   className={`shrink-0 rounded-full px-2 py-0.5 text-[11px] ${
-                    complete ? "border border-good-line bg-good-tint text-good-text" : "bg-fill text-mute"
+                    complete ? "border border-good-line bg-good-tint text-good-text" : "border border-line bg-paper text-mute"
                   }`}
                 >
                   {counts.done} of {counts.total}
                 </span>
               </button>
               {isCollapsed ? null : (
-                <>
-                  <p className="mt-1 text-[12px] text-mute">{section.blurb}</p>
+                <div className="px-5 pb-4 pt-2">
+                  <p className="text-[12px] text-mute">{section.blurb}</p>
                   <ul className="mt-2 divide-y divide-line">
                     {section.steps.map((step) => (
                       <StepRow key={step.key} step={step} active={step.key === activeStepKey} />
                     ))}
                   </ul>
-                </>
+                </div>
               )}
             </div>
           );
