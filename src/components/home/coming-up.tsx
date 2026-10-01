@@ -14,8 +14,8 @@ const RAIL = {
 export function ComingUp({ reminders, today }: { reminders: Reminder[]; today: Date }) {
   return (
     <section className="rounded-xl border border-line bg-paper">
-      <header className="flex min-h-[4.75rem] flex-col justify-center rounded-t-[11px] bg-ink px-5 py-4">
-        <h2 className="font-bold tracking-tight text-paper">Coming up</h2>
+      <header className="flex min-h-[4.75rem] flex-col justify-center rounded-t-[7px] bg-ink px-5 py-4">
+        <h2 className="eyebrow text-paper">Coming up</h2>
         <p className="mt-0.5 text-[12px] text-ondark-mute">
           Deadlines from your own records, plus the filings every association has.
         </p>

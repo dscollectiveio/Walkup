@@ -1,82 +1,231 @@
 @import "tailwindcss";
 
-@theme {
-  /* Avenir is licensed, not a web font — there is no next/font/google entry
-     for it and it can't be bundled. It ships with macOS/iOS (as "Avenir"
-     and the fuller-weight "Avenir Next") and with Microsoft Office on
-     Windows, but not on a bare Windows/Linux/Android install — those
-     fall through to the system sans-serif in the stack below. Same stack
-     for --font-serif: Doug asked for one typeface everywhere, so the
-     figures face (.figures below) is now Avenir at a heavier weight
-     rather than a distinct serif.
-   */
-  --font-sans: "Avenir Next", Avenir, -apple-system, "Segoe UI", Roboto,
-    "Helvetica Neue", Arial, sans-serif;
-  --font-serif: var(--font-sans);
-  --font-mono: ui-monospace, "SF Mono", Menlo, Consolas, monospace;
+/* ============================================================================
+   Walkup tokens — "Signal" theme on Walkup's own palette.
+
+   Two layers:
+   1. Semantic CSS variables on :root (light) and [data-theme="dark"], derived
+      from the palette (navy, cream, green, gold, brick red, slate). The dark
+      set is the same palette lightened/darkened until it passes contrast;
+      every derived value's ratio is in docs/reference/signal-theme.md.
+   2. Tailwind's @theme, declared `inline` so utilities like bg-ink read the
+      variable at runtime and flip with the theme. Token NAMES are unchanged
+      (ink, paper, bone, fill, line, mute, …) so no consumer churns.
+
+   Fonts come from next/font (layout.tsx) as --font-hanken / --font-jetbrains.
+   ========================================================================== */
+
+:root {
+  color-scheme: light;
 
   /* Structure */
-  --color-ink: #14213d;
-  --color-ink-mid: #1e2e52;
-  --color-ink-deep: #0d172b;
-  --color-slate: #2d4a7c;
-  --color-brass: #c08a3e;
-  --color-moss: #2f7a5c;
-  --color-rust: #b3402f;
+  --w-ink: #14213d;        /* primary text; the navy band on card headers and primary buttons */
+  --w-ink-mid: #1e2e52;    /* hover on the navy band */
+  --w-ink-deep: #0d172b;
+  --w-slate: #2d4a7c;
+  --w-brass: #c08a3e;
+  --w-moss: #2f7a5c;
+  --w-rust: #b3402f;
 
   /* Ground and neutrals */
-  --color-bone: #f4f2ed;
-  --color-paper: #ffffff;
-  --color-fill: #edeae3;
-  --color-line: #dcd8cf;
-  --color-line-strong: #c9c4b8;
-  --color-mute: #6e7385;
-  --color-mute-soft: #8e93a3;
-  --color-ondark-mute: #9aa6bf;
-  --color-section-label: #5e6c8c;
-  --color-sidebar-divider: #2a3a5e;
+  --w-bone: #f4f2ed;       /* page */
+  --w-paper: #ffffff;      /* card */
+  --w-fill: #edeae3;       /* nested panel, track */
+  --w-line: #dcd8cf;       /* hairline border */
+  --w-line-strong: #c9c4b8;/* ghost buttons, checkboxes */
+  --w-mute: #62677a;       /* 4.9:1 on paper, 4.1:1 on fill — darkened one step from #6e7385 */
+  --w-mute-soft: #8e93a3;
+  --w-ondark-mute: #9aa6bf;/* muted text on the navy band */
+  --w-section-label: #5e6c8c;
+
+  /* Sidebar (its own tokens, so the navy band's dark inversion never touches it) */
+  --w-nav: #14213d;
+  --w-nav-hover: #1e2e52;
+  --w-nav-text: #ffffff;
+  --w-nav-muted: #9aa6bf;
+  --w-nav-divider: #2a3a5e;
+  --w-sidebar-divider: #2a3a5e;
 
   /* Status: good */
-  --color-good: #2f7a5c;
-  --color-good-tint: #e8f1ec;
-  --color-good-line: #c3ddd0;
-  --color-good-text: #1e5540;
-
+  --w-good: #2f7a5c;
+  --w-good-tint: #e8f1ec;
+  --w-good-line: #c3ddd0;
+  --w-good-text: #1e5540;
   /* Status: warning */
-  --color-warning: #c08a3e;
-  --color-warning-tint: #f6edde;
-  --color-warning-line: #e4cea6;
-  --color-warning-text: #8a5f22;
-
+  --w-warning: #c08a3e;
+  --w-warning-tint: #f6edde;
+  --w-warning-line: #e4cea6;
+  --w-warning-text: #8a5f22;
   /* Status: bad */
-  --color-bad: #b3402f;
-  --color-bad-tint: #f8ede9;
-  --color-bad-line: #e4c4bc;
-  --color-bad-text: #7a2519;
-
+  --w-bad: #b3402f;
+  --w-bad-tint: #f8ede9;
+  --w-bad-line: #e4c4bc;
+  --w-bad-text: #7a2519;
   /* Status: info */
-  --color-info: #2d4a7c;
-  --color-info-tint: #eaeff7;
-  --color-info-line: #c6d3e8;
-  --color-info-text: #1d3560;
-
+  --w-info: #2d4a7c;
+  --w-info-tint: #eaeff7;
+  --w-info-line: #c6d3e8;
+  --w-info-text: #1d3560;
   /* Status: neutral */
-  --color-neutral: #6e7385;
-  --color-neutral-tint: #edeae3;
-  --color-neutral-line: #dcd8cf;
-  --color-neutral-text: #14213d;
+  --w-neutral: #62677a;
+  --w-neutral-tint: #edeae3;
+  --w-neutral-line: #dcd8cf;
+  --w-neutral-text: #14213d;
 
   /* Data series, in order */
-  --color-series-1: #2d4a7c;
-  --color-series-2: #c08a3e;
-  --color-series-3: #2f7a5c;
-  --color-series-4: #b3402f;
-  --color-series-5: #6e7385;
-  --color-series-6: #8fa3c4;
+  --w-series-1: #2d4a7c;
+  --w-series-2: #c08a3e;
+  --w-series-3: #2f7a5c;
+  --w-series-4: #b3402f;
+  --w-series-5: #62677a;
+  --w-series-6: #8fa3c4;
+
+  /* Depth: cards have none; menus, toasts and dialogs get one soft shadow. */
+  --w-shadow-pop: 0 8px 24px rgba(0, 0, 0, 0.12);
+}
+
+[data-theme="dark"] {
+  color-scheme: dark;
+
+  /* The navy band inverts: cream fill, navy text — same as the primary button. */
+  --w-ink: #f4f2ed;
+  --w-ink-mid: #e3dfd6;
+  --w-ink-deep: #ffffff;
+  --w-slate: #8c9bb7;      /* 5.7:1 on surface */
+  --w-brass: #c08a3e;      /* 5.3:1 on surface — unchanged */
+  --w-moss: #86b2a0;       /* 6.8:1 */
+  --w-rust: #d0897e;       /* 5.8:1 */
+
+  --w-bone: #0b1222;       /* navy two steps darker */
+  --w-paper: #14213d;      /* the navy itself */
+  --w-fill: #27334d;       /* one step lighter */
+  --w-line: #354058;
+  --w-line-strong: #565f73;
+  --w-mute: #9fa3aa;       /* 6.3:1 on surface, 5.0:1 on fill */
+  --w-mute-soft: #8a8f99;
+  --w-ondark-mute: #4b5878;/* muted text on the (now cream) band */
+  --w-section-label: #9fb0d4;
+
+  --w-nav: #0b1222;        /* merges with the page */
+  --w-nav-hover: #27334d;
+  --w-nav-text: #ffffff;
+  --w-nav-muted: #9fa3aa;
+  --w-nav-divider: #27334d;
+  --w-sidebar-divider: #27334d;
+
+  --w-good: #86b2a0;
+  --w-good-tint: #193143;
+  --w-good-line: #2c4a4d;
+  --w-good-text: #c1d7ce;  /* 8.9:1 on its tint */
+  --w-warning: #d3ad78;
+  --w-warning-tint: #33343d;
+  --w-warning-line: #4f4a47;
+  --w-warning-text: #ecdcc5;
+  --w-bad: #d0897e;
+  --w-bad-tint: #31273a;
+  --w-bad-line: #563a43;
+  --w-bad-text: #eacac5;
+  --w-info: #8c9bb7;
+  --w-info-tint: #1a2b4d;
+  --w-info-line: #2f4166;
+  --w-info-text: #c4ccda;
+  --w-neutral: #9fa3aa;
+  --w-neutral-tint: #27334d;
+  --w-neutral-line: #354058;
+  --w-neutral-text: #f4f2ed;
+
+  --w-series-1: #96a5be;
+  --w-series-2: #c08a3e;
+  --w-series-3: #86b2a0;
+  --w-series-4: #d0897e;
+  --w-series-5: #9fa3aa;
+  --w-series-6: #b7c3da;
+
+  --w-shadow-pop: 0 8px 24px rgba(0, 0, 0, 0.5);
+}
+
+@theme inline {
+  --font-sans: var(--font-hanken), "Hanken Grotesk", system-ui, sans-serif;
+  --font-serif: var(--font-sans);
+  --font-mono: var(--font-jetbrains), "JetBrains Mono", ui-monospace, monospace;
+
+  --color-ink: var(--w-ink);
+  --color-ink-mid: var(--w-ink-mid);
+  --color-ink-deep: var(--w-ink-deep);
+  --color-slate: var(--w-slate);
+  --color-brass: var(--w-brass);
+  --color-moss: var(--w-moss);
+  --color-rust: var(--w-rust);
+
+  --color-bone: var(--w-bone);
+  --color-paper: var(--w-paper);
+  --color-fill: var(--w-fill);
+  --color-line: var(--w-line);
+  --color-line-strong: var(--w-line-strong);
+  --color-mute: var(--w-mute);
+  --color-mute-soft: var(--w-mute-soft);
+  --color-ondark-mute: var(--w-ondark-mute);
+  --color-section-label: var(--w-section-label);
+  --color-sidebar-divider: var(--w-sidebar-divider);
+
+  --color-nav: var(--w-nav);
+  --color-nav-hover: var(--w-nav-hover);
+  --color-nav-text: var(--w-nav-text);
+  --color-nav-muted: var(--w-nav-muted);
+  --color-nav-divider: var(--w-nav-divider);
+
+  --color-good: var(--w-good);
+  --color-good-tint: var(--w-good-tint);
+  --color-good-line: var(--w-good-line);
+  --color-good-text: var(--w-good-text);
+  --color-warning: var(--w-warning);
+  --color-warning-tint: var(--w-warning-tint);
+  --color-warning-line: var(--w-warning-line);
+  --color-warning-text: var(--w-warning-text);
+  --color-bad: var(--w-bad);
+  --color-bad-tint: var(--w-bad-tint);
+  --color-bad-line: var(--w-bad-line);
+  --color-bad-text: var(--w-bad-text);
+  --color-info: var(--w-info);
+  --color-info-tint: var(--w-info-tint);
+  --color-info-line: var(--w-info-line);
+  --color-info-text: var(--w-info-text);
+  --color-neutral: var(--w-neutral);
+  --color-neutral-tint: var(--w-neutral-tint);
+  --color-neutral-line: var(--w-neutral-line);
+  --color-neutral-text: var(--w-neutral-text);
+
+  --color-series-1: var(--w-series-1);
+  --color-series-2: var(--w-series-2);
+  --color-series-3: var(--w-series-3);
+  --color-series-4: var(--w-series-4);
+  --color-series-5: var(--w-series-5);
+  --color-series-6: var(--w-series-6);
+
+  /* Shape: cards 8px, nested panels / buttons / inputs 6px, pills 999px.
+     Existing classes keep their names; the scale underneath changes. */
+  --radius-sm: 4px;
+  --radius-md: 6px;
+  --radius-lg: 6px;
+  --radius-xl: 8px;
+  --radius-2xl: 8px;
+
+  /* Depth: one soft shadow for anything that floats; cards get none. */
+  --shadow-sm: none;
+  --shadow: var(--w-shadow-pop);
+  --shadow-lg: var(--w-shadow-pop);
+  --shadow-xl: var(--w-shadow-pop);
 }
 
 body {
   font-family: var(--font-sans);
+  font-feature-settings: "ss01", "cv11";
+}
+
+/* Headings: Hanken Grotesk, tight. Weight stays bold (Doug's call) rather
+   than Signal's 600. */
+h1, h2, h3 {
+  letter-spacing: -0.01em;
 }
 
 /* Money and account codes must line up in columns or they are unreadable. */
@@ -85,16 +234,26 @@ body {
 }
 
 /* Every number someone will eventually defend to an accountant or a buyer's
-   attorney reads as record, not interface. See WALKUP_BRAND.md section 7. */
+   attorney reads as record, not interface: JetBrains Mono, tabular. */
 .figures {
-  font-family: var(--font-serif);
-  font-weight: 600;
+  font-family: var(--font-mono);
+  font-weight: 500;
   font-variant-numeric: tabular-nums;
+  letter-spacing: -0.02em;
+}
+
+/* Card titles as eyebrow labels. On the navy band the color is set inline. */
+.eyebrow {
+  font-size: 11px;
+  line-height: 1.2;
+  font-weight: 600;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
 }
 
 /* Focus is always visible. Never removed for aesthetics. */
 :focus-visible {
-  outline: 2px solid var(--color-slate);
+  outline: 2px solid var(--color-brass);
   outline-offset: 2px;
 }
 

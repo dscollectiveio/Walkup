@@ -39,7 +39,7 @@ export function TransactionsHelp() {
         title="How this works"
         className="inline-flex items-center gap-1.5 rounded-md px-2 py-1 text-[12px] text-ondark-mute transition-colors hover:bg-ink-mid hover:text-paper focus-visible:outline focus-visible:outline-2 focus-visible:outline-brass"
       >
-        <CircleHelp size={16} strokeWidth={1.75} aria-hidden="true" />
+        <CircleHelp size={16} strokeWidth={1.6} aria-hidden="true" />
         <span className="hidden sm:inline">How this works</span>
       </button>
 
@@ -65,7 +65,7 @@ export function TransactionsHelp() {
             aria-label="Close"
             className="rounded-md p-1 text-ondark-mute hover:bg-ink-mid hover:text-paper"
           >
-            <X size={16} strokeWidth={1.75} aria-hidden="true" />
+            <X size={16} strokeWidth={1.6} aria-hidden="true" />
           </button>
         </header>
 

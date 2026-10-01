@@ -68,14 +68,14 @@ export function Card({
     <section className="rounded-xl border border-line bg-paper">
       <header
         className={
-          navy ? "rounded-t-[11px] bg-ink px-5 py-4" : "border-b border-line px-5 py-4"
+          navy ? "rounded-t-[7px] bg-ink px-5 py-4" : "border-b border-line px-5 py-4"
         }
       >
         <div className="flex items-start justify-between gap-3">
           <div className="min-w-0">
-            <h2 className={`font-bold tracking-tight ${navy ? "text-paper" : "text-ink"}`}>{title}</h2>
+            <h2 className={`eyebrow ${navy ? "text-paper" : "text-mute"}`}>{title}</h2>
             {hint ? (
-              <p className={`mt-1 text-[13px] ${navy ? "text-ondark-mute" : "text-mute"}`}>{hint}</p>
+              <p className={`mt-1.5 text-[13px] ${navy ? "text-ondark-mute" : "text-mute"}`}>{hint}</p>
             ) : null}
           </div>
           {action ? <div className="shrink-0">{action}</div> : null}

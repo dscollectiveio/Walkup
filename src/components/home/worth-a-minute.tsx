@@ -46,7 +46,7 @@ export function WorthAMinute({ items }: { items: UrgentItem[] }) {
                 aria-hidden="true"
                 className={`flex h-8 w-8 shrink-0 items-center justify-center rounded-md border ${tile}`}
               >
-                <Icon size={15} strokeWidth={1.75} />
+                <Icon size={15} strokeWidth={1.6} />
               </span>
               <span className="min-w-0 flex-1">
                 <span className="block text-[13px] font-medium text-ink">{item.title}</span>

@@ -43,10 +43,10 @@ export function Standing({
     <section
       className={`flex flex-col rounded-xl border border-line bg-paper `}
     >
-      <header className="flex min-h-[4.75rem] flex-col justify-center rounded-t-[11px] bg-ink px-5 py-4">
+      <header className="flex min-h-[4.75rem] flex-col justify-center rounded-t-[7px] bg-ink px-5 py-4">
         <div className="flex items-center justify-between gap-3">
           <div>
-            <h2 className="font-bold tracking-tight text-paper">Where the association stands</h2>
+            <h2 className="eyebrow text-paper">Where the association stands</h2>
             <p className="mt-0.5 text-[12px] text-ondark-mute">Balance across all accounts</p>
           </div>
           <div className="figures text-[24px] leading-none text-paper">{formatMoney(totalCents)}</div>

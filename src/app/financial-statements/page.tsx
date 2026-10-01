@@ -63,7 +63,7 @@ function LineRow({
       <summary className="flex cursor-pointer list-none items-center gap-3 px-3 py-2.5 hover:bg-fill/40 [&::-webkit-details-marker]:hidden">
         <ChevronRight
           size={14}
-          strokeWidth={1.75}
+          strokeWidth={1.6}
           aria-hidden="true"
           className="shrink-0 text-mute-soft transition-transform group-open:rotate-90"
         />

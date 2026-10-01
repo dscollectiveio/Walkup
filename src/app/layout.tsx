@@ -1,10 +1,28 @@
 import type { Metadata } from "next";
+import { Hanken_Grotesk, JetBrains_Mono } from "next/font/google";
 import "./globals.css";
 import { createClient } from "@/lib/supabase/server";
 import { signOut } from "./login/actions";
 import Link from "next/link";
 import { Sidebar } from "@/components/sidebar/sidebar";
 import { cookies } from "next/headers";
+
+const hanken = Hanken_Grotesk({
+  subsets: ["latin"],
+  weight: ["400", "500", "600", "700"],
+  variable: "--font-hanken",
+  display: "swap",
+});
+const jetbrains = JetBrains_Mono({
+  subsets: ["latin"],
+  weight: ["500"],
+  variable: "--font-jetbrains",
+  display: "swap",
+});
+
+// Applies the saved theme (or the system preference when nothing is saved)
+// before first paint, so dark mode never flashes light. Mirrors ThemeToggle.
+const THEME_SCRIPT = `(function(){try{var t=localStorage.getItem("walkup.theme");if(t!=="dark"&&t!=="light"){t=window.matchMedia("(prefers-color-scheme: dark)").matches?"dark":"light"}document.documentElement.dataset.theme=t}catch(e){}})();`;
 
 export const metadata: Metadata = {
   title: "Walkup",
@@ -55,7 +73,15 @@ export default async function RootLayout({
   }
 
   return (
-    <html lang="en" data-sidebar={sidebarCollapsed ? "collapsed" : "expanded"}>
+    <html
+      lang="en"
+      data-sidebar={sidebarCollapsed ? "collapsed" : "expanded"}
+      className={`${hanken.variable} ${jetbrains.variable}`}
+      suppressHydrationWarning
+    >
+      <head>
+        <script dangerouslySetInnerHTML={{ __html: THEME_SCRIPT }} />
+      </head>
       <body className="min-h-screen bg-bone text-ink antialiased">
         {user ? (
           <Sidebar

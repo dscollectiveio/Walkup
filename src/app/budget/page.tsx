@@ -389,7 +389,7 @@ export default async function BudgetPage({ searchParams }: { searchParams: Promi
           <summary className={summaryShell}>
             <div className="flex items-baseline justify-between gap-3">
               <span className="flex min-w-0 items-center gap-2">
-                <ChevronRight size={14} strokeWidth={1.75} aria-hidden="true" className="shrink-0 text-mute-soft transition-transform group-open:rotate-90" />
+                <ChevronRight size={14} strokeWidth={1.6} aria-hidden="true" className="shrink-0 text-mute-soft transition-transform group-open:rotate-90" />
                 <span className="truncate text-[13px] font-medium text-ink">{r.name}</span>
                 <span className={`text-[11px] font-medium ${style.text}`}>
                   {r.status === "on_track" ? (r.spentCents === 0 ? "Nothing yet" : style.word) : `${r.pctOver}% over`}
@@ -497,7 +497,7 @@ export default async function BudgetPage({ searchParams }: { searchParams: Promi
                     <summary className={summaryShell}>
                       <div className="flex items-baseline justify-between gap-3">
                         <span className="flex min-w-0 items-center gap-2">
-                          <ChevronRight size={14} strokeWidth={1.75} aria-hidden="true" className="shrink-0 text-mute-soft transition-transform group-open:rotate-90" />
+                          <ChevronRight size={14} strokeWidth={1.6} aria-hidden="true" className="shrink-0 text-mute-soft transition-transform group-open:rotate-90" />
                           <span className="truncate text-[13px] font-medium text-ink">{a.name}</span>
                           <span className={`text-[11px] font-medium ${STATUS_STYLE.none.text}`}>{STATUS_STYLE.none.word}</span>
                         </span>
@@ -536,7 +536,7 @@ export default async function BudgetPage({ searchParams }: { searchParams: Promi
                     <summary className={summaryShell}>
                       <div className="flex items-baseline justify-between gap-3">
                         <span className="flex min-w-0 items-center gap-2">
-                          <ChevronRight size={14} strokeWidth={1.75} aria-hidden="true" className="shrink-0 text-mute-soft transition-transform group-open:rotate-90" />
+                          <ChevronRight size={14} strokeWidth={1.6} aria-hidden="true" className="shrink-0 text-mute-soft transition-transform group-open:rotate-90" />
                           <span className="truncate text-[13px] font-medium text-ink">Set aside for the reserve</span>
                           <span className={`text-[11px] font-medium ${STATUS_STYLE.saved.text}`}>
                             {reservePlanCents === null

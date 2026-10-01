@@ -371,8 +371,8 @@ export default async function BankFeedPage({
 
       {active.length > 0 ? (
         <section className="divide-y divide-line rounded-xl border border-line bg-paper">
-          <header className="rounded-t-[11px] bg-ink px-5 py-4">
-            <h2 className="font-bold tracking-tight text-paper">Bank accounts</h2>
+          <header className="rounded-t-[7px] bg-ink px-5 py-4">
+            <h2 className="eyebrow text-paper">Bank accounts</h2>
             <p className="mt-1 text-[13px] text-ondark-mute">
               Live balances from your connected banks. Transactions flow in from here.
             </p>

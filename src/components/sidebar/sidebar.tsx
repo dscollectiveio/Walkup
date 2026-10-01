@@ -5,6 +5,7 @@ import { usePathname } from "next/navigation";
 import { useState } from "react";
 import { LogOut, PanelLeftClose, PanelLeftOpen } from "lucide-react";
 import { Mark } from "@/components/mark";
+import { ThemeToggle } from "./theme-toggle";
 import { NAV_GROUPS, TRAILING_NAV, UNGROUPED_NAV, type NavItemConfig } from "./config";
 
 function isActive(pathname: string, href: string) {
@@ -34,14 +35,14 @@ function NavItemLink({
         collapsed ? "" : "min-[900px]:justify-start"
       } ${
         active
-          ? "border-brass bg-ink-mid text-paper"
-          : "border-transparent text-ondark-mute hover:bg-ink-mid hover:text-paper"
+          ? "border-brass bg-nav-hover text-nav-text"
+          : "border-transparent text-nav-muted hover:bg-nav-hover hover:text-nav-text"
       }`}
     >
       <span className="relative flex shrink-0 items-center justify-center">
         <Icon
           size={16}
-          strokeWidth={1.75}
+          strokeWidth={1.6}
           className={active ? "text-brass" : "text-current"}
           aria-hidden="true"
         />
@@ -93,7 +94,7 @@ export function Sidebar({
   return (
     <nav
       aria-label="Main"
-      className={`fixed inset-y-0 left-0 z-20 flex w-14 flex-col bg-ink transition-[width] duration-150 ease-out motion-reduce:transition-none ${
+      className={`fixed inset-y-0 left-0 z-20 flex w-14 flex-col bg-nav transition-[width] duration-150 ease-out motion-reduce:transition-none ${
         collapsed ? "" : "min-[900px]:w-[232px]"
       }`}
     >
@@ -104,11 +105,11 @@ export function Sidebar({
       >
         <Mark variant="dark" size={28} className="shrink-0" />
         <span className={`hidden min-w-0 flex-col leading-none ${collapsed ? "" : "min-[900px]:flex"}`}>
-          <span className="text-[14px] font-semibold tracking-[-0.014em] text-paper">
+          <span className="text-[14px] font-semibold tracking-[-0.014em] text-nav-text">
             Walkup
           </span>
           {associationName ? (
-            <span className="mt-1 truncate text-[11px] font-normal text-ondark-mute">
+            <span className="mt-1 truncate text-[11px] font-normal text-nav-muted">
               {associationName}
             </span>
           ) : null}
@@ -137,7 +138,7 @@ export function Sidebar({
             )}
             <div
               aria-hidden="true"
-              className={`mx-2 mb-2 border-t border-[var(--color-sidebar-divider)] ${collapsed ? "" : "min-[900px]:hidden"}`}
+              className={`mx-2 mb-2 border-t border-nav-divider ${collapsed ? "" : "min-[900px]:hidden"}`}
             />
             <div className="space-y-0.5">
               {group.items.map((item) => (
@@ -172,15 +173,15 @@ export function Sidebar({
         aria-label={collapsed ? "Expand sidebar" : "Collapse sidebar"}
         aria-expanded={!collapsed}
         title={collapsed ? "Expand sidebar" : "Collapse sidebar"}
-        className={`mx-2 mb-2 hidden items-center gap-3 rounded-md px-3 py-2 text-[12px] text-ondark-mute transition-colors hover:bg-ink-mid hover:text-paper min-[900px]:flex ${
+        className={`mx-2 mb-2 hidden items-center gap-3 rounded-md px-3 py-2 text-[12px] text-nav-muted transition-colors hover:bg-nav-hover hover:text-nav-text min-[900px]:flex ${
           collapsed ? "justify-center" : ""
         }`}
       >
         {collapsed ? (
-          <PanelLeftOpen size={16} strokeWidth={1.75} aria-hidden="true" />
+          <PanelLeftOpen size={16} strokeWidth={1.6} aria-hidden="true" />
         ) : (
           <>
-            <PanelLeftClose size={16} strokeWidth={1.75} aria-hidden="true" />
+            <PanelLeftClose size={16} strokeWidth={1.6} aria-hidden="true" />
             <span>Collapse</span>
           </>
         )}
@@ -188,30 +189,29 @@ export function Sidebar({
 
       <form
         action={signOutAction}
-        className={`flex items-center gap-2.5 border-t border-[var(--color-sidebar-divider)] px-3 py-3 ${
+        className={`flex items-center gap-2.5 border-t border-nav-divider px-3 py-3 ${
           collapsed ? "flex-col" : ""
         }`}
       >
         <span
           aria-hidden="true"
-          className="flex h-[22px] w-[22px] shrink-0 items-center justify-center rounded-full bg-slate text-[10px] font-medium text-paper"
+          className="flex h-[22px] w-[22px] shrink-0 items-center justify-center rounded-full bg-slate text-[10px] font-medium text-nav-text"
         >
           {initials}
         </span>
         <span
-          className={`hidden min-w-0 flex-1 truncate text-[12px] text-ondark-mute ${collapsed ? "" : "min-[900px]:inline"}`}
+          className={`hidden min-w-0 flex-1 truncate text-[12px] text-nav-muted ${collapsed ? "" : "min-[900px]:inline"}`}
         >
           {userEmail}
         </span>
+        <ThemeToggle className={collapsed ? "" : "ml-auto"} />
         <button
           type="submit"
           aria-label="Sign out"
           title="Sign out"
-          className={`flex h-7 w-7 shrink-0 items-center justify-center rounded-md text-ondark-mute transition-colors hover:bg-ink-mid hover:text-paper ${
-            collapsed ? "" : "ml-auto"
-          }`}
+          className="flex h-7 w-7 shrink-0 items-center justify-center rounded-md text-nav-muted transition-colors hover:bg-nav-hover hover:text-nav-text"
         >
-          <LogOut size={15} strokeWidth={1.75} aria-hidden="true" />
+          <LogOut size={15} strokeWidth={1.6} aria-hidden="true" />
         </button>
       </form>
     </nav>

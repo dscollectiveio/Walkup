@@ -45,7 +45,7 @@ function StepRow({ step, active }: { step: SetupStep; active: boolean }) {
             aria-label={`Open ${step.name}`}
             className="shrink-0 text-mute-soft hover:text-ink"
           >
-            <ChevronRight size={15} strokeWidth={1.75} aria-hidden="true" />
+            <ChevronRight size={15} strokeWidth={1.6} aria-hidden="true" />
           </Link>
         )}
       </div>
@@ -142,8 +142,8 @@ export function SetupGuidePanel({
   return (
     <>
     <section className="flex max-h-[34rem] flex-col rounded-xl border border-line bg-paper lg:max-h-none">
-      <header className="flex min-h-[4.75rem] flex-col justify-center rounded-t-[11px] bg-ink px-5 py-4 text-paper">
-        <h2 className="font-bold tracking-tight text-paper">Set up your building</h2>
+      <header className="flex min-h-[4.75rem] flex-col justify-center rounded-t-[7px] bg-ink px-5 py-4 text-paper">
+        <h2 className="eyebrow text-paper">Set up your building</h2>
         <p className="mt-0.5 text-[12px] text-ondark-mute">In order — each section builds on the last.</p>
       </header>
 
@@ -160,7 +160,7 @@ export function SetupGuidePanel({
               title="See every step in detail"
               className="flex h-7 w-7 items-center justify-center rounded-md text-mute hover:bg-fill hover:text-ink"
             >
-              <Maximize2 size={14} strokeWidth={1.75} aria-hidden="true" />
+              <Maximize2 size={14} strokeWidth={1.6} aria-hidden="true" />
             </button>
             <button
               type="button"
@@ -258,7 +258,7 @@ export function SetupGuidePanel({
               aria-label="Close"
               className="flex h-8 w-8 shrink-0 items-center justify-center rounded-md text-mute hover:bg-fill hover:text-ink"
             >
-              <X size={16} strokeWidth={1.75} aria-hidden="true" />
+              <X size={16} strokeWidth={1.6} aria-hidden="true" />
             </button>
           </div>
           <div className="mt-3 flex items-center gap-3">
