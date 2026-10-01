@@ -99,7 +99,7 @@ export function buildSetupGuide(input: SetupInputs): SetupSection[] {
 
   const invitesDone = input.inviteCount > 0;
 
-  // ---- Money In & Money Out ------------------------------------------------
+  // ---- Finances & Dues ------------------------------------------------
   const activeConnection = input.bankConnections.find((c) => c.status === "active");
   const bankDone = Boolean(activeConnection);
   const syncedConnection = input.bankConnections.find((c) => c.status === "active" && c.last_synced_at);
@@ -205,7 +205,7 @@ export function buildSetupGuide(input: SetupInputs): SetupSection[] {
     },
     {
       key: "money",
-      title: "Money In & Money Out",
+      title: "Finances & Dues",
       blurb: "The bank feed is the source of truth. Connect it, post what it reports, and the statements, budget and dues follow.",
       steps: [
         {

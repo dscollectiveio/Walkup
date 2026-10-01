@@ -35,7 +35,7 @@ export const UNGROUPED_NAV: NavItemConfig[] = [
 
 export const NAV_GROUPS: NavGroupConfig[] = [
   {
-    label: "Money In & Money Out",
+    label: "Finances & Dues",
     items: [
       { href: "/bank-feed", label: "Bank Feed & Transactions", icon: Landmark, badgeKey: "uncategorized" },
       { href: "/financial-statements", label: "Financial Statements", icon: FileBarChart },

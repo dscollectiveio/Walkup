@@ -27,7 +27,7 @@ describe("Sidebar collapse", () => {
     const html = render(false);
     expect(html).toContain("min-[900px]:w-[232px]");
     expect(html).toContain("min-[900px]:not-sr-only");
-    expect(html).toContain("Money In &amp; Money Out");
+    expect(html).toContain("Finances &amp; Dues");
     expect(html).toContain("Collapse sidebar");
   });
 
@@ -35,7 +35,7 @@ describe("Sidebar collapse", () => {
     const html = render(true);
     expect(html).not.toContain("min-[900px]:w-[232px]");
     expect(html).not.toContain("min-[900px]:not-sr-only");
-    expect(html).not.toContain("Money In &amp; Money Out");
+    expect(html).not.toContain("Finances &amp; Dues");
     expect(html).toContain("Expand sidebar");
   });
 
