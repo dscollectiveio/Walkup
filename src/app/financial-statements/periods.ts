@@ -1,6 +1,12 @@
 export type PeriodGrain = "monthly" | "quarterly" | "annual";
 export type ViewMode = "total" | "expenses";
 
+export interface FiscalYear {
+  label: string;
+  starts_on: string;
+  ends_on: string;
+}
+
 export interface PeriodBounds {
   start: string;
   end: string;
@@ -40,10 +46,7 @@ export function quarterBounds(offset: number, now = new Date()): PeriodBounds {
  * first) and this just indexes into them by offset, so annual periods are
  * always real fiscal years, never an assumed calendar year.
  */
-export function fiscalYearBounds(
-  fiscalYears: { label: string; starts_on: string; ends_on: string }[],
-  offset: number,
-): PeriodBounds | null {
+export function fiscalYearBounds(fiscalYears: FiscalYear[], offset: number): PeriodBounds | null {
   const fy = fiscalYears[offset];
   if (!fy) return null;
   return { start: fy.starts_on, end: fy.ends_on, label: fy.label };
@@ -61,11 +64,13 @@ export function statementHref(
   view: ViewMode,
   period: PeriodGrain,
   offset: number,
+  extra: Record<string, string | undefined> = {},
 ): string {
   const params = new URLSearchParams();
   if (view !== "total") params.set("view", view);
   if (period !== "monthly") params.set("period", period);
   if (offset !== 0) params.set("offset", String(offset));
+  for (const [k, v] of Object.entries(extra)) if (v) params.set(k, v);
   const qs = params.toString();
   return `${base}${qs ? `?${qs}` : ""}`;
 }
