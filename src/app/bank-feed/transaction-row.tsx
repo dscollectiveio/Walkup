@@ -5,7 +5,9 @@ import {
   categorizeBankTransaction,
   postBankTransaction,
   unpostBankTransaction,
+  type CategorizationItem,
   type PostingKind,
+  type PriorState,
 } from "./actions";
 import { money } from "@/components/ui";
 
@@ -45,6 +47,44 @@ const KIND_LABEL: Record<PostingKind, string> = {
   transfer: "Transfer",
   excluded: "Not for the books",
 };
+
+/** The row as it stands now, so a categorization can be undone. */
+export function priorOf(t: TransactionRecord): PriorState {
+  return {
+    id: t.id,
+    posting_kind: t.posting_kind,
+    account_id: t.account_id,
+    matched_unit_id: t.matched_unit_id,
+    vendor_id: t.vendor_id,
+    excluded_at: t.excluded_at,
+  };
+}
+
+/** Plain-language name for where a categorization sends a transaction ("Utilities", "Unit 2B", …). */
+export function labelForCategorization(
+  item: Pick<CategorizationItem, "kind" | "accountId" | "unitId">,
+  pickers: Pickers,
+): string {
+  const find = (list: Option[], id: string | null) => list.find((o) => o.id === id)?.label ?? null;
+  switch (item.kind) {
+    case "expense":
+      return find(pickers.expenseAccounts, item.accountId) ?? KIND_LABEL.expense;
+    case "income":
+      return find(pickers.incomeAccounts, item.accountId) ?? KIND_LABEL.income;
+    case "transfer":
+      return find(pickers.cashAccounts, item.accountId) ?? KIND_LABEL.transfer;
+    case "dues":
+      return find(pickers.units, item.unitId) ?? KIND_LABEL.dues;
+    default:
+      return KIND_LABEL.excluded;
+  }
+}
+
+export interface CategorizedEvent {
+  item: CategorizationItem;
+  postNow: boolean;
+  prior: PriorState;
+}
 
 function describeTarget(t: TransactionRecord, pickers: Pickers): string | null {
   if (!t.posting_kind) return null;
@@ -93,10 +133,12 @@ function CategorizeForm({
   t,
   pickers,
   onDone,
+  onCategorized,
 }: {
   t: TransactionRecord;
   pickers: Pickers;
   onDone: () => void;
+  onCategorized?: (event: CategorizedEvent) => void;
 }) {
   const moneyIn = Number(t.amount) > 0;
   const kinds: PostingKind[] = moneyIn
@@ -124,6 +166,7 @@ function CategorizeForm({
   const submit = (postNow: boolean) =>
     start(async () => {
       setError(null);
+      const prior = priorOf(t);
       const result = await categorizeBankTransaction({
         transactionId: t.id,
         kind,
@@ -135,7 +178,20 @@ function CategorizeForm({
         postNow,
       });
       if (result.error) setError(result.error);
-      else onDone();
+      else {
+        onCategorized?.({
+          item: {
+            id: t.id,
+            kind,
+            accountId: accountId || null,
+            unitId: unitId || null,
+            vendorId: vendorId || null,
+          },
+          postNow,
+          prior,
+        });
+        onDone();
+      }
     });
 
   const selectClass =
@@ -258,10 +314,17 @@ export function TransactionRow({
   pickers,
   canEdit,
   leadingCell,
+  suggestion,
+  onAcceptSuggestion,
+  onCategorized,
 }: {
   transaction: TransactionRecord;
   pickers: Pickers;
   canEdit: boolean;
+  /** A server-computed guess that can be accepted in one click (needs its account already chosen). */
+  suggestion?: { label: string } | null;
+  onAcceptSuggestion?: (postNow: boolean) => Promise<{ error?: string }>;
+  onCategorized?: (event: CategorizedEvent) => void;
   /** Extra <td> rendered before the date column — used by TransactionsTable for its bulk-select checkbox. */
   leadingCell?: React.ReactNode;
 }) {
@@ -298,6 +361,31 @@ export function TransactionRow({
           ) : null}
         </div>
 
+        {canEdit && !editing && suggestion && onAcceptSuggestion && !t.posting_kind ? (
+          <div className="mt-1.5 flex flex-wrap items-center gap-2">
+            <button
+              type="button"
+              disabled={busy}
+              onClick={() => run(() => onAcceptSuggestion(false))}
+              aria-label={`Categorize ${t.description} as ${suggestion.label}`}
+              title="Accept this suggestion"
+              className="inline-flex items-center gap-1 rounded-full border border-info-text/30 bg-info-tint px-2.5 py-0.5 text-[11px] font-medium text-info-text hover:brightness-95 disabled:opacity-50"
+            >
+              <span aria-hidden="true">✓</span> {busy ? "Saving…" : suggestion.label}
+            </button>
+            {!t.pending ? (
+              <button
+                type="button"
+                disabled={busy}
+                onClick={() => run(() => onAcceptSuggestion(true))}
+                className="text-[11px] text-mute underline-offset-2 hover:text-ink hover:underline disabled:opacity-50"
+              >
+                Accept &amp; post
+              </button>
+            ) : null}
+          </div>
+        ) : null}
+
         {canEdit && !editing ? (
           <div className="mt-1 flex flex-wrap gap-3 text-[11px]">
             {!t.journal_entry_id && !t.removed_at ? (
@@ -332,7 +420,9 @@ export function TransactionRow({
           </div>
         ) : null}
 
-        {editing ? <CategorizeForm t={t} pickers={pickers} onDone={() => setEditing(false)} /> : null}
+        {editing ? (
+          <CategorizeForm t={t} pickers={pickers} onDone={() => setEditing(false)} onCategorized={onCategorized} />
+        ) : null}
         {error ? <p className="mt-1 text-[11px] text-bad-text">{error}</p> : null}
       </td>
       <td className="figures py-2 text-right align-top text-ink">

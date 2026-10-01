@@ -366,6 +366,140 @@ export async function categorizeBankTransactionsBulk(input: {
   return { ok: true, posted, errors };
 }
 
+export interface CategorizationItem {
+  id: string;
+  kind: PostingKind;
+  accountId: string | null;
+  unitId: string | null;
+  vendorId: string | null;
+}
+
+/**
+ * Categorizes many rows where each can have its own target — what "Accept all
+ * suggestions", one-click suggestion chips, and "apply to similar" need
+ * (categorizeBankTransactionsBulk shares one target across every row). Same
+ * board_admin UPDATE and the same post_bank_transaction() per row when
+ * postNow is set; a row that can't be applied is reported, not fatal.
+ */
+export async function applyCategorizations(input: {
+  items: CategorizationItem[];
+  postNow: boolean;
+}): Promise<{ ok?: true; applied?: string[]; posted?: number; errors?: string[]; error?: string }> {
+  if (input.items.length === 0) return { error: "Nothing to apply." };
+  const supabase = await createClient();
+
+  const applied: string[] = [];
+  const errors: string[] = [];
+  let posted = 0;
+
+  for (const item of input.items) {
+    if (!POSTING_KINDS.includes(item.kind)) {
+      errors.push("Unknown category.");
+      continue;
+    }
+    if (["expense", "income", "transfer"].includes(item.kind) && !item.accountId) {
+      errors.push("A row is missing its account.");
+      continue;
+    }
+    if (item.kind === "dues" && !item.unitId) {
+      errors.push("A dues row is missing its unit.");
+      continue;
+    }
+    const { data, error } = await supabase
+      .from("bank_transactions")
+      .update({
+        posting_kind: item.kind,
+        account_id: ["expense", "income", "transfer"].includes(item.kind) ? item.accountId : null,
+        matched_unit_id: item.kind === "dues" ? item.unitId : null,
+        vendor_id: item.kind === "expense" ? item.vendorId : null,
+      })
+      .eq("id", item.id)
+      .is("journal_entry_id", null)
+      .select("id, description");
+    if (error) {
+      errors.push(error.message);
+      continue;
+    }
+    const row = data?.[0];
+    if (!row) {
+      errors.push("A transaction couldn't be changed — it may already be posted, or you may not be a board admin.");
+      continue;
+    }
+    applied.push(row.id);
+    if (input.postNow) {
+      const { error: postError } = await supabase.rpc("post_bank_transaction", { p_transaction_id: row.id });
+      if (postError) errors.push(`${row.description}: ${postError.message}`);
+      else posted += 1;
+    }
+  }
+
+  revalidateLedgerPages();
+  if (applied.length === 0) return { error: errors[0] ?? "Nothing could be applied." };
+  return { ok: true, applied, posted, errors };
+}
+
+/** What a row looked like before a categorization, so it can be put back. */
+export interface PriorState {
+  id: string;
+  posting_kind: PostingKind | null;
+  account_id: string | null;
+  matched_unit_id: string | null;
+  vendor_id: string | null;
+  excluded_at: string | null;
+}
+
+/**
+ * Undo for the actions above: takes back any posting made since (via
+ * unpost_bank_transaction, which writes a reversing entry — nothing is
+ * deleted from the ledger) and restores the earlier categorization.
+ */
+export async function revertCategorizations(
+  prior: PriorState[],
+): Promise<{ ok?: true; reverted?: number; error?: string }> {
+  if (prior.length === 0) return { error: "Nothing to undo." };
+  const supabase = await createClient();
+
+  const { data: current, error: readError } = await supabase
+    .from("bank_transactions")
+    .select("id, journal_entry_id")
+    .in(
+      "id",
+      prior.map((p) => p.id),
+    );
+  if (readError) return { error: readError.message };
+  const postedIds = new Set((current ?? []).filter((r) => r.journal_entry_id).map((r) => r.id));
+
+  let reverted = 0;
+  const errors: string[] = [];
+  for (const p of prior) {
+    if (postedIds.has(p.id)) {
+      const { error } = await supabase.rpc("unpost_bank_transaction", { p_transaction_id: p.id });
+      if (error) {
+        errors.push(error.message);
+        continue;
+      }
+    }
+    const { data, error } = await supabase
+      .from("bank_transactions")
+      .update({
+        posting_kind: p.posting_kind,
+        account_id: p.account_id,
+        matched_unit_id: p.matched_unit_id,
+        vendor_id: p.vendor_id,
+        excluded_at: p.excluded_at,
+      })
+      .eq("id", p.id)
+      .is("journal_entry_id", null)
+      .select("id");
+    if (error) errors.push(error.message);
+    else if (data?.[0]) reverted += 1;
+  }
+
+  revalidateLedgerPages();
+  if (reverted === 0) return { error: errors[0] ?? "Nothing could be undone." };
+  return { ok: true, reverted };
+}
+
 export async function postBankTransaction(
   transactionId: string,
 ): Promise<{ ok?: true; error?: string }> {
