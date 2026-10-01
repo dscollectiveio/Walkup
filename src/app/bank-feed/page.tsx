@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { createClient } from "@/lib/supabase/server";
-import { Card, Empty, Restricted, Stat, money } from "@/components/ui";
+import { Card, Empty, Restricted, money } from "@/components/ui";
+import { syncedAgo } from "@/lib/dates";
 import { plaidClient, describePlaidError } from "@/lib/plaid";
 import { ConnectBankButton } from "./connect-bank-button";
 import { SyncButton } from "./sync-button";
@@ -139,8 +140,9 @@ export default async function BankFeedPage({
   const { q, range: rangeParam, status: statusParam, sort: sortParam } = await searchParams;
   const range: Range =
     rangeParam === "this_month" || rangeParam === "last_30" ? rangeParam : "all";
-  const status: Status =
-    statusParam && statusParam in STATUS_LABEL ? (statusParam as Status) : "all";
+  // No status in the URL means "show me what needs doing" when there is any.
+  const explicitStatus: Status | null =
+    statusParam && statusParam in STATUS_LABEL ? (statusParam as Status) : null;
   const SORTS: Sort[] = ["date_desc", "date_asc", "name_asc", "name_desc", "amount_desc", "amount_asc"];
   const sort: Sort = sortParam && SORTS.includes(sortParam as Sort) ? (sortParam as Sort) : "date_desc";
 
@@ -229,6 +231,8 @@ export default async function BankFeedPage({
     counts.all += 1;
     counts[statusOf(t)] += 1;
   }
+  const status: Status = explicitStatus ?? (canEdit && counts.needs > 0 ? "needs" : "all");
+  const filtersActive = Boolean(q) || range !== "all";
   const transactions = (
     status === "all"
       ? allTransactions.filter((t) => !t.removed_at || t.journal_entry_id)
@@ -245,6 +249,13 @@ export default async function BankFeedPage({
     (t) => statusOf(t) === "ready" && !t.pending,
   ).length;
   const retractedPosted = allTransactions.filter((t) => t.removed_at && t.journal_entry_id).length;
+  const duesUnits = new Set(
+    allTransactions
+      .filter((t) => t.posting_kind === "dues" && t.journal_entry_id && t.matched_unit_id)
+      .map((t) => t.matched_unit_id),
+  ).size;
+  // The finish line: a board admin opened the tab with nothing left to categorize.
+  const caughtUp = canEdit && explicitStatus === null && counts.needs === 0 && counts.all > 0;
 
   const moneyIn = allTransactions
     .filter((t) => !t.removed_at && Number(t.amount) > 0)
@@ -300,67 +311,63 @@ export default async function BankFeedPage({
         </Card>
       ) : null}
 
-      {active.map((c) => {
-        const balance = balanceByConnection.get(c.id);
-        return (
-          <Card
-            navy
-            key={c.id}
-            title={c.institution_name}
-            hint={
-              c.last_synced_at
-                ? `Last synced ${new Date(c.last_synced_at).toLocaleString()}`
-                : "Not yet synced"
-            }
-          >
-            {canEdit ? (
-              <LedgerAccountSelect
-                connectionId={c.id}
-                cashAccounts={pickers.cashAccounts}
-                currentId={c.cash_account_id}
-              />
-            ) : null}
-            {balance?.error ? (
-              <p className="mb-3 text-[12px] text-mute-soft">{balance.error}</p>
-            ) : balance && balance.accounts.length > 0 ? (
-              <ul className="mb-3 space-y-1">
-                {balance.accounts.map((a, i) => (
-                  <li key={i} className="flex items-baseline justify-between gap-3 text-[13px]">
-                    <span className="text-ink">
-                      {a.name}
-                      {a.mask ? <span className="ml-1 text-[11px] text-mute-soft">···{a.mask}</span> : null}
-                    </span>
-                    <span className="figures text-ink">
-                      {a.currentCents !== null ? money(a.currentCents / 100) : "—"}
-                    </span>
-                  </li>
-                ))}
-              </ul>
-            ) : null}
-            <div className="flex flex-wrap items-center gap-2">
-              <SyncButton connectionId={c.id} />
-              <DisconnectButton connectionId={c.id} />
-            </div>
-          </Card>
-        );
-      })}
+      {active.length > 0 ? (
+        <section className="divide-y divide-line rounded-xl border border-line bg-paper">
+          {active.map((c) => {
+            const balance = balanceByConnection.get(c.id);
+            return (
+              <div key={c.id} className="px-5 py-3">
+                <div className="flex flex-wrap items-center gap-x-4 gap-y-2">
+                  <div className="min-w-0 flex-1">
+                    <div className="flex flex-wrap items-baseline gap-x-3 gap-y-0.5 text-[13px]">
+                      <span className="font-medium text-ink">{c.institution_name}</span>
+                      {balance?.accounts.map((a, i) => (
+                        <span key={i} className="text-mute">
+                          {a.name}
+                          {a.mask ? <span className="text-[11px] text-mute-soft"> ···{a.mask}</span> : null}{" "}
+                          <span className="figures text-ink">
+                            {a.currentCents !== null ? money(a.currentCents / 100) : "—"}
+                          </span>
+                        </span>
+                      ))}
+                      {balance?.error ? <span className="text-[11px] text-mute-soft">{balance.error}</span> : null}
+                    </div>
+                    <div className="text-[11px] text-mute-soft">{syncedAgo(c.last_synced_at)}</div>
+                  </div>
+                  <SyncButton connectionId={c.id} />
+                </div>
+                {canEdit && !c.cash_account_id ? (
+                  <div className="mt-2">
+                    <LedgerAccountSelect
+                      connectionId={c.id}
+                      cashAccounts={pickers.cashAccounts}
+                      currentId={c.cash_account_id}
+                    />
+                  </div>
+                ) : null}
+                {canEdit && c.cash_account_id ? (
+                  <details className="mt-1">
+                    <summary className="cursor-pointer select-none text-[11px] text-mute-soft hover:text-ink">
+                      Manage
+                    </summary>
+                    <div className="mt-2 flex flex-wrap items-center gap-3">
+                      <LedgerAccountSelect
+                        connectionId={c.id}
+                        cashAccounts={pickers.cashAccounts}
+                        currentId={c.cash_account_id}
+                      />
+                      <DisconnectButton connectionId={c.id} />
+                    </div>
+                  </details>
+                ) : null}
+              </div>
+            );
+          })}
+        </section>
+      ) : null}
 
       {allTransactions.length > 0 || active.length > 0 ? (
         <>
-          <div className="grid gap-4 sm:grid-cols-4">
-            {anyBalance ? (
-              <Stat label="Bank balance" value={money(totalBalanceCents / 100)} note="Live from Plaid, just now" />
-            ) : null}
-            <Stat
-              label="Needs category"
-              value={String(counts.needs)}
-              tone={counts.needs > 0 ? "bad" : "good"}
-              note="Not in the books yet"
-            />
-            <Stat label="Money in" value={money(moneyIn)} note="In the filtered range" />
-            <Stat label="Money out" value={money(moneyOut)} note="In the filtered range" />
-          </div>
-
           {retractedPosted > 0 ? (
             <p className="border-l-[3px] border-bad bg-bad-tint px-3 py-2 text-[13px] text-bad-text">
               The bank retracted {retractedPosted} transaction{retractedPosted === 1 ? "" : "s"} that{" "}
@@ -370,8 +377,38 @@ export default async function BankFeedPage({
             </p>
           ) : null}
 
-          <Card navy title="Transactions" hint="Categorize, then post. Posted rows are in the books.">
-            <div className="mb-4 flex flex-wrap items-center justify-between gap-3">
+          <Card
+            navy
+            title="Transactions"
+            hint={
+              canEdit && counts.needs > 0
+                ? "Pick a category for each one — suggestions are one click. Post when you're done."
+                : "Categorize, then post. Posted rows are in the books."
+            }
+          >
+            {caughtUp ? (
+              <div className="mb-4 rounded-lg border border-good-line bg-good-tint px-4 py-3">
+                <p className="text-[13px] font-medium text-good-text">Nothing waiting — you&rsquo;re caught up.</p>
+                <p className="mt-1 text-[12px] text-good-text">
+                  {counts.posted} in the books · {money(moneyIn)} in · {money(moneyOut)} out
+                  {duesUnits > 0 ? ` · dues from ${duesUnits} unit${duesUnits === 1 ? "" : "s"}` : ""}
+                </p>
+                {settledReady > 0 ? (
+                  <p className="mt-1 text-[12px] text-good-text">
+                    {settledReady} categorized and ready — post {settledReady === 1 ? "it" : "them"} to finish.
+                  </p>
+                ) : (
+                  <Link
+                    href="/financial-statements"
+                    className="mt-1 inline-block text-[12px] font-medium text-good-text underline-offset-2 hover:underline"
+                  >
+                    See the financial statements →
+                  </Link>
+                )}
+              </div>
+            ) : null}
+
+            <div className="mb-3 flex flex-wrap items-center justify-between gap-3">
               <div className="flex flex-wrap gap-1.5">
                 {(Object.keys(STATUS_LABEL) as Status[]).map((s) => (
                   <Link
@@ -388,53 +425,82 @@ export default async function BankFeedPage({
                   </Link>
                 ))}
               </div>
-              {canEdit ? <PostAllButton readyCount={settledReady} /> : null}
+              <div className="flex items-center gap-4">
+                {canEdit && counts.needs > 0 ? (
+                  <div className="figures text-[22px] leading-none text-ink">
+                    {counts.needs} <span className="text-[12px] font-normal text-mute">to go</span>
+                  </div>
+                ) : null}
+                {canEdit ? <PostAllButton readyCount={settledReady} /> : null}
+              </div>
             </div>
 
-            <form className="mb-4 flex flex-wrap items-end gap-2" method="get">
-              {status !== "all" ? <input type="hidden" name="status" value={status} /> : null}
-              {sort !== "date_desc" ? <input type="hidden" name="sort" value={sort} /> : null}
-              <div className="min-w-[10rem] flex-1">
-                <label htmlFor="q" className="block text-[12px] font-medium text-ink">
-                  Search
-                </label>
-                <input
-                  id="q"
-                  name="q"
-                  type="text"
-                  defaultValue={q ?? ""}
-                  placeholder="Description contains…"
-                  className="mt-1 w-full rounded-lg border border-line-strong bg-paper px-3 py-2 text-[13px] text-ink"
-                />
-              </div>
-              <div>
-                <label htmlFor="range" className="block text-[12px] font-medium text-ink">
-                  Range
-                </label>
-                <select
-                  id="range"
-                  name="range"
-                  defaultValue={range}
-                  className="mt-1 rounded-lg border border-line-strong bg-paper px-3 py-2 text-[13px] text-ink"
+            <div className="mb-3 flex flex-wrap items-center justify-between gap-x-4 gap-y-1 text-[12px] text-mute">
+              <span>
+                {anyBalance ? (
+                  <>
+                    Bank balance <span className="figures text-ink">{money(totalBalanceCents / 100)}</span> ·{" "}
+                  </>
+                ) : null}
+                In <span className="figures text-good-text">{money(moneyIn)}</span> · Out{" "}
+                <span className="figures text-ink">{money(moneyOut)}</span>
+                {range === "all" ? "" : " in this range"}
+              </span>
+            </div>
+
+            <details className="mb-4" open={filtersActive}>
+              <summary className="cursor-pointer select-none text-[12px] text-mute hover:text-ink">
+                Filter &amp; search{filtersActive ? " · on" : ""}
+              </summary>
+              <form className="mt-3 flex flex-wrap items-end gap-2" method="get">
+                {status !== "all" ? <input type="hidden" name="status" value={status} /> : null}
+                {sort !== "date_desc" ? <input type="hidden" name="sort" value={sort} /> : null}
+                <div className="min-w-[10rem] flex-1">
+                  <label htmlFor="q" className="block text-[12px] font-medium text-ink">
+                    Search
+                  </label>
+                  <input
+                    id="q"
+                    name="q"
+                    type="text"
+                    defaultValue={q ?? ""}
+                    placeholder="Description contains…"
+                    className="mt-1 w-full rounded-lg border border-line-strong bg-paper px-3 py-2 text-[13px] text-ink"
+                  />
+                </div>
+                <div>
+                  <label htmlFor="range" className="block text-[12px] font-medium text-ink">
+                    Range
+                  </label>
+                  <select
+                    id="range"
+                    name="range"
+                    defaultValue={range}
+                    className="mt-1 rounded-lg border border-line-strong bg-paper px-3 py-2 text-[13px] text-ink"
+                  >
+                    <option value="all">All synced</option>
+                    <option value="this_month">This month</option>
+                    <option value="last_30">Last 30 days</option>
+                  </select>
+                </div>
+                <button
+                  type="submit"
+                  className="rounded-md border border-line-strong px-4 py-2 text-[13px] text-ink hover:bg-fill"
                 >
-                  <option value="all">All synced</option>
-                  <option value="this_month">This month</option>
-                  <option value="last_30">Last 30 days</option>
-                </select>
-              </div>
-              <button
-                type="submit"
-                className="rounded-md border border-line-strong px-4 py-2 text-[13px] text-ink hover:bg-fill"
-              >
-                Filter
-              </button>
-            </form>
+                  Filter
+                </button>
+              </form>
+            </details>
 
             {transactions.length === 0 ? (
               <Empty>
-                {q || range !== "all" || status !== "all"
+                {filtersActive
                   ? "No transactions match this filter."
-                  : "No transactions synced yet. Click “Sync now” above."}
+                  : status === "needs"
+                    ? "Nothing needs a category."
+                    : status !== "all"
+                      ? `Nothing ${STATUS_LABEL[status].toLowerCase()} yet.`
+                      : "No transactions synced yet. Click “Sync now” above."}
               </Empty>
             ) : (
               <TransactionsTable

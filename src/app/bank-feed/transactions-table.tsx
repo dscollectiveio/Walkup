@@ -189,7 +189,7 @@ function BulkForm({
           Save all for later
         </button>
         <button type="button" onClick={onCancel} className="text-[11px] text-mute underline-offset-2 hover:underline">
-          Cancel
+          Clear
         </button>
         {error ? <span className="w-full text-[11px] text-bad-text">{error}</span> : null}
       </div>
@@ -254,18 +254,11 @@ export function TransactionsTable({
   );
   const [pending, start] = useTransition();
   const [bulkError, setBulkError] = useState<string | null>(null);
+  const [groupError, setGroupError] = useState<string | null>(null);
 
   const [toast, setToast] = useState<{ message: string; prior: PriorState[] } | null>(null);
   const [undoing, startUndo] = useTransition();
   const [undoError, setUndoError] = useState<string | null>(null);
-  const [similar, setSimilar] = useState<{
-    description: string;
-    label: string;
-    item: Omit<CategorizationItem, "id">;
-    ids: string[];
-  } | null>(null);
-  const [acceptAllOpen, setAcceptAllOpen] = useState(false);
-  const [groupError, setGroupError] = useState<string | null>(null);
 
   useEffect(() => {
     if (!toast) return;
@@ -289,56 +282,54 @@ export function TransactionsTable({
     startUndo(async () => {
       const result = await revertCategorizations(prior);
       if (result.error) setUndoError(result.error);
-      else {
-        setToast(null);
-        setSimilar(null);
-      }
+      else setToast(null);
     });
   }
 
-  /** After one row is categorized, offer the same for other un-categorized rows from the same payee. */
-  function offerSimilar(source: TransactionRecord, item: Omit<CategorizationItem, "id">, label: string) {
-    const key = normalizeDescription(source.description);
-    if (!isMatchableDescription(key)) {
-      setSimilar(null);
-      return;
+  // Same payee, same direction, still un-categorized: "COMED 8841" and
+  // "COMED 9120" are one decision, so each row knows its siblings.
+  const similarByRow = useMemo(() => {
+    const groups = new Map<string, TransactionRecord[]>();
+    for (const t of transactions) {
+      if (t.posting_kind || !selectable(t)) continue;
+      const key = normalizeDescription(t.description);
+      if (!isMatchableDescription(key)) continue;
+      const k = `${Math.sign(Number(t.amount))}:${key}`;
+      const g = groups.get(k) ?? [];
+      g.push(t);
+      groups.set(k, g);
     }
-    const direction = Math.sign(Number(source.amount));
-    const matches = transactions.filter(
-      (o) =>
-        o.id !== source.id &&
-        !o.posting_kind &&
-        selectable(o) &&
-        Math.sign(Number(o.amount)) === direction &&
-        normalizeDescription(o.description) === key,
-    );
-    setSimilar(
-      matches.length > 0
-        ? { description: source.description.trim(), label, item, ids: matches.map((m) => m.id) }
-        : null,
-    );
-  }
+    const byRow = new Map<string, TransactionRecord[]>();
+    for (const g of groups.values()) {
+      if (g.length < 2) continue;
+      for (const t of g) byRow.set(t.id, g.filter((o) => o.id !== t.id));
+    }
+    return byRow;
+  }, [transactions]);
 
   async function acceptSuggestion(t: SuggestedTransaction, postNow: boolean): Promise<{ error?: string }> {
     const s = t.suggestion;
     if (!s || (!s.accountId && s.kind !== "excluded")) return { error: "This suggestion needs a choice first." };
     const item = { kind: s.kind, accountId: s.accountId, unitId: null, vendorId: null };
-    const prior = [priorOf(t)];
-    const result = await applyCategorizations({ items: [{ id: t.id, ...item }], postNow });
+    const rows = [t, ...(similarByRow.get(t.id) ?? [])];
+    const prior = rows.map(priorOf);
+    const result = await applyCategorizations({ items: rows.map((r) => ({ id: r.id, ...item })), postNow });
     if (result.error) return { error: result.error };
-    if (result.errors && result.errors.length > 0) return { error: result.errors[0] };
-    announce(`Categorized as ${s.label}${postNow ? " and posted" : ""}.`, prior);
-    offerSimilar(t, item, s.label);
+    if (result.errors && result.errors.length > 0 && (result.applied?.length ?? 0) === 0) {
+      return { error: result.errors[0] };
+    }
+    const n = result.applied?.length ?? 0;
+    announce(
+      `${n === 1 ? "Filed" : `${n} filed`} as ${s.label}${postNow ? " and posted" : ""}.`,
+      prior,
+    );
     return {};
   }
 
   function handleCategorized(e: CategorizedEvent) {
-    const source = transactions.find((t) => t.id === e.item.id);
-    const { id: _id, ...item } = e.item;
-    void _id;
     const label = labelForCategorization(e.item, pickers);
-    announce(`Saved as ${label}${e.postNow ? " and posted" : ""}.`, [e.prior]);
-    if (source) offerSimilar(source, item, label);
+    const n = e.ids.length;
+    announce(`${n === 1 ? "Saved" : `${n} saved`} as ${label}${e.postNow ? " and posted" : ""}.`, e.prior);
   }
 
   function handleBulkApplied(e: BulkApplied) {
@@ -351,45 +342,18 @@ export function TransactionsTable({
     setPrefill(null);
   }
 
-  const suggestionGroups = useMemo(() => {
-    const groups = new Map<string, { label: string; kind: PostingKind; accountId: string | null; ids: string[] }>();
-    for (const t of transactions) {
-      if (t.posting_kind || !selectable(t) || !t.suggestion) continue;
-      const key = `${t.suggestion.kind}:${t.suggestion.accountId ?? ""}`;
-      const g = groups.get(key) ?? {
-        label: t.suggestion.label,
-        kind: t.suggestion.kind,
-        accountId: t.suggestion.accountId,
-        ids: [],
-      };
-      g.ids.push(t.id);
-      groups.set(key, g);
-    }
-    return [...groups.values()].filter((g) => g.ids.length >= 2).sort((a, b) => b.ids.length - a.ids.length);
-  }, [transactions]);
-
-  // Everything with a ready-to-accept suggestion, grouped by where it would go.
+  // Everything with a ready-to-accept suggestion.
   const acceptable = useMemo(() => {
-    const byLabel = new Map<string, { label: string; items: CategorizationItem[] }>();
+    const items: CategorizationItem[] = [];
     for (const t of transactions) {
-      if (t.posting_kind || !selectable(t) || !t.suggestion) continue;
-      if (!oneClick(t)) continue;
-      const g = byLabel.get(t.suggestion.label) ?? { label: t.suggestion.label, items: [] };
-      g.items.push({
-        id: t.id,
-        kind: t.suggestion.kind,
-        accountId: t.suggestion.accountId,
-        unitId: null,
-        vendorId: null,
-      });
-      byLabel.set(t.suggestion.label, g);
+      if (t.posting_kind || !selectable(t) || !t.suggestion || !oneClick(t)) continue;
+      items.push({ id: t.id, kind: t.suggestion.kind, accountId: t.suggestion.accountId, unitId: null, vendorId: null });
     }
-    const groups = [...byLabel.values()].sort((a, b) => b.items.length - a.items.length);
-    return { groups, total: groups.reduce((n, g) => n + g.items.length, 0) };
+    return items;
   }, [transactions]);
 
   function acceptAll() {
-    const items = acceptable.groups.flatMap((g) => g.items);
+    const items = acceptable;
     start(async () => {
       setGroupError(null);
       const prior = priorFor(items.map((i) => i.id));
@@ -398,7 +362,6 @@ export function TransactionsTable({
         setGroupError(result.error);
         return;
       }
-      setAcceptAllOpen(false);
       const n = result.applied?.length ?? 0;
       announce(
         `${n} suggestion${n === 1 ? "" : "s"} accepted — saved, not posted yet.${
@@ -406,26 +369,6 @@ export function TransactionsTable({
         }`,
         prior,
       );
-    });
-  }
-
-  function applySimilar() {
-    if (!similar) return;
-    const current = similar;
-    start(async () => {
-      setGroupError(null);
-      const prior = priorFor(current.ids);
-      const result = await applyCategorizations({
-        items: current.ids.map((id) => ({ id, ...current.item })),
-        postNow: false,
-      });
-      if (result.error) {
-        setGroupError(result.error);
-        return;
-      }
-      setSimilar(null);
-      const n = result.applied?.length ?? 0;
-      announce(`${n} more saved as ${current.label}.`, prior);
     });
   }
 
@@ -437,11 +380,6 @@ export function TransactionsTable({
       return next;
     });
     setPrefill(null);
-  }
-
-  function selectGroup(group: { ids: string[]; kind: PostingKind; accountId: string | null; label: string }) {
-    setSelected(new Set(group.ids));
-    setPrefill({ kind: group.kind, accountId: group.accountId, label: group.label });
   }
 
   const selectedSum = useMemo(
@@ -482,84 +420,33 @@ export function TransactionsTable({
 
   return (
     <div>
-      {canEdit && (suggestionGroups.length > 0 || acceptable.total > 0) ? (
-        <div className="mb-4 flex flex-wrap items-center gap-2">
-          {acceptable.total > 0 ? (
-            <button
-              type="button"
-              onClick={() => setAcceptAllOpen((o) => !o)}
-              aria-expanded={acceptAllOpen}
-              className="rounded-full bg-ink px-3 py-1.5 text-[12px] font-medium text-paper hover:bg-ink-mid"
-            >
-              Accept all {acceptable.total} suggestion{acceptable.total === 1 ? "" : "s"}
-            </button>
-          ) : null}
-          {suggestionGroups.map((g) => (
-            <button
-              key={`${g.kind}:${g.accountId}`}
-              type="button"
-              onClick={() => selectGroup(g)}
-              className="rounded-full border border-line-strong bg-fill px-3 py-1.5 text-[12px] text-ink hover:bg-line"
-            >
-              {g.ids.length} suggested as <span className="font-medium">{g.label}</span> — Select all
-            </button>
-          ))}
-        </div>
-      ) : null}
-
-      {canEdit && acceptAllOpen && acceptable.total > 0 ? (
-        <div className="mb-4 rounded-lg border border-line-strong bg-fill p-3">
-          <p className="text-[12px] font-medium text-ink">
-            Save these {acceptable.total} suggestions? They won&rsquo;t be posted to the books yet — you can review
-            first, and Undo is available afterwards.
-          </p>
-          <ul className="mt-2 grid gap-x-6 gap-y-1 text-[12px] sm:grid-cols-2">
-            {acceptable.groups.map((g) => (
-              <li key={g.label} className="flex justify-between gap-3">
-                <span className="text-ink">{g.label}</span>
-                <span className="figures text-mute">{g.items.length}</span>
-              </li>
-            ))}
-          </ul>
-          <div className="mt-3 flex flex-wrap items-center gap-2">
-            <button type="button" disabled={pending} onClick={acceptAll} className={btnPrimary}>
-              {pending ? "Saving…" : `Save ${acceptable.total}`}
-            </button>
-            <button type="button" onClick={() => setAcceptAllOpen(false)} className="text-[11px] text-mute underline-offset-2 hover:underline">
-              Cancel
-            </button>
-            {groupError ? <span className="w-full text-[11px] text-bad-text">{groupError}</span> : null}
-          </div>
-        </div>
-      ) : null}
-
-      {canEdit && similar ? (
-        <div className="mb-4 flex flex-wrap items-center gap-2 rounded-lg border border-info-text/30 bg-info-tint p-3">
-          <span className="text-[12px] text-info-text">
-            {similar.ids.length} other transaction{similar.ids.length === 1 ? "" : "s"} {similar.ids.length === 1 ? "says" : "say"} “{similar.description}” — save{" "}
-            {similar.ids.length === 1 ? "it" : "them"} as <span className="font-medium">{similar.label}</span> too?
-          </span>
-          <button type="button" disabled={pending} onClick={applySimilar} className={btnPrimary}>
-            {pending ? "Saving…" : `Yes, save ${similar.ids.length}`}
+      {canEdit && acceptable.length > 1 ? (
+        <div className="mb-3 flex flex-wrap items-center gap-2">
+          <button
+            type="button"
+            disabled={pending}
+            onClick={acceptAll}
+            className="rounded-full bg-ink px-3 py-1.5 text-[12px] font-medium text-paper hover:bg-ink-mid disabled:opacity-50"
+          >
+            {pending ? "Saving…" : `Accept all ${acceptable.length} suggestions`}
           </button>
-          <button type="button" onClick={() => setSimilar(null)} className="text-[11px] text-info-text underline-offset-2 hover:underline">
-            No thanks
-          </button>
-          {groupError && !acceptAllOpen ? <span className="w-full text-[11px] text-bad-text">{groupError}</span> : null}
+          <span className="text-[11px] text-mute">Saved, not posted — you can undo for 10 seconds.</span>
+          {groupError ? <span className="w-full text-[11px] text-bad-text">{groupError}</span> : null}
         </div>
       ) : null}
 
       <div className="overflow-x-auto">
         <table className="w-full text-[13px]">
           <thead>
-            <tr className="border-b border-line text-left text-mute">
-              {canEdit ? <th className="w-8 pb-2" /> : null}
+            <tr className="border-b border-line text-left text-[12px] text-mute">
+              {canEdit ? <th className="w-6 pb-2" /> : null}
               <SortableHeader href={dateHref} active={sort === "date_asc" || sort === "date_desc"} ascending={sort === "date_asc"}>
                 Date
               </SortableHeader>
               <SortableHeader href={nameHref} active={sort === "name_asc" || sort === "name_desc"} ascending={sort === "name_asc"}>
                 Description
               </SortableHeader>
+              <th className="pb-2 font-medium">Category</th>
               <SortableHeader
                 href={amountHref}
                 active={sort === "amount_asc" || sort === "amount_desc"}
@@ -568,6 +455,7 @@ export function TransactionsTable({
               >
                 Amount
               </SortableHeader>
+              {canEdit ? <th className="w-[7.5rem] pb-2" /> : null}
             </tr>
           </thead>
           <tbody className="divide-y divide-line">
@@ -578,6 +466,7 @@ export function TransactionsTable({
                 pickers={pickers}
                 canEdit={canEdit}
                 suggestion={oneClick(t)}
+                similar={similarByRow.get(t.id) ?? []}
                 onAcceptSuggestion={(postNow) => acceptSuggestion(t, postNow)}
                 onCategorized={handleCategorized}
                 leadingCell={

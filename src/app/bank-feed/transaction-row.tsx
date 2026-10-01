@@ -2,6 +2,7 @@
 
 import { useState, useTransition } from "react";
 import {
+  applyCategorizations,
   categorizeBankTransaction,
   postBankTransaction,
   unpostBankTransaction,
@@ -10,6 +11,7 @@ import {
   type PriorState,
 } from "./actions";
 import { money } from "@/components/ui";
+import { shortDate, todayIso } from "@/lib/dates";
 
 export interface TransactionRecord {
   id: string;
@@ -80,28 +82,35 @@ export function labelForCategorization(
   }
 }
 
+/** Fired after a human saves a categorization, so the table can show the Undo toast. */
 export interface CategorizedEvent {
-  item: CategorizationItem;
+  item: Omit<CategorizationItem, "id">;
+  /** Every row that was changed — the one edited plus any same-payee rows filed along with it. */
+  ids: string[];
   postNow: boolean;
-  prior: PriorState;
+  prior: PriorState[];
 }
 
 function describeTarget(t: TransactionRecord, pickers: Pickers): string | null {
   if (!t.posting_kind) return null;
-  const find = (list: Option[], id: string | null) => list.find((o) => o.id === id)?.label ?? null;
-  switch (t.posting_kind) {
-    case "expense":
-      return find(pickers.expenseAccounts, t.account_id);
-    case "income":
-      return find(pickers.incomeAccounts, t.account_id);
-    case "transfer":
-      return find(pickers.cashAccounts, t.account_id);
-    case "dues":
-      return find(pickers.units, t.matched_unit_id);
-    default:
-      return null;
-  }
+  return labelForCategorization(
+    { kind: t.posting_kind, accountId: t.account_id, unitId: t.matched_unit_id },
+    pickers,
+  );
 }
+
+/** Strip the "6100 " account code so the chip reads "Utilities", not "6100 Utilities". */
+function plainName(label: string): string {
+  return label.replace(/^\d{3,5}\s+/, "");
+}
+
+const CATEGORY_TONE: Record<PostingKind, string> = {
+  expense: "border-line bg-fill text-ink",
+  income: "border-good-line bg-good-tint text-good-text",
+  dues: "border-good-line bg-good-tint text-good-text",
+  transfer: "border-info-line bg-info-tint text-info-text",
+  excluded: "border-line bg-paper text-mute",
+};
 
 function StatusPill({ t }: { t: TransactionRecord }) {
   if (t.removed_at && t.journal_entry_id) {
@@ -126,17 +135,20 @@ function Pill({ tone, children }: { tone: "good" | "bad" | "info" | "warning" | 
           : tone === "warning"
             ? "bg-warning-tint text-warning-text"
             : "bg-fill text-mute";
-  return <span className={`rounded-full px-2 py-0.5 text-[11px] ${cls}`}>{children}</span>;
+  return <span className={`whitespace-nowrap rounded-full px-2 py-0.5 text-[11px] ${cls}`}>{children}</span>;
 }
 
 function CategorizeForm({
   t,
   pickers,
+  similar,
   onDone,
   onCategorized,
 }: {
   t: TransactionRecord;
   pickers: Pickers;
+  /** Other un-categorized rows from the same payee, offered to be filed the same way. */
+  similar: TransactionRecord[];
   onDone: () => void;
   onCategorized?: (event: CategorizedEvent) => void;
 }) {
@@ -149,6 +161,7 @@ function CategorizeForm({
   const [accountId, setAccountId] = useState(t.account_id ?? "");
   const [unitId, setUnitId] = useState(t.matched_unit_id ?? "");
   const [vendorId, setVendorId] = useState(t.vendor_id ?? "");
+  const [applyToSimilar, setApplyToSimilar] = useState(true);
   const [saveRule, setSaveRule] = useState(false);
   const [autoPostRule, setAutoPostRule] = useState(false);
   const [pending, start] = useTransition();
@@ -166,39 +179,48 @@ function CategorizeForm({
   const submit = (postNow: boolean) =>
     start(async () => {
       setError(null);
-      const prior = priorOf(t);
-      const result = await categorizeBankTransaction({
-        transactionId: t.id,
+      const item = {
         kind,
         accountId: accountId || null,
         unitId: unitId || null,
         vendorId: vendorId || null,
+      };
+      const others = applyToSimilar ? similar : [];
+      const prior = [priorOf(t), ...others.map(priorOf)];
+
+      const result = await categorizeBankTransaction({
+        transactionId: t.id,
+        ...item,
         saveRule,
         autoPostRule: saveRule && autoPostRule,
         postNow,
       });
-      if (result.error) setError(result.error);
-      else {
-        onCategorized?.({
-          item: {
-            id: t.id,
-            kind,
-            accountId: accountId || null,
-            unitId: unitId || null,
-            vendorId: vendorId || null,
-          },
-          postNow,
-          prior,
-        });
-        onDone();
+      if (result.error) {
+        setError(result.error);
+        return;
       }
+
+      const ids = [t.id];
+      if (others.length > 0) {
+        const more = await applyCategorizations({
+          items: others.map((o) => ({ id: o.id, ...item })),
+          postNow,
+        });
+        if (more.error) {
+          setError(`Saved this one, but the others couldn't be: ${more.error}`);
+        } else {
+          ids.push(...(more.applied ?? []));
+        }
+      }
+      onCategorized?.({ item, ids, postNow, prior });
+      onDone();
     });
 
   const selectClass =
     "mt-1 rounded-lg border border-line-strong bg-paper px-2 py-1 text-[12px] text-ink";
 
   return (
-    <div className="mt-2 space-y-2 rounded-lg border border-line-strong bg-fill p-3">
+    <div className="space-y-2 rounded-lg border border-line-strong bg-fill p-3">
       <div className="flex flex-wrap items-end gap-3">
         <div>
           <label className="block text-[11px] text-mute">This is</label>
@@ -266,6 +288,17 @@ function CategorizeForm({
       </div>
 
       <div className="flex flex-wrap items-center gap-x-4 gap-y-1 text-[11px] text-ink">
+        {similar.length > 0 ? (
+          <label className="flex items-center gap-1.5">
+            <input
+              type="checkbox"
+              checked={applyToSimilar}
+              onChange={(e) => setApplyToSimilar(e.target.checked)}
+            />
+            Also file the {similar.length} other “{t.description.trim()}” transaction
+            {similar.length === 1 ? "" : "s"} the same way
+          </label>
+        ) : null}
         <label className="flex items-center gap-1.5">
           <input type="checkbox" checked={saveRule} onChange={(e) => setSaveRule(e.target.checked)} />
           Remember this for “{t.description.trim()}”
@@ -315,24 +348,29 @@ export function TransactionRow({
   canEdit,
   leadingCell,
   suggestion,
+  similar = [],
   onAcceptSuggestion,
   onCategorized,
 }: {
   transaction: TransactionRecord;
   pickers: Pickers;
   canEdit: boolean;
-  /** A server-computed guess that can be accepted in one click (needs its account already chosen). */
-  suggestion?: { label: string } | null;
-  onAcceptSuggestion?: (postNow: boolean) => Promise<{ error?: string }>;
-  onCategorized?: (event: CategorizedEvent) => void;
   /** Extra <td> rendered before the date column — used by TransactionsTable for its bulk-select checkbox. */
   leadingCell?: React.ReactNode;
+  /** A server-computed guess that can be accepted in one click (its account already chosen). */
+  suggestion?: { label: string } | null;
+  /** Other un-categorized rows from the same payee; the chip and the form file them along with this one. */
+  similar?: TransactionRecord[];
+  onAcceptSuggestion?: (postNow: boolean) => Promise<{ error?: string }>;
+  onCategorized?: (event: CategorizedEvent) => void;
 }) {
   const [editing, setEditing] = useState(false);
   const [busy, start] = useTransition();
   const [error, setError] = useState<string | null>(null);
   const amount = Number(t.amount);
+  const moneyIn = amount > 0;
   const target = describeTarget(t, pickers);
+  const today = todayIso();
 
   const run = (fn: () => Promise<{ error?: string }>) =>
     start(async () => {
@@ -342,93 +380,140 @@ export function TransactionRow({
     });
 
   const canPost = canEdit && !t.journal_entry_id && !t.pending && !t.removed_at && !!t.posting_kind && !t.excluded_at;
+  const canEditRow = canEdit && !t.journal_entry_id && !t.removed_at;
+  const faded = t.removed_at && !t.journal_entry_id;
+  const columns = (leadingCell !== undefined ? 1 : 0) + 4 + (canEdit ? 1 : 0);
 
   return (
-    <tr className={t.removed_at && !t.journal_entry_id ? "opacity-60" : ""}>
-      {leadingCell !== undefined ? <td className="py-2 align-top">{leadingCell}</td> : null}
-      <td className="figures py-2 align-top text-ink">{t.posted_on}</td>
-      <td className="py-2 align-top text-ink">
-        <div className="flex flex-wrap items-center gap-2">
-          <span>{t.description}</span>
-          <StatusPill t={t} />
-          {t.posting_kind ? (
-            <span className="text-[11px] text-mute">
-              {KIND_LABEL[t.posting_kind]}
-              {target ? ` · ${target}` : ""}
-            </span>
-          ) : t.raw_category ? (
-            <span className="text-[11px] text-mute-soft">bank says: {t.raw_category}</span>
+    <>
+      <tr className={faded ? "opacity-60" : ""}>
+        {leadingCell !== undefined ? <td className="py-2.5 pr-2 align-middle">{leadingCell}</td> : null}
+
+        <td className="figures whitespace-nowrap py-2.5 pr-3 align-middle text-[12px] text-mute">
+          {shortDate(t.posted_on, today)}
+        </td>
+
+        <td className="min-w-0 py-2.5 pr-3 align-middle">
+          <div className="text-ink">{t.description}</div>
+          {!t.posting_kind && t.raw_category ? (
+            <div className="text-[11px] text-mute-soft">bank says: {t.raw_category}</div>
           ) : null}
-        </div>
+          {error ? <p className="mt-1 text-[11px] text-bad-text">{error}</p> : null}
+        </td>
 
-        {canEdit && !editing && suggestion && onAcceptSuggestion && !t.posting_kind ? (
-          <div className="mt-1.5 flex flex-wrap items-center gap-2">
-            <button
-              type="button"
-              disabled={busy}
-              onClick={() => run(() => onAcceptSuggestion(false))}
-              aria-label={`Categorize ${t.description} as ${suggestion.label}`}
-              title="Accept this suggestion"
-              className="inline-flex items-center gap-1 rounded-full border border-info-text/30 bg-info-tint px-2.5 py-0.5 text-[11px] font-medium text-info-text hover:brightness-95 disabled:opacity-50"
-            >
-              <span aria-hidden="true">✓</span> {busy ? "Saving…" : suggestion.label}
-            </button>
-            {!t.pending ? (
-              <button
-                type="button"
-                disabled={busy}
-                onClick={() => run(() => onAcceptSuggestion(true))}
-                className="text-[11px] text-mute underline-offset-2 hover:text-ink hover:underline disabled:opacity-50"
-              >
-                Accept &amp; post
-              </button>
-            ) : null}
+        <td className="py-2.5 pr-3 align-middle">
+          <div className="flex flex-wrap items-center gap-1.5">
+            {t.posting_kind ? (
+              <>
+                <span
+                  className={`whitespace-nowrap rounded-full border px-2 py-0.5 text-[11px] font-medium ${CATEGORY_TONE[t.posting_kind]}`}
+                >
+                  {t.posting_kind === "dues" && target ? `Dues · ${target}` : plainName(target ?? KIND_LABEL[t.posting_kind])}
+                </span>
+                <StatusPill t={t} />
+              </>
+            ) : canEdit && suggestion && onAcceptSuggestion ? (
+              <>
+                <button
+                  type="button"
+                  disabled={busy}
+                  onClick={() => run(() => onAcceptSuggestion(false))}
+                  aria-label={`File ${t.description} as ${suggestion.label}${
+                    similar.length > 0 ? ` along with ${similar.length} more from the same payee` : ""
+                  }`}
+                  title={
+                    similar.length > 0
+                      ? `Files this and ${similar.length} more “${t.description.trim()}” the same way`
+                      : "Accept this suggestion"
+                  }
+                  className="inline-flex items-center gap-1 whitespace-nowrap rounded-full border border-info-line bg-info-tint px-2.5 py-0.5 text-[11px] font-medium text-info-text hover:brightness-95 disabled:opacity-50"
+                >
+                  <span aria-hidden="true">✓</span>
+                  {busy ? "Saving…" : suggestion.label}
+                  {!busy && similar.length > 0 ? (
+                    <span className="font-normal opacity-80">· +{similar.length} more</span>
+                  ) : null}
+                </button>
+                {!t.pending ? (
+                  <button
+                    type="button"
+                    disabled={busy}
+                    onClick={() => run(() => onAcceptSuggestion(true))}
+                    className="whitespace-nowrap text-[11px] text-mute underline-offset-2 hover:text-ink hover:underline disabled:opacity-50"
+                  >
+                    Accept &amp; post
+                  </button>
+                ) : null}
+              </>
+            ) : (
+              <StatusPill t={t} />
+            )}
           </div>
-        ) : null}
+        </td>
 
-        {canEdit && !editing ? (
-          <div className="mt-1 flex flex-wrap gap-3 text-[11px]">
-            {!t.journal_entry_id && !t.removed_at ? (
-              <button
-                type="button"
-                onClick={() => setEditing(true)}
-                className="text-mute underline-offset-2 hover:underline"
-              >
-                {t.posting_kind ? "Edit" : "Categorize"}
-              </button>
-            ) : null}
-            {canPost ? (
-              <button
-                type="button"
-                disabled={busy}
-                onClick={() => run(() => postBankTransaction(t.id))}
-                className="font-medium text-ink underline-offset-2 hover:underline disabled:opacity-50"
-              >
-                {busy ? "Posting…" : "Post"}
-              </button>
-            ) : null}
-            {t.journal_entry_id ? (
-              <button
-                type="button"
-                disabled={busy}
-                onClick={() => run(() => unpostBankTransaction(t.id))}
-                className="text-mute underline-offset-2 hover:underline disabled:opacity-50"
-              >
-                {busy ? "Undoing…" : "Undo posting"}
-              </button>
-            ) : null}
-          </div>
-        ) : null}
+        <td
+          className={`figures whitespace-nowrap py-2.5 text-right align-middle ${
+            moneyIn ? "text-good-text" : "text-ink"
+          }`}
+        >
+          {moneyIn ? "+" : amount < 0 ? "−" : ""}
+          {money(Math.abs(amount))}
+        </td>
 
-        {editing ? (
-          <CategorizeForm t={t} pickers={pickers} onDone={() => setEditing(false)} onCategorized={onCategorized} />
+        {canEdit ? (
+          <td className="whitespace-nowrap py-2.5 pl-3 text-right align-middle text-[11px]">
+            {!editing ? (
+              <div className="flex justify-end gap-3">
+                {canEditRow ? (
+                  <button
+                    type="button"
+                    onClick={() => setEditing(true)}
+                    className="text-mute underline-offset-2 hover:text-ink hover:underline"
+                  >
+                    {t.posting_kind ? "Edit" : "Categorize"}
+                  </button>
+                ) : null}
+                {canPost ? (
+                  <button
+                    type="button"
+                    disabled={busy}
+                    onClick={() => run(() => postBankTransaction(t.id))}
+                    className="font-medium text-ink underline-offset-2 hover:underline disabled:opacity-50"
+                  >
+                    {busy ? "Posting…" : "Post"}
+                  </button>
+                ) : null}
+                {t.journal_entry_id ? (
+                  <button
+                    type="button"
+                    disabled={busy}
+                    onClick={() => run(() => unpostBankTransaction(t.id))}
+                    className="text-mute underline-offset-2 hover:underline disabled:opacity-50"
+                  >
+                    {busy ? "Undoing…" : "Undo posting"}
+                  </button>
+                ) : null}
+              </div>
+            ) : (
+              <span className="text-mute">Editing…</span>
+            )}
+          </td>
         ) : null}
-        {error ? <p className="mt-1 text-[11px] text-bad-text">{error}</p> : null}
-      </td>
-      <td className="figures py-2 text-right align-top text-ink">
-        {amount < 0 ? "−" : ""}
-        {money(Math.abs(amount))}
-      </td>
-    </tr>
+      </tr>
+
+      {editing ? (
+        <tr className="!border-t-0">
+          <td colSpan={columns} className="pb-3">
+            <CategorizeForm
+              t={t}
+              pickers={pickers}
+              similar={similar}
+              onDone={() => setEditing(false)}
+              onCategorized={onCategorized}
+            />
+          </td>
+        </tr>
+      ) : null}
+    </>
   );
 }
