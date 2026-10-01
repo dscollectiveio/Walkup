@@ -132,7 +132,7 @@ function buildViews(
 }
 
 /** How long each view stays up while the card is rotating on its own. */
-const ROTATE_MS = 7000;
+const ROTATE_MS = 12000;
 
 const REDUCED_MOTION = "(prefers-reduced-motion: reduce)";
 function usePrefersReducedMotion(): boolean {
