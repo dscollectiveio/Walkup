@@ -2,7 +2,8 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { LogOut } from "lucide-react";
+import { useState } from "react";
+import { LogOut, PanelLeftClose, PanelLeftOpen } from "lucide-react";
 import { Mark } from "@/components/mark";
 import { NAV_GROUPS, TRAILING_NAV, UNGROUPED_NAV, type NavItemConfig } from "./config";
 
@@ -14,10 +15,12 @@ function NavItemLink({
   item,
   active,
   badgeCount,
+  collapsed,
 }: {
   item: NavItemConfig;
   active: boolean;
   badgeCount?: number;
+  collapsed: boolean;
 }) {
   const Icon = item.icon;
   const showBadge = typeof badgeCount === "number" && badgeCount > 0;
@@ -27,7 +30,9 @@ function NavItemLink({
       href={item.href}
       aria-current={active ? "page" : undefined}
       title={item.label}
-      className={`flex items-center justify-center gap-3 border-l-[3px] px-3 py-2 text-[13px] font-bold transition-colors min-[900px]:justify-start ${
+      className={`flex items-center justify-center gap-3 border-l-[3px] px-3 py-2 text-[13px] font-bold transition-colors ${
+        collapsed ? "" : "min-[900px]:justify-start"
+      } ${
         active
           ? "border-brass bg-ink-mid text-paper"
           : "border-transparent text-ondark-mute hover:bg-ink-mid hover:text-paper"
@@ -49,7 +54,7 @@ function NavItemLink({
           </span>
         ) : null}
       </span>
-      <span className="sr-only truncate min-[900px]:not-sr-only">{item.label}</span>
+      <span className={`sr-only truncate ${collapsed ? "" : "min-[900px]:not-sr-only"}`}>{item.label}</span>
       {showBadge ? (
         <span className="sr-only">
           , {badgeCount} need a category
@@ -64,28 +69,41 @@ export function Sidebar({
   uncategorizedCount,
   userEmail,
   signOutAction,
+  initialCollapsed = false,
 }: {
   associationName: string | null;
   uncategorizedCount: number;
   userEmail: string;
   signOutAction: () => Promise<void>;
+  /** From the "sidebar" cookie, so the first paint already matches. */
+  initialCollapsed?: boolean;
 }) {
   const pathname = usePathname();
+  const [collapsed, setCollapsed] = useState(initialCollapsed);
+
+  function toggleCollapsed() {
+    const next = !collapsed;
+    setCollapsed(next);
+    document.documentElement.dataset.sidebar = next ? "collapsed" : "expanded";
+    document.cookie = `sidebar=${next ? "collapsed" : "expanded"}; path=/; max-age=31536000; samesite=lax`;
+  }
   const badges = { uncategorized: uncategorizedCount };
   const initials = userEmail.slice(0, 2).toUpperCase();
 
   return (
     <nav
       aria-label="Main"
-      className="fixed inset-y-0 left-0 z-20 flex w-14 flex-col bg-ink min-[900px]:w-[232px]"
+      className={`fixed inset-y-0 left-0 z-20 flex w-14 flex-col bg-ink transition-[width] duration-150 ease-out motion-reduce:transition-none ${
+        collapsed ? "" : "min-[900px]:w-[232px]"
+      }`}
     >
       <Link
         href="/"
         aria-label="Walkup home"
-        className="flex items-center gap-3 px-3 py-4"
+        className={`flex items-center gap-3 px-3 py-4 ${collapsed ? "justify-center" : ""}`}
       >
         <Mark variant="dark" size={28} className="shrink-0" />
-        <span className="hidden min-w-0 flex-col leading-none min-[900px]:flex">
+        <span className={`hidden min-w-0 flex-col leading-none ${collapsed ? "" : "min-[900px]:flex"}`}>
           <span className="text-[14px] font-semibold tracking-[-0.014em] text-paper">
             Walkup
           </span>
@@ -97,7 +115,7 @@ export function Sidebar({
         </span>
       </Link>
 
-      <div className="flex-1 overflow-y-auto px-2 pb-4 min-[900px]:px-3">
+      <div className={`flex-1 overflow-y-auto px-2 pb-4 ${collapsed ? "" : "min-[900px]:px-3"}`}>
         <div className="space-y-0.5">
           {UNGROUPED_NAV.map((item) => (
             <NavItemLink
@@ -105,15 +123,22 @@ export function Sidebar({
               item={item}
               active={isActive(pathname, item.href)}
               badgeCount={item.badgeKey ? badges[item.badgeKey as keyof typeof badges] : undefined}
+              collapsed={collapsed}
             />
           ))}
         </div>
 
         {NAV_GROUPS.map((group) => (
           <div key={group.label} className="mt-4">
-            <div className="hidden px-3 pb-1 text-[10px] font-medium uppercase tracking-[0.07em] text-section-label min-[900px]:block">
-              {group.label}
-            </div>
+            {collapsed ? null : (
+              <div className="hidden px-3 pb-1 text-[10px] font-medium uppercase tracking-[0.07em] text-section-label min-[900px]:block">
+                {group.label}
+              </div>
+            )}
+            <div
+              aria-hidden="true"
+              className={`mx-2 mb-2 border-t border-[var(--color-sidebar-divider)] ${collapsed ? "" : "min-[900px]:hidden"}`}
+            />
             <div className="space-y-0.5">
               {group.items.map((item) => (
                 <NavItemLink
@@ -121,6 +146,7 @@ export function Sidebar({
                   item={item}
                   active={isActive(pathname, item.href)}
                   badgeCount={item.badgeKey ? badges[item.badgeKey as keyof typeof badges] : undefined}
+              collapsed={collapsed}
                 />
               ))}
             </div>
@@ -134,14 +160,37 @@ export function Sidebar({
               item={item}
               active={isActive(pathname, item.href)}
               badgeCount={item.badgeKey ? badges[item.badgeKey as keyof typeof badges] : undefined}
+              collapsed={collapsed}
             />
           ))}
         </div>
       </div>
 
+      <button
+        type="button"
+        onClick={toggleCollapsed}
+        aria-label={collapsed ? "Expand sidebar" : "Collapse sidebar"}
+        aria-expanded={!collapsed}
+        title={collapsed ? "Expand sidebar" : "Collapse sidebar"}
+        className={`mx-2 mb-2 hidden items-center gap-3 rounded-md px-3 py-2 text-[12px] text-ondark-mute transition-colors hover:bg-ink-mid hover:text-paper min-[900px]:flex ${
+          collapsed ? "justify-center" : ""
+        }`}
+      >
+        {collapsed ? (
+          <PanelLeftOpen size={16} strokeWidth={1.75} aria-hidden="true" />
+        ) : (
+          <>
+            <PanelLeftClose size={16} strokeWidth={1.75} aria-hidden="true" />
+            <span>Collapse</span>
+          </>
+        )}
+      </button>
+
       <form
         action={signOutAction}
-        className="flex items-center gap-2.5 border-t border-[var(--color-sidebar-divider)] px-3 py-3"
+        className={`flex items-center gap-2.5 border-t border-[var(--color-sidebar-divider)] px-3 py-3 ${
+          collapsed ? "flex-col" : ""
+        }`}
       >
         <span
           aria-hidden="true"
@@ -149,14 +198,18 @@ export function Sidebar({
         >
           {initials}
         </span>
-        <span className="hidden min-w-0 flex-1 truncate text-[12px] text-ondark-mute min-[900px]:inline">
+        <span
+          className={`hidden min-w-0 flex-1 truncate text-[12px] text-ondark-mute ${collapsed ? "" : "min-[900px]:inline"}`}
+        >
           {userEmail}
         </span>
         <button
           type="submit"
           aria-label="Sign out"
           title="Sign out"
-          className="ml-auto flex h-7 w-7 shrink-0 items-center justify-center rounded-md text-ondark-mute transition-colors hover:bg-ink-mid hover:text-paper"
+          className={`flex h-7 w-7 shrink-0 items-center justify-center rounded-md text-ondark-mute transition-colors hover:bg-ink-mid hover:text-paper ${
+            collapsed ? "" : "ml-auto"
+          }`}
         >
           <LogOut size={15} strokeWidth={1.75} aria-hidden="true" />
         </button>

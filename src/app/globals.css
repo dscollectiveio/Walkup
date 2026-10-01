@@ -124,3 +124,21 @@ body {
 @media (prefers-reduced-motion: reduce) {
   .money-slide { animation: none; }
 }
+
+/* App shell offset for the fixed sidebar. Icons-only (3.5rem) below 900px or
+   when the user collapsed it; full width otherwise. The attribute is set on
+   <html> from a cookie on the server, then toggled by the sidebar. */
+.app-shell {
+  padding-left: 3.5rem;
+  transition: padding-left 150ms ease-out;
+}
+@media (min-width: 900px) {
+  html:not([data-sidebar="collapsed"]) .app-shell {
+    padding-left: 232px;
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .app-shell {
+    transition: none;
+  }
+}

@@ -4,6 +4,7 @@ import { createClient } from "@/lib/supabase/server";
 import { signOut } from "./login/actions";
 import Link from "next/link";
 import { Sidebar } from "@/components/sidebar/sidebar";
+import { cookies } from "next/headers";
 
 export const metadata: Metadata = {
   title: "Walkup",
@@ -15,6 +16,7 @@ export default async function RootLayout({
   children,
 }: Readonly<{ children: React.ReactNode }>) {
   const supabase = await createClient();
+  const sidebarCollapsed = (await cookies()).get("sidebar")?.value === "collapsed";
 
   // getSession(), not getUser(), deliberately — unlike src/lib/supabase/server.ts's
   // getUser() (used everywhere auth actually gates something), this layout
@@ -53,7 +55,7 @@ export default async function RootLayout({
   }
 
   return (
-    <html lang="en">
+    <html lang="en" data-sidebar={sidebarCollapsed ? "collapsed" : "expanded"}>
       <body className="min-h-screen bg-bone text-ink antialiased">
         {user ? (
           <Sidebar
@@ -61,10 +63,11 @@ export default async function RootLayout({
             uncategorizedCount={uncategorizedCount}
             userEmail={user.email ?? ""}
             signOutAction={signOut}
+            initialCollapsed={sidebarCollapsed}
           />
         ) : null}
 
-        <div className={user ? "min-h-screen min-[900px]:pl-[232px] pl-14" : "min-h-screen"}>
+        <div className={user ? "app-shell min-h-screen" : "min-h-screen"}>
           <main className="mx-auto max-w-[1100px] px-6 py-8 min-[900px]:px-8">
             {children}
           </main>
