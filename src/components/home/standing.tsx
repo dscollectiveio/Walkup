@@ -1,5 +1,4 @@
 import { formatMoney } from "@/lib/tax/form1120h";
-import { Jargon } from "@/components/ui";
 import { ReserveTargetForm } from "./reserve-target-form";
 import type { SnapshotTile } from "@/lib/home/snapshot";
 
@@ -15,19 +14,16 @@ const TILE_TEXT: Record<SnapshotTile["tone"], string> = {
 };
 
 /**
- * "Where the association stands" — the money picture in one card. The
- * trial-balance strip never shows a green state it can't verify: matched is
- * good-tint with the figure, anything else is bad-tint and says so.
+ * "Where the association stands" — the money picture in one card, with a
+ * "Right now" strip of four tiles underneath that stretch to fill whatever
+ * height the row gives it.
  */
 export function Standing({
   totalCents,
   operatingCents,
   reserveCents,
   reserveTarget, // display-only: drives a meter, not a ledger figure
-  booksBalanced,
-  tbTotalCents,
   canSetTarget,
-  hasActivity,
   matchSetupGuide = false,
   tiles = [],
 }: {
@@ -35,13 +31,7 @@ export function Standing({
   operatingCents: number;
   reserveCents: number;
   reserveTarget: number | null;
-  booksBalanced: boolean;
-  tbTotalCents: number;
   canSetTarget: boolean;
-  /** False for a building with nothing posted yet — the balanced/imbalanced
-   * banner below would otherwise show a false "don't match" alarm for a
-   * books that simply doesn't have anything in it to disagree with itself. */
-  hasActivity: boolean;
   /** Sits beside the setup guide on desktop: share its 34rem height and pin the books banner to the bottom. */
   matchSetupGuide?: boolean;
   /** "Right now" tiles — real figures, or a nudge to set the thing up. */
@@ -104,14 +94,14 @@ export function Standing({
         </div>
 
         {tiles.length > 0 ? (
-          <div className="mb-4">
+          <div className="mt-auto flex flex-1 flex-col">
             <h3 className="text-[11px] font-medium uppercase tracking-[0.07em] text-section-label">Right now</h3>
-            <ul className="mt-2 grid grid-cols-2 gap-2">
+            <ul className="mt-2 grid flex-1 auto-rows-fr grid-cols-2 gap-2">
               {tiles.map((tile) => (
                 <li key={tile.key}>
                   <a
                     href={tile.href}
-                    className={`block h-full rounded-lg border px-3 py-2.5 transition-colors ${TILE_TONE[tile.tone]}`}
+                    className={`flex h-full flex-col justify-center rounded-lg border px-3 py-2.5 transition-colors ${TILE_TONE[tile.tone]}`}
                   >
                     <div className="text-[11px] text-mute">{tile.label}</div>
                     {tile.value !== null ? (
@@ -128,25 +118,6 @@ export function Standing({
           </div>
         ) : null}
 
-        <div
-          className={`mt-auto rounded-lg border px-3 py-2 text-[12px] ${
-            !hasActivity
-              ? "border-line bg-fill text-mute"
-              : booksBalanced
-                ? "border-good-line bg-good-tint text-good-text"
-                : "border-bad-line bg-bad-tint text-bad-text"
-          }`}
-        >
-          {!hasActivity ? (
-            "No activity recorded yet — nothing to check."
-          ) : booksBalanced ? (
-            <Jargon term="trial balance">
-              The books balance — {formatMoney(tbTotalCents)} on each side
-            </Jargon>
-          ) : (
-            "The two sides of the books do not match. Check the ledger before trusting any figure on this page."
-          )}
-        </div>
       </div>
     </section>
   );

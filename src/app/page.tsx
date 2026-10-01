@@ -89,12 +89,12 @@ export default async function HomePage() {
       .from("association_totals")
       .select("visible_tb_rows, total_debits, total_credits, total_owed, units_behind"),
     supabase.from("unit_owners").select("unit_id, effective_from, effective_to, persons(full_name)"),
-    supabase.from("bank_connections").select("id, status, created_at, last_synced_at"),
+    supabase.from("bank_connections").select("id, status, institution_name, created_at, last_synced_at"),
     supabase
       .from("insurance_policies")
       .select("coverage, effective_from, effective_to, renewal_reminder_days")
       .is("replaced_at", null),
-    supabase.from("vendors").select("id, w9_on_file, w9_received_on, is_1099_exempt"),
+    supabase.from("vendors").select("id, w9_on_file, w9_received_on, is_1099_exempt, insured_until, status"),
     supabase
       .from("documents")
       .select("uploaded_at, document_categories(slug)")
@@ -153,8 +153,7 @@ export default async function HomePage() {
 
   const t = totals?.[0];
   const booksVisible = (t?.visible_tb_rows ?? 0) > 0;
-  const tbDebitCents = looseCents(t?.total_debits ?? 0);
-  const booksBalanced = booksVisible && tbDebitCents === looseCents(t?.total_credits ?? 0);
+  const booksBalanced = booksVisible && looseCents(t?.total_debits ?? 0) === looseCents(t?.total_credits ?? 0);
   const owedCents = looseCents(t?.total_owed ?? 0);
   const behind = Number(t?.units_behind ?? 0);
   const fyLabel = fiscalYears?.[0]?.label ?? String(new Date().getFullYear());
@@ -389,24 +388,6 @@ export default async function HomePage() {
     if (due && matchesYear) verifiedTaxDeadlines[t.form_code as keyof typeof verifiedTaxDeadlines] = due;
   }
 
-  const snapshotTiles = buildSnapshot({
-    today,
-    owedCents,
-    unitsBehind: behind,
-    duesByMonth: (duesCollection ?? []).map((d) => ({
-      month: d.month as string,
-      chargedCents: toCents(d.charged),
-      collectedCents: toCents(d.collected),
-    })),
-    bills: (bills ?? []).map((b) => ({
-      nextDueOn: b.next_due_on,
-      typicalAmountCents: b.typical_amount === null ? null : looseCents(b.typical_amount),
-    })),
-    bankConnected: (bankConnections ?? []).some((c) => c.status === "active"),
-    uncategorizedCount: uncategorizedCount ?? 0,
-    insuranceExpiresOn: activePolicies.map((p) => p.effective_to as string).sort()[0] ?? null,
-  });
-
   const reminders = assembleReminders({
     association,
     bills: bills ?? [],
@@ -416,6 +397,31 @@ export default async function HomePage() {
     lastAccessReviewAt,
     verifiedTaxDeadlines,
     contractorsMissingW9: (w9Gaps ?? []).length,
+  });
+
+  // The soonest tax or compliance filing among the reminders.
+  const localIso = (d: Date) =>
+    `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
+  const FILINGS = ["Form 1120-H", "1099-NEC to contractors", "Illinois annual report"];
+  const nextFilingReminder = reminders.find((r) => FILINGS.includes(r.name));
+
+  const snapshotTiles = buildSnapshot({
+    today,
+    bankConnections: (bankConnections ?? [])
+      .filter((c) => c.status !== "disconnected")
+      .map((c) => ({
+        status: c.status,
+        institutionName: c.institution_name,
+        lastSyncedAt: c.last_synced_at,
+      })),
+    uncategorizedCount: uncategorizedCount ?? 0,
+    insuranceExpiresOn: activePolicies.map((p) => p.effective_to as string).sort()[0] ?? null,
+    nextFiling: nextFilingReminder
+      ? { name: nextFilingReminder.name, dueOn: localIso(nextFilingReminder.due), estimated: nextFilingReminder.unverified === true }
+      : null,
+    contractors: (vendors ?? [])
+      .filter((v) => v.status !== "do_not_use")
+      .map((v) => ({ w9OnFile: v.w9_on_file, is1099Exempt: v.is_1099_exempt, insuredUntil: v.insured_until })),
   });
 
   const buildingUnits: BuildingUnit[] = (units ?? []).map((u) => {
@@ -475,10 +481,7 @@ export default async function HomePage() {
           operatingCents={operatingCents}
           reserveCents={reserveCents}
           reserveTarget={reserveTarget}
-          booksBalanced={booksBalanced}
-          tbTotalCents={tbDebitCents}
           canSetTarget={canSetTarget}
-          hasActivity={booksVisible}
           matchSetupGuide={showSetupGuide}
           tiles={snapshotTiles}
         />
