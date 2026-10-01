@@ -3,12 +3,10 @@ import {
   BarChart3,
   Landmark,
   FileText,
-  Wrench,
   Shield,
   Folder,
   Building2,
   Hammer,
-  CalendarClock,
   HandCoins,
   FileBarChart,
   type LucideIcon,
@@ -54,9 +52,7 @@ export const NAV_GROUPS: NavGroupConfig[] = [
     label: "Building",
     items: [
       { href: "/building", label: "Building Info", icon: Building2 },
-      { href: "/repairs", label: "Repairs", icon: Hammer },
-      { href: "/upkeep-schedule", label: "Upkeep Schedule", icon: CalendarClock },
-      { href: "/contractors", label: "Contractor Directory", icon: Wrench },
+      { href: "/repairs", label: "Repairs & Upkeep", icon: Hammer },
     ],
   },
 ];

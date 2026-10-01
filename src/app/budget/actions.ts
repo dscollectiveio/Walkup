@@ -122,6 +122,7 @@ export async function addRecurringBill(_prev: unknown, formData: FormData) {
   });
   if (error) return { error: error.code === "42501" ? "Only a board member can add a bill." : error.message };
 
+  revalidatePath("/repairs");
   revalidatePath("/budget");
   revalidatePath("/bills");
   revalidatePath("/");
