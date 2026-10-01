@@ -281,6 +281,11 @@ export default async function BankFeedPage({
       .filter((t) => t.posting_kind === "dues" && t.journal_entry_id && t.matched_unit_id)
       .map((t) => t.matched_unit_id),
   ).size;
+  // Progress through the queue: everything the bank still stands behind,
+  // minus what hasn't been given a category yet.
+  const progressTotal = counts.all - counts.retracted;
+  const progressDone = Math.max(0, progressTotal - counts.needs);
+  const progressPct = progressTotal > 0 ? Math.round((progressDone / progressTotal) * 100) : 0;
   // The finish line: a board admin opened the tab with nothing left to categorize.
   const caughtUp = canEdit && explicitStatus === null && counts.needs === 0 && counts.all > 0;
 
@@ -461,6 +466,30 @@ export default async function BankFeedPage({
                 {canEdit ? <PostAllButton readyCount={settledReady} /> : null}
               </div>
             </div>
+
+            {canEdit && progressTotal > 0 ? (
+              <div className="mb-3" aria-label={`${progressDone} of ${progressTotal} categorized`}>
+                <div className="flex items-baseline justify-between text-[11px] text-mute">
+                  <span>
+                    <span className="figures text-ink">{progressDone}</span> of{" "}
+                    <span className="figures">{progressTotal}</span> categorized
+                  </span>
+                  <span className="figures">{progressPct}%</span>
+                </div>
+                <div
+                  role="progressbar"
+                  aria-valuemin={0}
+                  aria-valuemax={progressTotal}
+                  aria-valuenow={progressDone}
+                  className="mt-1 h-1.5 overflow-hidden rounded-full bg-fill"
+                >
+                  <div
+                    className={`h-full rounded-full transition-[width] duration-300 ${progressPct === 100 ? "bg-moss" : "bg-brass"}`}
+                    style={{ width: `${progressPct}%` }}
+                  />
+                </div>
+              </div>
+            ) : null}
 
             <div className="mb-3 flex flex-wrap items-center justify-between gap-x-4 gap-y-1 text-[12px] text-mute">
               <span>
