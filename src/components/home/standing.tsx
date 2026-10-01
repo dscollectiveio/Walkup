@@ -1,6 +1,18 @@
 import { formatMoney } from "@/lib/tax/form1120h";
 import { Jargon } from "@/components/ui";
 import { ReserveTargetForm } from "./reserve-target-form";
+import type { SnapshotTile } from "@/lib/home/snapshot";
+
+const TILE_TONE: Record<SnapshotTile["tone"], string> = {
+  neutral: "border-line bg-paper hover:bg-fill",
+  attention: "border-warning-line bg-warning-tint hover:brightness-[0.98]",
+  good: "border-good-line bg-good-tint hover:brightness-[0.98]",
+};
+const TILE_TEXT: Record<SnapshotTile["tone"], string> = {
+  neutral: "text-ink",
+  attention: "text-warning-text",
+  good: "text-good-text",
+};
 
 /**
  * "Where the association stands" — the money picture in one card. The
@@ -17,6 +29,7 @@ export function Standing({
   canSetTarget,
   hasActivity,
   matchSetupGuide = false,
+  tiles = [],
 }: {
   totalCents: number;
   operatingCents: number;
@@ -31,6 +44,8 @@ export function Standing({
   hasActivity: boolean;
   /** Sits beside the setup guide on desktop: share its 34rem height and pin the books banner to the bottom. */
   matchSetupGuide?: boolean;
+  /** "Right now" tiles — real figures, or a nudge to set the thing up. */
+  tiles?: SnapshotTile[];
 }) {
   const targetCents = reserveTarget ? Math.round(reserveTarget * 100) : null;
   const funded =
@@ -87,6 +102,31 @@ export function Standing({
             </div>
           ) : null}
         </div>
+
+        {tiles.length > 0 ? (
+          <div className="mb-4">
+            <h3 className="text-[11px] font-medium uppercase tracking-[0.07em] text-section-label">Right now</h3>
+            <ul className="mt-2 grid grid-cols-2 gap-2">
+              {tiles.map((tile) => (
+                <li key={tile.key}>
+                  <a
+                    href={tile.href}
+                    className={`block h-full rounded-lg border px-3 py-2.5 transition-colors ${TILE_TONE[tile.tone]}`}
+                  >
+                    <div className="text-[11px] text-mute">{tile.label}</div>
+                    {tile.value !== null ? (
+                      <div className={`figures mt-0.5 text-[15px] ${TILE_TEXT[tile.tone]}`}>{tile.value}</div>
+                    ) : null}
+                    <div className={`text-[11px] ${tile.value === null ? "mt-0.5 font-medium text-ink underline underline-offset-2" : "text-mute"}`}>
+                      {tile.note}
+                      {tile.value === null ? " →" : ""}
+                    </div>
+                  </a>
+                </li>
+              ))}
+            </ul>
+          </div>
+        ) : null}
 
         <div
           className={`mt-auto rounded-lg border px-3 py-2 text-[12px] ${

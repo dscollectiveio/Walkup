@@ -14,6 +14,7 @@ import { Greeting } from "@/components/home/greeting";
 import { SetupGuidePanel } from "@/components/home/setup-guide-panel";
 import { cashByMonth } from "@/lib/money/cash";
 import { dueDate } from "@/lib/tax/due-rules";
+import { buildSnapshot } from "@/lib/home/snapshot";
 import { spendByAccount } from "@/lib/money/spending";
 import { dateOfKey, monthLongLabel, monthShortLabel } from "@/lib/money/months";
 import { WorthAMinute } from "@/components/home/worth-a-minute";
@@ -114,7 +115,7 @@ export default async function HomePage() {
       .is("removed_at", null)
       .eq("pending", false),
     supabase.from("journal_entries").select("id", { count: "exact", head: true }).eq("is_posted", true),
-    supabase.from("upcoming_bills").select("name, next_due_on, autopay_arranged"),
+    supabase.from("upcoming_bills").select("name, next_due_on, autopay_arranged, typical_amount"),
     supabase
       .from("charge_balances")
       .select("due_on")
@@ -388,6 +389,24 @@ export default async function HomePage() {
     if (due && matchesYear) verifiedTaxDeadlines[t.form_code as keyof typeof verifiedTaxDeadlines] = due;
   }
 
+  const snapshotTiles = buildSnapshot({
+    today,
+    owedCents,
+    unitsBehind: behind,
+    duesByMonth: (duesCollection ?? []).map((d) => ({
+      month: d.month as string,
+      chargedCents: toCents(d.charged),
+      collectedCents: toCents(d.collected),
+    })),
+    bills: (bills ?? []).map((b) => ({
+      nextDueOn: b.next_due_on,
+      typicalAmountCents: b.typical_amount === null ? null : looseCents(b.typical_amount),
+    })),
+    bankConnected: (bankConnections ?? []).some((c) => c.status === "active"),
+    uncategorizedCount: uncategorizedCount ?? 0,
+    insuranceExpiresOn: activePolicies.map((p) => p.effective_to as string).sort()[0] ?? null,
+  });
+
   const reminders = assembleReminders({
     association,
     bills: bills ?? [],
@@ -461,6 +480,7 @@ export default async function HomePage() {
           canSetTarget={canSetTarget}
           hasActivity={booksVisible}
           matchSetupGuide={showSetupGuide}
+          tiles={snapshotTiles}
         />
         {showSetupGuide ? (
           <SetupGuidePanel
