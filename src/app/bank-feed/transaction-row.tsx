@@ -112,6 +112,12 @@ const CATEGORY_TONE: Record<PostingKind, string> = {
   excluded: "border-line bg-paper text-mute",
 };
 
+/** Whole-surface buttons: the entire pill is the click target, not just the label. */
+const BTN_PRIMARY =
+  "inline-flex items-center justify-center whitespace-nowrap rounded-md bg-ink px-3 py-1.5 text-[12px] font-medium text-paper transition-colors hover:bg-ink-mid focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-brass disabled:opacity-50";
+const BTN_OUTLINE =
+  "inline-flex items-center justify-center whitespace-nowrap rounded-md border border-line-strong bg-paper px-3 py-1.5 text-[12px] font-medium text-ink transition-colors hover:bg-fill focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-brass disabled:opacity-50";
+
 function StatusPill({ t }: { t: TransactionRecord }) {
   if (t.removed_at && t.journal_entry_id) {
     return <Pill tone="bad">Retracted by bank — review</Pill>;
@@ -463,12 +469,12 @@ export function TransactionRow({
         {canEdit ? (
           <td className="whitespace-nowrap py-2.5 pl-3 text-right align-middle text-[11px]">
             {!editing ? (
-              <div className="flex justify-end gap-3">
+              <div className="flex justify-end gap-2">
                 {canEditRow ? (
                   <button
                     type="button"
                     onClick={() => setEditing(true)}
-                    className="text-mute underline-offset-2 hover:text-ink hover:underline"
+                    className={t.posting_kind ? BTN_OUTLINE : BTN_PRIMARY}
                   >
                     {t.posting_kind ? "Edit" : "Categorize"}
                   </button>
@@ -478,7 +484,7 @@ export function TransactionRow({
                     type="button"
                     disabled={busy}
                     onClick={() => run(() => postBankTransaction(t.id))}
-                    className="font-medium text-ink underline-offset-2 hover:underline disabled:opacity-50"
+                    className={BTN_PRIMARY}
                   >
                     {busy ? "Posting…" : "Post"}
                   </button>
@@ -488,7 +494,7 @@ export function TransactionRow({
                     type="button"
                     disabled={busy}
                     onClick={() => run(() => unpostBankTransaction(t.id))}
-                    className="text-mute underline-offset-2 hover:underline disabled:opacity-50"
+                    className={BTN_OUTLINE}
                   >
                     {busy ? "Undoing…" : "Undo posting"}
                   </button>

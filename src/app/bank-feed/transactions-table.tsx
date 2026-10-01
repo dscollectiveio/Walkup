@@ -455,7 +455,7 @@ export function TransactionsTable({
               >
                 Amount
               </SortableHeader>
-              {canEdit ? <th className="w-[7.5rem] pb-2" /> : null}
+              {canEdit ? <th className="w-[10rem] pb-2" /> : null}
             </tr>
           </thead>
           <tbody className="divide-y divide-line">
