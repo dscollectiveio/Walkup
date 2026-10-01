@@ -216,7 +216,7 @@ export function buildSetupGuide(input: SetupInputs): SetupSection[] {
           done: bankDone,
           doneOn: isoDay(activeConnection?.created_at),
           instructions: [
-            "On Bank Sync & Transactions, click “Connect a bank account” and sign in through Plaid.",
+            "On Bank Feed & Transactions, click “Connect a bank account” and sign in through Plaid.",
             "Your bank password is never seen or stored by Walkup — only a read-only token.",
           ],
         },
