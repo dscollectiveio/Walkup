@@ -16,14 +16,10 @@ import {
 } from "@/lib/money/budget";
 import { BudgetRow } from "./budget-row";
 import { AddCategoryForm } from "./add-category-form";
-import { AddBillForm } from "./add-bill-form";
-import { CategorizeMenu } from "./categorize-menu";
 import { SuggestedBudget } from "./suggested-budget";
-import { isNeedsCategory, loadTransactions, type TxRow } from "./transactions";
 
 export const dynamic = "force-dynamic";
 
-const PAGE_SIZE = 50;
 const looseCents = (v: string | number | null | undefined) => Math.round(Number(v ?? 0) * 100);
 const iso = (d: Date) =>
   `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
@@ -46,27 +42,18 @@ function syncedWords(lastSynced: string | null, now: Date): string {
 
 interface Params {
   period?: string;
-  cat?: string;
-  q?: string;
-  show?: string;
 }
 
-function hrefFor(p: { period: PeriodKey; cat?: string | null; q?: string | null; show?: number }, hash = "") {
-  const params = new URLSearchParams();
-  if (p.period !== "year") params.set("period", p.period);
-  if (p.cat) params.set("cat", p.cat);
-  if (p.q) params.set("q", p.q);
-  if (p.show && p.show > PAGE_SIZE) params.set("show", String(p.show));
-  const qs = params.toString();
-  return `/budget${qs ? `?${qs}` : ""}${hash}`;
+function hrefFor(p: { period: PeriodKey }) {
+  return p.period === "year" ? "/budget" : `/budget?period=${p.period}`;
 }
+
+/** The transactions behind a category live on the bank feed, filtered to that account. */
+const transactionsFor = (accountId: string) => `/bank-feed?account=${accountId}`;
 
 export default async function BudgetPage({ searchParams }: { searchParams: Promise<Params> }) {
   const sp = await searchParams;
   const period = parsePeriod(sp.period);
-  const cat = sp.cat?.trim() || null;
-  const q = sp.q?.trim() || null;
-  const show = Math.min(1000, Math.max(PAGE_SIZE, Number(sp.show) || PAGE_SIZE));
 
   const supabase = await createClient();
   const { data: associations } = await supabase.from("associations").select("id, display_name").limit(1);
@@ -93,7 +80,6 @@ export default async function BudgetPage({ searchParams }: { searchParams: Promi
   const fiscalYear = fyList.find((f) => f.starts_on <= todayIso && f.ends_on >= todayIso) ?? fyList[0];
   const priorFy = fiscalYear ? fyList.find((f) => f.ends_on < fiscalYear.starts_on) : undefined;
   const operatingFund = (funds ?? []).find((f) => f.kind === "operating");
-  const reserveFund = (funds ?? []).find((f) => f.kind === "reserve");
 
   if (!fiscalYear || !operatingFund) {
     return (
@@ -208,9 +194,6 @@ export default async function BudgetPage({ searchParams }: { searchParams: Promi
     );
   }
 
-  const in30 = new Date(today);
-  in30.setDate(in30.getDate() + 30);
-  const in30Iso = iso(in30);
   const currentMonth = monthKey(today);
 
   const [
@@ -219,13 +202,8 @@ export default async function BudgetPage({ searchParams }: { searchParams: Promi
     { data: fundBalances },
     { data: duesRows },
     { data: lateCharges },
-    { data: duesSoon },
-    { data: billsSoon },
-    { data: renewalsSoon },
     { data: connections },
     { data: units },
-    { data: contractors },
-    tx,
   ] = await Promise.all([
     supabase.from("monthly_expense_actuals").select("month, account_id, account_name, fund_id, total").order("month"),
     supabase
@@ -239,28 +217,8 @@ export default async function BudgetPage({ searchParams }: { searchParams: Promi
       .select("unit_id, days_overdue, balance")
       .in("status", ["open", "partial"])
       .gt("days_overdue", 0),
-    supabase
-      .from("charge_balances")
-      .select("balance")
-      .in("status", ["open", "partial"])
-      .gte("due_on", todayIso)
-      .lte("due_on", in30Iso),
-    supabase
-      .from("recurring_bills")
-      .select("id, name, typical_amount, next_due_on, autopay_arranged, vendors(id, name)")
-      .eq("is_active", true)
-      .gte("next_due_on", todayIso)
-      .lte("next_due_on", in30Iso)
-      .order("next_due_on"),
-    supabase
-      .from("insurance_policies")
-      .select("id, coverage, carrier_name, annual_premium, effective_to")
-      .gte("effective_to", todayIso)
-      .lte("effective_to", in30Iso),
     supabase.from("bank_connections").select("last_synced_at").order("last_synced_at", { ascending: false, nullsFirst: false }).limit(1),
     supabase.from("units").select("id, label"),
-    supabase.from("vendors").select("id, name").order("name"),
-    loadTransactions(supabase, { startDate: p.startDate, endDate: p.endDate, category: cat, query: q, limit: show }),
   ]);
 
   const expenses = (expenseRows ?? []) as ExpenseActualRow[];
@@ -344,56 +302,6 @@ export default async function BudgetPage({ searchParams }: { searchParams: Promi
     period === "month" ? `${monthLongLabel(addMonths(currentMonth, -12))}` : "the same months last year",
   );
 
-  // ---- Coming up -------------------------------------------------------------
-  type Upcoming = { key: string; name: string; due: string; payee: string | null; href: string | null; cents: number | null; estimate: boolean; autopay: boolean };
-  const upcoming: Upcoming[] = [
-    ...(billsSoon ?? []).map((b) => {
-      const v = b.vendors as unknown as { id: string; name: string } | null;
-      return {
-        key: `bill-${b.id}`,
-        name: b.name,
-        due: b.next_due_on as string,
-        payee: v?.name ?? null,
-        href: v ? `/contractors/${v.id}` : null,
-        cents: b.typical_amount === null ? null : looseCents(b.typical_amount),
-        estimate: true,
-        autopay: b.autopay_arranged,
-      };
-    }),
-    ...(renewalsSoon ?? []).map((pol) => ({
-      key: `ins-${pol.id}`,
-      name: "Insurance renewal",
-      due: pol.effective_to as string,
-      payee: pol.carrier_name,
-      href: "/insurance?view=quotes",
-      cents: looseCents(pol.annual_premium),
-      estimate: true,
-      autopay: false,
-    })),
-  ].sort((a, b) => a.due.localeCompare(b.due));
-  const upcomingCents = upcoming.reduce((s, u) => s + (u.cents ?? 0), 0);
-  const duesDueSoonCents = (duesSoon ?? []).reduce((s, c) => s + looseCents(c.balance), 0);
-
-  // ---- Transactions -----------------------------------------------------------
-  const needsCount = tx.needs.length;
-  const filteredCategoryName =
-    cat === "needs" ? "Needs a category" : cat ? (accountName.get(cat) ?? "that category") : null;
-
-  function describe(t: TxRow): { label: string; tone: "in" | "out" | "move" | "needs" } {
-    if (isNeedsCategory(t)) return { label: "Needs a category", tone: "needs" };
-    if (t.pending && t.posting_kind === null) return { label: "Pending at the bank", tone: t.amount > 0 ? "in" : "out" };
-    if (t.excluded_at) return { label: "Not for the books", tone: "move" };
-    if (t.posting_kind === "dues") {
-      const unit = t.matched_unit_id ? unitLabel.get(t.matched_unit_id) : null;
-      return { label: `Dues${unit ? ` · ${unit}` : ""} · bank deposit`, tone: "in" };
-    }
-    if (t.posting_kind === "transfer") {
-      const toReserve = reserveFund && t.account_id && (accounts ?? []).find((a) => a.id === t.account_id)?.name.match(/reserve/i);
-      return { label: toReserve ? "Moved to the reserve" : "Moved between accounts", tone: "move" };
-    }
-    return { label: accountName.get(t.account_id ?? "") ?? "Categorized", tone: t.amount > 0 ? "in" : "out" };
-  }
-
   const lastSynced = connections?.[0]?.last_synced_at ?? null;
   const pct = (cents: number, of: number) => (of > 0 ? Math.round((cents / of) * 100) : 0);
 
@@ -406,7 +314,7 @@ export default async function BudgetPage({ searchParams }: { searchParams: Promi
           {(Object.keys(PERIOD_LABEL) as PeriodKey[]).map((k) => (
             <Link
               key={k}
-              href={hrefFor({ period: k, cat, q })}
+              href={hrefFor({ period: k })}
               aria-current={k === period ? "page" : undefined}
               className={`inline-flex min-h-[36px] items-center rounded-full px-3.5 text-[12px] font-medium ${
                 k === period ? "bg-ink text-paper" : "text-mute hover:text-ink"
@@ -469,7 +377,7 @@ export default async function BudgetPage({ searchParams }: { searchParams: Promi
               </p>
               {driver ? (
                 <Link
-                  href={hrefFor({ period, cat: driver.accountId }, "#transactions")}
+                  href={transactionsFor(driver.accountId)}
                   className="mt-2 inline-block text-[12px] font-medium text-ink underline underline-offset-2"
                 >
                   See the {driver.name.toLowerCase()} spending →
@@ -557,7 +465,7 @@ export default async function BudgetPage({ searchParams }: { searchParams: Promi
                   return (
                     <li key={r.accountId}>
                       <Link
-                        href={hrefFor({ period, cat: r.accountId }, "#transactions")}
+                        href={transactionsFor(r.accountId)}
                         className={`block rounded-lg px-2 py-2 hover:bg-fill ${highlight ? "bg-bad-tint/60" : ""}`}
                       >
                         <div className="flex flex-wrap items-baseline justify-between gap-2">
@@ -587,7 +495,7 @@ export default async function BudgetPage({ searchParams }: { searchParams: Promi
                     {unbudgetedSpend.map((a, i) => (
                       <span key={a.accountId}>
                         {i > 0 ? ", " : ""}
-                        <Link href={hrefFor({ period, cat: a.accountId }, "#transactions")} className="underline underline-offset-2">
+                        <Link href={transactionsFor(a.accountId)} className="underline underline-offset-2">
                           {a.name} {formatMoney(a.cents).replace(/\.00$/, "")}
                         </Link>
                       </span>
@@ -636,7 +544,7 @@ export default async function BudgetPage({ searchParams }: { searchParams: Promi
                 slices={allSpend.map((a) => ({
                   label: a.name,
                   valueCents: a.cents,
-                  href: hrefFor({ period, cat: a.accountId }, "#transactions"),
+                  href: transactionsFor(a.accountId),
                 }))}
                 maxSlices={6}
                 minShare={0.05}
@@ -649,196 +557,6 @@ export default async function BudgetPage({ searchParams }: { searchParams: Promi
           )}
         </Card>
       </div>
-
-      {/* Coming up */}
-      <Card title="Coming up in the next 30 days" hint="Known bills and renewals.">
-        {upcoming.length === 0 ? (
-          <div className="space-y-3 text-[13px] text-mute">
-            <p>
-              Nothing known is due in the next 30 days. Bills show up here once they&rsquo;re added — a utility, a contract,
-              the insurance renewal — with when they&rsquo;re next due.
-            </p>
-          </div>
-        ) : (
-          <ul className="divide-y divide-line">
-            {upcoming.map((u) => (
-              <li key={u.key} className="flex flex-wrap items-baseline justify-between gap-3 py-2.5 text-[13px]">
-                <div className="min-w-0">
-                  <span className="font-medium text-ink">{u.name}</span>
-                  <span className="ml-2 text-mute">
-                    due {new Date(`${u.due}T00:00:00`).toLocaleDateString("en-US", { month: "short", day: "numeric" })}
-                    {u.payee ? (
-                      <>
-                        {" · "}
-                        {u.href ? (
-                          <Link href={u.href} className="underline underline-offset-2">{u.payee}</Link>
-                        ) : (
-                          u.payee
-                        )}
-                      </>
-                    ) : null}
-                    {u.autopay ? " · on autopay" : ""}
-                  </span>
-                  {u.key.startsWith("ins-") ? (
-                    <Link href="/insurance?view=quotes" className="ml-2 text-[12px] font-medium text-ink underline underline-offset-2">
-                      Get quotes
-                    </Link>
-                  ) : null}
-                </div>
-                <span className="figures text-ink">
-                  {u.cents === null ? "amount varies" : `${u.estimate ? "about " : ""}${formatMoney(u.cents).replace(/\.00$/, "")}`}
-                </span>
-              </li>
-            ))}
-          </ul>
-        )}
-        {upcoming.length > 0 ? (
-          <p className="mt-3 border-t border-line pt-3 text-[13px] text-ink">
-            After these, about {formatMoney(operatingCashCents - upcomingCents).replace(/\.\d\d$/, "")} left in day-to-day cash
-            {duesDueSoonCents > 0 ? `, plus ${formatMoney(duesDueSoonCents).replace(/\.\d\d$/, "")} in dues due in the same 30 days` : ""}.
-          </p>
-        ) : null}
-        {canEdit ? (
-          <div className="mt-4">
-            <AddBillForm
-              categories={expenseAccounts.map((a) => ({ id: a.id, name: a.name }))}
-              contractors={(contractors ?? []).map((c) => ({ id: c.id, name: c.name }))}
-            />
-          </div>
-        ) : null}
-      </Card>
-
-      {/* Transactions */}
-      <section id="transactions" className="rounded-xl border border-line bg-paper">
-        <header className="flex flex-wrap items-baseline justify-between gap-3 border-b border-line px-5 py-4">
-          <h2 className="font-bold tracking-tight text-ink">
-            Transactions
-            {needsCount > 0 ? (
-              <span className="ml-2 rounded-full bg-rust px-2 py-0.5 align-middle text-[11px] font-medium text-paper">
-                {needsCount} need{needsCount === 1 ? "s" : ""} a category
-              </span>
-            ) : null}
-          </h2>
-          <a
-            href={`/budget/export?${new URLSearchParams({ period, ...(cat ? { cat } : {}), ...(q ? { q } : {}) }).toString()}`}
-            className="inline-flex min-h-[36px] items-center rounded-md border border-line-strong px-3 text-[12px] font-medium text-ink hover:bg-fill"
-          >
-            Export to Excel
-          </a>
-        </header>
-        <div className="px-5 py-4">
-          <form method="get" action="/budget#transactions" className="mb-4 flex flex-wrap items-end gap-2">
-            {period !== "year" ? <input type="hidden" name="period" value={period} /> : null}
-            <div>
-              <label htmlFor="tx-cat" className="block text-[12px] font-medium text-ink">Category</label>
-              <select
-                id="tx-cat"
-                name="cat"
-                defaultValue={cat ?? ""}
-                className="mt-1 min-h-[40px] rounded-lg border border-line-strong bg-paper px-3 text-[13px] text-ink"
-              >
-                <option value="">All</option>
-                <option value="needs">Needs a category ({needsCount})</option>
-                {(accounts ?? [])
-                  .filter((a) => a.type === "expense" || a.type === "income")
-                  .map((a) => (
-                    <option key={a.id} value={a.id}>{a.name}</option>
-                  ))}
-              </select>
-            </div>
-            <div className="min-w-[12rem] flex-1">
-              <label htmlFor="tx-q" className="block text-[12px] font-medium text-ink">Search</label>
-              <input
-                id="tx-q"
-                name="q"
-                defaultValue={q ?? ""}
-                placeholder="Who it was paid to, or an amount"
-                className="mt-1 min-h-[40px] w-full rounded-lg border border-line-strong bg-paper px-3 text-[13px] text-ink"
-              />
-            </div>
-            <button type="submit" className="min-h-[40px] rounded-md border border-line-strong px-4 text-[13px] text-ink hover:bg-fill">
-              Filter
-            </button>
-            {cat || q ? (
-              <Link href={hrefFor({ period }, "#transactions")} className="min-h-[40px] px-2 py-2.5 text-[12px] text-mute underline underline-offset-2">
-                Clear
-              </Link>
-            ) : null}
-          </form>
-
-          {filteredCategoryName ? (
-            <p className="mb-2 text-[12px] text-mute">Showing: {filteredCategoryName}</p>
-          ) : null}
-
-          {needsCount === 0 && cat !== "needs" && tx.rows.length > 0 ? (
-            <p className="mb-2 text-[12px] text-good-text">Everything is categorized.</p>
-          ) : null}
-
-          {tx.needs.length === 0 && tx.rows.length === 0 ? (
-            <Empty>No transactions for {p.label.toLowerCase()}{cat || q ? " match this filter" : ""}.</Empty>
-          ) : (
-            <div className="overflow-x-auto">
-              <table className="w-full min-w-[40rem] text-[13px]">
-                <thead>
-                  <tr className="border-b border-line text-left text-[11px] uppercase tracking-wide text-mute">
-                    <th className="pb-2 font-medium">Date</th>
-                    <th className="pb-2 font-medium">Paid to / from</th>
-                    <th className="pb-2 font-medium">Category</th>
-                    <th className="pb-2 text-right font-medium">Amount</th>
-                    <th className="pb-2 text-right font-medium">
-                      <span className="sr-only">Action</span>
-                    </th>
-                  </tr>
-                </thead>
-                <tbody className="divide-y divide-line">
-                  {[...tx.needs, ...tx.rows].map((t) => {
-                    const d = describe(t);
-                    const needs = d.tone === "needs";
-                    return (
-                      <tr key={t.id} className={needs ? "bg-warning-tint" : undefined}>
-                        <td className="figures py-2 pr-3 align-top text-ink">{t.posted_on}</td>
-                        <td className="py-2 pr-3 align-top text-ink">{t.description}</td>
-                        <td className={`py-2 pr-3 align-top ${needs ? "font-medium text-warning-text" : "text-mute"}`}>{d.label}</td>
-                        <td
-                          className={`figures py-2 pr-3 text-right align-top ${
-                            t.amount > 0 && d.tone === "in" ? "text-good-text" : "text-ink"
-                          }`}
-                        >
-                          {t.amount > 0 ? "+" : "−"}
-                          {formatMoney(Math.round(Math.abs(t.amount) * 100))}
-                        </td>
-                        <td className="py-2 text-right align-top">
-                          {needs && canEdit && t.amount < 0 ? (
-                            <CategorizeMenu
-                              transactionId={t.id}
-                              description={t.description}
-                              categories={expenseAccounts.map((a) => ({ id: a.id, name: a.name }))}
-                            />
-                          ) : needs ? (
-                            <Link href="/bank-feed?status=needs" className="text-[12px] font-medium text-ink underline underline-offset-2">
-                              {t.amount > 0 ? "Categorize on the bank feed" : "Categorize"}
-                            </Link>
-                          ) : null}
-                        </td>
-                      </tr>
-                    );
-                  })}
-                </tbody>
-              </table>
-            </div>
-          )}
-          {tx.hasMore ? (
-            <div className="mt-4">
-              <Link
-                href={hrefFor({ period, cat, q, show: show + PAGE_SIZE }, "#transactions")}
-                className="inline-flex min-h-[44px] items-center rounded-md border border-line-strong px-4 text-[13px] text-ink hover:bg-fill"
-              >
-                Show earlier transactions
-              </Link>
-            </div>
-          ) : null}
-        </div>
-      </section>
 
       {editBudgetCard(
         !hasBudget && canEdit && priorFy

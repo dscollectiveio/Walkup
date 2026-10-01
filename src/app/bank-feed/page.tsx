@@ -115,9 +115,10 @@ function statusOf(t: TransactionRecord): Status {
   return "needs";
 }
 
-function hrefFor(q: string | undefined, range: Range, status: Status, sort: Sort): string {
+function hrefFor(q: string | undefined, range: Range, status: Status, sort: Sort, account?: string): string {
   const params = new URLSearchParams();
   if (q) params.set("q", q);
+  if (account) params.set("account", account);
   if (range !== "all") params.set("range", range);
   if (status !== "all") params.set("status", status);
   if (sort !== "date_desc") params.set("sort", sort);
@@ -152,9 +153,11 @@ function compareBySort(a: TransactionRecord, b: TransactionRecord, sort: Sort): 
 export default async function BankFeedPage({
   searchParams,
 }: {
-  searchParams: Promise<{ q?: string; range?: string; status?: string; sort?: string }>;
+  searchParams: Promise<{ q?: string; range?: string; status?: string; sort?: string; account?: string }>;
 }) {
-  const { q, range: rangeParam, status: statusParam, sort: sortParam } = await searchParams;
+  const { q, range: rangeParam, status: statusParam, sort: sortParam, account: accountParam } = await searchParams;
+  // From the Budget page: "see the transactions behind this category".
+  const account = accountParam?.trim() || undefined;
   const range: Range =
     rangeParam === "this_month" || rangeParam === "last_30" ? rangeParam : "all";
   // No status in the URL means "show me what needs doing" when there is any.
@@ -256,15 +259,17 @@ export default async function BankFeedPage({
   // History persists across disconnects — a disconnected bank's transactions
   // are still in the books, so they still show here.
   const { data: transactionRows } = await transactionsQuery;
-  const allTransactions = (transactionRows ?? []) as TransactionRecord[];
+  const allTransactions = ((transactionRows ?? []) as TransactionRecord[]).filter(
+    (t) => !account || t.account_id === account,
+  );
 
   const counts: Record<Status, number> = { all: 0, needs: 0, ready: 0, posted: 0, excluded: 0, retracted: 0 };
   for (const t of allTransactions) {
     counts.all += 1;
     counts[statusOf(t)] += 1;
   }
-  const status: Status = explicitStatus ?? (canEdit && counts.needs > 0 ? "needs" : "all");
-  const filtersActive = Boolean(q) || range !== "all";
+  const status: Status = explicitStatus ?? (canEdit && counts.needs > 0 && !account ? "needs" : "all");
+  const filtersActive = Boolean(q) || range !== "all" || Boolean(account);
   const transactions = (
     status === "all"
       ? allTransactions.filter((t) => !t.removed_at || t.journal_entry_id)
@@ -517,7 +522,7 @@ export default async function BankFeedPage({
                 {(Object.keys(STATUS_LABEL) as Status[]).map((s) => (
                   <Link
                     key={s}
-                    href={hrefFor(q, range, s, sort)}
+                    href={hrefFor(q, range, s, sort, account)}
                     className={
                       status === s
                         ? "rounded-full bg-ink px-3 py-1 text-[12px] font-medium text-paper"
@@ -575,6 +580,15 @@ export default async function BankFeedPage({
                 {range === "all" ? "" : " in this range"}
               </span>
             </div>
+
+            {account ? (
+              <p className="mb-3 text-[12px] text-ink">
+                Showing only <span className="font-medium">{accountNameById.get(account) ?? "one category"}</span>.{" "}
+                <Link href={hrefFor(q, range, status, sort)} className="text-mute underline-offset-2 hover:underline">
+                  Show all
+                </Link>
+              </p>
+            ) : null}
 
             <details className="mb-4" open={filtersActive}>
               <summary className="cursor-pointer select-none text-[12px] text-mute hover:text-ink">
@@ -636,9 +650,9 @@ export default async function BankFeedPage({
                 pickers={pickers}
                 canEdit={canEdit}
                 sort={sort}
-                dateHref={hrefFor(q, range, status, nextSort(sort, "date"))}
-                nameHref={hrefFor(q, range, status, nextSort(sort, "name"))}
-                amountHref={hrefFor(q, range, status, nextSort(sort, "amount"))}
+                dateHref={hrefFor(q, range, status, nextSort(sort, "date"), account)}
+                nameHref={hrefFor(q, range, status, nextSort(sort, "name"), account)}
+                amountHref={hrefFor(q, range, status, nextSort(sort, "amount"), account)}
               />
             )}
           </Card>
