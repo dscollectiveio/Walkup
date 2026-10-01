@@ -2,10 +2,11 @@
 // conditions, never hand-maintained, so the list empties itself as things
 // get handled.
 //
-// Deliberate mismatch, documented: this count is not the sidebar's Problems
-// badge. The badge counts open maintenance tickets; this counts financial
-// and compliance conditions needing a board member's minute. They measure
-// different things, and forcing them equal would make one of them lie.
+// Deliberate mismatch, documented: this count is not the sidebar's
+// "needs a category" badge, which counts uncategorized transactions; this
+// counts financial and compliance conditions needing a board member's minute.
+// They measure different things, and forcing them equal would make one of
+// them lie.
 
 export interface UrgentItem {
   key: "books" | "delinquent" | "w9" | "insurance" | "bank";

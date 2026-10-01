@@ -52,7 +52,7 @@ function NavItemLink({
       <span className="sr-only truncate min-[900px]:not-sr-only">{item.label}</span>
       {showBadge ? (
         <span className="sr-only">
-          , {badgeCount} {item.badgeKey === "uncategorized" ? "need a category" : "open"}
+          , {badgeCount} need a category
         </span>
       ) : null}
     </Link>
@@ -61,19 +61,17 @@ function NavItemLink({
 
 export function Sidebar({
   associationName,
-  problemCount,
   uncategorizedCount,
   userEmail,
   signOutAction,
 }: {
   associationName: string | null;
-  problemCount: number;
   uncategorizedCount: number;
   userEmail: string;
   signOutAction: () => Promise<void>;
 }) {
   const pathname = usePathname();
-  const badges = { problems: problemCount, uncategorized: uncategorizedCount };
+  const badges = { uncategorized: uncategorizedCount };
   const initials = userEmail.slice(0, 2).toUpperCase();
 
   return (

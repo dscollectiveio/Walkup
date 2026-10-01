@@ -31,20 +31,14 @@ export default async function RootLayout({
   const user = session?.user ?? null;
 
   let associationName: string | null = null;
-  let problemCount = 0;
   let uncategorizedCount = 0;
 
   if (user) {
     // Lightweight queries the sidebar needs on every page: the association
-    // name for the lockup, a live count of open problems, and how many bank
-    // transactions still need a category (RLS hides these from owners, so
-    // their count is simply 0).
-    const [{ data: associations }, { count }, { count: needsCount }] = await Promise.all([
+    // name for the lockup, and how many bank transactions still need a
+    // category (RLS hides these from owners, so their count is simply 0).
+    const [{ data: associations }, { count: needsCount }] = await Promise.all([
       supabase.from("associations").select("display_name").limit(1),
-      supabase
-        .from("tickets")
-        .select("id", { count: "exact", head: true })
-        .not("status", "in", '("resolved","closed")'),
       supabase
         .from("bank_transactions")
         .select("id", { count: "exact", head: true })
@@ -55,7 +49,6 @@ export default async function RootLayout({
         .eq("pending", false),
     ]);
     associationName = associations?.[0]?.display_name ?? null;
-    problemCount = count ?? 0;
     uncategorizedCount = needsCount ?? 0;
   }
 
@@ -65,7 +58,6 @@ export default async function RootLayout({
         {user ? (
           <Sidebar
             associationName={associationName}
-            problemCount={problemCount}
             uncategorizedCount={uncategorizedCount}
             userEmail={user.email ?? ""}
             signOutAction={signOut}

@@ -1,6 +1,5 @@
 import {
   Home,
-  AlertTriangle,
   BarChart3,
   Landmark,
   FileText,
@@ -19,7 +18,7 @@ export interface NavItemConfig {
   href: string;
   label: string;
   icon: LucideIcon;
-  /** Key into the badges map passed to the sidebar: "problems" or "uncategorized". */
+  /** Key into the badges map passed to the sidebar: currently only "uncategorized". */
   badgeKey?: string;
 }
 
@@ -32,7 +31,6 @@ export interface NavGroupConfig {
 // themselves. See DECISIONS.md and the nav audit that produced this grouping.
 export const UNGROUPED_NAV: NavItemConfig[] = [
   { href: "/", label: "Home", icon: Home },
-  { href: "/maintenance", label: "Needs Attention", icon: AlertTriangle, badgeKey: "problems" },
 ];
 
 export const NAV_GROUPS: NavGroupConfig[] = [
