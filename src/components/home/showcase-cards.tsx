@@ -173,6 +173,8 @@ export function ShowcaseCards({
   const reducedMotion = usePrefersReducedMotion();
 
   const rotating = views.length > 1 && !userPaused && !reducedMotion;
+  // Nothing slides on first paint — only once the view has actually changed.
+  const animated = activeKey !== null;
   const currentKey = (views.find((v) => v.key === activeKey) ?? views[0])?.key;
 
   useEffect(() => {
@@ -248,16 +250,21 @@ export function ShowcaseCards({
               ) : null}
             </div>
           ) : null}
-          <h2 className={`text-[16px] font-bold tracking-tight ${t.heading}`}>{view.heading}</h2>
-          <p className={`mt-1 text-[12px] leading-relaxed ${t.heading} opacity-85`}>{view.line}</p>
+          <h2 key={view.key} className={`text-[16px] font-bold tracking-tight ${t.heading} ${animated ? "money-slide" : ""}`}>
+            {view.heading}
+          </h2>
+          <p key={`${view.key}-line`} className={`mt-1 text-[12px] leading-relaxed ${t.heading} opacity-85 ${animated ? "money-slide" : ""}`}>
+            {view.line}
+          </p>
         </div>
-        <div>
+        <div key={`${view.key}-figure`} className={animated ? "money-slide" : undefined}>
           <div className={`figures text-[22px] ${view.figureTone}`}>{view.figure}</div>
           <p className={`text-[11px] ${t.heading} opacity-85`}>{view.figureCaption}</p>
         </div>
         <Link
+          key={`${view.key}-link`}
           href={view.button.href}
-          className="w-fit rounded-full border border-line-strong bg-paper px-3.5 py-1.5 text-[12px] font-medium text-ink hover:bg-fill"
+          className={`w-fit rounded-full border border-line-strong bg-paper px-3.5 py-1.5 text-[12px] font-medium text-ink hover:bg-fill ${animated ? "money-slide" : ""}`}
         >
           {view.button.label}
         </Link>
@@ -269,7 +276,9 @@ export function ShowcaseCards({
         aria-live={rotating ? "off" : "polite"}
         className="border-t border-line bg-paper px-4 py-4 md:min-h-[15rem] md:border-l md:border-t-0"
       >
-        {view.chart}
+        <div key={view.key} className={animated ? "money-slide" : undefined}>
+          {view.chart}
+        </div>
       </div>
       {rotating ? (
         <div aria-hidden="true" className="absolute inset-x-0 bottom-0 h-0.5 bg-line/60">
