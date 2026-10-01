@@ -59,15 +59,43 @@ describe("TransactionRow", () => {
     expect(html).toContain("Categorize");
   });
 
-  it("shows a one-click chip that names how many same-payee rows come along", () => {
+  it("shows the recommendation, its reason, and how many same-payee rows come along", () => {
     const html = render({
-      suggestion: { label: "Utilities" },
+      suggestion: {
+        kind: "expense",
+        accountId: "a1",
+        unitId: null,
+        label: "Utilities",
+        reason: "you filed this payee the same way 4 times before",
+        needsPick: false,
+      },
       similar: [{ ...base, id: "t2" }, { ...base, id: "t3" }],
       onAcceptSuggestion: async () => ({}),
     });
+    expect(html).toContain("Recommended");
     expect(html).toContain("Utilities");
     expect(html).toContain("+2 more");
+    expect(html).toContain("4 times before");
     expect(html).toContain("Accept &amp; post");
+  });
+
+  it("still shows a recommendation that needs a pick, as a chooser rather than a save", () => {
+    const html = render({
+      transaction: { ...base, amount: "450" },
+      suggestion: {
+        kind: "dues",
+        accountId: null,
+        unitId: null,
+        label: "Dues",
+        reason: "looks like an owner payment — pick the unit",
+        needsPick: true,
+      },
+      onAcceptSuggestion: async () => ({}),
+    });
+    expect(html).toContain("Recommended");
+    expect(html).toContain("choose →");
+    expect(html).toContain("pick the unit");
+    expect(html).not.toContain("Accept &amp; post");
   });
 
   it("colors money in and shows the chosen category as a chip once categorized", () => {

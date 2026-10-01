@@ -83,6 +83,16 @@ export function labelForCategorization(
 }
 
 /** Fired after a human saves a categorization, so the table can show the Undo toast. */
+/** What the table knows about a row's recommended category. */
+export interface RowRecommendation {
+  kind: PostingKind;
+  accountId: string | null;
+  unitId: string | null;
+  label: string;
+  reason: string;
+  needsPick: boolean;
+}
+
 export interface CategorizedEvent {
   item: Omit<CategorizationItem, "id">;
   /** Every row that was changed — the one edited plus any same-payee rows filed along with it. */
@@ -148,6 +158,7 @@ function CategorizeForm({
   t,
   pickers,
   similar,
+  prefill,
   onDone,
   onCategorized,
 }: {
@@ -155,6 +166,8 @@ function CategorizeForm({
   pickers: Pickers;
   /** Other un-categorized rows from the same payee, offered to be filed the same way. */
   similar: TransactionRecord[];
+  /** The recommendation, so the form opens already set to it. */
+  prefill?: RowRecommendation | null;
   onDone: () => void;
   onCategorized?: (event: CategorizedEvent) => void;
 }) {
@@ -162,10 +175,11 @@ function CategorizeForm({
   const kinds: PostingKind[] = moneyIn
     ? ["dues", "income", "transfer", "excluded"]
     : ["expense", "transfer", "excluded"];
+  const prefillKind = prefill && kinds.includes(prefill.kind) ? prefill.kind : null;
 
-  const [kind, setKind] = useState<PostingKind>(t.posting_kind ?? kinds[0]);
-  const [accountId, setAccountId] = useState(t.account_id ?? "");
-  const [unitId, setUnitId] = useState(t.matched_unit_id ?? "");
+  const [kind, setKind] = useState<PostingKind>(t.posting_kind ?? prefillKind ?? kinds[0]);
+  const [accountId, setAccountId] = useState(t.account_id ?? (prefillKind ? (prefill?.accountId ?? "") : ""));
+  const [unitId, setUnitId] = useState(t.matched_unit_id ?? (prefillKind ? (prefill?.unitId ?? "") : ""));
   const [vendorId, setVendorId] = useState(t.vendor_id ?? "");
   const [applyToSimilar, setApplyToSimilar] = useState(true);
   const [saveRule, setSaveRule] = useState(false);
@@ -363,8 +377,8 @@ export function TransactionRow({
   canEdit: boolean;
   /** Extra <td> rendered before the date column — used by TransactionsTable for its bulk-select checkbox. */
   leadingCell?: React.ReactNode;
-  /** A server-computed guess that can be accepted in one click (its account already chosen). */
-  suggestion?: { label: string } | null;
+  /** The recommended category: one click saves it, or opens the form pre-set when a unit/account is still needed. */
+  suggestion?: RowRecommendation | null;
   /** Other un-categorized rows from the same payee; the chip and the form file them along with this one. */
   similar?: TransactionRecord[];
   onAcceptSuggestion?: (postNow: boolean) => Promise<{ error?: string }>;
@@ -419,38 +433,56 @@ export function TransactionRow({
                 <StatusPill t={t} />
               </>
             ) : canEdit && suggestion && onAcceptSuggestion ? (
-              <>
-                <button
-                  type="button"
-                  disabled={busy}
-                  onClick={() => run(() => onAcceptSuggestion(false))}
-                  aria-label={`File ${t.description} as ${suggestion.label}${
-                    similar.length > 0 ? ` along with ${similar.length} more from the same payee` : ""
-                  }`}
-                  title={
-                    similar.length > 0
-                      ? `Files this and ${similar.length} more “${t.description.trim()}” the same way`
-                      : "Accept this suggestion"
-                  }
-                  className="inline-flex items-center gap-1 whitespace-nowrap rounded-full border border-info-line bg-info-tint px-2.5 py-0.5 text-[11px] font-medium text-info-text hover:brightness-95 disabled:opacity-50"
-                >
-                  <span aria-hidden="true">✓</span>
-                  {busy ? "Saving…" : suggestion.label}
-                  {!busy && similar.length > 0 ? (
-                    <span className="font-normal opacity-80">· +{similar.length} more</span>
+              <div className="flex flex-col gap-0.5">
+                <div className="flex flex-wrap items-center gap-1.5">
+                  <span className="text-[10px] font-medium uppercase tracking-[0.07em] text-mute-soft">
+                    Recommended
+                  </span>
+                  {suggestion.needsPick ? (
+                    <button
+                      type="button"
+                      onClick={() => setEditing(true)}
+                      title="Opens the form with this already chosen"
+                      className="inline-flex items-center gap-1 whitespace-nowrap rounded-full border border-info-line bg-paper px-2.5 py-0.5 text-[11px] font-medium text-info-text hover:bg-info-tint"
+                    >
+                      {suggestion.label}
+                      <span className="font-normal opacity-80">· choose →</span>
+                    </button>
+                  ) : (
+                    <button
+                      type="button"
+                      disabled={busy}
+                      onClick={() => run(() => onAcceptSuggestion(false))}
+                      aria-label={`File ${t.description} as ${suggestion.label}${
+                        similar.length > 0 ? ` along with ${similar.length} more from the same payee` : ""
+                      }`}
+                      title={
+                        similar.length > 0
+                          ? `Files this and ${similar.length} more “${t.description.trim()}” the same way`
+                          : "Save this category"
+                      }
+                      className="inline-flex items-center gap-1 whitespace-nowrap rounded-full border border-info-line bg-info-tint px-2.5 py-0.5 text-[11px] font-medium text-info-text hover:brightness-95 disabled:opacity-50"
+                    >
+                      <span aria-hidden="true">✓</span>
+                      {busy ? "Saving…" : suggestion.label}
+                      {!busy && similar.length > 0 ? (
+                        <span className="font-normal opacity-80">· +{similar.length} more</span>
+                      ) : null}
+                    </button>
+                  )}
+                  {!suggestion.needsPick && !t.pending ? (
+                    <button
+                      type="button"
+                      disabled={busy}
+                      onClick={() => run(() => onAcceptSuggestion(true))}
+                      className="whitespace-nowrap text-[11px] text-mute underline-offset-2 hover:text-ink hover:underline disabled:opacity-50"
+                    >
+                      Accept &amp; post
+                    </button>
                   ) : null}
-                </button>
-                {!t.pending ? (
-                  <button
-                    type="button"
-                    disabled={busy}
-                    onClick={() => run(() => onAcceptSuggestion(true))}
-                    className="whitespace-nowrap text-[11px] text-mute underline-offset-2 hover:text-ink hover:underline disabled:opacity-50"
-                  >
-                    Accept &amp; post
-                  </button>
-                ) : null}
-              </>
+                </div>
+                <span className="text-[11px] text-mute-soft">{suggestion.reason}</span>
+              </div>
             ) : (
               <StatusPill t={t} />
             )}
@@ -514,6 +546,7 @@ export function TransactionRow({
               t={t}
               pickers={pickers}
               similar={similar}
+              prefill={suggestion}
               onDone={() => setEditing(false)}
               onCategorized={onCategorized}
             />

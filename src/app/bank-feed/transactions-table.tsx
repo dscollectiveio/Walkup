@@ -22,8 +22,16 @@ import { money } from "@/components/ui";
 import { isMatchableDescription, normalizeDescription } from "@/lib/plaid/similar";
 
 export interface SuggestedTransaction extends TransactionRecord {
-  /** Server-computed guess (src/lib/plaid/suggest.ts) — never written anywhere until a human confirms it here. */
-  suggestion: { kind: PostingKind; accountId: string | null; label: string } | null;
+  /** Server-computed recommendation (src/lib/plaid/recommend.ts) — never written anywhere until a human clicks it. */
+  suggestion: {
+    kind: PostingKind;
+    accountId: string | null;
+    unitId: string | null;
+    label: string;
+    reason: string;
+    /** The kind is clear but the unit/account isn't: clicking opens the form pre-set instead of saving. */
+    needsPick: boolean;
+  } | null;
 }
 
 const KIND_LABEL: Record<PostingKind, string> = {
@@ -222,11 +230,9 @@ function SortableHeader({
   );
 }
 
-/** A suggestion can be accepted in one click only when it already names its target. */
-function oneClick(t: SuggestedTransaction): { label: string } | null {
-  const s = t.suggestion;
-  if (!s) return null;
-  return s.accountId || s.kind === "excluded" ? { label: s.label } : null;
+/** A recommendation can be saved in one click only when it already names its target. */
+function oneClick(t: SuggestedTransaction): boolean {
+  return !!t.suggestion && !t.suggestion.needsPick;
 }
 
 const UNDO_MS = 10000;
@@ -309,8 +315,8 @@ export function TransactionsTable({
 
   async function acceptSuggestion(t: SuggestedTransaction, postNow: boolean): Promise<{ error?: string }> {
     const s = t.suggestion;
-    if (!s || (!s.accountId && s.kind !== "excluded")) return { error: "This suggestion needs a choice first." };
-    const item = { kind: s.kind, accountId: s.accountId, unitId: null, vendorId: null };
+    if (!s || s.needsPick) return { error: "This recommendation needs a choice first." };
+    const item = { kind: s.kind, accountId: s.accountId, unitId: s.unitId, vendorId: null };
     const rows = [t, ...(similarByRow.get(t.id) ?? [])];
     const prior = rows.map(priorOf);
     const result = await applyCategorizations({ items: rows.map((r) => ({ id: r.id, ...item })), postNow });
@@ -347,7 +353,13 @@ export function TransactionsTable({
     const items: CategorizationItem[] = [];
     for (const t of transactions) {
       if (t.posting_kind || !selectable(t) || !t.suggestion || !oneClick(t)) continue;
-      items.push({ id: t.id, kind: t.suggestion.kind, accountId: t.suggestion.accountId, unitId: null, vendorId: null });
+      items.push({
+        id: t.id,
+        kind: t.suggestion.kind,
+        accountId: t.suggestion.accountId,
+        unitId: t.suggestion.unitId,
+        vendorId: null,
+      });
     }
     return items;
   }, [transactions]);
@@ -428,7 +440,7 @@ export function TransactionsTable({
             onClick={acceptAll}
             className="rounded-full bg-ink px-3 py-1.5 text-[12px] font-medium text-paper hover:bg-ink-mid disabled:opacity-50"
           >
-            {pending ? "Saving…" : `Accept all ${acceptable.length} suggestions`}
+            {pending ? "Saving…" : `Accept all ${acceptable.length} recommendations`}
           </button>
           <span className="text-[11px] text-mute">Saved, not posted — you can undo for 10 seconds.</span>
           {groupError ? <span className="w-full text-[11px] text-bad-text">{groupError}</span> : null}
@@ -465,7 +477,7 @@ export function TransactionsTable({
                 transaction={t}
                 pickers={pickers}
                 canEdit={canEdit}
-                suggestion={oneClick(t)}
+                suggestion={t.suggestion}
                 similar={similarByRow.get(t.id) ?? []}
                 onAcceptSuggestion={(postNow) => acceptSuggestion(t, postNow)}
                 onCategorized={handleCategorized}

@@ -11,7 +11,7 @@ import { TransactionsTable, type SuggestedTransaction } from "./transactions-tab
 import { PostAllButton } from "./post-all-button";
 import { LedgerAccountSelect } from "./ledger-account-select";
 import { RulesList, type RuleRecord } from "./rules-list";
-import { suggestCategorization } from "@/lib/plaid/suggest";
+import { buildHistoryIndex, recommend, type HistoryRow, type Recommendation } from "@/lib/plaid/recommend";
 
 export const dynamic = "force-dynamic";
 
@@ -163,6 +163,7 @@ export default async function BankFeedPage({
     { data: accounts },
     { data: vendors },
     { data: rules },
+    { data: historyRows },
   ] = await Promise.all([
     supabase.from("associations").select("id").limit(1),
     supabase.from("units").select("id, label").order("sort_order"),
@@ -176,6 +177,15 @@ export default async function BankFeedPage({
       .from("bank_categorization_rules")
       .select("id, pattern, posting_kind, account_id, matched_unit_id, auto_post")
       .order("created_at"),
+    // What this board filed each payee as before — the strongest source for
+    // the "Recommended" chip. Read-only; recommendations are never saved.
+    supabase
+      .from("bank_transactions")
+      .select("description, amount, posting_kind, account_id, matched_unit_id")
+      .not("posting_kind", "is", null)
+      .is("removed_at", null)
+      .order("posted_on", { ascending: false })
+      .limit(2000),
   ]);
   const associationId = associations?.[0]?.id ?? null;
   const { data: isBoardAdminRes } = associationId
@@ -203,11 +213,16 @@ export default async function BankFeedPage({
     .filter((a) => a.type === "income")
     .map((a) => ({ id: a.id, name: a.name }));
 
-  function suggestionLabel(s: { kind: string; accountId: string | null }): string {
-    if (s.kind === "expense" || s.kind === "income") {
-      return accountNameById.get(s.accountId ?? "") ?? KIND_LABEL[s.kind];
+  const history = buildHistoryIndex((historyRows ?? []) as HistoryRow[]);
+
+  function recommendationLabel(r: Recommendation): string {
+    if (r.kind === "dues") return r.unitId ? `Dues · ${unitLabelById.get(r.unitId) ?? "unit"}` : "Dues";
+    if (r.kind === "transfer") {
+      const name = r.accountId ? accountNameById.get(r.accountId) : null;
+      return name ? `Transfer · ${name}` : "Transfer";
     }
-    return KIND_LABEL[s.kind];
+    if (r.kind === "excluded") return KIND_LABEL.excluded;
+    return accountNameById.get(r.accountId ?? "") ?? KIND_LABEL[r.kind];
   }
 
   let transactionsQuery = supabase
@@ -241,8 +256,20 @@ export default async function BankFeedPage({
 
   const transactionsWithSuggestions: SuggestedTransaction[] = transactions.map((t) => {
     if (t.posting_kind || t.journal_entry_id || t.removed_at) return { ...t, suggestion: null };
-    const raw = suggestCategorization(t.description, Number(t.amount), expenseSuggestable, incomeSuggestable);
-    return { ...t, suggestion: raw ? { ...raw, label: suggestionLabel(raw) } : null };
+    const r = recommend(t, history, { expense: expenseSuggestable, income: incomeSuggestable });
+    return {
+      ...t,
+      suggestion: r
+        ? {
+            kind: r.kind,
+            accountId: r.accountId,
+            unitId: r.unitId,
+            label: recommendationLabel(r),
+            reason: r.reason,
+            needsPick: r.needsPick,
+          }
+        : null,
+    };
   });
 
   const settledReady = allTransactions.filter(
