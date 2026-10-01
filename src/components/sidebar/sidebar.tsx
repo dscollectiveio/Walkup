@@ -165,13 +165,15 @@ export function Sidebar({
           phone && !drawerOpen ? "invisible w-0" : expanded ? "w-[288px]" : "w-[72px]"
         }`}
       >
-        <div className={`flex items-center ${expanded ? "gap-3 px-3 py-4" : "justify-center py-4"}`}>
+        {/* The logo band: same height and colour as the page header, so the two
+            read as one bar across the top. It collapses with the sidebar. */}
+        <div className={`relative -mr-px flex h-[56px] shrink-0 items-center bg-ink text-paper ${expanded ? "gap-3 px-4" : "justify-center"}`}>
           <Link href="/" aria-label="Walkup home" className="flex min-w-0 items-center gap-3">
-            <Mark variant="full" size={28} className="shrink-0" />
+            <Mark variant="dark" size={30} className="shrink-0" />
             {expanded ? (
               <span className="flex min-w-0 flex-col leading-none">
-                <span className="text-[14px] font-semibold tracking-[-0.014em] text-nav-text">Walkup</span>
-                {associationName ? <span className="mt-1 truncate text-[11px] font-normal text-nav-muted">{associationName}</span> : null}
+                <span className="text-[15px] font-semibold tracking-[-0.014em] text-paper">Walkup</span>
+                {associationName ? <span className="mt-1 truncate text-[11px] font-normal text-ondark-mute">{associationName}</span> : null}
               </span>
             ) : null}
           </Link>
@@ -180,14 +182,14 @@ export function Sidebar({
               type="button"
               onClick={() => setDrawerOpen(false)}
               aria-label="Close navigation"
-              className="ml-auto flex h-8 w-8 items-center justify-center rounded-md text-nav-muted hover:bg-nav-hover hover:text-nav-text"
+              className="ml-auto flex h-8 w-8 items-center justify-center rounded-md text-ondark-mute hover:bg-ink-mid hover:text-paper"
             >
               <X size={16} strokeWidth={1.6} aria-hidden="true" />
             </button>
           ) : null}
         </div>
 
-        <div className={`flex-1 overflow-y-auto pb-4 ${expanded ? "px-3" : "px-[14px]"}`}>
+        <div className={`flex-1 overflow-y-auto pb-4 pt-2 ${expanded ? "px-3" : "px-[14px]"}`}>
           <div className="space-y-0.5">
             {UNGROUPED_NAV.map((item) => (
               <NavItemLink key={item.href} item={item} active={isActive(pathname, item.href)} badgeCount={badgeFor(item)} expanded={expanded} />
