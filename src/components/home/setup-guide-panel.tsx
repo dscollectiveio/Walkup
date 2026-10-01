@@ -143,21 +143,22 @@ export function SetupGuidePanel({
     <>
     <section className="flex max-h-[34rem] flex-col rounded-xl border border-line bg-paper lg:max-h-none lg:min-h-[34rem]">
       <header className="flex min-h-[4.75rem] flex-col justify-center rounded-t-[11px] bg-ink px-5 py-4 text-paper">
-        <div className="flex flex-wrap items-baseline justify-between gap-3">
-          <div>
-            <h2 className="font-bold tracking-tight text-paper">Set up your building</h2>
-            <p className="mt-0.5 text-[12px] text-ondark-mute">In order — each section builds on the last.</p>
-          </div>
+        <h2 className="font-bold tracking-tight text-paper">Set up your building</h2>
+        <p className="mt-0.5 text-[12px] text-ondark-mute">In order — each section builds on the last.</p>
+      </header>
+
+      <div className="border-b border-line px-5 py-3">
+        <div className="flex flex-wrap items-center justify-between gap-3">
+          <span className="tabular text-[12px] text-ink">
+            {done} of {total} done
+          </span>
           <div className="flex items-center gap-3">
-            <span className="tabular text-[12px] text-paper">
-              {done} of {total} done
-            </span>
             <button
               type="button"
               onClick={() => dialogRef.current?.showModal()}
               aria-label="Expand the setup guide"
               title="See every step in detail"
-              className="flex h-7 w-7 items-center justify-center rounded-md text-ondark-mute hover:bg-ink-mid hover:text-paper"
+              className="flex h-7 w-7 items-center justify-center rounded-md text-mute hover:bg-fill hover:text-ink"
             >
               <Maximize2 size={14} strokeWidth={1.75} aria-hidden="true" />
             </button>
@@ -171,17 +172,17 @@ export function SetupGuidePanel({
                   if (result.error) setError(result.error);
                 })
               }
-              className="text-[12px] text-ondark-mute underline-offset-2 hover:text-paper hover:underline disabled:opacity-50"
+              className="text-[12px] text-mute underline-offset-2 hover:text-ink hover:underline disabled:opacity-50"
             >
               {pending ? "Hiding…" : "Skip for now"}
             </button>
           </div>
         </div>
-        <div className="mt-2 h-1.5 overflow-hidden rounded-full bg-ink-mid">
+        <div className="mt-2 h-1.5 overflow-hidden rounded-full bg-fill">
           <div className="h-full rounded-full bg-brass transition-all" style={{ width: `${pct}%` }} />
         </div>
         {error ? <p className="mt-2 text-[12px] text-bad-text">{error}</p> : null}
-      </header>
+      </div>
 
       {/* On desktop the list is absolutely positioned so it never sets the row's
           height — the row is as tall as the taller card (min 34rem) and this scrolls. */}
