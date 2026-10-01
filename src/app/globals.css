@@ -108,3 +108,9 @@ body {
     animation-iteration-count: 1 !important;
   }
 }
+
+/* Progress bar for the Home money card's automatic rotation. */
+@keyframes money-rotate {
+  from { transform: scaleX(0); }
+  to   { transform: scaleX(1); }
+}

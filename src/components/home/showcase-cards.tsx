@@ -1,7 +1,8 @@
 "use client";
 
 import Link from "next/link";
-import { useState } from "react";
+import { useEffect, useState, useSyncExternalStore } from "react";
+import { Pause, Play } from "lucide-react";
 import { formatMoney } from "@/lib/tax/form1120h";
 import { Empty } from "@/components/ui";
 import { LineChart, type LinePoint } from "./charts/line-chart";
@@ -130,10 +131,31 @@ function buildViews(
   return views;
 }
 
+/** How long each view stays up while the card is rotating on its own. */
+const ROTATE_MS = 7000;
+
+const REDUCED_MOTION = "(prefers-reduced-motion: reduce)";
+function usePrefersReducedMotion(): boolean {
+  return useSyncExternalStore(
+    (notify) => {
+      const mq = window.matchMedia(REDUCED_MOTION);
+      mq.addEventListener("change", notify);
+      return () => mq.removeEventListener("change", notify);
+    },
+    () => window.matchMedia(REDUCED_MOTION).matches,
+    () => false,
+  );
+}
+
 /**
  * The three money views — cash balance, in vs out, spending by category —
  * share one card and switch with tabs, so they take a single card's space.
  * Only views with data get a tab.
+ *
+ * It also rotates through them on its own, so a glance at Home shows all
+ * three. The rotation is the user's to stop: hovering or focusing inside the
+ * card holds it, clicking a tab ends it, the pause button toggles it, and
+ * anyone who has asked their system for reduced motion never gets it.
  */
 export function ShowcaseCards({
   cash,
@@ -146,6 +168,23 @@ export function ShowcaseCards({
 }) {
   const views = buildViews(cash, inOut, spending);
   const [activeKey, setActiveKey] = useState<View["key"] | null>(null);
+  const [userPaused, setUserPaused] = useState(false);
+  const [holding, setHolding] = useState(false);
+  const reducedMotion = usePrefersReducedMotion();
+
+  const rotating = views.length > 1 && !userPaused && !reducedMotion;
+  const currentKey = (views.find((v) => v.key === activeKey) ?? views[0])?.key;
+
+  useEffect(() => {
+    if (!rotating || holding || !currentKey) return;
+    const timer = setTimeout(() => {
+      const i = views.findIndex((v) => v.key === currentKey);
+      setActiveKey(views[(i + 1) % views.length].key);
+    }, ROTATE_MS);
+    return () => clearTimeout(timer);
+    // `views` is rebuilt every render from props; its length and keys are what matter.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [rotating, holding, currentKey, views.length]);
 
   if (views.length === 0) {
     return (
@@ -160,7 +199,11 @@ export function ShowcaseCards({
 
   return (
     <section
-      className={`grid overflow-hidden rounded-xl border md:grid-cols-[minmax(220px,36%)_1fr] ${t.card}`}
+      onMouseEnter={() => setHolding(true)}
+      onMouseLeave={() => setHolding(false)}
+      onFocusCapture={() => setHolding(true)}
+      onBlurCapture={() => setHolding(false)}
+      className={`relative grid overflow-hidden rounded-xl border md:grid-cols-[minmax(220px,36%)_1fr] ${t.card}`}
     >
       <div className="flex flex-col justify-between gap-5 px-5 py-5">
         <div>
@@ -180,7 +223,10 @@ export function ShowcaseCards({
                     id={`money-tab-${v.key}`}
                     aria-selected={selected}
                     aria-controls="money-panel"
-                    onClick={() => setActiveKey(v.key)}
+                    onClick={() => {
+                      setActiveKey(v.key);
+                      setUserPaused(true);
+                    }}
                     className={`rounded-full px-3 py-1 text-[11px] font-medium transition-colors ${
                       selected ? "bg-ink text-paper" : "text-mute hover:text-ink"
                     }`}
@@ -189,6 +235,17 @@ export function ShowcaseCards({
                   </button>
                 );
               })}
+              {!reducedMotion ? (
+                <button
+                  type="button"
+                  onClick={() => setUserPaused((p) => !p)}
+                  aria-label={userPaused ? "Resume automatic rotation" : "Pause automatic rotation"}
+                  title={userPaused ? "Resume" : "Pause"}
+                  className="ml-1 flex h-6 w-6 items-center justify-center rounded-full text-mute hover:text-ink"
+                >
+                  {userPaused ? <Play size={11} strokeWidth={2} aria-hidden="true" /> : <Pause size={11} strokeWidth={2} aria-hidden="true" />}
+                </button>
+              ) : null}
             </div>
           ) : null}
           <h2 className={`text-[16px] font-bold tracking-tight ${t.heading}`}>{view.heading}</h2>
@@ -209,10 +266,23 @@ export function ShowcaseCards({
         id="money-panel"
         role="tabpanel"
         aria-labelledby={`money-tab-${view.key}`}
-        className="border-t border-line bg-paper px-4 py-4 md:border-l md:border-t-0"
+        aria-live={rotating ? "off" : "polite"}
+        className="border-t border-line bg-paper px-4 py-4 md:min-h-[15rem] md:border-l md:border-t-0"
       >
         {view.chart}
       </div>
+      {rotating ? (
+        <div aria-hidden="true" className="absolute inset-x-0 bottom-0 h-0.5 bg-line/60">
+          <div
+            key={view.key}
+            className="h-full origin-left bg-ink/50"
+            style={{
+              animation: `money-rotate ${ROTATE_MS}ms linear forwards`,
+              animationPlayState: holding ? "paused" : "running",
+            }}
+          />
+        </div>
+      ) : null}
     </section>
   );
 }
