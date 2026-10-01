@@ -1,25 +1,58 @@
 "use client";
 
+import { useRef } from "react";
 import { usePathname } from "next/navigation";
-import { Menu } from "lucide-react";
+import { CircleHelp, LogOut, Menu, X } from "lucide-react";
 import { pageTitleFor } from "./config";
 import { setDrawerOpen, useSidebarState } from "./sidebar-state";
 
-export const TOP_BAR_SLOT_ID = "walkup-topbar-slot";
+const HELP: { title: string; body: string }[] = [
+  {
+    title: "Start with Home",
+    body: "The setup guide walks you through everything in order. Steps tick themselves off as you finish them.",
+  },
+  {
+    title: "Once a month: the bank feed",
+    body: "Open Bank Feed & Transactions, click the recommended category on each transaction, then post them. About 10 minutes.",
+  },
+  {
+    title: "Dues",
+    body: "HOA Dues shows who's paid. Charge each period, then confirm deposits as they land.",
+  },
+  {
+    title: "Something broken?",
+    body: "Report it under Repairs & Upkeep. The board assigns a contractor and closes it when it's fixed.",
+  },
+  {
+    title: "Keyboard",
+    body: "Press [ to shrink the sidebar to icons and ] to bring it back.",
+  },
+];
 
 /**
- * The slim top bar that carries the building name and current page while
- * the rail is showing (or on a phone). Not rendered when the labeled
- * sidebar is expanded — the sidebar's own lockup says the same thing.
+ * The sticky header on every signed-in page: the association and the page
+ * you're on at the left; your name, Help and Sign out at the right. On a
+ * phone it also carries the menu button that opens the navigation drawer.
  */
-export function TopBar({ associationName, userEmail }: { associationName: string | null; userEmail: string }) {
+export function TopBar({
+  associationName,
+  userName,
+  userEmail,
+  signOutAction,
+}: {
+  associationName: string | null;
+  userName: string | null;
+  userEmail: string;
+  signOutAction: () => Promise<void>;
+}) {
   const pathname = usePathname();
-  const { topBar, phone } = useSidebarState();
-  if (!topBar) return null;
+  const { phone } = useSidebarState();
+  const helpRef = useRef<HTMLDialogElement>(null);
   const page = pageTitleFor(pathname);
+  const shownName = userName ?? userEmail;
 
   return (
-    <header className="sticky top-0 z-20 flex h-[52px] items-center gap-3 border-b border-line bg-paper px-4 min-[900px]:px-6">
+    <header className="sticky top-0 z-20 flex h-[56px] items-center gap-3 border-b border-line bg-paper px-4 min-[900px]:px-6">
       {phone ? (
         <button
           type="button"
@@ -30,8 +63,9 @@ export function TopBar({ associationName, userEmail }: { associationName: string
           <Menu size={18} strokeWidth={1.6} aria-hidden="true" />
         </button>
       ) : null}
-      <div className="flex min-w-0 items-baseline gap-2 text-[15px]">
-        <span className="truncate font-semibold text-ink">{associationName ?? "Walkup"}</span>
+
+      <div className="flex min-w-0 items-baseline gap-2">
+        <span className="truncate text-[15px] font-semibold text-ink">{associationName ?? "Walkup"}</span>
         {page ? (
           <>
             <span aria-hidden="true" className="text-mute">
@@ -41,10 +75,81 @@ export function TopBar({ associationName, userEmail }: { associationName: string
           </>
         ) : null}
       </div>
-      <div className="ml-auto flex min-w-0 items-center gap-3">
-        <div id={TOP_BAR_SLOT_ID} className="flex items-center" />
-        <span className="hidden truncate text-[12.5px] text-mute sm:inline">{userEmail}</span>
+
+      <div className="ml-auto flex shrink-0 items-center gap-1.5">
+        <span className="mr-2 hidden max-w-[16rem] truncate text-[13px] font-medium text-ink sm:inline" title={userEmail}>
+          {shownName}
+        </span>
+        <button
+          type="button"
+          onClick={() => helpRef.current?.showModal()}
+          className="inline-flex h-9 items-center gap-1.5 rounded-md border border-line-strong bg-paper px-3 text-[13px] font-medium text-ink hover:bg-fill"
+        >
+          <CircleHelp size={15} strokeWidth={1.6} aria-hidden="true" />
+          <span className="hidden sm:inline">Help</span>
+          <span className="sr-only sm:hidden">Help</span>
+        </button>
+        <form action={signOutAction}>
+          <button
+            type="submit"
+            className="inline-flex h-9 items-center gap-1.5 rounded-md bg-ink px-3 text-[13px] font-medium text-paper hover:bg-ink-mid"
+          >
+            <LogOut size={15} strokeWidth={1.6} aria-hidden="true" />
+            <span className="hidden sm:inline">Sign out</span>
+            <span className="sr-only sm:hidden">Sign out</span>
+          </button>
+        </form>
       </div>
+
+      <dialog
+        ref={helpRef}
+        aria-labelledby="help-title"
+        onClick={(e) => {
+          if (e.target === helpRef.current) helpRef.current?.close();
+        }}
+        className="m-auto w-[min(32rem,calc(100vw-2rem))] rounded-xl border border-line bg-paper p-0 text-ink shadow-xl backdrop:bg-ink-deep/40"
+      >
+        <div className="flex items-start justify-between gap-4 rounded-t-[11px] bg-ink px-5 py-4">
+          <div>
+            <h2 id="help-title" className="eyebrow text-paper">
+              How Walkup works
+            </h2>
+            <p className="mt-1.5 text-[13px] text-ondark-mute">The short version. The full walkthrough is below.</p>
+          </div>
+          <button
+            type="button"
+            onClick={() => helpRef.current?.close()}
+            aria-label="Close"
+            className="rounded-md p-1 text-ondark-mute hover:bg-ink-mid hover:text-paper"
+          >
+            <X size={16} strokeWidth={1.6} aria-hidden="true" />
+          </button>
+        </div>
+        <ul className="space-y-3 px-5 py-5">
+          {HELP.map((h) => (
+            <li key={h.title}>
+              <div className="text-[13px] font-semibold text-ink">{h.title}</div>
+              <p className="mt-0.5 text-[13px] leading-relaxed text-mute">{h.body}</p>
+            </li>
+          ))}
+        </ul>
+        <div className="flex flex-wrap items-center justify-between gap-3 border-t border-line px-5 py-3">
+          <a
+            href="/walkthrough.txt"
+            download="Walkup walkthrough.txt"
+            className="text-[13px] font-medium text-ink underline underline-offset-2"
+          >
+            Download the full walkthrough
+          </a>
+          <button
+            type="button"
+            onClick={() => helpRef.current?.close()}
+            className="rounded-md bg-ink px-3 py-1.5 text-[12px] font-medium text-paper hover:bg-ink-mid"
+          >
+            Got it
+          </button>
+        </div>
+      </dialog>
     </header>
   );
 }

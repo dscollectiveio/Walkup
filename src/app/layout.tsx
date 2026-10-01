@@ -1,5 +1,5 @@
 import type { Metadata } from "next";
-import { Hanken_Grotesk, JetBrains_Mono } from "next/font/google";
+import { Montserrat } from "next/font/google";
 import "./globals.css";
 import { createClient } from "@/lib/supabase/server";
 import { signOut } from "./login/actions";
@@ -8,16 +8,10 @@ import { Sidebar } from "@/components/sidebar/sidebar";
 import { TopBar } from "@/components/sidebar/top-bar";
 import { cookies } from "next/headers";
 
-const hanken = Hanken_Grotesk({
+const montserrat = Montserrat({
   subsets: ["latin"],
   weight: ["400", "500", "600", "700"],
-  variable: "--font-hanken",
-  display: "swap",
-});
-const jetbrains = JetBrains_Mono({
-  subsets: ["latin"],
-  weight: ["500"],
-  variable: "--font-jetbrains",
+  variable: "--font-montserrat",
   display: "swap",
 });
 
@@ -55,13 +49,14 @@ export default async function RootLayout({
   const user = session?.user ?? null;
 
   let associationName: string | null = null;
+  let userName: string | null = null;
   let uncategorizedCount = 0;
 
   if (user) {
     // Lightweight queries the sidebar needs on every page: the association
     // name for the lockup, and how many bank transactions still need a
     // category (RLS hides these from owners, so their count is simply 0).
-    const [{ data: associations }, { count: needsCount }] = await Promise.all([
+    const [{ data: associations }, { count: needsCount }, { data: me }] = await Promise.all([
       supabase.from("associations").select("display_name").limit(1),
       supabase
         .from("bank_transactions")
@@ -71,8 +66,11 @@ export default async function RootLayout({
         .is("excluded_at", null)
         .is("removed_at", null)
         .eq("pending", false),
+      // The signed-in person's own name for the header.
+      supabase.from("persons").select("full_name").eq("auth_user_id", user.id).limit(1),
     ]);
     associationName = associations?.[0]?.display_name ?? null;
+    userName = me?.[0]?.full_name ?? null;
     uncategorizedCount = needsCount ?? 0;
   }
 
@@ -80,7 +78,7 @@ export default async function RootLayout({
     <html
       lang="en"
       data-sidebar={sidebarMode}
-      className={`${hanken.variable} ${jetbrains.variable}`}
+      className={montserrat.variable}
       suppressHydrationWarning
     >
       <head>
@@ -92,13 +90,19 @@ export default async function RootLayout({
             associationName={associationName}
             uncategorizedCount={uncategorizedCount}
             userEmail={user.email ?? ""}
-            signOutAction={signOut}
             initialMode={sidebarMode}
           />
         ) : null}
 
         <div className={user ? "app-shell min-h-screen" : "min-h-screen"}>
-          {user ? <TopBar associationName={associationName} userEmail={user.email ?? ""} /> : null}
+          {user ? (
+            <TopBar
+              associationName={associationName}
+              userName={userName}
+              userEmail={user.email ?? ""}
+              signOutAction={signOut}
+            />
+          ) : null}
           <main className="mx-auto max-w-[1100px] px-6 py-8 min-[900px]:px-8">
             {children}
           </main>

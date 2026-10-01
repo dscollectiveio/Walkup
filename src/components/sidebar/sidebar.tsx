@@ -3,7 +3,7 @@
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { useEffect, useId } from "react";
-import { LogOut, PanelLeftClose, PanelLeftOpen, X } from "lucide-react";
+import { PanelLeftClose, PanelLeftOpen, X } from "lucide-react";
 import { Mark } from "@/components/mark";
 import { ThemeToggle } from "./theme-toggle";
 import { NAV_GROUPS, TRAILING_NAV, UNGROUPED_NAV, type NavItemConfig } from "./config";
@@ -45,9 +45,9 @@ function NavItemLink({
       <Link
         href={item.href}
         aria-current={active ? "page" : undefined}
-        className={`relative flex min-h-[40px] items-center gap-3 rounded-md border-l-[3px] px-3 text-[13px] font-bold transition-colors ${
+        className={`relative flex min-h-[40px] items-center gap-2.5 rounded-md border-l-[3px] px-2.5 text-[13px] font-bold transition-colors ${
           active
-            ? "border-brass bg-nav-hover text-nav-text"
+            ? "border-brass bg-nav-active text-nav-active-text"
             : "border-transparent text-nav-muted hover:bg-nav-hover hover:text-nav-text"
         }`}
       >
@@ -75,7 +75,7 @@ function NavItemLink({
         aria-current={active ? "page" : undefined}
         aria-describedby={tipId}
         className={`relative mx-auto flex h-11 w-11 items-center justify-center rounded-lg transition-colors ${
-          active ? "bg-nav-hover text-nav-text" : "text-nav-muted hover:bg-nav-hover hover:text-nav-text"
+          active ? "bg-nav-active text-nav-active-text" : "text-nav-muted hover:bg-nav-hover hover:text-nav-text"
         }`}
       >
         {/* The "where am I" cue: a 3px gold bar on the rail's left edge, level with the active item. */}
@@ -105,13 +105,11 @@ export function Sidebar({
   associationName,
   uncategorizedCount,
   userEmail,
-  signOutAction,
   initialMode = "expanded",
 }: {
   associationName: string | null;
   uncategorizedCount: number;
   userEmail: string;
-  signOutAction: () => Promise<void>;
   /** From the walkup.sidebar cookie, so the first paint already matches. */
   initialMode?: SidebarMode;
 }) {
@@ -163,13 +161,13 @@ export function Sidebar({
       <nav
         aria-label="Main"
         data-expanded={expanded ? "true" : "false"}
-        className={`fixed inset-y-0 left-0 z-40 flex flex-col bg-nav transition-[width] duration-[160ms] ease-out motion-reduce:transition-none ${
-          phone && !drawerOpen ? "invisible w-0" : expanded ? "w-[232px]" : "w-[72px]"
+        className={`fixed inset-y-0 left-0 z-40 flex flex-col border-r border-nav-divider bg-nav transition-[width] duration-[160ms] ease-out motion-reduce:transition-none ${
+          phone && !drawerOpen ? "invisible w-0" : expanded ? "w-[288px]" : "w-[72px]"
         }`}
       >
         <div className={`flex items-center ${expanded ? "gap-3 px-3 py-4" : "justify-center py-4"}`}>
           <Link href="/" aria-label="Walkup home" className="flex min-w-0 items-center gap-3">
-            <Mark variant="dark" size={28} className="shrink-0" />
+            <Mark variant="full" size={28} className="shrink-0" />
             {expanded ? (
               <span className="flex min-w-0 flex-col leading-none">
                 <span className="text-[14px] font-semibold tracking-[-0.014em] text-nav-text">Walkup</span>
@@ -241,25 +239,17 @@ export function Sidebar({
           </button>
         ) : null}
 
-        <form action={signOutAction} className={`flex items-center border-t border-nav-divider ${expanded ? "gap-2.5 px-3 py-3" : "flex-col gap-2 py-3"}`}>
+        <div className={`flex items-center border-t border-nav-divider ${expanded ? "gap-2.5 px-3 py-3" : "flex-col gap-2 py-3"}`}>
           <span
             aria-hidden="true"
             title={userEmail}
-            className="flex h-[22px] w-[22px] shrink-0 items-center justify-center rounded-full bg-slate text-[10px] font-medium text-nav-text"
+            className="flex h-[22px] w-[22px] shrink-0 items-center justify-center rounded-full bg-slate text-[10px] font-medium text-paper"
           >
             {initials}
           </span>
           {expanded ? <span className="min-w-0 flex-1 truncate text-[12px] text-nav-muted">{userEmail}</span> : null}
           <ThemeToggle className={expanded ? "ml-auto" : ""} />
-          <button
-            type="submit"
-            aria-label="Sign out"
-            title="Sign out"
-            className="flex h-7 w-7 shrink-0 items-center justify-center rounded-md text-nav-muted transition-colors hover:bg-nav-hover hover:text-nav-text"
-          >
-            <LogOut size={15} strokeWidth={1.6} aria-hidden="true" />
-          </button>
-        </form>
+        </div>
       </nav>
     </>
   );

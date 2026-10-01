@@ -1,18 +1,11 @@
 "use client";
 
-import { createPortal } from "react-dom";
-import { useMounted, useSidebarState } from "./sidebar-state";
-import { TOP_BAR_SLOT_ID } from "./top-bar";
-
 /**
- * Renders its children in place when the labeled sidebar is expanded, and
- * moves them into the slim top bar when the rail is showing. Used by Home's
- * greeting row for the "Books balance" pill.
+ * Previously moved Home's "Books balance" pill into the slim top bar in the
+ * rail state. The header is now on every page and carries the user's name,
+ * Help and Sign out, so the pill stays in the greeting row. Kept as a
+ * pass-through so callers don't change.
  */
 export function TopBarSlot({ children }: { children: React.ReactNode }) {
-  const mounted = useMounted();
-  const { topBar } = useSidebarState();
-  if (!mounted || !topBar) return <>{children}</>;
-  const target = document.getElementById(TOP_BAR_SLOT_ID);
-  return target ? createPortal(children, target) : <>{children}</>;
+  return <>{children}</>;
 }

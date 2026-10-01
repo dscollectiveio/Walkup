@@ -17,7 +17,6 @@ const render = (initialMode: "expanded" | "rail") =>
       associationName: "Test HOA",
       uncategorizedCount: 3,
       userEmail: "a@b.co",
-      signOutAction: async () => {},
       initialMode,
     }),
   );
@@ -25,9 +24,9 @@ const render = (initialMode: "expanded" | "rail") =>
 const items = [...UNGROUPED_NAV, ...NAV_GROUPS.flatMap((g) => g.items), ...TRAILING_NAV];
 
 describe("Sidebar: expanded and rail", () => {
-  it("expanded: 232px, labels and group headings visible, numbered badge", () => {
+  it("expanded: 288px, labels and group headings visible, numbered badge", () => {
     const html = render("expanded");
-    expect(html).toContain("w-[232px]");
+    expect(html).toContain("w-[288px]");
     expect(html).toContain("Finances &amp; Dues");
     expect(html).toContain("Collapse navigation");
     expect(html).toContain(">3<"); // the badge number
@@ -52,6 +51,11 @@ describe("Sidebar: expanded and rail", () => {
     const b = hrefs(render("rail")).filter((h) => items.some((i) => i.href === h));
     expect(a).toEqual(b);
     expect(render("rail")).toContain('aria-current="page"');
+  });
+
+  it("selected tab sits on the dark fill in both states", () => {
+    expect(render("expanded")).toContain("bg-nav-active text-nav-active-text");
+    expect(render("rail")).toContain("bg-nav-active text-nav-active-text");
   });
 
   it("names the current page for the top bar", () => {

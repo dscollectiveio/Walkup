@@ -1,0 +1,204 @@
+WALKUP — HOW TO USE IT
+From signing in for the first time to running the building every month.
+==========================================================================
+
+Walkup keeps a small condo association's books, dues, taxes, insurance and
+repairs in one place. It reads your bank (read-only), but it never moves
+money and never sends anything on its own — every payment and every email
+still goes out from you.
+
+Keyboard: press [ to shrink the sidebar to icons, ] to bring it back.
+Help: the Help button at the top right of every page has the short version.
+
+
+--------------------------------------------------------------------------
+PART 1 — GETTING IN
+--------------------------------------------------------------------------
+
+1. Create your account
+   - Go to the sign-in page and choose "Create an account".
+   - Enter your email and a password (twice), tick the privacy notice, and
+     submit.
+   - If a board member invited you, open the invite link from their email
+     instead — it brings you straight to their building after you sign up.
+
+2. Turn on two-step sign-in (required)
+   - Walkup holds your association's financial records, so every account
+     uses an authenticator app (Google Authenticator, 1Password, Authy…).
+   - Scan the QR code it shows you, then type the 6-digit code to confirm.
+   - From then on, each sign-in is: email + password, then the current
+     6-digit code from the app.
+
+3. Create your building (first board member only)
+   - Enter your full name, the association's legal name (as on the
+     declaration), the short name you'll see in the app (usually the
+     address), and the state.
+   - Walkup sets up the fiscal year, the operating and reserve funds, and a
+     chart of accounts for you. You land on Home.
+
+   Invited members skip this step — they join the building that invited
+   them.
+
+
+--------------------------------------------------------------------------
+PART 2 — SETTING UP (about an hour, can be spread over a week)
+--------------------------------------------------------------------------
+
+Home shows "Set up your building": a checklist in the right order. Each
+step ticks itself off when the information exists — there is nothing to
+check off by hand. You can skip it and come back; it stays on Home until
+it's done.
+
+STEP 1 — BUILDING INFO  (Sidebar: Building Info)
+   a. Fill in the association's details: EIN, city, county, date
+      incorporated. The EIN is needed for the tax return.
+   b. Add every unit (e.g. Unit 1, Unit 2, Garden).
+   c. Assign an owner to each unit — name and email. The email is what
+      reminders and invites use.
+   d. Add the rest of the board and give each person their role.
+   e. Invite them to sign in. They get a link; nothing is emailed by
+      Walkup itself.
+
+STEP 2 — FINANCES & DUES
+   a. Connect the bank  (Bank Feed & Transactions)
+      - Click "Connect your bank" and sign in to your bank through Plaid.
+        Walkup gets read-only access: it can see transactions and
+        balances, never move money.
+      - If the association has money at a second bank (often the reserve),
+        use "+ Add another bank" and tell Walkup which account it is.
+   b. Sync transactions — "Sync now" pulls in recent history.
+   c. Categorize and post the backlog — see "The monthly routine" below.
+      The first time this may take 20–30 minutes; after that, ten.
+   d. Financial statements fill themselves in once transactions are
+      posted. Nothing to set up.
+   e. Set this year's budget  (Budget & spending)
+      - "Edit budget" → one number per category for the year.
+      - If you have last year's records, Walkup offers them as a starting
+        point (with an optional +2–5% for rising costs).
+      - Plan a yearly amount to set aside for the reserve, too.
+   f. Tell owners how to pay  (HOA Dues → How to pay)
+      - Payee name, bank, account and routing numbers, Zelle — whatever
+        owners should use. Owners see this on their own Dues page.
+   g. Set each unit's dues  (HOA Dues → Dues plan, far right of each row)
+      - Enter what each unit pays for the year and how often (monthly,
+        quarterly, once a year). Units can all be different.
+      - Optional: a late-fee rule (amount and grace days). It's off until
+        you set it, and even then fees are only ever proposed — you click
+        to add each one.
+
+STEP 3 — TAXES & INSURANCE
+   a. EIN on file (from Step 1a).
+   b. Taxes: nothing to do now. At year end, Taxes works out the 1120-H
+      from your posted books and shows you what to file.
+   c. Record the insurance policy  (Insurance Marketplace)
+      - Carrier, policy number, dates, premium, deductible, limits.
+      - Upload the declarations page if you have it.
+      - The premium is added to your recurring bills automatically.
+
+STEP 4 — BUILDING UPKEEP  (Repairs & Upkeep)
+   a. Add your contractors  (Contractors view) — the plumber, electrician,
+      roofer, cleaners you already use. If Google search is turned on,
+      "Find a contractor" searches near the building.
+   b. Collect W-9s from each contractor you pay — you need them before you
+      can issue 1099s in January. Record "W-9 on file" on their profile.
+   c. Set up the upkeep schedule  (Upkeep view)
+      - "Start with the usual checklist" offers the dozen jobs most
+        buildings do every year (boiler service, gutters, backflow test,
+        sewer rodding…). Untick what doesn't apply.
+   d. Upload the declaration and the insurance certificate  (Document Hub).
+
+
+--------------------------------------------------------------------------
+PART 3 — THE MONTHLY ROUTINE (about 15 minutes)
+--------------------------------------------------------------------------
+
+1. Bank Feed & Transactions
+   - The page opens on what needs a category, with a "to go" count and a
+     progress bar.
+   - Each transaction shows a RECOMMENDED category with the reason
+     ("you filed this payee the same way 4 times before"). Click it once
+     to accept. "+3 more" means the other transactions from the same payee
+     are filed with it.
+   - No recommendation, or it's wrong? Click "Categorize" and pick one.
+   - Many at once: tick the boxes; a bar appears at the bottom of the
+     screen to categorize them together.
+   - Made a mistake? Every save shows an Undo button for 10 seconds.
+   - When everything is categorized, click "Post … ready to the books".
+     Posting is what updates the budget, dues balances and statements.
+
+2. HOA Dues
+   - "Needs you" lists everything waiting, one decision per line:
+     * "October dues haven't been charged yet" → Charge what's due.
+     * "$450 came in on Oct 3 — looks like Unit 2" → Yes, Unit 2.
+     * "Unit 3 says they paid by Zelle" → it's matched automatically when
+       the deposit shows up; otherwise Keep waiting or Not received.
+     * A late fee, if you set a rule → Add the fee, or Skip this time.
+     * "Unit 1 is behind" → Draft a reminder (opens in your own email).
+   - A check or cash handed to you: "Record a payment".
+
+3. Budget & spending
+   - One sentence at the top says whether you're on plan.
+   - Each category shows spent vs. planned, with a thin line for where
+     you'd be if spending were spread evenly. Over-budget categories are
+     listed first. Click one to see what's in it.
+
+4. Home
+   - "Worth a minute today" lists anything that needs attention (late
+     dues, a category over budget, an insurance renewal coming up,
+     missing W-9s). It empties itself as things get handled.
+
+
+--------------------------------------------------------------------------
+PART 4 — AS THINGS COME UP
+--------------------------------------------------------------------------
+
+Something breaks
+   Repairs & Upkeep → Problems → "Report a problem". Anyone in the building
+   can report one. The board marks it urgent if needed, assigns a
+   contractor, and closes it when it's fixed.
+
+Upkeep comes due
+   Repairs & Upkeep → Upkeep. Overdue jobs are at the top. When a job is
+   done, "Mark done" with the date, cost and who did it — the next date
+   rolls forward on its own.
+
+Board meeting or an owner asks for the numbers
+   Financial Statements → pick the month, quarter or year → Download PDF.
+   The "···" menu has Excel, an email draft, and the year-end package for
+   your accountant.
+
+Insurance renewal
+   Home warns you 60 days ahead. Insurance Marketplace has the policy, and
+   lets you compare quotes year to year.
+
+Year end
+   1. Make sure every transaction for the year is posted.
+   2. Taxes → review the 1120-H figures Walkup worked out. Have an
+      accountant look before you file — Walkup is not a tax adviser.
+   3. Issue 1099-NECs to contractors you paid $600 or more (W-9s first).
+   4. Budget & spending → "Start from the last budget" for next year.
+
+
+--------------------------------------------------------------------------
+FOR OWNERS (not on the board)
+--------------------------------------------------------------------------
+
+   - HOA Dues shows what you owe, what each charge is for, and how to pay.
+   - Paid by Zelle, check or cash? Click "I paid another way" so the board
+     can match it when the deposit lands.
+   - Something broken in a shared area or your unit? Report it under
+     Repairs & Upkeep.
+   - Your unit's full statement is linked from the Dues page.
+
+
+--------------------------------------------------------------------------
+GOOD TO KNOW
+--------------------------------------------------------------------------
+
+   - Nothing moves money. Owners pay from their own bank; you pay bills
+     from yours. Walkup records and reminds.
+   - Nothing is sent automatically. Reminder emails open as drafts in your
+     own email app.
+   - Posted entries are never deleted. "Undo posting" writes a reversing
+     entry, so the history always adds up.
+   - Light or dark: the moon/sun button at the bottom of the sidebar.
