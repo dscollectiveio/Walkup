@@ -39,13 +39,13 @@ export function WorthAMinute({ items }: { items: UrgentItem[] }) {
           return (
             <li
               key={item.title}
-              className="flex flex-wrap items-center gap-x-4 gap-y-2 py-[18px] sm:flex-nowrap"
+              className="flex flex-wrap items-center gap-x-4 gap-y-2 py-2.5 sm:flex-nowrap"
             >
               <span
                 aria-hidden="true"
-                className={`flex h-10 w-10 shrink-0 items-center justify-center rounded-md border ${tile}`}
+                className={`flex h-8 w-8 shrink-0 items-center justify-center rounded-md border ${tile}`}
               >
-                <Icon size={17} strokeWidth={1.75} />
+                <Icon size={15} strokeWidth={1.75} />
               </span>
               <span className="min-w-0 flex-1">
                 <span className="block text-[13px] font-medium text-ink">{item.title}</span>
@@ -55,7 +55,7 @@ export function WorthAMinute({ items }: { items: UrgentItem[] }) {
               </span>
               <Link
                 href={item.action.href}
-                className="shrink-0 rounded-md bg-ink px-3.5 py-2 text-[12px] font-medium text-paper hover:bg-ink-mid"
+                className="shrink-0 rounded-md bg-ink px-3 py-1.5 text-[12px] font-medium text-paper hover:bg-ink-mid"
               >
                 {item.action.label}
               </Link>
