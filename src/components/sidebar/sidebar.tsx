@@ -195,12 +195,11 @@ export function Sidebar({
           </div>
 
           {NAV_GROUPS.map((group) => (
-            <div key={group.label} className={expanded ? "mt-4" : ""}>
+            <div key={group.label}>
+              {divider}
               {expanded ? (
                 <div className="px-3 pb-1 text-[10px] font-medium uppercase tracking-[0.07em] text-section-label">{group.label}</div>
-              ) : (
-                divider
-              )}
+              ) : null}
               <div className="space-y-0.5">
                 {group.items.map((item) => (
                   <NavItemLink key={item.href} item={item} active={isActive(pathname, item.href)} badgeCount={badgeFor(item)} expanded={expanded} />
@@ -209,8 +208,8 @@ export function Sidebar({
             </div>
           ))}
 
-          <div className={expanded ? "mt-4 space-y-0.5" : "space-y-0.5"}>
-            {expanded ? null : divider}
+          <div className="space-y-0.5">
+            {divider}
             {TRAILING_NAV.map((item) => (
               <NavItemLink key={item.href} item={item} active={isActive(pathname, item.href)} badgeCount={badgeFor(item)} expanded={expanded} />
             ))}
