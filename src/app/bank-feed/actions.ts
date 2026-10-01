@@ -85,11 +85,23 @@ export async function connectBank(
 
   // Every posting needs a cash leg. Default to Operating Cash / Operating
   // fund so the first sync can post; the board can change it on the page.
+  // A second bank is different: if another live connection already posts
+  // to Operating Cash, defaulting this one there too would merge two banks
+  // into one ledger account. Leave it unset so the page asks which account
+  // this bank is (the "pick one before posting" prompt) before anything posts.
   const [{ data: cashAccounts }, { data: funds }] = await Promise.all([
     supabase.from("accounts").select("id").eq("code", "1000").eq("is_cash_account", true).limit(1),
     supabase.from("funds").select("id").eq("kind", "operating").limit(1),
   ]);
-  if (cashAccounts?.[0] && funds?.[0]) {
+  const { count: alreadyUsing } = cashAccounts?.[0]
+    ? await supabase
+        .from("bank_connections")
+        .select("id", { count: "exact", head: true })
+        .eq("cash_account_id", cashAccounts[0].id)
+        .neq("status", "disconnected")
+        .neq("id", connectionId)
+    : { count: 0 };
+  if (cashAccounts?.[0] && funds?.[0] && (alreadyUsing ?? 0) === 0) {
     await supabase
       .from("bank_connections")
       .update({ cash_account_id: cashAccounts[0].id, fund_id: funds[0].id })

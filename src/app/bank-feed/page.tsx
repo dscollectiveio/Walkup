@@ -4,6 +4,7 @@ import { Card, Empty, Restricted, money } from "@/components/ui";
 import { syncedAgo } from "@/lib/dates";
 import { plaidClient, describePlaidError } from "@/lib/plaid";
 import { ConnectBankButton } from "./connect-bank-button";
+import { TransactionsHelp } from "./transactions-help";
 import { SyncButton } from "./sync-button";
 import { DisconnectButton } from "./disconnect-button";
 import { type Pickers, type TransactionRecord } from "./transaction-row";
@@ -450,6 +451,15 @@ export default async function BankFeedPage({
               </div>
             );
           })}
+          {canEdit ? (
+            <div className="flex flex-wrap items-center justify-between gap-3 bg-fill/40 px-5 py-3">
+              <p className="text-[12px] text-mute">
+                Have money at another bank too — say, the reserve? Add it here. For new transactions at a bank
+                that&rsquo;s already listed, use Sync now instead.
+              </p>
+              <ConnectBankButton label="+ Add another bank" variant="outline" />
+            </div>
+          ) : null}
         </section>
       ) : null}
 
@@ -467,6 +477,7 @@ export default async function BankFeedPage({
           <Card
             navy
             title="Transactions"
+            action={<TransactionsHelp />}
             hint={
               canEdit && counts.needs > 0
                 ? "Pick a category for each one — suggestions are one click. Post when you're done."

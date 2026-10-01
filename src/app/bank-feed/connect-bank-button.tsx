@@ -6,7 +6,20 @@ import { useRouter } from "next/navigation";
 import { connectBank, createLinkToken } from "./actions";
 import { clearLinkTokenForOAuth, storeLinkTokenForOAuth } from "./oauth-link-token";
 
-export function ConnectBankButton() {
+const STYLES = {
+  primary:
+    "rounded-md bg-ink px-4 py-2 text-[13px] font-medium text-paper transition hover:bg-ink-mid disabled:opacity-50",
+  outline:
+    "inline-flex items-center gap-1.5 rounded-md border border-line-strong bg-paper px-3 py-1.5 text-[12px] font-medium text-ink transition hover:bg-fill disabled:opacity-50",
+};
+
+export function ConnectBankButton({
+  label = "Connect your bank",
+  variant = "primary",
+}: {
+  label?: string;
+  variant?: keyof typeof STYLES;
+} = {}) {
   const [linkToken, setLinkToken] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
 
@@ -25,14 +38,14 @@ export function ConnectBankButton() {
           an empty token even after the real one arrived. Mounting this
           component only once linkToken is real avoids that entirely. */}
       {linkToken ? (
-        <PlaidLinkButton linkToken={linkToken} onError={setError} />
+        <PlaidLinkButton linkToken={linkToken} onError={setError} label={label} className={STYLES[variant]} />
       ) : (
         <button
           type="button"
           disabled
-          className="rounded-md bg-ink px-4 py-2 text-[13px] font-medium text-paper opacity-50"
+          className={STYLES[variant]}
         >
-          {error ? "Connect your bank" : "Loading…"}
+          {error ? label : "Loading…"}
         </button>
       )}
       {error ? (
@@ -47,9 +60,13 @@ export function ConnectBankButton() {
 function PlaidLinkButton({
   linkToken,
   onError,
+  label,
+  className,
 }: {
   linkToken: string;
   onError: (message: string) => void;
+  label: string;
+  className: string;
 }) {
   const router = useRouter();
   const [connecting, setConnecting] = useState(false);
@@ -88,9 +105,9 @@ function PlaidLinkButton({
         open();
       }}
       disabled={!ready || connecting}
-      className="rounded-md bg-ink px-4 py-2 text-[13px] font-medium text-paper transition hover:bg-ink-mid disabled:opacity-50"
+      className={className}
     >
-      {connecting ? "Connecting…" : "Connect your bank"}
+      {connecting ? "Connecting…" : label}
     </button>
   );
 }

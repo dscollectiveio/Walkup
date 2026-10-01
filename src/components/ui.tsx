@@ -53,10 +53,13 @@ export function Card({
   title,
   hint,
   navy = false,
+  action,
   children,
 }: {
   title: string;
   hint?: string;
+  /** Rendered at the right of the header, e.g. a help button. */
+  action?: React.ReactNode;
   /** Brand-colored header band with white text (used on the Home and Bank Feed pages). */
   navy?: boolean;
   children: React.ReactNode;
@@ -68,10 +71,15 @@ export function Card({
           navy ? "rounded-t-[11px] bg-ink px-5 py-4" : "border-b border-line px-5 py-4"
         }
       >
-        <h2 className={`font-bold tracking-tight ${navy ? "text-paper" : "text-ink"}`}>{title}</h2>
-        {hint ? (
-          <p className={`mt-1 text-[13px] ${navy ? "text-ondark-mute" : "text-mute"}`}>{hint}</p>
-        ) : null}
+        <div className="flex items-start justify-between gap-3">
+          <div className="min-w-0">
+            <h2 className={`font-bold tracking-tight ${navy ? "text-paper" : "text-ink"}`}>{title}</h2>
+            {hint ? (
+              <p className={`mt-1 text-[13px] ${navy ? "text-ondark-mute" : "text-mute"}`}>{hint}</p>
+            ) : null}
+          </div>
+          {action ? <div className="shrink-0">{action}</div> : null}
+        </div>
       </header>
       <div className="px-5 py-4">{children}</div>
     </section>
