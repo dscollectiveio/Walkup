@@ -97,14 +97,14 @@ export function Standing({
         </div>
 
         {tiles.length > 0 ? (
-          <div className="mt-auto flex flex-1 flex-col">
+          <div className="mt-auto flex flex-col">
             <h3 className="text-[11px] font-medium uppercase tracking-[0.07em] text-section-label">Right now</h3>
-            <ul className="mt-2 grid flex-1 auto-rows-fr grid-cols-2 gap-2">
+            <ul className="mt-2 grid grid-cols-2 gap-2">
               {tiles.map((tile) => (
                 <li key={tile.key}>
                   <a
                     href={tile.href}
-                    className={`flex h-full flex-col justify-center rounded-lg border px-3 py-2.5 transition-colors ${TILE_TONE[tile.tone]}`}
+                    className={`flex h-full flex-col justify-center rounded-lg border px-3 py-1.5 transition-colors ${TILE_TONE[tile.tone]}`}
                   >
                     <div className="text-[11px] text-mute">{tile.label}</div>
                     {tile.value !== null ? (
