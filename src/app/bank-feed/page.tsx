@@ -287,6 +287,7 @@ export default async function BankFeedPage({
 
       {active.length === 0 ? (
         <Card
+          navy
           title="Connect a bank account"
           hint="Transactions flow in automatically; you categorize them and they post to the books."
         >
@@ -303,6 +304,7 @@ export default async function BankFeedPage({
         const balance = balanceByConnection.get(c.id);
         return (
           <Card
+            navy
             key={c.id}
             title={c.institution_name}
             hint={
@@ -368,7 +370,7 @@ export default async function BankFeedPage({
             </p>
           ) : null}
 
-          <Card title="Transactions" hint="Categorize, then post. Posted rows are in the books.">
+          <Card navy title="Transactions" hint="Categorize, then post. Posted rows are in the books.">
             <div className="mb-4 flex flex-wrap items-center justify-between gap-3">
               <div className="flex flex-wrap gap-1.5">
                 {(Object.keys(STATUS_LABEL) as Status[]).map((s) => (
@@ -449,6 +451,7 @@ export default async function BankFeedPage({
 
           {ruleRecords.length > 0 ? (
             <Card
+              navy
               title="Rules"
               hint="Saved from “Remember this”. Applied to new transactions as they sync."
             >

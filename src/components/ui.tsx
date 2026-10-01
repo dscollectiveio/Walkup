@@ -52,17 +52,26 @@ const STATUS = {
 export function Card({
   title,
   hint,
+  navy = false,
   children,
 }: {
   title: string;
   hint?: string;
+  /** Brand-colored header band with white text (used on the Home and Bank Feed pages). */
+  navy?: boolean;
   children: React.ReactNode;
 }) {
   return (
     <section className="rounded-xl border border-line bg-paper">
-      <header className="border-b border-line px-5 py-4">
-        <h2 className="font-bold tracking-tight text-ink">{title}</h2>
-        {hint ? <p className="mt-1 text-[13px] text-mute">{hint}</p> : null}
+      <header
+        className={
+          navy ? "rounded-t-[11px] bg-ink px-5 py-4" : "border-b border-line px-5 py-4"
+        }
+      >
+        <h2 className={`font-bold tracking-tight ${navy ? "text-paper" : "text-ink"}`}>{title}</h2>
+        {hint ? (
+          <p className={`mt-1 text-[13px] ${navy ? "text-ondark-mute" : "text-mute"}`}>{hint}</p>
+        ) : null}
       </header>
       <div className="px-5 py-4">{children}</div>
     </section>
