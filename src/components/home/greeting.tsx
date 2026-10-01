@@ -5,6 +5,8 @@
  * hydration mismatch. A visitor in another timezone sees the building's
  * morning, which for a board member of that building is the right morning.
  */
+import { TopBarSlot } from "@/components/sidebar/top-bar-slot";
+
 export function Greeting({
   firstName,
   statusLine,
@@ -27,6 +29,7 @@ export function Greeting({
         <p className="mt-1 text-[13px] text-mute">{statusLine}</p>
       </div>
       {books?.visible ? (
+        <TopBarSlot>
         <span
           className={`shrink-0 rounded-full border px-3 py-1 text-[12px] font-medium ${
             books.balanced
@@ -36,6 +39,7 @@ export function Greeting({
         >
           {books.balanced ? "Books balance · checked just now" : "Books don't match — check the ledger"}
         </span>
+        </TopBarSlot>
       ) : null}
     </div>
   );

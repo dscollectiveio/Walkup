@@ -5,6 +5,7 @@ import { createClient } from "@/lib/supabase/server";
 import { signOut } from "./login/actions";
 import Link from "next/link";
 import { Sidebar } from "@/components/sidebar/sidebar";
+import { TopBar } from "@/components/sidebar/top-bar";
 import { cookies } from "next/headers";
 
 const hanken = Hanken_Grotesk({
@@ -34,7 +35,10 @@ export default async function RootLayout({
   children,
 }: Readonly<{ children: React.ReactNode }>) {
   const supabase = await createClient();
-  const sidebarCollapsed = (await cookies()).get("sidebar")?.value === "collapsed";
+  const jar = await cookies();
+  // walkup.sidebar is the preference; the older "sidebar=collapsed" cookie still counts as the rail.
+  const sidebarMode: "expanded" | "rail" =
+    jar.get("walkup.sidebar")?.value === "rail" || jar.get("sidebar")?.value === "collapsed" ? "rail" : "expanded";
 
   // getSession(), not getUser(), deliberately — unlike src/lib/supabase/server.ts's
   // getUser() (used everywhere auth actually gates something), this layout
@@ -75,7 +79,7 @@ export default async function RootLayout({
   return (
     <html
       lang="en"
-      data-sidebar={sidebarCollapsed ? "collapsed" : "expanded"}
+      data-sidebar={sidebarMode}
       className={`${hanken.variable} ${jetbrains.variable}`}
       suppressHydrationWarning
     >
@@ -89,11 +93,12 @@ export default async function RootLayout({
             uncategorizedCount={uncategorizedCount}
             userEmail={user.email ?? ""}
             signOutAction={signOut}
-            initialCollapsed={sidebarCollapsed}
+            initialMode={sidebarMode}
           />
         ) : null}
 
         <div className={user ? "app-shell min-h-screen" : "min-h-screen"}>
+          {user ? <TopBar associationName={associationName} userEmail={user.email ?? ""} /> : null}
           <main className="mx-auto max-w-[1100px] px-6 py-8 min-[900px]:px-8">
             {children}
           </main>

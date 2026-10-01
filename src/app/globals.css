@@ -284,17 +284,33 @@ h1, h2, h3 {
   .money-slide { animation: none; }
 }
 
-/* App shell offset for the fixed sidebar. Icons-only (3.5rem) below 900px or
-   when the user collapsed it; full width otherwise. The attribute is set on
-   <html> from a cookie on the server, then toggled by the sidebar. */
-.app-shell {
-  padding-left: 3.5rem;
-  transition: padding-left 150ms ease-out;
+/* Navigation width. The preference is <html data-sidebar="expanded|rail">
+   (set server-side from the walkup.sidebar cookie, toggled by the sidebar);
+   the viewport can override it: under 1024px the rail is forced, under
+   768px the nav is a drawer and takes no width. The main area reads this
+   one variable, so nothing else hard-codes 232px. */
+:root {
+  --sidebar-width: 232px;
 }
-@media (min-width: 900px) {
-  html:not([data-sidebar="collapsed"]) .app-shell {
-    padding-left: 232px;
+html[data-sidebar="rail"] {
+  --sidebar-width: 72px;
+}
+@media (max-width: 1023px) {
+  html,
+  html[data-sidebar="expanded"] {
+    --sidebar-width: 72px;
   }
+}
+@media (max-width: 767px) {
+  html,
+  html[data-sidebar="expanded"],
+  html[data-sidebar="rail"] {
+    --sidebar-width: 0px;
+  }
+}
+.app-shell {
+  padding-left: var(--sidebar-width);
+  transition: padding-left 160ms ease-out;
 }
 @media (prefers-reduced-motion: reduce) {
   .app-shell {

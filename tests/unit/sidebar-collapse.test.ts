@@ -9,42 +9,56 @@ vi.mock("next/link", () => ({
 }));
 
 import { Sidebar } from "@/components/sidebar/sidebar";
-import { NAV_GROUPS, TRAILING_NAV, UNGROUPED_NAV } from "@/components/sidebar/config";
+import { NAV_GROUPS, TRAILING_NAV, UNGROUPED_NAV, pageTitleFor } from "@/components/sidebar/config";
 
-const render = (initialCollapsed: boolean) =>
+const render = (initialMode: "expanded" | "rail") =>
   renderToStaticMarkup(
     createElement(Sidebar, {
       associationName: "Test HOA",
       uncategorizedCount: 3,
       userEmail: "a@b.co",
       signOutAction: async () => {},
-      initialCollapsed,
+      initialMode,
     }),
   );
 
-describe("Sidebar collapse", () => {
-  it("expanded: full width at desktop, labels and group headings shown", () => {
-    const html = render(false);
-    expect(html).toContain("min-[900px]:w-[232px]");
-    expect(html).toContain("min-[900px]:not-sr-only");
+const items = [...UNGROUPED_NAV, ...NAV_GROUPS.flatMap((g) => g.items), ...TRAILING_NAV];
+
+describe("Sidebar: expanded and rail", () => {
+  it("expanded: 232px, labels and group headings visible, numbered badge", () => {
+    const html = render("expanded");
+    expect(html).toContain("w-[232px]");
     expect(html).toContain("Finances &amp; Dues");
-    expect(html).toContain("Collapse sidebar");
+    expect(html).toContain("Collapse navigation");
+    expect(html).toContain(">3<"); // the badge number
+    for (const item of items) expect(html).toContain(item.label.replace("&", "&amp;"));
   });
 
-  it("collapsed: icon rail only, no desktop widening, labels screen-reader-only", () => {
-    const html = render(true);
-    expect(html).not.toContain("min-[900px]:w-[232px]");
-    expect(html).not.toContain("min-[900px]:not-sr-only");
-    expect(html).not.toContain("Finances &amp; Dues");
-    expect(html).toContain("Expand sidebar");
+  it("rail: 72px, labels kept for screen readers, tooltips with the count in words, dot badge", () => {
+    const html = render("rail");
+    expect(html).toContain("w-[72px]");
+    expect(html).not.toContain("Finances &amp; Dues"); // group headings become dividers
+    expect(html).toContain("Expand navigation");
+    expect((html.match(/role="tooltip"/g) ?? []).length).toBe(items.length);
+    expect(html).toContain("3 waiting");
+    expect(html).not.toContain(">3<");
+    for (const item of items) expect(html).toContain(item.label.replace("&", "&amp;"));
+    expect((html.match(/aria-describedby=/g) ?? []).length).toBe(items.length);
   });
 
-  it("every tab keeps an icon and a tooltip/label when collapsed", () => {
-    const html = render(true);
-    const items = [...UNGROUPED_NAV, ...NAV_GROUPS.flatMap((g) => g.items), ...TRAILING_NAV];
-    for (const item of items) {
-      expect(html).toContain(`title="${item.label.replace("&", "&amp;")}"`);
-    }
-    expect((html.match(/<svg/g) ?? []).length).toBeGreaterThanOrEqual(items.length);
+  it("same items in the same order in both states, active item marked", () => {
+    const hrefs = (html: string) => [...html.matchAll(/href="([^"]+)"/g)].map((m) => m[1]).filter((h) => h !== "/" || true);
+    const a = hrefs(render("expanded")).filter((h) => items.some((i) => i.href === h));
+    const b = hrefs(render("rail")).filter((h) => items.some((i) => i.href === h));
+    expect(a).toEqual(b);
+    expect(render("rail")).toContain('aria-current="page"');
+  });
+
+  it("names the current page for the top bar", () => {
+    expect(pageTitleFor("/")).toBe("Home");
+    expect(pageTitleFor("/budget")).toBe("Budget & spending");
+    expect(pageTitleFor("/repairs?view=upkeep")).toBe("Repairs & Upkeep");
+    expect(pageTitleFor("/units/abc")).toBe("Unit statement");
+    expect(pageTitleFor("/nowhere")).toBeNull();
   });
 });

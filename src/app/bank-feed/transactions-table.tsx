@@ -501,7 +501,7 @@ export function TransactionsTable({
 
       {/* Selection bar: pinned to the bottom of the screen so it's never scrolled away from the rows. */}
       {canEdit && selected.size > 0 ? (
-        <div className="pointer-events-none fixed inset-x-0 bottom-4 z-30 pl-[4.5rem] pr-4 min-[900px]:pl-[calc(232px+1.5rem)] min-[900px]:pr-8">
+        <div className="pointer-events-none fixed inset-x-0 bottom-4 z-30 pl-[calc(var(--sidebar-width)+1rem)] pr-4 min-[900px]:pl-[calc(var(--sidebar-width)+1.5rem)] min-[900px]:pr-8">
           <div className="pointer-events-auto mx-auto max-h-[60vh] max-w-[1100px] overflow-y-auto rounded-xl">
             {prefill ? (
               <div className="flex flex-wrap items-center gap-2 rounded-xl border border-brass bg-warning-tint p-3 shadow-lg">

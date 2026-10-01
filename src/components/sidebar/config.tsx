@@ -62,3 +62,25 @@ export const NAV_GROUPS: NavGroupConfig[] = [
 export const TRAILING_NAV: NavItemConfig[] = [
   { href: "/documents", label: "Document Hub", icon: Folder },
 ];
+
+/** Pages reachable outside the nav, so the top bar can still name them. */
+const EXTRA_TITLES: { prefix: string; label: string }[] = [
+  { prefix: "/units/", label: "Unit statement" },
+  { prefix: "/maintenance/", label: "Problem" },
+  { prefix: "/contractors/", label: "Contractor" },
+  { prefix: "/ledger", label: "Ledger" },
+  { prefix: "/delinquency", label: "Who owes money" },
+  { prefix: "/admin", label: "Admin" },
+  { prefix: "/login", label: "Sign in" },
+  { prefix: "/onboarding", label: "Set up" },
+];
+
+/** The current page's name for the slim top bar, from the nav config first. */
+export function pageTitleFor(pathname: string): string | null {
+  if (pathname === "/") return "Home";
+  const all = [...UNGROUPED_NAV, ...NAV_GROUPS.flatMap((g) => g.items), ...TRAILING_NAV].filter((i) => i.href !== "/");
+  const hit = all.find((i) => pathname === i.href || pathname.startsWith(`${i.href}/`) || pathname.startsWith(`${i.href}?`));
+  if (hit) return hit.label;
+  const extra = EXTRA_TITLES.find((e) => pathname.startsWith(e.prefix));
+  return extra?.label ?? null;
+}
