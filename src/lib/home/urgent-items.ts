@@ -9,7 +9,7 @@
 // them lie.
 
 export interface UrgentItem {
-  key: "books" | "delinquent" | "w9" | "insurance" | "bank";
+  key: "books" | "delinquent" | "w9" | "insurance" | "bank" | "budget";
   severity: number; // lower sorts first
   title: string;
   why: string;
@@ -32,6 +32,8 @@ interface UrgentInputs {
   insuranceExpiry: Date | null; // soonest active policy end
   bankConnected: boolean;
   today: Date;
+  /** Categories more than 10% over their share of the budget so far this year, biggest first. */
+  budgetOver?: { name: string; overCents: number }[];
 }
 
 const money = (n: number) =>
@@ -93,6 +95,22 @@ export function urgentItems(input: UrgentInputs): UrgentItem[] {
         tone: "warning",
       });
     }
+  }
+
+  const over = input.budgetOver ?? [];
+  if (over.length > 0) {
+    const lead = over[0];
+    items.push({
+      key: "budget",
+      severity: 2,
+      title:
+        over.length === 1
+          ? `${lead.name} is ${money(lead.overCents / 100)} over budget so far this year`
+          : `${over.length} categories are over budget — ${lead.name} leads at ${money(lead.overCents / 100)}`,
+      why: "Catching it mid-year leaves options: trim, move money from a line with room, or plan a special assessment early instead of in a hurry.",
+      action: { label: "See the budget", href: "/budget" },
+      tone: "warning",
+    });
   }
 
   if (!input.bankConnected) {

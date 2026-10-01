@@ -16,6 +16,8 @@ import { cashByMonth } from "@/lib/money/cash";
 import { dueDate } from "@/lib/tax/due-rules";
 import { buildSnapshot } from "@/lib/home/snapshot";
 import { spendByAccount } from "@/lib/money/spending";
+import { monthKey, monthKeyOf, monthsBetween } from "@/lib/money/months";
+import { buildPlanRows, overBudgetAlerts } from "@/lib/money/plan";
 import { dateOfKey, monthLongLabel, monthShortLabel } from "@/lib/money/months";
 import { WorthAMinute } from "@/components/home/worth-a-minute";
 import { Standing } from "@/components/home/standing";
@@ -76,7 +78,7 @@ export default async function HomePage() {
       .select(
         "id, display_name, state_code, fiscal_year_end_month, incorporated_on, reserve_target, ein, city, county, dues_payee_name, dues_account_number, dues_zelle_handle, setup_dismissed_at",
       ),
-    supabase.from("fiscal_years").select("id, label, ends_on").order("starts_on", { ascending: false }).limit(1),
+    supabase.from("fiscal_years").select("id, label, starts_on, ends_on").order("starts_on", { ascending: false }).limit(1),
     supabase
       .from("fund_cash_balances")
       .select("fund_id, name, kind, cash_balance, visible_lines")
@@ -143,7 +145,7 @@ export default async function HomePage() {
       .from("monthly_expense_actuals")
       .select("month, account_id, account_name, fund_id, total")
       .order("month"),
-    supabase.from("budget_vs_actual").select("type, variance"),
+    supabase.from("budget_vs_actual").select("type, variance, account_id, fund_id, name, budgeted"),
   ]);
 
   const association = associations?.[0];
@@ -208,6 +210,28 @@ export default async function HomePage() {
   // "books don't match" item when booksVisible is true itself; every other
   // check (delinquency, W-9s, insurance, bank connection) doesn't depend on
   // any activity having been posted yet.
+  // Categories past the 10% band against their share of the year so far —
+  // the same arithmetic as the Budget page's list, so the two agree.
+  const fyRow = fiscalYears?.[0];
+  const operatingFundId = (funds ?? []).find((f) => f.kind === "operating")?.fund_id ?? null;
+  let budgetOver: { name: string; overCents: number }[] = [];
+  if (fyRow?.starts_on && operatingFundId) {
+    const fyStartKey = monthKeyOf(fyRow.starts_on);
+    const current = monthKey(today);
+    const fyMonths = Math.max(1, monthsBetween(fyStartKey, monthKeyOf(fyRow.ends_on)).length);
+    const share = Math.min(1, monthsBetween(fyStartKey, current).length / fyMonths);
+    const annual = new Map(
+      (budgetRows ?? [])
+        .filter((r) => r.type === "expense" && r.fund_id === operatingFundId && Number(r.budgeted) > 0)
+        .map((r) => [r.account_id as string, Math.round(Number(r.budgeted) * 100)]),
+    );
+    const nameOf = new Map((budgetRows ?? []).map((r) => [r.account_id as string, r.name as string]));
+    const spent = new Map(
+      spendByAccount(spendingRows ?? [], fyStartKey, current, operatingFundId).map((a) => [a.accountId, a.cents]),
+    );
+    budgetOver = overBudgetAlerts(buildPlanRows(annual, spent, (id) => nameOf.get(id) ?? "A category", share));
+  }
+
   const urgent = urgentItems({
     booksVisible,
     booksBalance: booksBalanced,
@@ -217,6 +241,7 @@ export default async function HomePage() {
     insuranceExpiry: soonestExpiry ?? null,
     bankConnected: (bankConnections ?? []).some((c) => c.status === "active"),
     today,
+    budgetOver,
   });
 
   // --------------------------------------------------------------------------
