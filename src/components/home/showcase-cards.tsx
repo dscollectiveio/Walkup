@@ -131,6 +131,42 @@ function buildViews(
   return views;
 }
 
+/**
+ * Every view is rendered in the same grid cell and only the active one is
+ * visible, so the cell is always as tall as the tallest view. That is what
+ * keeps the card from resizing as it switches — no measuring, no magic
+ * number. Hidden views are inert (unfocusable, unclickable) and aria-hidden.
+ */
+function Stack({
+  views,
+  activeKey,
+  animated,
+  children,
+}: {
+  views: View[];
+  activeKey: View["key"];
+  animated: boolean;
+  children: (view: View) => React.ReactNode;
+}) {
+  return (
+    <div className="grid">
+      {views.map((v) => {
+        const active = v.key === activeKey;
+        return (
+          <div
+            key={v.key}
+            aria-hidden={!active}
+            inert={!active}
+            className={`col-start-1 row-start-1 ${active ? (animated ? "money-slide" : "") : "invisible"}`}
+          >
+            {children(v)}
+          </div>
+        );
+      })}
+    </div>
+  );
+}
+
 /** How long each view stays up while the card is rotating on its own. */
 const ROTATE_MS = 12000;
 
@@ -250,35 +286,44 @@ export function ShowcaseCards({
               ) : null}
             </div>
           ) : null}
-          <h2 key={view.key} className={`text-[16px] font-bold tracking-tight ${t.heading} ${animated ? "money-slide" : ""}`}>
-            {view.heading}
-          </h2>
-          <p key={`${view.key}-line`} className={`mt-1 text-[12px] leading-relaxed ${t.heading} opacity-85 ${animated ? "money-slide" : ""}`}>
-            {view.line}
-          </p>
+          <Stack views={views} activeKey={view.key} animated={animated}>
+            {(v) => (
+              <>
+                <h2 className={`text-[16px] font-bold tracking-tight ${TONES[v.tone].heading}`}>{v.heading}</h2>
+                <p className={`mt-1 text-[12px] leading-relaxed ${TONES[v.tone].heading} opacity-85`}>{v.line}</p>
+              </>
+            )}
+          </Stack>
         </div>
-        <div key={`${view.key}-figure`} className={animated ? "money-slide" : undefined}>
-          <div className={`figures text-[22px] ${view.figureTone}`}>{view.figure}</div>
-          <p className={`text-[11px] ${t.heading} opacity-85`}>{view.figureCaption}</p>
-        </div>
-        <Link
-          key={`${view.key}-link`}
-          href={view.button.href}
-          className={`w-fit rounded-full border border-line-strong bg-paper px-3.5 py-1.5 text-[12px] font-medium text-ink hover:bg-fill ${animated ? "money-slide" : ""}`}
-        >
-          {view.button.label}
-        </Link>
+        <Stack views={views} activeKey={view.key} animated={animated}>
+          {(v) => (
+            <>
+              <div className={`figures text-[22px] ${v.figureTone}`}>{v.figure}</div>
+              <p className={`text-[11px] ${TONES[v.tone].heading} opacity-85`}>{v.figureCaption}</p>
+            </>
+          )}
+        </Stack>
+        <Stack views={views} activeKey={view.key} animated={animated}>
+          {(v) => (
+            <Link
+              href={v.button.href}
+              className="block w-fit rounded-full border border-line-strong bg-paper px-3.5 py-1.5 text-[12px] font-medium text-ink hover:bg-fill"
+            >
+              {v.button.label}
+            </Link>
+          )}
+        </Stack>
       </div>
       <div
         id="money-panel"
         role="tabpanel"
         aria-labelledby={`money-tab-${view.key}`}
         aria-live={rotating ? "off" : "polite"}
-        className="border-t border-line bg-paper px-4 py-4 md:min-h-[15rem] md:border-l md:border-t-0"
+        className="border-t border-line bg-paper px-4 py-4 md:border-l md:border-t-0"
       >
-        <div key={view.key} className={animated ? "money-slide" : undefined}>
-          {view.chart}
-        </div>
+        <Stack views={views} activeKey={view.key} animated={animated}>
+          {(v) => v.chart}
+        </Stack>
       </div>
       {rotating ? (
         <div aria-hidden="true" className="absolute inset-x-0 bottom-0 h-0.5 bg-line/60">
