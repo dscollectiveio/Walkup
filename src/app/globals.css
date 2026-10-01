@@ -115,9 +115,9 @@ body {
   to   { transform: scaleX(1); }
 }
 
-/* The Home money card slides each new view in from the left, moving right. */
+/* The Home money card slides each new view in from the right, moving left. */
 @keyframes money-slide-in {
-  from { opacity: 0; transform: translateX(-40px); }
+  from { opacity: 0; transform: translateX(40px); }
   to   { opacity: 1; transform: translateX(0); }
 }
 .money-slide { animation: money-slide-in 1750ms ease-in-out both; }
