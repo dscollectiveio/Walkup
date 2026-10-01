@@ -1,6 +1,6 @@
 import Link from "next/link";
 import { createClient } from "@/lib/supabase/server";
-import { Card, Empty, Restricted, Stat, money } from "@/components/ui";
+import { Card, Empty, Restricted, money } from "@/components/ui";
 import { statementHref, type PeriodBounds, type PeriodGrain, type ViewMode } from "./periods";
 import { loadStatement, type AccountLine } from "./data";
 
@@ -10,6 +10,62 @@ function pillClass(active: boolean): string {
   return active
     ? "rounded-full bg-ink px-3 py-1.5 text-[12px] font-medium text-paper"
     : "rounded-full border border-line-strong px-3 py-1.5 text-[12px] text-ink hover:bg-fill";
+}
+
+const navBtn =
+  "rounded-md border border-ondark-mute/50 px-3 py-1.5 text-[12px] font-medium text-paper transition-colors hover:bg-ink-mid";
+const toolBtn =
+  "rounded-md border border-line-strong bg-paper px-3 py-1.5 text-[12px] font-medium text-ink transition-colors hover:bg-fill";
+
+/** One block of the statement: a labelled band, its accounts with a share bar, then the total. */
+function Section({
+  label,
+  rows,
+  total,
+  totalLabel,
+  tone,
+}: {
+  label: string;
+  rows: AccountLine[];
+  total: number;
+  totalLabel: string;
+  tone: "income" | "expense";
+}) {
+  const bar = tone === "income" ? "bg-moss" : "bg-brass";
+  return (
+    <>
+      <tr>
+        <td colSpan={3} className="bg-fill/60 px-3 py-2 text-[11px] font-medium uppercase tracking-[0.07em] text-section-label">
+          {label}
+        </td>
+      </tr>
+      {rows.map((r) => {
+        const share = total > 0 ? Math.max(0, Math.min(100, (r.amount / total) * 100)) : 0;
+        return (
+          <tr key={r.account_id} className="border-b border-line/70">
+            <td className="py-2.5 pl-3 pr-3">
+              <span className="text-ink">{r.account_name}</span>
+              <span className="figures ml-2 text-[11px] text-mute-soft">{r.code}</span>
+            </td>
+            <td className="hidden w-44 py-2.5 pr-4 sm:table-cell">
+              <div className="flex items-center gap-2">
+                <div className="h-1.5 flex-1 overflow-hidden rounded-full bg-fill">
+                  <div className={`h-full rounded-full ${bar}`} style={{ width: `${share}%` }} />
+                </div>
+                <span className="figures w-9 text-right text-[11px] text-mute">{Math.round(share)}%</span>
+              </div>
+            </td>
+            <td className="figures w-28 py-2.5 pr-3 text-right text-ink">{money(r.amount)}</td>
+          </tr>
+        );
+      })}
+      <tr>
+        <td className="py-2.5 pl-3 font-semibold text-ink">{totalLabel}</td>
+        <td className="hidden sm:table-cell" />
+        <td className="figures py-2.5 pr-3 text-right font-semibold text-ink">{money(total)}</td>
+      </tr>
+    </>
+  );
 }
 
 function buildEmailDraft(
@@ -140,65 +196,50 @@ export default async function FinancialStatementsPage({
       </div>
 
       <Card
+        navy
         title={bounds ? bounds.label : "No period available"}
         hint={
           view === "total"
             ? "Income and expenses posted to the ledger in this period."
             : "Expenses posted to the ledger in this period, largest first."
         }
-      >
-        <div className="mb-4 flex flex-wrap items-center justify-between gap-2">
-          <div className="flex gap-2">
+        action={
+          <div className="flex gap-1.5">
             <Link
               href={statementHref("/financial-statements", view, period, offset + 1)}
               aria-disabled={!canGoOlder}
-              className={`rounded-md border border-line-strong px-3 py-1.5 text-[12px] text-ink hover:bg-fill ${
-                canGoOlder ? "" : "pointer-events-none opacity-40"
-              }`}
+              className={`${navBtn} ${canGoOlder ? "" : "pointer-events-none opacity-40"}`}
             >
               ← Earlier
             </Link>
             <Link
               href={statementHref("/financial-statements", view, period, Math.max(0, offset - 1))}
               aria-disabled={!canGoNewer}
-              className={`rounded-md border border-line-strong px-3 py-1.5 text-[12px] text-ink hover:bg-fill ${
-                canGoNewer ? "" : "pointer-events-none opacity-40"
-              }`}
+              className={`${navBtn} ${canGoNewer ? "" : "pointer-events-none opacity-40"}`}
             >
               Later →
             </Link>
           </div>
-          {rows.length > 0 ? (
-            <div className="flex flex-wrap gap-2">
-              <a
-                href={excelHref}
-                className="rounded-md border border-line-strong px-3 py-1.5 text-[12px] text-ink hover:bg-fill"
-              >
-                Export to Excel
-              </a>
-              <a
-                href={pdfHref}
-                className="rounded-md border border-line-strong px-3 py-1.5 text-[12px] text-ink hover:bg-fill"
-              >
-                Download PDF
-              </a>
-              {emailHref ? (
-                <a
-                  href={emailHref}
-                  className="rounded-md border border-line-strong px-3 py-1.5 text-[12px] text-ink hover:bg-fill"
-                >
-                  Draft email
-                </a>
-              ) : null}
-            </div>
-          ) : null}
-        </div>
-
+        }
+      >
         {rows.length > 0 ? (
-          <p className="mb-4 text-[12px] text-mute-soft">
-            A mailto: link can&rsquo;t carry an attachment — download the PDF above, then attach it
-            to the drafted email yourself before sending.
-          </p>
+          <div className="mb-5 flex flex-wrap items-center justify-end gap-2">
+            <a href={excelHref} className={toolBtn}>
+              Export to Excel
+            </a>
+            <a href={pdfHref} className={toolBtn}>
+              Download PDF
+            </a>
+            {emailHref ? (
+              <a
+                href={emailHref}
+                title="A mailto: link can’t carry an attachment — download the PDF, then attach it to the drafted email yourself."
+                className={toolBtn}
+              >
+                Draft email
+              </a>
+            ) : null}
+          </div>
         ) : null}
 
         {!bounds ? (
@@ -207,98 +248,61 @@ export default async function FinancialStatementsPage({
           <Empty>No posted activity in this period.</Empty>
         ) : (
           <>
-            <div className="grid gap-4 sm:grid-cols-3">
+            <dl
+              className={`grid divide-y divide-line overflow-hidden rounded-lg border border-line sm:divide-x sm:divide-y-0 ${
+                view === "total" ? "sm:grid-cols-3" : "sm:grid-cols-1"
+              }`}
+            >
               {view === "total" ? (
                 <>
-                  <Stat label="Income" value={money(totalIncome)} />
-                  <Stat label="Expenses" value={money(totalExpenses)} />
-                  <Stat
-                    label="Net income"
-                    value={money(netIncome)}
-                    tone={netIncome < 0 ? "bad" : "good"}
-                  />
+                  <div className="px-5 py-4">
+                    <dt className="text-[12px] text-mute">Income</dt>
+                    <dd className="figures mt-1 text-[22px] text-ink">{money(totalIncome)}</dd>
+                  </div>
+                  <div className="px-5 py-4">
+                    <dt className="text-[12px] text-mute">Expenses</dt>
+                    <dd className="figures mt-1 text-[22px] text-ink">{money(totalExpenses)}</dd>
+                  </div>
+                  <div className={`px-5 py-4 ${netIncome < 0 ? "bg-bad-tint" : "bg-good-tint"}`}>
+                    <dt className={`text-[12px] ${netIncome < 0 ? "text-bad-text" : "text-good-text"}`}>Net income</dt>
+                    <dd className={`figures mt-1 text-[22px] ${netIncome < 0 ? "text-bad-text" : "text-good-text"}`}>
+                      {money(netIncome)}
+                    </dd>
+                  </div>
                 </>
               ) : (
-                <Stat label="Total expenses" value={money(totalExpenses)} />
+                <div className="px-5 py-4">
+                  <dt className="text-[12px] text-mute">Total expenses</dt>
+                  <dd className="figures mt-1 text-[22px] text-ink">{money(totalExpenses)}</dd>
+                </div>
               )}
-            </div>
+            </dl>
 
-            {view === "total" ? (
-              <div className="mt-5 overflow-x-auto">
-                <table className="w-full text-[13px]">
-                  <thead>
-                    <tr className="border-b border-line text-left text-mute">
-                      <th className="pb-2 font-medium">Code</th>
-                      <th className="pb-2 font-medium">Account</th>
-                      <th className="pb-2 text-right font-medium">Amount</th>
-                    </tr>
-                  </thead>
-                  <tbody className="divide-y divide-line">
-                    <tr>
-                      <td colSpan={3} className="pt-3 pb-1 text-[11px] font-medium uppercase tracking-wide text-mute">
-                        Income
-                      </td>
-                    </tr>
-                    {incomeRows.map((r) => (
-                      <tr key={r.account_id}>
-                        <td className="figures py-2 font-mono text-[11px] text-mute-soft">{r.code}</td>
-                        <td className="py-2 text-ink">{r.account_name}</td>
-                        <td className="figures py-2 text-right text-ink">{money(r.amount)}</td>
+            <div className="mt-5 overflow-x-auto">
+              <table className="w-full text-[13px]">
+                <tbody>
+                  {view === "total" ? (
+                    <>
+                      <Section label="Income" rows={incomeRows} total={totalIncome} totalLabel="Total income" tone="income" />
+                      <Section label="Expenses" rows={expenseRows} total={totalExpenses} totalLabel="Total expenses" tone="expense" />
+                      <tr className="border-t-2 border-ink">
+                        <td className="pt-3 text-[14px] font-bold text-ink">Net income</td>
+                        <td className="hidden sm:table-cell" />
+                        <td
+                          className={`figures pt-3 text-right text-[14px] font-bold ${
+                            netIncome < 0 ? "text-bad-text" : "text-good-text"
+                          }`}
+                        >
+                          {money(netIncome)}
+                        </td>
                       </tr>
-                    ))}
-                    <tr className="border-t border-line">
-                      <td colSpan={2} className="py-2 font-medium text-ink">Total income</td>
-                      <td className="figures py-2 text-right font-medium text-ink">{money(totalIncome)}</td>
-                    </tr>
-                    <tr>
-                      <td colSpan={3} className="pt-4 pb-1 text-[11px] font-medium uppercase tracking-wide text-mute">
-                        Expenses
-                      </td>
-                    </tr>
-                    {expenseRows.map((r) => (
-                      <tr key={r.account_id}>
-                        <td className="figures py-2 font-mono text-[11px] text-mute-soft">{r.code}</td>
-                        <td className="py-2 text-ink">{r.account_name}</td>
-                        <td className="figures py-2 text-right text-ink">{money(r.amount)}</td>
-                      </tr>
-                    ))}
-                    <tr className="border-t border-line">
-                      <td colSpan={2} className="py-2 font-medium text-ink">Total expenses</td>
-                      <td className="figures py-2 text-right font-medium text-ink">{money(totalExpenses)}</td>
-                    </tr>
-                    <tr className="border-t-2 border-line-strong">
-                      <td colSpan={2} className="py-2 font-semibold text-ink">Net income</td>
-                      <td className="figures py-2 text-right font-semibold text-ink">{money(netIncome)}</td>
-                    </tr>
-                  </tbody>
-                </table>
-              </div>
-            ) : (
-              <div className="mt-5 overflow-x-auto">
-                <table className="w-full text-[13px]">
-                  <thead>
-                    <tr className="border-b border-line text-left text-mute">
-                      <th className="pb-2 font-medium">Code</th>
-                      <th className="pb-2 font-medium">Account</th>
-                      <th className="pb-2 text-right font-medium">Amount</th>
-                    </tr>
-                  </thead>
-                  <tbody className="divide-y divide-line">
-                    {expenseRows.map((r) => (
-                      <tr key={r.account_id}>
-                        <td className="figures py-2 font-mono text-[11px] text-mute-soft">{r.code}</td>
-                        <td className="py-2 text-ink">{r.account_name}</td>
-                        <td className="figures py-2 text-right text-ink">{money(r.amount)}</td>
-                      </tr>
-                    ))}
-                    <tr className="border-t border-line">
-                      <td colSpan={2} className="py-2 font-medium text-ink">Total expenses</td>
-                      <td className="figures py-2 text-right font-medium text-ink">{money(totalExpenses)}</td>
-                    </tr>
-                  </tbody>
-                </table>
-              </div>
-            )}
+                    </>
+                  ) : (
+                    <Section label="Expenses" rows={expenseRows} total={totalExpenses} totalLabel="Total expenses" tone="expense" />
+                  )}
+                </tbody>
+              </table>
+            </div>
           </>
         )}
       </Card>
