@@ -27,7 +27,7 @@ function NavItemLink({
       href={item.href}
       aria-current={active ? "page" : undefined}
       title={item.label}
-      className={`flex items-center justify-center gap-3 border-l-[3px] px-3 py-2 text-[13px] font-semibold transition-colors min-[900px]:justify-start ${
+      className={`flex items-center justify-center gap-3 border-l-[3px] px-3 py-2 text-[13px] font-medium transition-colors min-[900px]:justify-start ${
         active
           ? "border-brass bg-ink-mid text-paper"
           : "border-transparent text-ondark-mute hover:bg-ink-mid hover:text-paper"
