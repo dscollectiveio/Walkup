@@ -579,11 +579,11 @@ export default async function DuesPage() {
                 <tr className="border-b border-line text-left text-[12px] text-mute">
                   <th className="pb-2 font-medium">Unit</th>
                   <th className="pb-2 font-medium">Owner</th>
-                  <th className="pb-2 font-medium">Dues plan</th>
                   <th className="pb-2 font-medium">Standing</th>
                   <th className="pb-2 text-right font-medium">Owed</th>
                   <th className="hidden pb-2 text-right font-medium sm:table-cell">Next charge</th>
                   <th className="pb-2" />
+                  <th className="pb-2 text-right font-medium">Dues plan</th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-line">
@@ -601,9 +601,6 @@ export default async function DuesPage() {
                       <td className="py-2.5 pr-3 text-ink">
                         {owner?.name ?? <span className="text-mute-soft">no owner on file</span>}
                         {owner && !owner.email ? <span className="ml-1 text-[11px] text-warning-text">· no email</span> : null}
-                      </td>
-                      <td className="min-w-[14rem] py-2.5 pr-3">
-                        <UnitDuesEditor unitId={u.id} plan={plan?.plan ?? null} canEdit={isBoard} />
                       </td>
                       <td className="py-2.5 pr-3">
                         <span className={`whitespace-nowrap rounded-full px-2 py-0.5 text-[11px] ${STANDING_TONE[s.standing]}`}>
@@ -633,6 +630,9 @@ export default async function DuesPage() {
                         <Link href={`/units/${u.id}`} className="text-[12px] text-mute underline-offset-2 hover:text-ink hover:underline">
                           Statement
                         </Link>
+                      </td>
+                      <td className="py-2.5 pl-3 text-right">
+                        <UnitDuesEditor unitId={u.id} plan={plan?.plan ?? null} canEdit={isBoard} />
                       </td>
                     </tr>
                   );

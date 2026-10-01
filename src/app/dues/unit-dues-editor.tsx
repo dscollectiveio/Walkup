@@ -42,33 +42,33 @@ export function UnitDuesEditor({
 
   if (!open) {
     return (
-      <div className="flex flex-wrap items-center gap-x-2 gap-y-0.5">
+      <div className="flex flex-col items-end gap-1">
         {plan ? (
-          <span className="text-[13px]">
+          <span className="whitespace-nowrap text-[12px]">
             <span className="figures text-ink">{money(plan.annualCents)}</span>
             <span className="text-mute"> a year · </span>
             <span className="figures text-ink">{money(perPeriodCents(plan.annualCents, plan.frequency))}</span>
             <span className="text-mute"> {FREQUENCY_WORDS[plan.frequency]}</span>
           </span>
-        ) : (
-          <span className="text-[12px] text-mute-soft">no plan yet</span>
-        )}
-        {plan?.note ? <span className="w-full text-[11px] text-mute-soft">{plan.note}</span> : null}
+        ) : null}
+        {plan?.note ? <span className="max-w-[16rem] text-right text-[11px] text-mute-soft">{plan.note}</span> : null}
         {canEdit ? (
           <button
             type="button"
             onClick={() => setOpen(true)}
-            className="text-[12px] text-mute underline-offset-2 hover:text-ink hover:underline"
+            className="inline-flex h-8 items-center whitespace-nowrap rounded-md bg-ink px-3 text-[12px] font-medium text-paper transition-colors hover:bg-ink-mid focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-brass"
           >
-            {plan ? "Change" : "Set dues"}
+            {plan ? "Edit dues plan" : "Set dues plan"}
           </button>
+        ) : !plan ? (
+          <span className="text-[12px] text-mute-soft">no plan yet</span>
         ) : null}
       </div>
     );
   }
 
   return (
-    <form action={action} className="flex flex-wrap items-end gap-2 rounded-lg border border-line bg-fill/40 p-2">
+    <form action={action} className="ml-auto flex min-w-[18rem] flex-wrap items-end justify-end gap-2 rounded-lg border border-line bg-fill/40 p-2 text-left">
       <input type="hidden" name="unit_id" value={unitId} />
       <label className="block text-[11px] text-mute">
         A year
