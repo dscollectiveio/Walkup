@@ -39,7 +39,7 @@ export default async function MfaSetupPage() {
     return (
       <div className="mx-auto max-w-sm py-16">
         <Lockup />
-        <h1 className="mt-4 text-[20px] font-black text-ink">
+        <h1 className="mt-4 text-[20px] font-bold text-ink">
           Couldn&rsquo;t start MFA setup
         </h1>
         <p className="mt-2 text-mute">{error?.message ?? "Try refreshing the page."}</p>
@@ -52,7 +52,7 @@ export default async function MfaSetupPage() {
       <div className="flex justify-center">
         <Lockup />
       </div>
-      <h1 className="mt-4 text-[20px] font-black tracking-tight text-ink">
+      <h1 className="mt-4 text-[20px] font-bold tracking-tight text-ink">
         Set up two-factor authentication
       </h1>
       <p className="mt-2 text-mute">

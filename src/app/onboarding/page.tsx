@@ -26,7 +26,7 @@ export default async function OnboardingPage() {
   return (
     <div className="mx-auto max-w-sm py-16">
       <Lockup />
-      <h1 className="mt-4 text-[20px] font-black tracking-tight text-ink">
+      <h1 className="mt-4 text-[20px] font-bold tracking-tight text-ink">
         Set up your building
       </h1>
       <p className="mt-2 text-mute">

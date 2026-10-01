@@ -42,7 +42,7 @@ export function Standing({
       className={`flex flex-col rounded-xl border border-line bg-paper ${matchSetupGuide ? "lg:min-h-[34rem]" : ""}`}
     >
       <header className="border-b border-line px-5 py-4">
-        <h2 className="font-black tracking-tight text-ink">Where the association stands</h2>
+        <h2 className="font-bold tracking-tight text-ink">Where the association stands</h2>
       </header>
 
       <div className="flex flex-1 flex-col px-5 py-4">

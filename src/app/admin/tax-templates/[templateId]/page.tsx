@@ -33,7 +33,7 @@ export default async function TemplatePage({ params }: { params: Promise<{ templ
     <div className="space-y-6">
       <div>
         <Link href="/admin/tax-templates" className="text-[13px] text-mute hover:underline">← All templates</Link>
-        <h1 className="mt-2 text-[20px] font-black tracking-tight text-ink">
+        <h1 className="mt-2 text-[20px] font-bold tracking-tight text-ink">
           {FORM_LABEL[t.form_code as keyof typeof FORM_LABEL] ?? t.form_code} · {t.tax_year}
         </h1>
         <p className="mt-1 text-[12px] text-mute">

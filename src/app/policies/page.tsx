@@ -18,7 +18,7 @@ export default function PoliciesIndexPage() {
         <Lockup />
       </Link>
 
-      <h1 className="mt-8 text-[22px] font-black tracking-tight text-ink">Policies</h1>
+      <h1 className="mt-8 text-[22px] font-bold tracking-tight text-ink">Policies</h1>
       <p className="mt-2 text-[13px] leading-relaxed text-mute">
         Every policy governing how Walkup handles access and data, kept current with what the
         application actually does.

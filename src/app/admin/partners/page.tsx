@@ -22,7 +22,7 @@ export default async function PartnersPage() {
   return (
     <div className="space-y-6">
       <div>
-        <h1 className="text-[20px] font-black tracking-tight text-ink">Insurance broker partners</h1>
+        <h1 className="text-[20px] font-bold tracking-tight text-ink">Insurance broker partners</h1>
         <p className="mt-1 text-mute">
           Brokers who receive quote requests. A board only sees active partners serving its state, and Get quotes stays
           hidden where there are none.

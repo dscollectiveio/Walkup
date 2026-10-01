@@ -26,7 +26,7 @@ export default async function TaxTemplatesPage() {
   return (
     <div className="space-y-6">
       <div>
-        <h1 className="text-[20px] font-black tracking-tight text-ink">Official tax form templates</h1>
+        <h1 className="text-[20px] font-bold tracking-tight text-ink">Official tax form templates</h1>
         <p className="mt-1 text-mute">
           Walkup fills only these PDFs, and only after a person has checked the field map against the printed form and
           activated it. Boards never see this page.

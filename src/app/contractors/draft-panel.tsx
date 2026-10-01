@@ -39,7 +39,7 @@ export function DraftPanel({
     <div className="space-y-4">
       <section className="rounded-xl border border-line bg-paper">
         <header className="border-b border-line px-5 py-4">
-          <h2 className="font-black tracking-tight text-ink">Write to a contractor</h2>
+          <h2 className="font-bold tracking-tight text-ink">Write to a contractor</h2>
           <p className="mt-1 text-[13px] text-mute">
             Walkup writes the first draft. You read it, change anything you
             want, then send it from your own email.
@@ -97,7 +97,7 @@ export function DraftPanel({
       {live.length > 0 ? (
         <section className="rounded-xl border border-line bg-paper">
           <header className="border-b border-line px-5 py-4">
-            <h2 className="font-black tracking-tight text-ink">
+            <h2 className="font-bold tracking-tight text-ink">
               Waiting to be sent ({live.length})
             </h2>
             <p className="mt-1 text-[13px] text-mute">

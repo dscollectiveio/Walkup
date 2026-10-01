@@ -69,7 +69,7 @@ export default async function DocumentDetailPage({
           ← Document Hub
         </Link>
         <div className="mt-2 flex flex-wrap items-center gap-2">
-          <h1 className="text-[20px] font-black tracking-tight text-ink">{doc.title}</h1>
+          <h1 className="text-[20px] font-bold tracking-tight text-ink">{doc.title}</h1>
           {category ? (
             <TagChip
               label={category.label}

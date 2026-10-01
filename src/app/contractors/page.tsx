@@ -91,7 +91,7 @@ export default async function ContractorsPage({
   return (
     <div className="space-y-6">
       <div>
-        <h1 className="text-[20px] font-black tracking-tight text-ink">Contractors</h1>
+        <h1 className="text-[20px] font-bold tracking-tight text-ink">Contractors</h1>
         <p className="mt-1 text-mute">Who you call, their paperwork, and how they&rsquo;ve done.</p>
       </div>
 

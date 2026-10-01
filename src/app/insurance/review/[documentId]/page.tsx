@@ -109,7 +109,7 @@ export default async function ReviewPage({
         <Link href={mode === "quote" ? "/insurance?view=quotes" : "/insurance"} className="text-[13px] text-mute hover:underline">
           ← Insurance
         </Link>
-        <h1 className="mt-2 text-[20px] font-black tracking-tight text-ink">{title}</h1>
+        <h1 className="mt-2 text-[20px] font-bold tracking-tight text-ink">{title}</h1>
         <p className="mt-1 text-mute">
           {doc ? (
             <>

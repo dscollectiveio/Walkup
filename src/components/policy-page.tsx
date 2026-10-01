@@ -23,7 +23,7 @@ export function PolicyPage({
         <Lockup />
       </Link>
 
-      <h1 className="mt-8 text-[22px] font-black tracking-tight text-ink">{title}</h1>
+      <h1 className="mt-8 text-[22px] font-bold tracking-tight text-ink">{title}</h1>
       <p className="mt-2 text-[13px] text-mute-soft">{subtitle}</p>
 
       {intro ? <p className="mt-6 text-[13px] leading-relaxed text-mute">{intro}</p> : null}
@@ -48,7 +48,7 @@ export function PolicySection({
 }) {
   return (
     <section className="mt-8">
-      <h2 className="text-[15px] font-black text-ink">{title}</h2>
+      <h2 className="text-[15px] font-bold text-ink">{title}</h2>
       <div className="mt-2 space-y-3 text-[13px] leading-relaxed text-mute">{children}</div>
     </section>
   );

@@ -61,7 +61,7 @@ export function Card({
   return (
     <section className="rounded-xl border border-line bg-paper">
       <header className="border-b border-line px-5 py-4">
-        <h2 className="font-black tracking-tight text-ink">{title}</h2>
+        <h2 className="font-bold tracking-tight text-ink">{title}</h2>
         {hint ? <p className="mt-1 text-[13px] text-mute">{hint}</p> : null}
       </header>
       <div className="px-5 py-4">{children}</div>
@@ -96,7 +96,7 @@ export function Answer({
 
   return (
     <section className={`border-l-[3px] ${tone.rule} ${tone.bg} px-5 py-4`}>
-      <h2 className={`text-lg font-black tracking-tight ${tone.text}`}>
+      <h2 className={`text-lg font-bold tracking-tight ${tone.text}`}>
         {headline}
       </h2>
       {detail ? (

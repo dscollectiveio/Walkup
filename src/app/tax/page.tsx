@@ -50,7 +50,7 @@ function Rule({
     <div className="rounded-xl border border-line bg-paper">
       <header className="flex flex-wrap items-center justify-between gap-2 border-b border-line px-5 py-4">
         <div>
-          <h3 className="font-black text-ink">{heading}</h3>
+          <h3 className="font-bold text-ink">{heading}</h3>
           <p className="mt-0.5 text-[13px] text-mute">{plainQuestion}</p>
         </div>
         <span
@@ -303,7 +303,7 @@ export default async function TaxPage() {
   return (
     <div className="space-y-6">
       <div>
-        <h1 className="text-[20px] font-black tracking-tight text-ink">Taxes</h1>
+        <h1 className="text-[20px] font-bold tracking-tight text-ink">Taxes</h1>
         <p className="mt-1 text-mute">
           Fiscal year {ctx.fiscalYear.label} ({ctx.fiscalYear.starts_on} to {ctx.fiscalYear.ends_on}) — which forms you
           need, why, and when.
@@ -330,7 +330,7 @@ export default async function TaxPage() {
       </section>
 
       <section id="forms" className="space-y-3">
-        <h2 className="text-[16px] font-black tracking-tight text-ink">Your forms</h2>
+        <h2 className="text-[16px] font-bold tracking-tight text-ink">Your forms</h2>
         <div className="grid gap-3 md:grid-cols-2">
           {ctx.forms.map((f) => {
             const started = startedFor(f.formCode, f.taxYear, f.vendorId);
@@ -375,7 +375,7 @@ export default async function TaxPage() {
       </Card>
 
       <div className="border-t border-line pt-6">
-        <h2 className="text-[16px] font-black tracking-tight text-ink">1120-H check</h2>
+        <h2 className="text-[16px] font-bold tracking-tight text-ink">1120-H check</h2>
         <p className="mt-1 text-mute">
           Associations like yours can use a short tax form{" "}
           <Jargon term="Form 1120-H">instead of a full company return</Jargon>,
@@ -567,7 +567,7 @@ export default async function TaxPage() {
 
       <div className="border-t border-line pt-6">
         <div>
-          <h2 className="text-[16px] font-black tracking-tight text-ink">
+          <h2 className="text-[16px] font-bold tracking-tight text-ink">
             Contractors and 1099s — payments in {ctx.contractorYear}
           </h2>
           <p className="mt-1 text-mute">

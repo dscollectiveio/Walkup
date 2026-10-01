@@ -73,7 +73,7 @@ export function Building({
   return (
     <section className="rounded-xl border border-line bg-paper">
       <header className="border-b border-line px-5 py-4">
-        <h2 className="font-black tracking-tight text-ink">The building</h2>
+        <h2 className="font-bold tracking-tight text-ink">The building</h2>
         <p className="mt-1 text-[13px] text-mute">Click a floor to see its payment history.</p>
       </header>
 

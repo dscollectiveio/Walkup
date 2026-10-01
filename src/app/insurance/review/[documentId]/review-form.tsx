@@ -164,7 +164,7 @@ export function ReviewForm({
 
       {(Object.keys(GROUP_LABEL) as FieldGroup[]).map((group) => (
         <section key={group} className="rounded-xl border border-line bg-paper">
-          <h2 className="border-b border-line px-5 py-3 font-black tracking-tight text-ink">{GROUP_LABEL[group]}</h2>
+          <h2 className="border-b border-line px-5 py-3 font-bold tracking-tight text-ink">{GROUP_LABEL[group]}</h2>
           <div className="grid gap-x-6 gap-y-4 px-5 py-4 sm:grid-cols-2">
             {FIELD_DEFS.filter((d) => d.group === group).map((def) => {
               const r = byKey.get(def.key);

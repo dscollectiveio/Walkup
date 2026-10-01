@@ -72,7 +72,7 @@ export function YourList({
     <section className="rounded-xl border border-line bg-paper">
       <header className="border-b border-line px-5 py-4">
         <div className="flex items-baseline justify-between gap-3">
-          <h2 className="font-black tracking-tight text-ink">Your list</h2>
+          <h2 className="font-bold tracking-tight text-ink">Your list</h2>
           <span className="tabular text-[12px] text-mute">
             {done} of {total} done
           </span>

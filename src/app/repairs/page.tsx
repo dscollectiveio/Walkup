@@ -4,7 +4,7 @@ export default function RepairsPage() {
   return (
     <div className="space-y-6">
       <div>
-        <h1 className="text-[20px] font-black tracking-tight text-ink">Repairs</h1>
+        <h1 className="text-[20px] font-bold tracking-tight text-ink">Repairs</h1>
         <p className="mt-1 text-mute">
           A place to track repair work on the building, separate from open
           problem reports.

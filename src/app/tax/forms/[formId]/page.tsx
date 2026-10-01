@@ -82,7 +82,7 @@ export default async function TaxFormPage({ params }: { params: Promise<{ formId
     <div className="space-y-6">
       <div>
         <Link href="/tax" className="text-[13px] text-mute hover:underline">← Taxes</Link>
-        <h1 className="mt-2 text-[20px] font-black tracking-tight text-ink">
+        <h1 className="mt-2 text-[20px] font-bold tracking-tight text-ink">
           {label} · {form.tax_year}
           {vendorName ? ` · ${vendorName}` : ""}
         </h1>
@@ -135,7 +135,7 @@ export default async function TaxFormPage({ params }: { params: Promise<{ formId
 
           {sections.map((section) => (
             <section key={section} className="rounded-xl border border-line bg-paper">
-              <h2 className="border-b border-line px-5 py-3 font-black tracking-tight text-ink">{section}</h2>
+              <h2 className="border-b border-line px-5 py-3 font-bold tracking-tight text-ink">{section}</h2>
               <ul className="divide-y divide-line px-5">
                 {views
                   .filter((v) => v.section === section)

@@ -191,7 +191,7 @@ export function ShowcaseCards({
               })}
             </div>
           ) : null}
-          <h2 className={`text-[16px] font-black tracking-tight ${t.heading}`}>{view.heading}</h2>
+          <h2 className={`text-[16px] font-bold tracking-tight ${t.heading}`}>{view.heading}</h2>
           <p className={`mt-1 text-[12px] leading-relaxed ${t.heading} opacity-85`}>{view.line}</p>
         </div>
         <div>

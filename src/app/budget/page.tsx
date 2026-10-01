@@ -98,7 +98,7 @@ export default async function BudgetPage({ searchParams }: { searchParams: Promi
   if (!fiscalYear || !operatingFund) {
     return (
       <div className="space-y-6">
-        <h1 className="text-[20px] font-black tracking-tight text-ink">Budget &amp; spending</h1>
+        <h1 className="text-[20px] font-bold tracking-tight text-ink">Budget &amp; spending</h1>
         <Card title="Budget">
           <Empty>{!fiscalYear ? "No fiscal year is set up yet." : "No operating fund is set up yet."}</Empty>
         </Card>
@@ -126,7 +126,7 @@ export default async function BudgetPage({ searchParams }: { searchParams: Promi
   const header = (
     <div className="flex flex-wrap items-end justify-between gap-4">
       <div>
-        <h1 className="text-[20px] font-black tracking-tight text-ink">Budget &amp; spending</h1>
+        <h1 className="text-[20px] font-bold tracking-tight text-ink">Budget &amp; spending</h1>
         <p className="mt-1 text-mute">
           {association.display_name} · Fiscal year {fiscalYear.label} ({fiscalYear.starts_on} to {fiscalYear.ends_on})
         </p>
@@ -711,7 +711,7 @@ export default async function BudgetPage({ searchParams }: { searchParams: Promi
       {/* Transactions */}
       <section id="transactions" className="rounded-xl border border-line bg-paper">
         <header className="flex flex-wrap items-baseline justify-between gap-3 border-b border-line px-5 py-4">
-          <h2 className="font-black tracking-tight text-ink">
+          <h2 className="font-bold tracking-tight text-ink">
             Transactions
             {needsCount > 0 ? (
               <span className="ml-2 rounded-full bg-rust px-2 py-0.5 align-middle text-[11px] font-medium text-paper">

@@ -174,7 +174,7 @@ export default async function InsurancePage({
     return (
       <div className="space-y-6">
         <div>
-          <h1 className="text-[20px] font-black tracking-tight text-ink">Insurance</h1>
+          <h1 className="text-[20px] font-bold tracking-tight text-ink">Insurance</h1>
           <p className="mt-1 text-mute">Ask brokers for quotes, keep track of replies, and see them next to what you have.</p>
         </div>
         {tabs}
@@ -419,7 +419,7 @@ export default async function InsurancePage({
   return (
     <div className="space-y-6">
       <div>
-        <h1 className="text-[20px] font-black tracking-tight text-ink">Insurance</h1>
+        <h1 className="text-[20px] font-bold tracking-tight text-ink">Insurance</h1>
         <p className="mt-1 text-mute">What you&rsquo;re covered for, what it costs, and when it renews.</p>
       </div>
       {tabs}
@@ -491,7 +491,7 @@ export default async function InsurancePage({
               <section className="rounded-xl border border-line bg-paper px-5 py-4">
                 <div className="flex flex-wrap items-start justify-between gap-3">
                   <div>
-                    <h2 className="text-[17px] font-black tracking-tight text-ink">{selected.carrier_name}</h2>
+                    <h2 className="text-[17px] font-bold tracking-tight text-ink">{selected.carrier_name}</h2>
                     <p className="mt-0.5 text-[13px] text-mute">
                       {typeLabel(selected.coverage)}
                       {selected.policy_number ? ` · policy ${selected.policy_number as string}` : ""}

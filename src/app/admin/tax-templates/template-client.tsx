@@ -141,7 +141,7 @@ export function FieldMapForm({
 
       <div>
         <div className="flex flex-wrap items-end justify-between gap-2">
-          <h3 className="text-[14px] font-black tracking-tight text-ink">Field map</h3>
+          <h3 className="text-[14px] font-bold tracking-tight text-ink">Field map</h3>
           <input
             aria-label="Filter fields"
             placeholder="Filter fields"

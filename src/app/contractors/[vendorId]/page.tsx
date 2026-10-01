@@ -130,7 +130,7 @@ export default async function ContractorPage({ params }: { params: Promise<{ ven
           ← All contractors
         </Link>
         <div className="mt-2 flex flex-wrap items-center gap-2">
-          <h1 className="text-[20px] font-black tracking-tight text-ink">{v.name}</h1>
+          <h1 className="text-[20px] font-bold tracking-tight text-ink">{v.name}</h1>
           <span className={`rounded-full border px-2 py-0.5 text-[11px] ${badge.className}`}>{badge.label}</span>
         </div>
         <div className="mt-2 flex flex-wrap gap-1">

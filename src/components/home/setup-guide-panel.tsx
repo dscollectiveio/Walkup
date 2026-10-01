@@ -145,7 +145,7 @@ export function SetupGuidePanel({
       <header className="border-b border-line px-5 py-4">
         <div className="flex flex-wrap items-baseline justify-between gap-3">
           <div>
-            <h2 className="font-black tracking-tight text-ink">Set up your building</h2>
+            <h2 className="font-bold tracking-tight text-ink">Set up your building</h2>
             <p className="mt-0.5 text-[12px] text-mute">In order — each section builds on the last.</p>
           </div>
           <div className="flex items-center gap-3">
@@ -203,7 +203,7 @@ export function SetupGuidePanel({
                   <span className="text-[10px] font-medium uppercase tracking-[0.07em] text-section-label">
                     Step {i + 1}
                   </span>
-                  <span className="block text-[15px] font-black tracking-tight text-ink">{section.title}</span>
+                  <span className="block text-[15px] font-bold tracking-tight text-ink">{section.title}</span>
                 </span>
                 <span
                   className={`shrink-0 rounded-full px-2 py-0.5 text-[11px] ${
@@ -243,7 +243,7 @@ export function SetupGuidePanel({
         <header className="border-b border-line px-6 py-5">
           <div className="flex items-start justify-between gap-4">
             <div>
-              <h2 id="setup-guide-detail-title" className="text-[20px] font-black tracking-tight text-ink">
+              <h2 id="setup-guide-detail-title" className="text-[20px] font-bold tracking-tight text-ink">
                 Set up your building
               </h2>
               <p className="mt-1 text-[13px] text-mute">
@@ -280,7 +280,7 @@ export function SetupGuidePanel({
                     <span className="text-[10px] font-medium uppercase tracking-[0.07em] text-section-label">
                       Step {i + 1}
                     </span>
-                    <h3 className="text-[17px] font-black tracking-tight text-ink">{section.title}</h3>
+                    <h3 className="text-[17px] font-bold tracking-tight text-ink">{section.title}</h3>
                   </div>
                   <span
                     className={`shrink-0 rounded-full px-2 py-0.5 text-[11px] ${

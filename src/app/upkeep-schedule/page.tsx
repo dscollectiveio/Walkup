@@ -4,7 +4,7 @@ export default function UpkeepSchedulePage() {
   return (
     <div className="space-y-6">
       <div>
-        <h1 className="text-[20px] font-black tracking-tight text-ink">
+        <h1 className="text-[20px] font-bold tracking-tight text-ink">
           Upkeep Schedule
         </h1>
         <p className="mt-1 text-mute">

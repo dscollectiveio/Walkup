@@ -142,7 +142,7 @@ export default async function DuesPage() {
   return (
     <div className="space-y-6">
       <div>
-        <h1 className="text-[20px] font-black tracking-tight text-ink">HOA Dues</h1>
+        <h1 className="text-[20px] font-bold tracking-tight text-ink">HOA Dues</h1>
         <p className="mt-1 text-mute">
           Send a payment straight from your own bank — no processor, no fee for anyone.
         </p>

@@ -14,7 +14,7 @@ function Section({
 }) {
   return (
     <section className="mt-8">
-      <h2 className="text-[15px] font-black text-ink">{title}</h2>
+      <h2 className="text-[15px] font-bold text-ink">{title}</h2>
       <div className="mt-2 space-y-3 text-[13px] leading-relaxed text-mute">{children}</div>
     </section>
   );
@@ -36,7 +36,7 @@ export default function PrivacyPage() {
         <Lockup />
       </Link>
 
-      <h1 className="mt-8 text-[22px] font-black tracking-tight text-ink">
+      <h1 className="mt-8 text-[22px] font-bold tracking-tight text-ink">
         Privacy Policy
       </h1>
       <p className="mt-2 text-[13px] text-mute-soft">
