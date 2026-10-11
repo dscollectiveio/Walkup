@@ -69,4 +69,15 @@ describe("matchRule", () => {
     expect(matchRule("TRANSFER TO CK CHASE BANK", rules)?.id).toBe("r2");
     expect(matchRule("WEB CITY OF CHICAGO WATER BILL", rules)).toBeNull();
   });
+
+  it("matches on the payee key, so a rule made from one month's description fires on the next month's", () => {
+    const dated = [{ ...rules[0], pattern: "COMED 8841 11/03" }];
+    expect(matchRule("COMED 8841 12/03", dated)?.id).toBe("r1");
+    expect(matchRule("comed", dated)?.id).toBe("r1");
+  });
+
+  it("never matches on a pattern that is only digits or punctuation", () => {
+    const digits = [{ ...rules[0], pattern: "8841 #22" }];
+    expect(matchRule("ANYTHING AT ALL", digits)).toBeNull();
+  });
 });

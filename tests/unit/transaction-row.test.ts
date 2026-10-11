@@ -114,9 +114,10 @@ describe("TransactionRow", () => {
     expect(html).toContain("border-info-line bg-paper");
   });
 
-  it("a likely duplicate is warning-tinted and says so in plain words", () => {
+  it("a likely duplicate is warning-tinted, says so in plain words, and files this row alone", () => {
     const html = render({
       transaction: { ...base, amount: "450" },
+      similar: [{ ...base, id: "t2", amount: "450" }],
       suggestion: {
         kind: "excluded",
         accountId: null,
@@ -131,6 +132,16 @@ describe("TransactionRow", () => {
     expect(html).toContain("Already recorded · not for the books");
     expect(html).toContain("bg-warning-tint");
     expect(html).toContain("recorded by hand on Oct 3");
+    expect(html).not.toContain("+1 more");
+    expect(html).not.toContain("along with");
+  });
+
+  it("calls the kept-out state Not for the books, like the picker does", () => {
+    const html = render({
+      transaction: { ...base, posting_kind: "excluded", excluded_at: "2026-09-15T00:00:00Z" },
+    });
+    expect(html).toContain("Not for the books");
+    expect(html).not.toContain(">Excluded<");
   });
 
   it("still shows a recommendation that needs a pick, as a chooser rather than a save", () => {
@@ -177,7 +188,7 @@ describe("TransactionRow", () => {
     expect(html).toContain('title="The bank hasn&#x27;t settled this yet; it will post once it does"');
   });
 
-  it("tags a row a rule filed, naming the rule, with Remove rule for the board", () => {
+  it("tags a row a rule filed, naming the rule, with Remove rule always visible for the board", () => {
     const html = render({
       transaction: { ...base, posting_kind: "expense", account_id: "a1", rule_id: "r1" },
       rulePattern: "COMED",
@@ -185,6 +196,7 @@ describe("TransactionRow", () => {
     expect(html).toContain(">rule<");
     expect(html).toContain("Filed by your rule for ‘COMED’");
     expect(html).toContain("Remove rule");
+    expect(html).not.toContain("opacity-0");
   });
 
   it("opens the categorize form with the searchable picker when told to", () => {

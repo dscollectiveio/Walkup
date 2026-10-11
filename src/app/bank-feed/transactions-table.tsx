@@ -22,6 +22,7 @@ import {
   type TransactionRecord,
 } from "./transaction-row";
 import { CategoryPicker, type CategoryChoice, type Direction } from "./category-picker";
+import type { Sort } from "./href";
 import { PREVIEW_ABOVE, PostPreview, inOutLabel, type PreviewRow } from "./post-preview";
 import { money } from "@/components/ui";
 import { isMatchableDescription, normalizeDescription } from "@/lib/plaid/similar";
@@ -39,18 +40,35 @@ function selectable(t: TransactionRecord): boolean {
   return !t.journal_entry_id && !t.removed_at;
 }
 
-/** Plain words for the toast: "Posted as Utilities", "3 saved as Dues · 2B", "Marked not for the books". */
-function outcome(n: number, label: string, posted: boolean, kind: PostingKind): string {
-  const count = n === 1 ? "" : `${n} `;
-  if (kind === "excluded" && posted) return n === 1 ? "Marked not for the books" : `${n} marked not for the books`;
-  const verb = posted ? "posted" : "saved";
-  return n === 1 ? `${verb[0].toUpperCase()}${verb.slice(1)} as ${label}` : `${count}${verb} as ${label}`;
+/**
+ * Plain words for the toast, honest about what reached the books: `n` rows
+ * took the category and `posted` of them were posted. "Posted as Utilities",
+ * "3 saved as Dues · 2B", "Marked not for the books", "2 posted as Utilities
+ * · 1 couldn't be posted yet" (a pending sibling, say).
+ */
+function outcome(o: { n: number; label: string; kind: PostingKind; postNow: boolean; posted: number }): string {
+  const one = o.n === 1;
+  const saved = one ? `Saved as ${o.label}` : `${o.n} saved as ${o.label}`;
+  if (!o.postNow) return saved;
+  const left = o.n - o.posted;
+  const notYet = left === 0 ? "" : ` · ${left === o.n && one ? "it" : left} couldn't be posted yet`;
+  if (o.posted === 0) return `${saved}${notYet}`;
+  const done =
+    o.kind === "excluded"
+      ? one
+        ? "Marked not for the books"
+        : `${o.posted} marked not for the books`
+      : one
+        ? `Posted as ${o.label}`
+        : `${o.posted} posted as ${o.label}`;
+  return `${done}${notYet}`;
 }
 
 interface BulkApplied {
   ids: string[];
   item: Omit<CategorizationItem, "id">;
   postNow: boolean;
+  posted: number;
   prior: PriorState[];
 }
 
@@ -92,7 +110,7 @@ function BulkForm({
       const prior = snapshot(transactionIds);
       const result = await categorizeBankTransactionsBulk({ transactionIds, ...item, postNow });
       if (result.error) setError(result.error);
-      else onApplied({ ids: transactionIds, item, postNow, prior });
+      else onApplied({ ids: result.applied ?? transactionIds, item, postNow, posted: result.posted ?? 0, prior });
     });
 
   const submit = (postNow: boolean) => {
@@ -142,7 +160,7 @@ function BulkForm({
           onClick={() => submit(true)}
           className="rounded-md bg-ink px-2.5 py-1 text-[11px] font-medium text-paper hover:bg-ink-mid disabled:opacity-50"
         >
-          {pending ? "Saving…" : choice?.kind === "excluded" ? "Save & exclude all" : "Save & post all"}
+          {pending ? "Saving…" : choice?.kind === "excluded" ? "Keep all out of the books" : "Save & post all"}
         </button>
         <button
           type="button"
@@ -160,8 +178,6 @@ function BulkForm({
     </div>
   );
 }
-
-export type Sort = "date_desc" | "date_asc" | "name_asc" | "name_desc" | "amount_desc" | "amount_asc";
 
 function SortableHeader({
   href,
@@ -198,6 +214,7 @@ const UNDO_WITH_RULE_MS = 20000;
 interface Toast {
   message: string;
   prior: PriorState[];
+  /** "Always file ‘pattern’ as label?" — label is the one the toast already used for the item. */
   rule?: { pattern: string; label: string; item: Omit<CategorizationItem, "id"> };
 }
 
@@ -282,14 +299,14 @@ export function TransactionsTable({
     });
   }
 
+  /** Yes to "Always file X as Y?". The toast then says only that; Undo would not undo the rule, so it goes (Rules · N has Remove). */
   function saveRule() {
     if (!toast?.rule) return;
     const { pattern, label, item } = toast.rule;
-    const keep = toast;
     startUndo(async () => {
       const result = await saveCategorizationRule({ pattern, ...item });
       if (result.error) setUndoError(result.error);
-      else setToast({ message: `${keep.message} · new ‘${pattern}’ rows will be filed as ${label}`, prior: keep.prior });
+      else setToast({ message: `New ‘${pattern}’ rows will be filed as ${label}`, prior: [] });
     });
   }
 
@@ -324,7 +341,9 @@ export function TransactionsTable({
     const s = t.suggestion;
     if (!s || s.needsPick) return { error: "This recommendation needs a choice first." };
     const item = { kind: s.kind, accountId: s.accountId, unitId: s.unitId, vendorId: null };
-    const rows = [t, ...(similarByRow.get(t.id) ?? [])];
+    // A duplicate is one deposit matching one hand-recorded payment: this row
+    // only. Anything else takes the same-payee rows with it.
+    const rows = s.source === "duplicate" ? [t] : [t, ...(similarByRow.get(t.id) ?? [])];
     const prior = rows.map(priorOf);
     const result = await applyCategorizations({ items: rows.map((r) => ({ id: r.id, ...item })), postNow });
     if (result.error) return { error: result.error };
@@ -332,7 +351,7 @@ export function TransactionsTable({
       return { error: result.errors[0] };
     }
     const n = result.applied?.length ?? 0;
-    announce(outcome(n, s.label, postNow, s.kind), prior);
+    announce(outcome({ n, label: s.label, kind: s.kind, postNow, posted: result.posted ?? 0 }), prior);
     return {};
   }
 
@@ -342,7 +361,8 @@ export function TransactionsTable({
     const result = await postBankTransaction(t.id);
     if (result.error) return result;
     const item = { kind: t.posting_kind, accountId: t.account_id, unitId: t.matched_unit_id };
-    announce(outcome(1, labelForCategorization(item, pickers), true, t.posting_kind), [priorOf(t)]);
+    const label = labelForCategorization(item, pickers);
+    announce(outcome({ n: 1, label, kind: t.posting_kind, postNow: true, posted: 1 }), [priorOf(t)]);
     return {};
   }
 
@@ -352,22 +372,25 @@ export function TransactionsTable({
     const postNow = !t.pending;
     const result = await applyCategorizations({ items: [{ id: t.id, ...item }], postNow });
     if (result.error) return { error: result.error };
-    announce(outcome(1, "Not for the books", postNow, "excluded"), [priorOf(t)]);
+    announce(
+      outcome({ n: 1, label: "Not for the books", kind: "excluded", postNow, posted: result.posted ?? 0 }),
+      [priorOf(t)],
+    );
     return {};
   }
 
   function handleCategorized(e: CategorizedEvent) {
     const label = labelForCategorization(e.item, pickers);
     announce(
-      outcome(e.ids.length, label, e.postNow, e.item.kind),
+      outcome({ n: e.ids.length, label, kind: e.item.kind, postNow: e.postNow, posted: e.posted }),
       e.prior,
-      e.ruleSuggestion ? { ...e.ruleSuggestion, item: e.item } : undefined,
+      e.ruleSuggestion ? { ...e.ruleSuggestion, label, item: e.item } : undefined,
     );
   }
 
   function handleBulkApplied(e: BulkApplied) {
     const label = labelForCategorization(e.item, pickers);
-    announce(outcome(e.ids.length, label, e.postNow, e.item.kind), e.prior);
+    announce(outcome({ n: e.ids.length, label, kind: e.item.kind, postNow: e.postNow, posted: e.posted }), e.prior);
     setSelected(new Set());
   }
 
@@ -505,18 +528,15 @@ export function TransactionsTable({
             {pending
               ? "Posting…"
               : postable.length > 0
-                ? `Accept all ${postable.length}`
-                : `Accept the ${guesses.length} guesses`}
+                ? `Post all ${postable.length} recommended`
+                : `Post the ${guesses.length} guesses`}
           </button>
           {postable.length > 0 && guesses.length > 0 ? (
             <button type="button" disabled={pending} onClick={() => acceptAll([...postable, ...guesses])} className={LINK_QUIET}>
               also the {guesses.length} guess{guesses.length === 1 ? "" : "es"}
             </button>
           ) : null}
-          <span className="text-[11px] text-mute">
-            {postable.length > 0 ? "Posts the ones you've filed this way before" : "Posts them to the books"} — undo for 10
-            seconds.
-          </span>
+          <span className="text-[11px] text-mute">undo for 10 seconds</span>
           {groupError ? <span className="w-full text-[11px] text-bad-text">{groupError}</span> : null}
         </div>
       ) : null}
@@ -613,7 +633,7 @@ export function TransactionsTable({
         <div
           role="status"
           aria-live="polite"
-          className="fixed bottom-4 left-1/2 z-40 flex max-w-[92vw] flex-wrap items-center gap-x-3 gap-y-1 rounded-lg bg-ink px-4 py-2.5 text-[13px] text-paper shadow-lg"
+          className="fixed bottom-4 left-1/2 z-40 flex max-w-[92vw] -translate-x-1/2 flex-wrap items-center gap-x-3 gap-y-1 rounded-lg bg-ink px-4 py-2.5 text-[13px] text-paper shadow-lg"
         >
           <span>{undoError ?? toast.message}</span>
           {toast.prior.length > 0 ? (

@@ -10,9 +10,8 @@ const DEBOUNCE_MS = 300;
 /**
  * Search and range for the transactions list, applied as you type: the bar
  * rewrites the same query params the page reads (router.replace, no scroll),
- * so the server re-filters and the URL stays shareable. Active filters show
- * as chips with an × to remove them. Collapsed behind "Filter & search" only
- * while nothing is active.
+ * so the server re-filters and the URL stays shareable. Opens on its own when
+ * a filter becomes active; collapsed, its summary names what is on.
  */
 export function FiltersBar({
   current,
@@ -53,34 +52,15 @@ export function FiltersBar({
     return () => clearTimeout(timer);
   }, [pendingHref, router]);
 
-  const chips: { key: string; label: string; remove: () => void }[] = [];
-  if (current.range !== "all") {
-    chips.push({
-      key: "range",
-      label: RANGE_LABEL[current.range],
-      remove: () => {
-        setRange("all");
-        go({ range: "all" });
-      },
-    });
-  }
-  if (current.q) {
-    chips.push({
-      key: "q",
-      label: `‘${current.q}’`,
-      remove: () => {
-        setText("");
-        go({ q: undefined });
-      },
-    });
-  }
-  if (current.account) {
-    chips.push({
-      key: "account",
-      label: `Only ${accountLabel ?? "one category"}`,
-      remove: () => go({ account: undefined }),
-    });
-  }
+  // The search box and the range select show (and clear) their own state, so
+  // the only chip is the category filter, which has no control of its own.
+  // Collapsed, the summary names what is on instead.
+  const accountChip = current.account ? `Only ${accountLabel ?? "one category"}` : null;
+  const onParts = [
+    current.range !== "all" ? RANGE_LABEL[current.range] : null,
+    current.q ? `‘${current.q}’` : null,
+    accountChip,
+  ].filter((p): p is string => p !== null);
 
   const input =
     "rounded-lg border border-line-strong bg-paper px-3 py-1.5 text-[13px] text-ink focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-1 focus-visible:outline-brass";
@@ -88,7 +68,7 @@ export function FiltersBar({
   return (
     <details className="min-w-0 flex-1" open={open} onToggle={(e) => setOpen(e.currentTarget.open)}>
       <summary className="cursor-pointer select-none text-[12px] text-mute hover:text-ink">
-        Filter &amp; search{active ? " · on" : ""}
+        Filter &amp; search{active ? (open ? " · on" : ` · ${onParts.join(" · ")}`) : ""}
       </summary>
       <div className="mt-2 flex flex-wrap items-center gap-2">
         <input
@@ -115,18 +95,17 @@ export function FiltersBar({
             </option>
           ))}
         </select>
-        {chips.map((c) => (
+        {accountChip ? (
           <button
-            key={c.key}
             type="button"
-            onClick={c.remove}
-            aria-label={`Remove filter: ${c.label}`}
+            onClick={() => go({ account: undefined })}
+            aria-label={`Remove filter: ${accountChip}`}
             className="inline-flex items-center gap-1 rounded-full border border-line-strong bg-fill px-2.5 py-1 text-[12px] text-ink hover:bg-paper"
           >
-            {c.label}
+            {accountChip}
             <X size={12} strokeWidth={1.6} aria-hidden="true" />
           </button>
-        ))}
+        ) : null}
         {isPending || pendingHref ? <span className="text-[11px] text-mute-soft">Updating…</span> : null}
       </div>
     </details>

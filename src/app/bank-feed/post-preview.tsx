@@ -15,7 +15,7 @@ export interface PreviewRow {
 export const PREVIEW_ABOVE = 10;
 
 /** Money in and out across a set of rows, as positive numbers. */
-export function sumInOut(rows: { amount: string | number }[]): { moneyIn: number; moneyOut: number } {
+function sumInOut(rows: { amount: string | number }[]): { moneyIn: number; moneyOut: number } {
   let moneyIn = 0;
   let moneyOut = 0;
   for (const r of rows) {

@@ -18,7 +18,7 @@ const STEPS: { title: string; body: string }[] = [
   },
   {
     title: "Do many at once",
-    body: "“Accept all” posts every recommendation your own history backs. Or tick the boxes on the left: a bar appears at the bottom of the screen to file them all together.",
+    body: "“Post all N recommended” posts every recommendation your own history backs. Or tick the boxes on the left: a bar appears at the bottom of the screen to file them all together.",
   },
   {
     title: "Undo any time",

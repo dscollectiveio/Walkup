@@ -15,7 +15,6 @@ import { DEFAULT_LIMIT, MAX_LIMIT, bankFeedHref, type Range, type Sort, type Sta
 import {
   BankAccountsSection,
   BankAccountsSkeleton,
-  ReconnectNotice,
   getConnectionBalance,
   type ConnectionBalance,
   type MoneyFlow,
@@ -38,11 +37,11 @@ const STATUS_LABEL: Record<Status, string> = {
   needs: "Needs category",
   ready: "Ready to post",
   posted: "Posted",
-  excluded: "Excluded",
+  excluded: "Not for the books",
   retracted: "Retracted",
 };
 
-/** The pills a treasurer works from; Excluded and Retracted sit behind "More". */
+/** The pills a treasurer works from; Not for the books and Retracted sit behind "More". */
 const MAIN_STATUSES: Status[] = ["all", "needs", "ready", "posted"];
 
 const PILL_ACTIVE = "rounded-full bg-ink px-3 py-1 text-[12px] font-medium text-paper";
@@ -61,6 +60,16 @@ const KIND_LABEL: Record<string, string> = {
 
 /** A bank last synced longer ago than this gets a sync kicked off when a board admin opens the page. */
 const STALE_SYNC_MS = 12 * 60 * 60 * 1000;
+/**
+ * When this server last started an auto-sync for a connection. last_synced_at
+ * only moves once a sync finishes, and this page re-renders on every search
+ * keystroke, filter and action, so without this each render would start
+ * another sync of the same cursor while the first still ran — and a bank that
+ * kept failing would be retried on every click. Per instance; the daily cron
+ * is the backstop.
+ */
+const autoSyncStartedAt = new Map<string, number>();
+const AUTO_SYNC_COOLDOWN_MS = 10 * 60 * 1000;
 
 const TRANSACTION_COLUMNS =
   "id, posted_on, description, amount, pending, raw_category, posting_kind, account_id, matched_unit_id, vendor_id, journal_entry_id, excluded_at, removed_at, rule_id";
@@ -195,6 +204,8 @@ export default async function BankFeedPage({
   const sort: Sort = sortParam && SORTS.includes(sortParam as Sort) ? (sortParam as Sort) : "date_desc";
   const parsedLimit = Number.parseInt(limitParam ?? "", 10);
   const limit = Number.isFinite(parsedLimit) && parsedLimit > 0 ? Math.min(parsedLimit, MAX_LIMIT) : DEFAULT_LIMIT;
+  // The landing render, as opposed to a search, filter, sort or "Load earlier" re-render.
+  const plainOpen = !q && !rangeParam && !statusParam && !sortParam && !accountParam && !limitParam;
 
   const supabase = await createClient();
 
@@ -208,12 +219,11 @@ export default async function BankFeedPage({
   const filters: Filters = { q, start: rangeStart(range), account };
   const countFor = (status: Status) =>
     withStatus(scoped(supabase.from("bank_transactions").select("id", { count: "exact", head: true }), filters), status);
-  // One more than the page shows, so the page knows whether there is more.
   const rowsFor = (status: Status) =>
     withStatus(scoped(supabase.from("bank_transactions").select(TRANSACTION_COLUMNS), filters), status)
       .order(ORDER[sort].column, { ascending: ORDER[sort].ascending })
       .order("id")
-      .limit(limit + 1);
+      .limit(limit);
   // The best first guess at the status to show; corrected below if needed.
   const firstStatus: Status = explicitStatus ?? (account ? "all" : "needs");
   const now = new Date();
@@ -237,7 +247,6 @@ export default async function BankFeedPage({
     { count: postedCount },
     { count: excludedCount },
     { count: retractedCount },
-    { count: settledReadyCount },
     { count: retractedPostedCount },
     // History persists across disconnects — a disconnected bank's
     // transactions are still in the books, so they still show here.
@@ -282,12 +291,12 @@ export default async function BankFeedPage({
     countFor("posted"),
     countFor("excluded"),
     countFor("retracted"),
-    countFor("ready").eq("pending", false),
     countFor("retracted").not("journal_entry_id", "is", null),
     rowsFor(firstStatus),
-    // What "Post all ready" would post, so the button can say how much and
-    // flag anything unusual before it does. Ignores the filters on purpose:
-    // the action posts everything ready, not just what is on screen.
+    // What "Post N saved" would post: its count, its preview and the action
+    // all come from this one set. Ignores the filters on purpose: the action
+    // posts everything saved, not just what is on screen, and the label and
+    // the preview gate must say so.
     withStatus(supabase.from("bank_transactions").select("id, description, amount"), "ready")
       .eq("pending", false)
       .order("posted_on")
@@ -312,16 +321,16 @@ export default async function BankFeedPage({
     retracted: retractedCount ?? 0,
   };
   counts.all = counts.needs + counts.ready + counts.posted + counts.excluded + counts.retracted;
-  const settledReady = settledReadyCount ?? 0;
+  const settledReady = (readyRows ?? []).length;
   const retractedPosted = retractedPostedCount ?? 0;
 
   const status: Status = explicitStatus ?? (canEdit && counts.needs > 0 && !account ? "needs" : "all");
   const { data: rows } = status === firstStatus ? { data: firstRows } : await rowsFor(status);
-  const loaded = (rows ?? []) as TransactionRecord[];
-  const hasMore = loaded.length > limit;
-  const transactions = hasMore ? loaded.slice(0, limit) : loaded;
+  const transactions = (rows ?? []) as TransactionRecord[];
   // How many rows this status holds in total; "All" leaves out retracted rows that were never posted.
   const statusTotal = status === "all" ? counts.all - (counts.retracted - retractedPosted) : counts[status];
+  // From the head count, not from an extra row: a request above max_rows comes back silently capped.
+  const hasMore = statusTotal > transactions.length;
   const loadMoreHref =
     hasMore && limit < MAX_LIMIT ? hrefFor(q, range, status, sort, account, Math.min(limit * 2, MAX_LIMIT)) : null;
 
@@ -336,15 +345,20 @@ export default async function BankFeedPage({
   // Auto-sync on open: a board admin shouldn't have to remember "Sync now".
   // Runs after the response is sent, with autoPost: false — a page load is
   // not a click, so nothing reaches the ledger from here (DECISIONS #29).
-  // Banks marked 'error' are skipped: they want a sign-in, not a retry.
-  const checking = canEdit
-    ? active.filter(
-        (c) =>
-          c.status === "active" &&
-          (!c.last_synced_at || now.getTime() - new Date(c.last_synced_at).getTime() > STALE_SYNC_MS),
-      )
-    : [];
+  // Only on the landing render, and not again within the cooldown, so a
+  // search or a filter never starts a second sync of the same cursor. Banks
+  // marked 'error' are skipped: they want a sign-in, not a retry.
+  const checking =
+    canEdit && plainOpen
+      ? active.filter(
+          (c) =>
+            c.status === "active" &&
+            (!c.last_synced_at || now.getTime() - new Date(c.last_synced_at).getTime() > STALE_SYNC_MS) &&
+            now.getTime() - (autoSyncStartedAt.get(c.id) ?? 0) > AUTO_SYNC_COOLDOWN_MS,
+        )
+      : [];
   if (checking.length > 0) {
+    for (const c of checking) autoSyncStartedAt.set(c.id, now.getTime());
     after(async () => {
       for (const c of checking) {
         try {
@@ -516,10 +530,6 @@ export default async function BankFeedPage({
                 : "Categorize, then post. Posted rows are in the books."
             }
           >
-            <Suspense fallback={null}>
-              <ReconnectNotice balancesPromise={balancesPromise} active={active} canEdit={canEdit} />
-            </Suspense>
-
             {caughtUp ? (
               <div className="mb-4 rounded-lg border border-good-line bg-good-tint px-4 py-3">
                 <p className="text-[13px] font-medium text-good-text">Nothing waiting — you&rsquo;re caught up.</p>
@@ -619,11 +629,13 @@ export default async function BankFeedPage({
                   ? "No transactions match this filter."
                   : status === "needs"
                     ? "Nothing needs a category."
-                    : status !== "all"
-                      ? `Nothing ${STATUS_LABEL[status].toLowerCase()} yet.`
-                      : checking.length > 0
-                        ? "Checking the bank for transactions now — refresh in a moment."
-                        : "No transactions synced yet. Click “Sync now” above."}
+                    : status === "excluded"
+                      ? "Nothing kept out of the books yet."
+                      : status !== "all"
+                        ? `Nothing ${STATUS_LABEL[status].toLowerCase()} yet.`
+                        : checking.length > 0
+                          ? "Checking the bank for transactions now — reload in a minute."
+                          : "No transactions synced yet. Click “Sync now” above."}
               </Empty>
             ) : (
               <>
@@ -644,7 +656,11 @@ export default async function BankFeedPage({
                     {loadMoreHref ? (
                       <>
                         {" · "}
-                        <Link href={loadMoreHref} className="font-medium text-ink underline-offset-2 hover:underline">
+                        <Link
+                          href={loadMoreHref}
+                          scroll={false}
+                          className="font-medium text-ink underline-offset-2 hover:underline"
+                        >
                           {sort === "date_desc" ? "Load earlier" : "Load more"}
                         </Link>
                       </>

@@ -54,7 +54,7 @@ export const KIND_LABEL: Record<PostingKind, string> = {
   excluded: "Not for the books",
 };
 
-export const PENDING_NOTE = "The bank hasn't settled this yet; it will post once it does";
+const PENDING_NOTE = "The bank hasn't settled this yet; it will post once it does";
 
 /** The row as it stands now, so a categorization can be undone. */
 export function priorOf(t: TransactionRecord): PriorState {
@@ -65,6 +65,7 @@ export function priorOf(t: TransactionRecord): PriorState {
     matched_unit_id: t.matched_unit_id,
     vendor_id: t.vendor_id,
     excluded_at: t.excluded_at,
+    rule_id: t.rule_id,
   };
 }
 
@@ -110,9 +111,11 @@ export interface CategorizedEvent {
   /** Every row that was changed — the one edited plus any same-payee rows filed along with it. */
   ids: string[];
   postNow: boolean;
+  /** How many of `ids` reached the books; a pending row only saves. */
+  posted: number;
   prior: PriorState[];
-  /** The server says this payee has been filed this way before: worth offering a rule. */
-  ruleSuggestion?: { pattern: string; label: string };
+  /** The server says this payee has been filed this way before: worth offering a rule on this payee key. */
+  ruleSuggestion?: { pattern: string };
 }
 
 function describeTarget(t: TransactionRecord, pickers: Pickers): string | null {
@@ -175,7 +178,7 @@ function StatusPill({ t }: { t: TransactionRecord }) {
   }
   if (t.removed_at) return <Pill tone="mute">Retracted by bank</Pill>;
   if (t.journal_entry_id) return <Pill tone="good">Posted</Pill>;
-  if (t.excluded_at) return <Pill tone="mute">Excluded</Pill>;
+  if (t.excluded_at) return <Pill tone="mute">Not for the books</Pill>;
   if (t.pending)
     return (
       <Pill tone="mute" title={PENDING_NOTE}>
@@ -212,13 +215,13 @@ function Pill({
   );
 }
 
-/** "rule" tag on a row a saved rule pre-filled, with Remove rule on hover or focus. */
+/** "rule" tag on a row a saved rule pre-filled, with Remove rule beside it — always visible, so it works on a phone too. */
 function RuleTag({ ruleId, pattern, canEdit }: { ruleId: string; pattern: string | null; canEdit: boolean }) {
   const [busy, start] = useTransition();
   const [error, setError] = useState<string | null>(null);
   const title = pattern ? `Filed by your rule for ‘${pattern}’` : "Filed by one of your rules";
   return (
-    <span className="group/rule inline-flex items-center gap-1">
+    <span className="inline-flex items-center gap-1.5">
       <span title={title} className="rounded-sm bg-fill px-1 py-px text-[10px] uppercase tracking-[0.05em] text-mute">
         rule
       </span>
@@ -234,7 +237,7 @@ function RuleTag({ ruleId, pattern, canEdit }: { ruleId: string; pattern: string
             })
           }
           title={pattern ? `Stop filing ‘${pattern}’ this way automatically` : undefined}
-          className={`${LINK_QUIET} opacity-0 focus:opacity-100 group-hover/rule:opacity-100`}
+          className={LINK_QUIET}
         >
           {busy ? "Removing…" : "Remove rule"}
         </button>
@@ -301,6 +304,7 @@ function CategorizeForm({
       }
 
       const ids = [t.id];
+      let posted = result.posted ? 1 : 0;
       if (others.length > 0) {
         const more = await applyCategorizations({
           items: others.map((o) => ({ id: o.id, ...item })),
@@ -310,9 +314,10 @@ function CategorizeForm({
           setError(`Saved this one, but the others couldn't be: ${more.error}`);
         } else {
           ids.push(...(more.applied ?? []));
+          posted += more.posted ?? 0;
         }
       }
-      onCategorized?.({ item, ids, postNow, prior, ruleSuggestion: result.ruleSuggestion });
+      onCategorized?.({ item, ids, postNow, posted, prior, ruleSuggestion: result.ruleSuggestion });
       onDone();
     });
   };
@@ -375,7 +380,7 @@ function CategorizeForm({
           title={t.pending ? PENDING_NOTE : undefined}
           className="rounded-md bg-ink px-2.5 py-1 text-[11px] font-medium text-paper hover:bg-ink-mid disabled:opacity-50"
         >
-          {pending ? "Saving…" : isExcluded ? "Save & exclude" : "Save & post"}
+          {pending ? "Saving…" : isExcluded ? "Keep out of the books" : "Save & post"}
         </button>
         <button
           type="button"
@@ -449,11 +454,14 @@ export function TransactionRow({
   const faded = t.removed_at && !t.journal_entry_id;
   const columns = (leadingCell !== undefined ? 1 : 0) + 4 + (canEdit ? 1 : 0);
 
+  // A duplicate is one deposit matching one hand-recorded payment, so its chip
+  // files this row alone; every other chip takes the same-payee rows with it.
+  const alongWith = suggestion?.source === "duplicate" ? [] : similar;
   const chipTitle = (() => {
     if (!suggestion) return undefined;
     if (suggestion.source === "duplicate") return "Keeps this out of the books so the dues aren't counted twice";
     if (t.pending) return "Saves the category; it posts once the bank settles it";
-    const alsoOthers = similar.length > 0 ? ` and ${similar.length} more “${t.description.trim()}”` : "";
+    const alsoOthers = alongWith.length > 0 ? ` and ${alongWith.length} more “${t.description.trim()}”` : "";
     return `Files this${alsoOthers} as ${suggestion.label} and posts it to the books`;
   })();
   const chipText =
@@ -464,7 +472,8 @@ export function TransactionRow({
       <tr
         id={`tx-${t.id}`}
         data-focused={focused || undefined}
-        onClick={canEditRow ? (e) => (onControl(e.target) ? undefined : setEditing(!editing)) : undefined}
+        // Opens only: a second tap on a phone must not throw away a half-made pick. Cancel or Escape closes.
+        onClick={canEditRow && !editing ? (e) => (onControl(e.target) ? undefined : setEditing(true)) : undefined}
         className={`${ROW} ${faded ? "opacity-60" : ""} ${canEditRow ? "cursor-pointer hover:bg-fill/60" : ""} ${
           focused ? "bg-fill outline outline-1 -outline-offset-1 outline-brass" : ""
         }`}
@@ -523,15 +532,15 @@ export function TransactionRow({
                       disabled={busy}
                       onClick={() => run(() => onAcceptSuggestion(!t.pending))}
                       aria-label={`${t.pending ? "File" : "Post"} ${t.description} as ${suggestion.label}${
-                        similar.length > 0 ? ` along with ${similar.length} more from the same payee` : ""
+                        alongWith.length > 0 ? ` along with ${alongWith.length} more from the same payee` : ""
                       }`}
                       title={chipTitle}
                       className={`inline-flex items-center gap-1 whitespace-nowrap rounded-full border px-2.5 py-0.5 text-[11px] font-medium disabled:opacity-50 ${CHIP_TONE[suggestion.source]}`}
                     >
                       <span aria-hidden="true">✓</span>
                       {busy ? (t.pending ? "Saving…" : "Posting…") : chipText}
-                      {!busy && similar.length > 0 ? (
-                        <span className="font-normal opacity-80">· +{similar.length} more</span>
+                      {!busy && alongWith.length > 0 ? (
+                        <span className="font-normal opacity-80">· +{alongWith.length} more</span>
                       ) : null}
                     </button>
                   )}

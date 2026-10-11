@@ -116,15 +116,21 @@ PART 3 — THE MONTHLY ROUTINE (about 15 minutes)
    - The page opens on what needs a category, with a "to go" count and a
      progress bar.
    - Each transaction shows a RECOMMENDED category with the reason
-     ("you filed this payee the same way 4 times before"). Click it once
-     to accept. "+3 more" means the other transactions from the same payee
-     are filed with it.
-   - No recommendation, or it's wrong? Click "Categorize" and pick one.
-   - Many at once: tick the boxes; a bar appears at the bottom of the
-     screen to categorize them together.
-   - Made a mistake? Every save shows an Undo button for 10 seconds.
-   - When everything is categorized, click "Post … ready to the books".
-     Posting is what updates the budget, dues balances and statements.
+     ("you filed this payee the same way 4 times before"). One click files
+     it and posts it to the books. A filled chip is how you filed that
+     payee before; an outlined one is a guess. "+3 more" means the other
+     transactions from the same payee go with it.
+   - "Save for later" beside the chip files it without posting; "Post N
+     saved" at the top posts everything you saved.
+   - No recommendation, or it's wrong? Click the row (or "Categorize") and
+     start typing — Utilities, Dues, Transfer, Not for the books — then
+     pick from the list and Save & post.
+   - Many at once: "Post all N recommended" posts what your own history
+     backs; or tick the boxes and a bar appears at the bottom of the
+     screen to file them together.
+   - Made a mistake? Every post shows Undo for 10 seconds, and a posted
+     row always has "Undo posting". Posting is what updates the budget,
+     dues balances and statements.
 
 2. HOA Dues
    - "Needs you" lists everything waiting, one decision per line:

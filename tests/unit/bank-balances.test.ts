@@ -18,7 +18,7 @@ vi.mock("@/app/bank-feed/disconnect-button", () => ({ DisconnectButton: () => cr
 vi.mock("@/app/bank-feed/connect-bank-button", () => ({ ConnectBankButton: () => createElement("button", null, "Connect") }));
 vi.mock("@/app/bank-feed/ledger-account-select", () => ({ LedgerAccountSelect: () => createElement("span", null, "pick") }));
 
-import { BankAccountsSection, ReconnectNotice, type ConnectionBalance } from "@/app/bank-feed/balances";
+import { BankAccountsSection, type ConnectionBalance } from "@/app/bank-feed/balances";
 
 const balances: ConnectionBalance[] = [
   {
@@ -93,31 +93,27 @@ describe("Bank accounts section", () => {
     expect(html).not.toContain("Manage connection");
   });
 
-  it("the same line tops the Transactions card as a bad-status answer, and is absent when every bank is fine", async () => {
-    const stale = await ReconnectNotice({
-      balancesPromise: Promise.resolve([{ connectionId: "c1", accounts: [], needsReconnect: true }]),
-      active,
-      canEdit: true,
-    });
-    const html = renderToStaticMarkup(stale as never);
-    expect(html).toContain("Chase needs you to sign in again before new transactions can come in.");
-    expect(html).toContain("Reconnect Chase");
-    expect(html).toContain("bg-bad-tint");
-
-    const errored = await ReconnectNotice({
+  it("tells someone who can't reconnect that a board admin has to, and shows one Reconnect button at most", async () => {
+    const el = await BankAccountsSection({
       balancesPromise: Promise.resolve(balances),
       active: [{ ...active[0], status: "error" }],
       canEdit: false,
+      cashAccounts: [],
     });
-    const erroredHtml = renderToStaticMarkup(errored as never);
-    expect(erroredHtml).toContain("sign in again");
-    expect(erroredHtml).not.toContain("Reconnect Chase"); // owners can't reconnect
+    const html = renderToStaticMarkup(el);
+    expect(html).toContain("Chase needs a board admin to sign in again before new transactions can come in.");
+    expect(html).not.toContain("Reconnect Chase");
 
-    const fine = await ReconnectNotice({ balancesPromise: Promise.resolve(balances), active, canEdit: true });
-    expect(fine).toBeNull();
+    const admin = await BankAccountsSection({
+      balancesPromise: Promise.resolve([{ connectionId: "c1", accounts: [], needsReconnect: true }]),
+      active,
+      canEdit: true,
+      cashAccounts: [],
+    });
+    expect((renderToStaticMarkup(admin).match(/Reconnect Chase/g) ?? []).length).toBe(1);
   });
 
-  it("says when the page is checking the bank on its own", async () => {
+  it("says when the page is checking the bank on its own, and that a reload shows the result", async () => {
     const el = await BankAccountsSection({
       balancesPromise: Promise.resolve(balances),
       active,
@@ -125,6 +121,8 @@ describe("Bank accounts section", () => {
       cashAccounts: [],
       checkingIds: ["c1"],
     });
-    expect(renderToStaticMarkup(el)).toContain("Checking the bank for new transactions");
+    const html = renderToStaticMarkup(el);
+    expect(html).toContain("Checking the bank for new transactions");
+    expect(html).toContain("reload in a minute");
   });
 });

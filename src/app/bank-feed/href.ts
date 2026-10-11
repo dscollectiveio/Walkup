@@ -14,9 +14,13 @@ export const RANGE_LABEL: Record<Range, string> = {
   last_30: "Last 30 days",
 };
 
-/** Rows per page load. "Load earlier" doubles it, up to the cap. */
+/**
+ * Rows per page load. "Load earlier" doubles it, up to the cap — which stays
+ * at hosted Supabase's default max_rows (1,000): PostgREST silently truncates
+ * anything above it, and a page that asked for more would never know.
+ */
 export const DEFAULT_LIMIT = 200;
-export const MAX_LIMIT = 2000;
+export const MAX_LIMIT = 1000;
 
 export interface FeedParams {
   q?: string;

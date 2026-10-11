@@ -4,6 +4,7 @@ import { revalidatePath } from "next/cache";
 import { createClient } from "@/lib/supabase/server";
 import { plaidClient, describePlaidError } from "@/lib/plaid";
 import { syncOneConnection } from "@/lib/plaid/sync";
+import { forgetBalance } from "@/lib/plaid/balance-cache";
 import { matchRule, type CategorizationRule } from "@/lib/plaid/dedupe";
 import { isMatchableDescription, normalizeDescription } from "@/lib/plaid/similar";
 import { CountryCode, Products } from "plaid";
@@ -103,6 +104,7 @@ export async function reconnectBank(
     .select("id");
   if (error) return { error: error.message };
   if (!data || data.length === 0) return { error: "Only a board admin can reconnect a bank." };
+  forgetBalance(connectionId);
   return syncBankTransactions(connectionId);
 }
 
@@ -332,6 +334,8 @@ export async function syncBankTransactions(
   if (tokenError) return { error: tokenError.message };
 
   const result = await syncOneConnection(supabase, connection, accessToken, { autoPost: true });
+  // The person asked for fresh numbers, so the bank card re-asks Plaid too.
+  forgetBalance(connectionId);
   if ("error" in result) {
     if (result.needsReconnect) revalidatePath("/bank-feed");
     return { error: result.error, needsReconnect: result.needsReconnect };
@@ -357,6 +361,10 @@ interface Categorization {
   account_id: string | null;
   matched_unit_id: string | null;
   vendor_id: string | null;
+  /** A person chose this, so it is no longer "filed by a rule". */
+  rule_id: null;
+  /** Leaving "Not for the books" clears the stamp post_bank_transaction() put on it. */
+  excluded_at?: null;
 }
 
 /** The columns bank_transactions gets from a (kind, account, unit, vendor) choice. */
@@ -371,6 +379,8 @@ function categorizationOf(item: {
     account_id: ["expense", "income", "transfer"].includes(item.kind) ? item.accountId : null,
     matched_unit_id: item.kind === "dues" ? item.unitId : null,
     vendor_id: item.kind === "expense" ? item.vendorId : null,
+    rule_id: null,
+    ...(item.kind === "excluded" ? {} : { excluded_at: null }),
   };
 }
 
@@ -383,96 +393,62 @@ function invalidChoice(item: { kind: PostingKind; accountId: string | null; unit
 }
 
 /**
- * Transfers and "Not for the books" are never judgement calls twice: a move
- * to the association's own savings is always a transfer, and a payee the
- * board has said to keep out of the books stays out. So the first time a
- * person files one, remember it as a rule for that exact description — no
- * checkbox to find, nothing to ask. auto_post stays false: the rule pre-fills
- * the next matching row and a person still posts it. A rule that already
- * exists for the description is left exactly as it is.
+ * The pattern a rule is saved under: the payee key (normalizeDescription —
+ * lowercase, digits and punctuation dropped), the same key the tally and
+ * matchRule() use. "COMED 8841 10/03" becomes "comed", so the rule fires on
+ * next month's "COMED 8841 11/03" too. Null when there is too little left to
+ * mean anything ("1234 #").
  */
-async function rememberObviousRules(
-  supabase: Supabase,
-  rows: { association_id: string; description: string }[],
-  categorization: Categorization,
-): Promise<void> {
-  if (categorization.posting_kind !== "transfer" && categorization.posting_kind !== "excluded") return;
-  const seen = new Set<string>();
-  const rules = [];
-  for (const r of rows) {
-    const pattern = r.description.trim();
-    const key = `${r.association_id}:${pattern}`;
-    if (pattern.length < 3 || seen.has(key)) continue;
-    seen.add(key);
-    rules.push({ association_id: r.association_id, pattern, ...categorization, auto_post: false });
-  }
-  if (rules.length === 0) return;
-  const { error } = await supabase
-    .from("bank_categorization_rules")
-    .upsert(rules, { onConflict: "association_id,pattern", ignoreDuplicates: true });
-  // The categorization itself already saved; a rule that didn't is a lost
-  // convenience, not an error worth stopping the person for.
-  if (error) console.warn("bank_categorization_rules upsert failed", error.message);
+function rulePatternFor(description: string): string | null {
+  const key = normalizeDescription(description);
+  return isMatchableDescription(key) ? key : null;
 }
 
 /**
- * After an expense, income or dues choice: is this at least the second time
+ * After a choice made by hand in the form: is this at least the second time
  * the board has filed this payee this way, with no rule yet? Then the client
- * can ask "Always file X as Y?" — one click instead of a checkbox nobody
- * finds. Reads the trigger-kept tally (0046), which already includes the row
- * just filed, so "second time" is count >= 2.
+ * can ask "Always file X as Y?" — one click, one explicit yes. Nothing is
+ * remembered on its own, so a one-off "Not for the books" or a duplicate
+ * guard never turns into a standing rule (that happened; see DECISIONS #29).
+ * Reads the trigger-kept tally (0046), which already includes the row just
+ * filed, so "second time" is count >= 2.
  */
 async function suggestRule(
   supabase: Supabase,
   row: { association_id: string; description: string; amount: string | number },
   c: Categorization,
-): Promise<{ pattern: string; label: string } | null> {
-  if (!["expense", "income", "dues"].includes(c.posting_kind)) return null;
-  const pattern = row.description.trim();
-  const payeeKey = normalizeDescription(row.description);
+): Promise<{ pattern: string } | null> {
+  const pattern = rulePatternFor(row.description);
   const direction = Math.sign(Number(row.amount));
-  if (pattern.length < 3 || !isMatchableDescription(payeeKey) || direction === 0) return null;
+  if (!pattern || direction === 0) return null;
 
   const tallyQuery = supabase
     .from("bank_payee_history")
     .select("count")
     .eq("association_id", row.association_id)
-    .eq("payee_key", payeeKey)
+    .eq("payee_key", pattern)
     .eq("direction", direction)
     .eq("posting_kind", c.posting_kind);
-  const labelQuery =
-    c.posting_kind === "dues"
-      ? supabase
-          .from("units")
-          .select("label")
-          .eq("id", c.matched_unit_id)
-          .limit(1)
-          .then(({ data }) => (data?.[0]?.label as string | undefined) ?? null)
-      : supabase
-          .from("accounts")
-          .select("name")
-          .eq("id", c.account_id)
-          .limit(1)
-          .then(({ data }) => (data?.[0]?.name as string | undefined) ?? null);
-  const [{ data: tally }, { data: rules }, label] = await Promise.all([
+  const [{ data: tally }, { data: rules }] = await Promise.all([
     (c.posting_kind === "dues"
       ? tallyQuery.eq("matched_unit_id", c.matched_unit_id)
-      : tallyQuery.eq("account_id", c.account_id)
+      : c.posting_kind === "excluded"
+        ? tallyQuery
+        : tallyQuery.eq("account_id", c.account_id)
     ).limit(1),
     supabase
       .from("bank_categorization_rules")
       .select("id, pattern, posting_kind, account_id, matched_unit_id, vendor_id, auto_post")
       .eq("association_id", row.association_id),
-    labelQuery,
   ]);
 
-  if (Number(tally?.[0]?.count ?? 0) < 2 || !label) return null;
+  if (Number(tally?.[0]?.count ?? 0) < 2) return null;
   if (matchRule(row.description, (rules ?? []) as CategorizationRule[])) return null;
-  return { pattern, label };
+  return { pattern };
 }
 
 /**
- * Saves "description contains pattern ⇒ this choice" for future syncs. The
+ * Saves "payee key contains pattern ⇒ this choice" for future syncs. The
  * table's RLS makes this board_admin-only. Never auto-posts: a rule
  * pre-fills, a person posts (DECISIONS #29).
  */
@@ -483,8 +459,8 @@ export async function saveCategorizationRule(input: {
   unitId: string | null;
   vendorId: string | null;
 }): Promise<{ ok?: true; error?: string }> {
-  const pattern = input.pattern.trim();
-  if (pattern.length < 3) return { error: "The description is too short to make a rule from." };
+  const pattern = rulePatternFor(input.pattern);
+  if (!pattern) return { error: "The description is too short to make a rule from." };
   const invalid = invalidChoice(input);
   if (invalid) return { error: invalid };
 
@@ -492,10 +468,11 @@ export async function saveCategorizationRule(input: {
   if (!associationId) return { error: "No association is visible to you." };
 
   const supabase = await createClient();
+  const { posting_kind, account_id, matched_unit_id, vendor_id } = categorizationOf(input);
   const { error } = await supabase
     .from("bank_categorization_rules")
     .upsert(
-      { association_id: associationId, pattern, ...categorizationOf(input), auto_post: false },
+      { association_id: associationId, pattern, posting_kind, account_id, matched_unit_id, vendor_id, auto_post: false },
       { onConflict: "association_id,pattern" },
     );
   if (error) return { error: error.message };
@@ -508,8 +485,8 @@ export async function saveCategorizationRule(input: {
  * it right now. The categorization itself is a board_admin UPDATE
  * (bank_transactions_update, 0016); the posting is post_bank_transaction()
  * (0036), which does its own checks and is the only thing that ever sets
- * journal_entry_id. Transfers and "Not for the books" become rules on their
- * own; for the rest, `ruleSuggestion` says when it's worth asking.
+ * journal_entry_id. `ruleSuggestion` says when it's worth asking "Always
+ * file X as Y?"; no rule is saved without that yes.
  */
 export async function categorizeBankTransaction(input: {
   transactionId: string;
@@ -522,7 +499,7 @@ export async function categorizeBankTransaction(input: {
   ok?: true;
   posted?: boolean;
   /** Set when this is at least the second time the payee was filed this way and no rule exists yet. */
-  ruleSuggestion?: { pattern: string; label: string };
+  ruleSuggestion?: { pattern: string };
   error?: string;
 }> {
   const invalid = invalidChoice(input);
@@ -542,10 +519,7 @@ export async function categorizeBankTransaction(input: {
   const row = data?.[0];
   if (!row) return { error: "Only a board admin can categorize a transaction, and it can't already be posted." };
 
-  const [ruleSuggestion] = await Promise.all([
-    suggestRule(supabase, row, categorization),
-    rememberObviousRules(supabase, [row], categorization),
-  ]);
+  const ruleSuggestion = await suggestRule(supabase, row, categorization);
 
   let posted = false;
   if (input.postNow) {
@@ -563,10 +537,11 @@ export async function categorizeBankTransaction(input: {
 /**
  * Same as categorizeBankTransaction, but for many rows at once with one
  * shared categorization — the bulk-review tool on the bank feed. No rule is
- * saved here (a rule is one pattern → one target; a batch of differently-
+ * offered here (a rule is one pattern → one target; a batch of differently-
  * worded transactions sharing a category doesn't have a single pattern to
  * save). Same board_admin-gated UPDATE, same post_bank_transaction() per
- * row if postNow is set.
+ * row if postNow is set. `applied` is every row that took the category;
+ * `posted` how many of those reached the books.
  */
 export async function categorizeBankTransactionsBulk(input: {
   transactionIds: string[];
@@ -575,7 +550,7 @@ export async function categorizeBankTransactionsBulk(input: {
   unitId: string | null;
   vendorId: string | null;
   postNow: boolean;
-}): Promise<{ ok?: true; posted?: number; errors?: string[]; error?: string }> {
+}): Promise<{ ok?: true; applied?: string[]; posted?: number; errors?: string[]; error?: string }> {
   if (input.transactionIds.length === 0) return { error: "Nothing selected." };
   const invalid = invalidChoice(input);
   if (invalid) return { error: invalid };
@@ -595,14 +570,12 @@ export async function categorizeBankTransactionsBulk(input: {
     return { error: "None of those could be categorized — only a board admin can, and none can already be posted." };
   }
 
-  await rememberObviousRules(supabase, data, categorization);
-
   const { done: posted, errors } = input.postNow
     ? await postBatch(supabase, "post_bank_transactions", data)
     : { done: 0, errors: [] };
 
   revalidateLedgerPages();
-  return { ok: true, posted, errors };
+  return { ok: true, applied: data.map((r) => r.id), posted, errors };
 }
 
 export interface CategorizationItem {
@@ -614,11 +587,13 @@ export interface CategorizationItem {
 }
 
 /**
- * Categorizes many rows where each can have its own target — what "Accept all
- * suggestions", one-click suggestion chips, and "apply to similar" need
- * (categorizeBankTransactionsBulk shares one target across every row). Same
- * board_admin UPDATE and the same post_bank_transaction() per row when
- * postNow is set; a row that can't be applied is reported, not fatal.
+ * Categorizes many rows where each can have its own target — what "Post all
+ * recommended", one-click suggestion chips, and "apply to similar" need
+ * (categorizeBankTransactionsBulk shares one target across every row). Rows
+ * that share a choice go in one UPDATE, so a batch across six categories is
+ * six round trips, not one per row. Same board_admin UPDATE and the same
+ * post_bank_transaction() per row when postNow is set; a row that can't be
+ * applied is reported, not fatal.
  */
 export async function applyCategorizations(input: {
   items: CategorizationItem[];
@@ -627,12 +602,9 @@ export async function applyCategorizations(input: {
   if (input.items.length === 0) return { error: "Nothing to apply." };
   const supabase = await createClient();
 
-  const applied: { id: string; association_id: string; description: string }[] = [];
+  const applied: { id: string; description: string }[] = [];
   const errors: string[] = [];
-  // Rows filed as a transfer or "Not for the books", grouped by the exact
-  // choice, so each becomes one rule upsert rather than one per row.
-  const obvious = new Map<string, { categorization: Categorization; rows: typeof applied }>();
-
+  const groups = new Map<string, { categorization: Categorization; ids: string[] }>();
   for (const item of input.items) {
     const invalid = invalidChoice(item);
     if (invalid) {
@@ -640,32 +612,30 @@ export async function applyCategorizations(input: {
       continue;
     }
     const categorization = categorizationOf(item);
+    const key = JSON.stringify(categorization);
+    const group = groups.get(key) ?? { categorization, ids: [] };
+    group.ids.push(item.id);
+    groups.set(key, group);
+  }
+
+  for (const { categorization, ids } of groups.values()) {
     const { data, error } = await supabase
       .from("bank_transactions")
       .update(categorization)
-      .eq("id", item.id)
+      .in("id", ids)
       .is("journal_entry_id", null)
-      .select("id, association_id, description");
+      .select("id, description");
     if (error) {
       errors.push(error.message);
       continue;
     }
-    const row = data?.[0];
-    if (!row) {
-      errors.push("A transaction couldn't be changed — it may already be posted, or you may not be a board admin.");
-      continue;
+    applied.push(...(data ?? []));
+    const missing = ids.length - (data?.length ?? 0);
+    if (missing > 0) {
+      errors.push(
+        `${missing} transaction${missing === 1 ? "" : "s"} couldn't be changed — already posted, or you may not be a board admin.`,
+      );
     }
-    applied.push(row);
-    if (item.kind === "transfer" || item.kind === "excluded") {
-      const key = JSON.stringify(categorization);
-      const group = obvious.get(key) ?? { categorization, rows: [] };
-      group.rows.push(row);
-      obvious.set(key, group);
-    }
-  }
-
-  for (const group of obvious.values()) {
-    await rememberObviousRules(supabase, group.rows, group.categorization);
   }
 
   const { done: posted, errors: postErrors } = input.postNow
@@ -686,12 +656,15 @@ export interface PriorState {
   matched_unit_id: string | null;
   vendor_id: string | null;
   excluded_at: string | null;
+  rule_id: string | null;
 }
 
 /**
  * Undo for the actions above: takes back any posting made since (via
  * unpost_bank_transaction, which writes a reversing entry — nothing is
- * deleted from the ledger) and restores the earlier categorization.
+ * deleted from the ledger) and restores the earlier categorization. No rule
+ * is ever saved by those actions without a separate yes, so there is none
+ * to take back here.
  */
 export async function revertCategorizations(
   prior: PriorState[],
@@ -728,6 +701,7 @@ export async function revertCategorizations(
         matched_unit_id: p.matched_unit_id,
         vendor_id: p.vendor_id,
         excluded_at: p.excluded_at,
+        rule_id: p.rule_id,
       })
       .eq("id", p.id)
       .is("journal_entry_id", null)

@@ -242,9 +242,9 @@ export function buildSetupGuide(input: SetupInputs): SetupSection[] {
           done: backlogDone,
           doneOn: null,
           instructions: [
-            "Use the “N suggested as …” buttons above the table to select whole groups at once, then “Save & post all”.",
+            "Click a recommended category to post that row; “Post all N recommended” does every one your own history backs.",
             "Deposits from owners are Dues — pick the unit. Transfers between your own accounts are Transfers.",
-            "Anything you save “for later” shows under Ready to post; “Post all ready” finishes it.",
+            "Anything you save “for later” shows under Ready to post; “Post N saved” finishes it.",
           ],
         },
         {

@@ -971,6 +971,37 @@ is a centered line under the table. (6) A bank that wants a fresh sign-in
 has that one sentence and the Reconnect button in place of its button row,
 and the same sentence tops the Transactions card as a bad-status Answer.
 
+**Review fixes, added 2026-10-10.** Corrections to the four slices above,
+each the simpler of the options on the table. (1) *No rule is saved without
+a yes.* Slice B's "transfers and Not for the books are remembered on their
+own" is withdrawn: it turned the duplicate guard (a one-deposit fact) and the
+`x` key into permanent substring rules, and Undo could not take them back.
+Instead the "Always file X as Y?" question now covers every kind, asked only
+from the form after the second filing of a payee; chips, `x` and
+"Post all recommended" never create a rule. (2) Rules are stored and matched
+on the payee key (`normalizeDescription`, the same key as
+`bank_payee_history`), so a rule made from "COMED 8841 10/03" fires on next
+month's "COMED 8841 11/03"; a pattern that normalizes to under three letters
+never matches. (3) A duplicate chip files that row alone, never its
+same-payee siblings. (4) A hand categorization clears `excluded_at` (when
+leaving Not for the books) and `rule_id`; undo restores both. (5) "Post N
+saved", its preview gate and `postAllReady()` all use the same unfiltered set.
+(6) The auto-sync runs only on the landing render (no search, filter, sort or
+limit params) and not again within ten minutes per server instance; the bank
+card says to reload to see the result. Plaid balances are remembered per
+connection for ten minutes per instance, forgotten by Sync now and Reconnect.
+(7) `applyCategorizations` groups rows by choice into one UPDATE each.
+(8) `MAX_LIMIT` is 1,000 (hosted Supabase's max_rows) and "more rows exist"
+comes from the head count, not an extra row. (9) One reconnect notice (the
+bank card's), worded for a non-admin as "needs a board admin to sign in
+again". (10) Words: the state is "Not for the books" everywhere (pill, filter,
+buttons "Keep out of the books"); the bulk button is "Post all N recommended";
+toasts count what was actually posted ("2 posted · 1 couldn't be posted
+yet"); after yes to a rule the toast says only that, with no Undo. (11) A row
+click opens its form but never closes it, so a second tap on a phone cannot
+discard a half-made pick. (12) 0047 drops the redundant
+`bank_payee_history_lookup_idx`.
+
 ## 30. Access reviews, automated deprovisioning, and personal-data redaction — including the one path that edits the audit log
 
 *Decided: Doug, 2026-09-26. Plaid's security review (submitted the same

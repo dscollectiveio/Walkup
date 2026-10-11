@@ -16,6 +16,8 @@
  * row, in order.
  */
 
+import { isMatchableDescription, normalizeDescription } from "./similar";
+
 export interface IncomingTransaction {
   transaction_id: string;
   date: string;
@@ -92,11 +94,18 @@ export interface CategorizationRule {
   auto_post: boolean;
 }
 
-/** First rule whose pattern appears in the description, case-insensitively. */
+/**
+ * First rule whose pattern appears in the description. Both sides are
+ * normalized the way the payee tally is (normalizeDescription: lowercase,
+ * digits and punctuation dropped), so a rule made from "COMED 8841 10/03"
+ * still fires on "COMED 8841 11/03". A pattern that normalizes to too little
+ * to mean anything never matches.
+ */
 export function matchRule(description: string, rules: CategorizationRule[]): CategorizationRule | null {
-  const haystack = description.toLowerCase();
+  const haystack = normalizeDescription(description);
   for (const r of rules) {
-    if (haystack.includes(r.pattern.trim().toLowerCase())) return r;
+    const needle = normalizeDescription(r.pattern);
+    if (isMatchableDescription(needle) && haystack.includes(needle)) return r;
   }
   return null;
 }

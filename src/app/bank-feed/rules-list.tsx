@@ -32,7 +32,8 @@ export function RulesToggle({ rules, canEdit }: { rules: RuleRecord[]; canEdit: 
       {open ? (
         <div className="basis-full rounded-lg border border-line bg-fill/40 px-3 py-1">
           <p className="py-2 text-[12px] text-mute">
-            Applied to new transactions as they sync. Transfers and “Not for the books” are remembered on their own.
+            Pre-fill new transactions as they sync; a person still posts them. Saved when you answer yes to “Always
+            file … as …?”.
           </p>
           <RulesList rules={rules} canEdit={canEdit} />
         </div>
@@ -41,7 +42,7 @@ export function RulesToggle({ rules, canEdit }: { rules: RuleRecord[]; canEdit: 
   );
 }
 
-export function RulesList({ rules, canEdit }: { rules: RuleRecord[]; canEdit: boolean }) {
+function RulesList({ rules, canEdit }: { rules: RuleRecord[]; canEdit: boolean }) {
   const [pending, start] = useTransition();
   const [error, setError] = useState<string | null>(null);
 

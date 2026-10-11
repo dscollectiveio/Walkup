@@ -19,7 +19,7 @@ describe("FiltersBar", () => {
     expect(html).toContain('type="search"');
   });
 
-  it("opens with a removable chip for each active filter", () => {
+  it("opens when a filter is active, with a chip only for the category filter — the search box and range select show the rest", () => {
     const html = render({
       current: { q: "comed", range: "last_30", status: "needs", sort: "date_desc", account: "a1" },
       accountLabel: "Utilities",
@@ -28,9 +28,9 @@ describe("FiltersBar", () => {
     expect(html).toContain("· on");
     expect(html).toContain('value="comed"');
     expect(html).toContain("Last 30 days");
-    expect(html).toContain("‘comed’");
+    expect(html).not.toContain("‘comed’");
     expect(html).toContain("Only Utilities");
-    expect((html.match(/Remove filter/g) ?? []).length).toBe(3);
+    expect((html.match(/Remove filter/g) ?? []).length).toBe(1);
     expect(html).not.toContain(">Filter<");
   });
 });

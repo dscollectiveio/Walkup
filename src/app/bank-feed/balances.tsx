@@ -1,7 +1,8 @@
 import { createClient } from "@/lib/supabase/server";
-import { Answer, money } from "@/components/ui";
+import { money } from "@/components/ui";
 import { syncedAgo } from "@/lib/dates";
 import { plaidClient, describePlaidError, isLoginRequired, isProductNotEnabled } from "@/lib/plaid";
+import { rememberBalance } from "@/lib/plaid/balance-cache";
 import { ConnectBankButton } from "./connect-bank-button";
 import { ReconnectButton } from "./reconnect-button";
 import { SyncButton } from "./sync-button";
@@ -66,25 +67,29 @@ export async function getConnectionBalance(
         a.balances.current !== null && a.balances.current !== undefined ? Math.round(a.balances.current * 100) : null,
     }));
 
-  try {
-    const response = await plaidClient().accountsBalanceGet({ access_token: accessToken });
-    return { connectionId, accounts: toAccounts(response.data.accounts), source: "live" };
-  } catch (cause) {
-    if (isLoginRequired(cause)) return { connectionId, accounts: [], needsReconnect: true };
-    if (!isProductNotEnabled(cause)) {
-      console.error("Plaid accountsBalanceGet failed", cause);
-      return { connectionId, accounts: [], error: describePlaidError(cause) };
-    }
-    console.warn("Plaid Balance isn't enabled for this client; using cached balances from accountsGet.");
+  // The Plaid half is remembered for a few minutes per connection: this page
+  // re-renders on every click, and the balance does not change between them.
+  return rememberBalance(connectionId, async () => {
     try {
-      const response = await plaidClient().accountsGet({ access_token: accessToken });
-      return { connectionId, accounts: toAccounts(response.data.accounts), source: "last_sync" };
-    } catch (fallback) {
-      if (isLoginRequired(fallback)) return { connectionId, accounts: [], needsReconnect: true };
-      console.error("Plaid accountsGet failed", fallback);
-      return { connectionId, accounts: [], error: describePlaidError(fallback) };
+      const response = await plaidClient().accountsBalanceGet({ access_token: accessToken });
+      return { connectionId, accounts: toAccounts(response.data.accounts), source: "live" };
+    } catch (cause) {
+      if (isLoginRequired(cause)) return { connectionId, accounts: [], needsReconnect: true };
+      if (!isProductNotEnabled(cause)) {
+        console.error("Plaid accountsBalanceGet failed", cause);
+        return { connectionId, accounts: [], error: describePlaidError(cause) };
+      }
+      console.warn("Plaid Balance isn't enabled for this client; using cached balances from accountsGet.");
+      try {
+        const response = await plaidClient().accountsGet({ access_token: accessToken });
+        return { connectionId, accounts: toAccounts(response.data.accounts), source: "last_sync" };
+      } catch (fallback) {
+        if (isLoginRequired(fallback)) return { connectionId, accounts: [], needsReconnect: true };
+        console.error("Plaid accountsGet failed", fallback);
+        return { connectionId, accounts: [], error: describePlaidError(fallback) };
+      }
     }
-  }
+  });
 }
 
 
@@ -110,8 +115,9 @@ function needsReconnect(c: ActiveConnection, balance: ConnectionBalance | undefi
   return c.status === "error" || balance?.needsReconnect === true;
 }
 
-function reconnectSentence(institution: string): string {
-  return `${institution} needs you to sign in again before new transactions can come in.`;
+/** Addressed to whoever can act: a board admin signs in again; anyone else is told who can. */
+function reconnectSentence(institution: string, canEdit: boolean): string {
+  return `${institution} needs ${canEdit ? "you" : "a board admin"} to sign in again before new transactions can come in.`;
 }
 
 /** Placeholder while Plaid answers, so the rest of the page isn't held up by it. */
@@ -242,7 +248,9 @@ export async function BankAccountsSection({
               </div>
               <div className="mt-0.5 text-[11px] text-mute-soft">
                 {syncedAgo(c.last_synced_at)}
-                {checkingIds.includes(c.id) ? " · Checking the bank for new transactions…" : ""}
+                {checkingIds.includes(c.id)
+                  ? " · Checking the bank for new transactions — reload in a minute to see them"
+                  : ""}
               </div>
             </div>
 
@@ -259,7 +267,7 @@ export async function BankAccountsSection({
             {/* A bank that wants a sign-in has one thing to do, so that one thing replaces the button row. */}
             {needsReconnect(c, balance) ? (
               <div className="mt-3 flex flex-wrap items-center justify-between gap-3 rounded-lg border border-warning-line bg-warning-tint px-3 py-2">
-                <p className="text-[13px] text-warning-text">{reconnectSentence(c.institution_name)}</p>
+                <p className="text-[13px] text-warning-text">{reconnectSentence(c.institution_name, canEdit)}</p>
                 {canEdit ? <ReconnectButton connectionId={c.id} institutionName={c.institution_name} /> : null}
               </div>
             ) : (
@@ -285,39 +293,5 @@ export async function BankAccountsSection({
         </div>
       ) : null}
     </section>
-  );
-}
-
-/**
- * The same sign-in-again message at the top of the Transactions card, so it
- * is seen where the person came to work, not only in the bank card above.
- * Nothing until Plaid has answered; nothing when every bank is fine.
- */
-export async function ReconnectNotice({
-  balancesPromise,
-  active,
-  canEdit,
-}: {
-  balancesPromise: Promise<ConnectionBalance[]>;
-  active: ActiveConnection[];
-  canEdit: boolean;
-}) {
-  const balances = await balancesPromise;
-  const byConnection = new Map(balances.map((b) => [b.connectionId, b]));
-  const stale = active.filter((c) => needsReconnect(c, byConnection.get(c.id)));
-  if (stale.length === 0) return null;
-  return (
-    <div className="mb-4 space-y-2">
-      {stale.map((c) => (
-        <Answer
-          key={c.id}
-          status="bad"
-          headline={reconnectSentence(c.institution_name)}
-          detail="Nothing already in the books changes."
-        >
-          {canEdit ? <ReconnectButton connectionId={c.id} institutionName={c.institution_name} /> : null}
-        </Answer>
-      ))}
-    </div>
   );
 }

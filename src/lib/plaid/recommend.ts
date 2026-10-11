@@ -64,6 +64,8 @@ interface Tally {
   unitId: string | null;
   /** How many times the board made this exact choice for the payee. */
   count: number;
+  /** How many times the payee was filed at all, any choice — the base of typicalAmountCents. */
+  totalCount: number;
   /** Mean abs(amount) in cents across every time the payee was filed, any choice. */
   typicalAmountCents: number;
 }
@@ -94,12 +96,14 @@ export function buildHistoryIndex(rows: PayeeHistoryRow[]): HistoryIndex {
         accountId: r.account_id,
         unitId: r.matched_unit_id,
         count: r.count,
+        totalCount: 0,
         typicalAmountCents: 0,
       });
     }
   }
   for (const [key, t] of best) {
     const total = totals.get(key);
+    t.totalCount = total?.count ?? 0;
     t.typicalAmountCents = total && total.count > 0 ? Math.round(total.cents / total.count) : 0;
   }
   return best;
@@ -124,9 +128,9 @@ export function typicalAmountCents(
   const past = key ? history.get(key) : undefined;
   if (!past || past.typicalAmountCents <= 0) return null;
   if (!options.alreadyFiled) return past.typicalAmountCents;
-  const others = past.count - 1;
+  const others = past.totalCount - 1;
   if (others <= 0) return null;
-  const centsWithoutSelf = past.typicalAmountCents * past.count - Math.abs(cents(t.amount));
+  const centsWithoutSelf = past.typicalAmountCents * past.totalCount - Math.abs(cents(t.amount));
   return centsWithoutSelf > 0 ? Math.round(centsWithoutSelf / others) : null;
 }
 

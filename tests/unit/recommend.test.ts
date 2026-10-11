@@ -74,6 +74,21 @@ describe("recommend", () => {
     expect(typicalAmountCents({ description: "NEW VENDOR", amount: -50 }, once, { alreadyFiled: true })).toBeNull();
   });
 
+  it("takes a filed row's own amount out of a mean built across every choice, not just the most-used one", () => {
+    // Four $50 Utilities and two $500 Repairs: the others of a $50 row average $230.
+    const mixed = buildHistoryIndex([
+      filed("comed", -1, { posting_kind: "expense", account_id: "util", matched_unit_id: null }, 4, 5000),
+      filed("comed", -1, { posting_kind: "expense", account_id: "rep", matched_unit_id: null }, 2, 50000),
+    ]);
+    expect(typicalAmountCents({ description: "COMED 8841", amount: -50 }, mixed, { alreadyFiled: true })).toBe(23000);
+    // Filed once each way: a second filing exists, so this is not a first-time payee.
+    const twice = buildHistoryIndex([
+      filed("comed", -1, { posting_kind: "expense", account_id: "util", matched_unit_id: null }, 1, 5000),
+      filed("comed", -1, { posting_kind: "expense", account_id: "rep", matched_unit_id: null }, 1, 50000),
+    ]);
+    expect(typicalAmountCents({ description: "COMED 8841", amount: -500 }, twice, { alreadyFiled: true })).toBe(5000);
+  });
+
   it("ignores payee keys too short to mean anything", () => {
     const history = buildHistoryIndex([
       filed("ab", -1, { posting_kind: "expense", account_id: "util", matched_unit_id: null }, 5, 100),
