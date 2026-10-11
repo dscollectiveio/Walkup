@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { useEffect, useId } from "react";
+import { useEffect, useId, useRef, useState } from "react";
 import { PanelLeftClose, PanelLeftOpen, X } from "lucide-react";
 import { Mark } from "@/components/mark";
 import { ThemeToggle } from "./theme-toggle";
@@ -12,6 +12,9 @@ import { primeServerMode, setDrawerOpen, setSidebarMode, useSidebarState, type S
 function isActive(pathname: string, href: string) {
   return href === "/" ? pathname === "/" : pathname.startsWith(href);
 }
+
+/** How long the mouse rests on the rail before it slides out. */
+const PEEK_DELAY_MS = 1000;
 
 const isTyping = (el: EventTarget | null) =>
   el instanceof HTMLElement &&
@@ -116,7 +119,34 @@ export function Sidebar({
   primeServerMode(initialMode);
   const pathname = usePathname();
   const state = useSidebarState();
-  const { expanded, phone, narrow, drawerOpen } = state;
+  const { expanded: pinned, phone, narrow, drawerOpen } = state;
+
+  // Hover-to-peek: resting the mouse on the icon rail for a second slides it
+  // out over the page (the content doesn't move) so the labels can be read;
+  // leaving slides it back. The pinned state — what [ ] and the toggle set —
+  // is unchanged.
+  const [peek, setPeek] = useState(false);
+  const peekTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const canPeek = !pinned && !narrow && !phone;
+  const startPeek = () => {
+    if (!canPeek || peekTimer.current) return;
+    peekTimer.current = setTimeout(() => {
+      peekTimer.current = null;
+      setPeek(true);
+    }, PEEK_DELAY_MS);
+  };
+  const endPeek = () => {
+    if (peekTimer.current) {
+      clearTimeout(peekTimer.current);
+      peekTimer.current = null;
+    }
+    setPeek(false);
+  };
+  useEffect(() => () => {
+    if (peekTimer.current) clearTimeout(peekTimer.current);
+  }, []);
+  // What's drawn: the labeled sidebar when pinned open or peeking.
+  const expanded = pinned || (peek && canPeek);
 
   // [ collapses, ] expands — never while typing, never when the viewport forces the rail.
   useEffect(() => {
@@ -161,9 +191,11 @@ export function Sidebar({
       <nav
         aria-label="Main"
         data-expanded={expanded ? "true" : "false"}
-        className={`fixed inset-y-0 left-0 z-40 flex flex-col border-r border-nav-divider bg-nav transition-[width] duration-[160ms] ease-out motion-reduce:transition-none ${
+        onMouseEnter={startPeek}
+        onMouseLeave={endPeek}
+        className={`fixed inset-y-0 left-0 z-40 flex flex-col border-r border-nav-divider bg-nav transition-[width,box-shadow] duration-[220ms] ease-out motion-reduce:transition-none ${
           phone && !drawerOpen ? "invisible w-0" : expanded ? "w-[288px]" : "w-[72px]"
-        }`}
+        } ${expanded && !pinned ? "overflow-hidden shadow-xl" : ""}`}
       >
         {/* The logo band: same height and colour as the page header, so the two
             read as one bar across the top. It collapses with the sidebar. */}
@@ -222,17 +254,21 @@ export function Sidebar({
           <button
             type="button"
             onClick={toggle}
-            aria-label={expanded ? "Collapse navigation" : "Expand navigation"}
-            aria-expanded={expanded}
-            title={expanded ? "Collapse navigation  ( [ )" : "Expand navigation  ( ] )"}
+            aria-label={pinned ? "Collapse navigation" : "Expand navigation"}
+            aria-expanded={pinned}
+            title={pinned ? "Collapse navigation  ( [ )" : "Keep navigation open  ( ] )"}
             className={`mb-2 flex items-center text-[12px] text-nav-muted transition-colors hover:bg-nav-hover hover:text-nav-text ${
               expanded ? "mx-3 gap-3 rounded-md px-3 py-2" : "mx-auto h-11 w-11 justify-center rounded-lg"
             }`}
           >
             {expanded ? (
               <>
-                <PanelLeftClose size={16} strokeWidth={1.6} aria-hidden="true" />
-                <span>Collapse</span>
+                {pinned ? (
+                  <PanelLeftClose size={16} strokeWidth={1.6} aria-hidden="true" />
+                ) : (
+                  <PanelLeftOpen size={16} strokeWidth={1.6} aria-hidden="true" />
+                )}
+                <span>{pinned ? "Collapse" : "Keep open"}</span>
               </>
             ) : (
               <PanelLeftOpen size={18} strokeWidth={1.6} aria-hidden="true" />
