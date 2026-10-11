@@ -15,6 +15,8 @@ function isActive(pathname: string, href: string) {
 
 /** How long the mouse rests on the rail before it slides out. */
 const PEEK_DELAY_MS = 500;
+/** How long the content takes to fade out before the layout swaps. */
+const FADE_OUT_MS = 160;
 
 const isTyping = (el: EventTarget | null) =>
   el instanceof HTMLElement &&
@@ -145,8 +147,20 @@ export function Sidebar({
   useEffect(() => () => {
     if (peekTimer.current) clearTimeout(peekTimer.current);
   }, []);
-  // What's drawn: the labeled sidebar when pinned open or peeking.
-  const expanded = pinned || (peek && canPeek);
+  // Where the sidebar is heading: the labeled sidebar when pinned open or peeking.
+  const wantOpen = pinned || (peek && canPeek);
+  // What's drawn lags it by a beat, so the content can fade out while the
+  // width starts to move and fade back in as it arrives — a crossfade rather
+  // than icons snapping into labels. (Derived, not stored: crossfading is
+  // simply "drawn differs from wanted", which the timer below resolves.)
+  const [drawnOpen, setDrawnOpen] = useState(wantOpen);
+  useEffect(() => {
+    if (drawnOpen === wantOpen) return;
+    const t = setTimeout(() => setDrawnOpen(wantOpen), FADE_OUT_MS);
+    return () => clearTimeout(t);
+  }, [drawnOpen, wantOpen]);
+  const expanded = drawnOpen;
+  const crossfading = drawnOpen !== wantOpen;
 
   // [ collapses, ] expands — never while typing, never when the viewport forces the rail.
   useEffect(() => {
@@ -193,10 +207,15 @@ export function Sidebar({
         data-expanded={expanded ? "true" : "false"}
         onMouseEnter={startPeek}
         onMouseLeave={endPeek}
-        className={`fixed inset-y-0 left-0 z-40 flex flex-col border-r border-nav-divider bg-nav transition-[width,box-shadow] duration-[220ms] ease-out motion-reduce:transition-none ${
-          phone && !drawerOpen ? "invisible w-0" : expanded ? "w-[288px]" : "w-[72px]"
-        } ${expanded && !pinned ? "overflow-hidden shadow-xl" : ""}`}
+        className={`fixed inset-y-0 left-0 z-40 flex flex-col border-r border-nav-divider bg-nav transition-[width,box-shadow] duration-[420ms] ease-[cubic-bezier(0.45,0,0.25,1)] motion-reduce:transition-none ${
+          phone && !drawerOpen ? "invisible w-0" : wantOpen ? "w-[288px]" : "w-[72px]"
+        } ${!pinned && (drawnOpen || wantOpen) ? "overflow-hidden" : ""} ${wantOpen && !pinned ? "shadow-xl" : ""}`}
       >
+        <div
+          className={`flex min-h-0 flex-1 flex-col transition-opacity motion-reduce:transition-none ${
+            crossfading ? "opacity-0 duration-[160ms] ease-in" : "opacity-100 duration-[280ms] ease-out"
+          }`}
+        >
         {/* The logo band: same height and colour as the page header, so the two
             read as one bar across the top. It collapses with the sidebar. */}
         <div className={`relative -mr-px flex h-[56px] shrink-0 items-center bg-ink text-paper ${expanded ? "gap-3 px-4" : "justify-center"}`}>
@@ -286,6 +305,7 @@ export function Sidebar({
           </span>
           {expanded ? <span className="min-w-0 flex-1 truncate text-[12px] text-nav-muted">{userEmail}</span> : null}
           <ThemeToggle className={expanded ? "ml-auto" : ""} />
+        </div>
         </div>
       </nav>
     </>
