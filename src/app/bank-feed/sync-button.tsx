@@ -10,7 +10,7 @@ export function SyncButton({ connectionId }: { connectionId: string }) {
   const [note, setNote] = useState<string | null>(null);
 
   return (
-    <div className="min-w-0">
+    <div className="flex min-w-0 flex-col items-start">
       <button
         type="button"
         disabled={pending}

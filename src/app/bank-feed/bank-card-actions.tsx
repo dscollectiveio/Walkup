@@ -9,7 +9,7 @@ export const SHOW_ACCOUNTS_BUTTON =
 
 /** Link-style actions inside an account tile: no border, no fill. */
 export const LINK_ACTION =
-  "inline-flex items-center gap-1 whitespace-nowrap text-[12px] font-medium text-ink underline-offset-2 hover:underline focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-brass disabled:opacity-50";
+  "inline-flex h-5 items-center gap-1 whitespace-nowrap text-[12px] leading-5 font-medium text-ink underline-offset-2 hover:underline focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-brass disabled:opacity-50";
 
 const ManageContext = createContext<{ open: boolean; toggle: () => void } | null>(null);
 
