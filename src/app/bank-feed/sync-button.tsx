@@ -2,7 +2,7 @@
 
 import { useState, useTransition } from "react";
 import { syncBankTransactions } from "./actions";
-import { CARD_BUTTON } from "./bank-card-actions";
+import { LINK_ACTION } from "./bank-card-actions";
 
 export function SyncButton({ connectionId }: { connectionId: string }) {
   const [pending, start] = useTransition();
@@ -10,7 +10,7 @@ export function SyncButton({ connectionId }: { connectionId: string }) {
   const [note, setNote] = useState<string | null>(null);
 
   return (
-    <div>
+    <div className="min-w-0">
       <button
         type="button"
         disabled={pending}
@@ -28,7 +28,7 @@ export function SyncButton({ connectionId }: { connectionId: string }) {
             }
           })
         }
-        className={CARD_BUTTON}
+        className={LINK_ACTION}
       >
         {pending ? "Syncing…" : "Sync now"}
       </button>

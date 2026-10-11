@@ -6,7 +6,7 @@ import { rememberBalance } from "@/lib/plaid/balance-cache";
 import { ConnectBankButton } from "./connect-bank-button";
 import { ReconnectButton } from "./reconnect-button";
 import { SyncButton } from "./sync-button";
-import { BankCardActions } from "./bank-card-actions";
+import { BankCardActions, ManageLink } from "./bank-card-actions";
 import { DisconnectButton } from "./disconnect-button";
 import { LedgerAccountSelect } from "./ledger-account-select";
 
@@ -204,22 +204,27 @@ export async function BankAccountsSection({
                   Balances are as of the bank&rsquo;s last update, not real-time.
                 </p>
               ) : null}
-              <ul className="grid gap-2 sm:grid-cols-2 lg:grid-cols-4">
+              <ul className="divide-y divide-line overflow-hidden rounded-lg border border-line">
                 {accts.map((a, i) => (
-                  <li key={`${a.mask ?? ""}-${i}`} className="rounded-lg border border-line bg-fill/40 px-3 py-2">
-                    <div className="flex items-baseline justify-between gap-2">
-                      <span className="truncate text-[12px] text-ink" title={a.name}>
+                  <li
+                    key={`${a.mask ?? ""}-${i}`}
+                    className="flex flex-wrap items-center gap-x-4 gap-y-1 px-3 py-2.5"
+                  >
+                    <div className="flex min-w-0 flex-1 basis-48 items-baseline gap-2">
+                      <span className="truncate text-[13px] text-ink" title={a.name}>
                         {a.name}
                       </span>
                       {a.mask ? <span className="figures shrink-0 text-[11px] text-mute-soft">···{a.mask}</span> : null}
-                    </div>
-                    <div className="mt-0.5 flex items-baseline justify-between gap-2">
-                      <span className="figures text-[15px] text-ink">
-                        {a.currentCents !== null ? money(a.currentCents / 100) : "—"}
-                      </span>
-                      <span className="text-[10px] uppercase tracking-[0.07em] text-mute-soft">
+                      <span className="shrink-0 text-[10px] uppercase tracking-[0.07em] text-mute-soft">
                         {ACCOUNT_TYPE_LABEL[a.type] ?? a.type}
                       </span>
+                    </div>
+                    <span className="figures w-28 shrink-0 text-right text-[14px] text-ink">
+                      {a.currentCents !== null ? money(a.currentCents / 100) : "—"}
+                    </span>
+                    <div className="flex shrink-0 items-start gap-x-4">
+                      <SyncButton connectionId={c.id} />
+                      {canEdit && c.cash_account_id ? <ManageLink /> : null}
                     </div>
                   </li>
                 ))}
@@ -235,24 +240,28 @@ export async function BankAccountsSection({
             </div>
           ) : null;
 
+        const header = (
+          <div className="min-w-0">
+            <div className="flex flex-wrap items-baseline gap-x-2">
+              <span className="font-bold tracking-tight text-ink">{c.institution_name}</span>
+              {accts.length > 0 ? (
+                <span className="text-[12px] text-mute">
+                  {accts.length} account{accts.length === 1 ? "" : "s"}
+                </span>
+              ) : null}
+            </div>
+            <div className="mt-0.5 text-[11px] text-mute-soft">
+              {syncedAgo(c.last_synced_at)}
+              {checkingIds.includes(c.id)
+                ? " · Checking the bank for new transactions — reload in a minute to see them"
+                : ""}
+            </div>
+          </div>
+        );
+
         return (
           <div key={c.id} className="px-5 py-4">
-            <div className="min-w-0">
-              <div className="flex flex-wrap items-baseline gap-x-2">
-                <span className="font-bold tracking-tight text-ink">{c.institution_name}</span>
-                {accts.length > 0 ? (
-                  <span className="text-[12px] text-mute">
-                    {accts.length} account{accts.length === 1 ? "" : "s"}
-                  </span>
-                ) : null}
-              </div>
-              <div className="mt-0.5 text-[11px] text-mute-soft">
-                {syncedAgo(c.last_synced_at)}
-                {checkingIds.includes(c.id)
-                  ? " · Checking the bank for new transactions — reload in a minute to see them"
-                  : ""}
-              </div>
-            </div>
+            {needsReconnect(c, balance) ? header : null}
 
             {balance?.error && !needsReconnect(c, balance) ? (
               <p className="mt-3 text-[12px] text-mute-soft">{balance.error}</p>
@@ -271,14 +280,13 @@ export async function BankAccountsSection({
                 {canEdit ? <ReconnectButton connectionId={c.id} institutionName={c.institution_name} /> : null}
               </div>
             ) : (
-              <div className="mt-3">
-                <BankCardActions
-                  sync={<SyncButton connectionId={c.id} />}
-                  accountsPanel={accountsPanel}
-                  managePanel={managePanel}
-                  accountCount={accts.length}
-                />
-              </div>
+              <BankCardActions
+                header={header}
+                sync={<SyncButton connectionId={c.id} />}
+                accountsPanel={accountsPanel}
+                managePanel={managePanel}
+                accountCount={accts.length}
+              />
             )}
           </div>
         );
@@ -287,7 +295,7 @@ export async function BankAccountsSection({
         <div className="flex flex-wrap items-center justify-between gap-3 bg-fill/40 px-5 py-3">
           <p className="text-[12px] text-mute">
             Have money at another bank too — say, the reserve? Add it here. For new transactions at a bank
-            that&rsquo;s already listed, use Sync now instead.
+            that&rsquo;s already listed, open its accounts and use Sync now.
           </p>
           <ConnectBankButton label="+ Add another bank" variant="outline" />
         </div>

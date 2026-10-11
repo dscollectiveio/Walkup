@@ -1,23 +1,44 @@
 "use client";
 
-import { useState } from "react";
+import { createContext, useContext, useState } from "react";
 import { ChevronDown } from "lucide-react";
 
-/** One look for every action on a bank's card, so they read as a set. */
-export const CARD_BUTTON =
-  "inline-flex h-9 items-center gap-1.5 whitespace-nowrap rounded-md border border-line-strong bg-paper px-3 text-[13px] font-medium text-ink transition-colors hover:bg-fill focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-brass disabled:opacity-50";
+/** The one solid button on a bank's card. */
+export const SHOW_ACCOUNTS_BUTTON =
+  "inline-flex h-9 shrink-0 items-center gap-1.5 whitespace-nowrap rounded-md bg-ink px-3 text-[13px] font-medium text-paper transition-colors hover:bg-ink-mid focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-brass";
+
+/** Link-style actions inside an account tile: no border, no fill. */
+export const LINK_ACTION =
+  "inline-flex items-center gap-1 whitespace-nowrap text-[12px] font-medium text-ink underline-offset-2 hover:underline focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-brass disabled:opacity-50";
+
+const ManageContext = createContext<{ open: boolean; toggle: () => void } | null>(null);
+
+/** "Manage connection" on an account tile. Opens the connection's settings under the accounts. */
+export function ManageLink() {
+  const ctx = useContext(ManageContext);
+  if (!ctx) return null;
+  return (
+    <button type="button" onClick={ctx.toggle} aria-expanded={ctx.open} className={LINK_ACTION}>
+      Manage connection
+    </button>
+  );
+}
 
 /**
- * The row of buttons on a bank's card — Sync now, Show individual accounts,
- * Manage connection — and the panels the last two open beneath it. The panel
- * contents are server-rendered and passed in; this only decides which is open.
+ * A bank's header line with one solid button on the right, "Show individual
+ * accounts". The accounts — each with its own Sync now and Manage connection
+ * links — appear beneath it. Panel contents are server-rendered and passed
+ * in; this only decides what is open.
  */
 export function BankCardActions({
-  sync,
+  header,
   accountsPanel,
   managePanel,
   accountCount,
+  sync,
 }: {
+  header: React.ReactNode;
+  /** Shown on the bank's own line when there are no accounts to expand, so the bank can still be synced. */
   sync: React.ReactNode;
   /** null when there are no accounts to show */
   accountsPanel: React.ReactNode | null;
@@ -25,51 +46,42 @@ export function BankCardActions({
   managePanel: React.ReactNode | null;
   accountCount: number;
 }) {
-  const [open, setOpen] = useState<"accounts" | "manage" | null>(null);
-  const toggle = (which: "accounts" | "manage") => setOpen((cur) => (cur === which ? null : which));
+  const [open, setOpen] = useState(false);
+  const [manageOpen, setManageOpen] = useState(false);
 
   return (
-    <div>
-      <div className="flex flex-wrap items-start gap-2">
-        {sync}
+    <ManageContext.Provider
+      value={managePanel ? { open: manageOpen, toggle: () => setManageOpen((o) => !o) } : null}
+    >
+      <div className="flex flex-wrap items-start justify-between gap-3">
+        {header}
         {accountsPanel ? (
           <button
             type="button"
-            onClick={() => toggle("accounts")}
-            aria-expanded={open === "accounts"}
-            className={CARD_BUTTON}
+            onClick={() => setOpen((o) => !o)}
+            aria-expanded={open}
+            className={SHOW_ACCOUNTS_BUTTON}
           >
-            {open === "accounts" ? "Hide individual accounts" : `Show individual accounts (${accountCount})`}
+            {open ? "Hide individual accounts" : `Show individual accounts (${accountCount})`}
             <ChevronDown
               size={14}
               strokeWidth={1.6}
               aria-hidden="true"
-              className={`text-mute transition-transform ${open === "accounts" ? "rotate-180" : ""}`}
+              className={`transition-transform ${open ? "rotate-180" : ""}`}
             />
           </button>
-        ) : null}
-        {managePanel ? (
-          <button
-            type="button"
-            onClick={() => toggle("manage")}
-            aria-expanded={open === "manage"}
-            className={CARD_BUTTON}
-          >
-            Manage connection
-            <ChevronDown
-              size={14}
-              strokeWidth={1.6}
-              aria-hidden="true"
-              className={`text-mute transition-transform ${open === "manage" ? "rotate-180" : ""}`}
-            />
-          </button>
-        ) : null}
+        ) : (
+          <div className="flex flex-wrap items-start gap-x-4 gap-y-1 pt-1">
+            {sync}
+            {managePanel ? <ManageLink /> : null}
+          </div>
+        )}
       </div>
 
-      {open === "accounts" && accountsPanel ? <div className="mt-3">{accountsPanel}</div> : null}
-      {open === "manage" && managePanel ? (
+      {open && accountsPanel ? <div className="mt-3">{accountsPanel}</div> : null}
+      {manageOpen && managePanel && (open || !accountsPanel) ? (
         <div className="mt-3 rounded-lg border border-line bg-fill/40 p-3">{managePanel}</div>
       ) : null}
-    </div>
+    </ManageContext.Provider>
   );
 }
