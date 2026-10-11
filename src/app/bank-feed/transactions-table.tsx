@@ -523,7 +523,8 @@ export function TransactionsTable({
 
       <div className="overflow-x-auto">
         <table className="w-full text-[13px]">
-          <thead>
+          {/* Rows are cards on a phone (see transaction-row.tsx), so the header only applies from sm up. */}
+          <thead className="hidden sm:table-header-group">
             <tr className="border-b border-line text-left text-[12px] text-mute">
               {canEdit ? <th className="w-6 pb-2" /> : null}
               <SortableHeader href={dateHref} active={sort === "date_asc" || sort === "date_desc"} ascending={sort === "date_asc"}>
@@ -532,7 +533,7 @@ export function TransactionsTable({
               <SortableHeader href={nameHref} active={sort === "name_asc" || sort === "name_desc"} ascending={sort === "name_asc"}>
                 Description
               </SortableHeader>
-              <th className="pb-2 font-medium">Category</th>
+              <th className="min-w-[14rem] pb-2 font-medium">Category</th>
               <SortableHeader
                 href={amountHref}
                 active={sort === "amount_asc" || sort === "amount_desc"}
@@ -541,7 +542,7 @@ export function TransactionsTable({
               >
                 Amount
               </SortableHeader>
-              {canEdit ? <th className="w-[10rem] pb-2" /> : null}
+              {canEdit ? <th className="w-[11rem] pb-2" /> : null}
             </tr>
           </thead>
           <tbody className="divide-y divide-line">

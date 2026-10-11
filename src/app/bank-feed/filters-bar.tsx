@@ -86,7 +86,7 @@ export function FiltersBar({
     "rounded-lg border border-line-strong bg-paper px-3 py-1.5 text-[13px] text-ink focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-1 focus-visible:outline-brass";
 
   return (
-    <details className="mb-4" open={open} onToggle={(e) => setOpen(e.currentTarget.open)}>
+    <details className="min-w-0 flex-1" open={open} onToggle={(e) => setOpen(e.currentTarget.open)}>
       <summary className="cursor-pointer select-none text-[12px] text-mute hover:text-ink">
         Filter &amp; search{active ? " · on" : ""}
       </summary>

@@ -18,7 +18,7 @@ vi.mock("@/app/bank-feed/disconnect-button", () => ({ DisconnectButton: () => cr
 vi.mock("@/app/bank-feed/connect-bank-button", () => ({ ConnectBankButton: () => createElement("button", null, "Connect") }));
 vi.mock("@/app/bank-feed/ledger-account-select", () => ({ LedgerAccountSelect: () => createElement("span", null, "pick") }));
 
-import { BankAccountsSection, BankBalanceInline, type ConnectionBalance } from "@/app/bank-feed/balances";
+import { BankAccountsSection, ReconnectNotice, type ConnectionBalance } from "@/app/bank-feed/balances";
 
 const balances: ConnectionBalance[] = [
   {
@@ -63,12 +63,22 @@ describe("Bank accounts section", () => {
     expect(html).toContain("4 accounts");
   });
 
-  it("the inline strip figure matches the headline total", async () => {
-    const el = await BankBalanceInline({ promise: Promise.resolve(balances) });
-    expect(renderToStaticMarkup(el as never)).toContain("$320.00");
+  it("puts In and Out for the period under the total, and says nothing when there is no flow to report", async () => {
+    const withFlow = await BankAccountsSection({
+      balancesPromise: Promise.resolve(balances),
+      active,
+      canEdit: true,
+      cashAccounts: [],
+      flow: { in: 2800, out: 4310.5, period: "this month" },
+    });
+    const html = renderToStaticMarkup(withFlow);
+    expect(html).toContain("$2,800.00");
+    expect(html).toContain("$4,310.50");
+    expect(html).toMatch(/In .*\$2,800\.00.* · Out .*\$4,310\.50.* this month/);
+    expect(await render()).not.toContain("· Out");
   });
 
-  it("offers Reconnect, not an error, when the bank wants a fresh sign-in", async () => {
+  it("replaces the bank's buttons with one sign-in-again line and Reconnect when the bank wants a fresh sign-in", async () => {
     const el = await BankAccountsSection({
       balancesPromise: Promise.resolve([{ connectionId: "c1", accounts: [], needsReconnect: true }]),
       active,
@@ -76,8 +86,35 @@ describe("Bank accounts section", () => {
       cashAccounts: [],
     });
     const html = renderToStaticMarkup(el);
+    expect(html).toContain("Chase needs you to sign in again before new transactions can come in.");
     expect(html).toContain("Reconnect Chase");
-    expect(html).toContain("sign in again");
+    expect(html).toContain("bg-warning-tint");
+    expect(html).not.toContain("<button>Sync now</button>");
+    expect(html).not.toContain("Manage connection");
+  });
+
+  it("the same line tops the Transactions card as a bad-status answer, and is absent when every bank is fine", async () => {
+    const stale = await ReconnectNotice({
+      balancesPromise: Promise.resolve([{ connectionId: "c1", accounts: [], needsReconnect: true }]),
+      active,
+      canEdit: true,
+    });
+    const html = renderToStaticMarkup(stale as never);
+    expect(html).toContain("Chase needs you to sign in again before new transactions can come in.");
+    expect(html).toContain("Reconnect Chase");
+    expect(html).toContain("bg-bad-tint");
+
+    const errored = await ReconnectNotice({
+      balancesPromise: Promise.resolve(balances),
+      active: [{ ...active[0], status: "error" }],
+      canEdit: false,
+    });
+    const erroredHtml = renderToStaticMarkup(errored as never);
+    expect(erroredHtml).toContain("sign in again");
+    expect(erroredHtml).not.toContain("Reconnect Chase"); // owners can't reconnect
+
+    const fine = await ReconnectNotice({ balancesPromise: Promise.resolve(balances), active, canEdit: true });
+    expect(fine).toBeNull();
   });
 
   it("says when the page is checking the bank on its own", async () => {

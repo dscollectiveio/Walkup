@@ -1,5 +1,5 @@
 import { createClient } from "@/lib/supabase/server";
-import { money } from "@/components/ui";
+import { Answer, money } from "@/components/ui";
 import { syncedAgo } from "@/lib/dates";
 import { plaidClient, describePlaidError, isLoginRequired, isProductNotEnabled } from "@/lib/plaid";
 import { ConnectBankButton } from "./connect-bank-button";
@@ -97,6 +97,23 @@ interface ActiveConnection {
   cash_account_id: string | null;
 }
 
+/** Money that came in and went out across every connected bank, over a stated period. */
+export interface MoneyFlow {
+  in: number;
+  out: number;
+  /** "this month" or "in the last 30 days". */
+  period: string;
+}
+
+/** A bank needs a fresh sign-in when the sync said so (status 'error') or Plaid just did. */
+function needsReconnect(c: ActiveConnection, balance: ConnectionBalance | undefined): boolean {
+  return c.status === "error" || balance?.needsReconnect === true;
+}
+
+function reconnectSentence(institution: string): string {
+  return `${institution} needs you to sign in again before new transactions can come in.`;
+}
+
 /** Placeholder while Plaid answers, so the rest of the page isn't held up by it. */
 export function BankAccountsSkeleton() {
   return (
@@ -124,6 +141,7 @@ export async function BankAccountsSection({
   canEdit,
   cashAccounts,
   checkingIds = [],
+  flow,
 }: {
   balancesPromise: Promise<ConnectionBalance[]>;
   active: ActiveConnection[];
@@ -131,6 +149,8 @@ export async function BankAccountsSection({
   cashAccounts: { id: string; label: string }[];
   /** Connections the page kicked off a sync for after responding (stale by 12+ hours). */
   checkingIds?: string[];
+  /** In and out for the period, shown under the total; left out when nothing has synced for it. */
+  flow?: MoneyFlow;
 }) {
   const balances = await balancesPromise;
   const balanceByConnection = new Map(balances.map((b) => [b.connectionId, b]));
@@ -153,8 +173,16 @@ export async function BankAccountsSection({
               : "Checking, savings, CD and money market accounts, added together."}
           </p>
         </div>
-        <div className="figures text-[40px] leading-none text-paper sm:text-[48px]">
-          {hasCash ? money(totalCashCents / 100) : "—"}
+        <div className="text-right">
+          <div className="figures text-[40px] leading-none text-paper sm:text-[48px]">
+            {hasCash ? money(totalCashCents / 100) : "—"}
+          </div>
+          {flow ? (
+            <p className="mt-2 text-[12px] text-ondark-mute">
+              In <span className="figures text-paper">{money(flow.in)}</span> · Out{" "}
+              <span className="figures text-paper">{money(flow.out)}</span> {flow.period}
+            </p>
+          ) : null}
         </div>
       </header>
       {active.map((c) => {
@@ -201,8 +229,6 @@ export async function BankAccountsSection({
             </div>
           ) : null;
 
-        const needsReconnect = c.status === "error" || balance?.needsReconnect === true;
-
         return (
           <div key={c.id} className="px-5 py-4">
             <div className="min-w-0">
@@ -220,15 +246,7 @@ export async function BankAccountsSection({
               </div>
             </div>
 
-            {needsReconnect ? (
-              <div className="mt-3 flex flex-wrap items-center gap-3 rounded-lg border border-warning-line bg-warning-tint px-3 py-2">
-                <p className="text-[12px] text-warning-text">
-                  {c.institution_name} wants you to sign in again before it will share new transactions.
-                  Nothing already in the books changes.
-                </p>
-                {canEdit ? <ReconnectButton connectionId={c.id} institutionName={c.institution_name} /> : null}
-              </div>
-            ) : balance?.error ? (
+            {balance?.error && !needsReconnect(c, balance) ? (
               <p className="mt-3 text-[12px] text-mute-soft">{balance.error}</p>
             ) : null}
 
@@ -238,14 +256,22 @@ export async function BankAccountsSection({
               </div>
             ) : null}
 
-            <div className="mt-3">
-              <BankCardActions
-                sync={<SyncButton connectionId={c.id} />}
-                accountsPanel={accountsPanel}
-                managePanel={managePanel}
-                accountCount={accts.length}
-              />
-            </div>
+            {/* A bank that wants a sign-in has one thing to do, so that one thing replaces the button row. */}
+            {needsReconnect(c, balance) ? (
+              <div className="mt-3 flex flex-wrap items-center justify-between gap-3 rounded-lg border border-warning-line bg-warning-tint px-3 py-2">
+                <p className="text-[13px] text-warning-text">{reconnectSentence(c.institution_name)}</p>
+                {canEdit ? <ReconnectButton connectionId={c.id} institutionName={c.institution_name} /> : null}
+              </div>
+            ) : (
+              <div className="mt-3">
+                <BankCardActions
+                  sync={<SyncButton connectionId={c.id} />}
+                  accountsPanel={accountsPanel}
+                  managePanel={managePanel}
+                  accountCount={accts.length}
+                />
+              </div>
+            )}
           </div>
         );
       })}
@@ -263,21 +289,35 @@ export async function BankAccountsSection({
 }
 
 /**
- * "Bank balance $X · " — cash the association can spend: depository accounts
- * only. A credit card balance is money owed and a retirement/brokerage
- * account isn't operating cash, so neither belongs in this total.
+ * The same sign-in-again message at the top of the Transactions card, so it
+ * is seen where the person came to work, not only in the bank card above.
+ * Nothing until Plaid has answered; nothing when every bank is fine.
  */
-export async function BankBalanceInline({ promise }: { promise: Promise<ConnectionBalance[]> }) {
-  const balances = await promise;
-  const totalCents = balances.reduce(
-    (sum, b) => sum + b.accounts.filter((a) => a.type === "depository").reduce((s, a) => s + (a.currentCents ?? 0), 0),
-    0,
-  );
-  const any = balances.some((b) => b.accounts.some((a) => a.type === "depository"));
-  if (!any) return null;
+export async function ReconnectNotice({
+  balancesPromise,
+  active,
+  canEdit,
+}: {
+  balancesPromise: Promise<ConnectionBalance[]>;
+  active: ActiveConnection[];
+  canEdit: boolean;
+}) {
+  const balances = await balancesPromise;
+  const byConnection = new Map(balances.map((b) => [b.connectionId, b]));
+  const stale = active.filter((c) => needsReconnect(c, byConnection.get(c.id)));
+  if (stale.length === 0) return null;
   return (
-    <>
-      Bank balance <span className="figures text-ink">{money(totalCents / 100)}</span> ·{" "}
-    </>
+    <div className="mb-4 space-y-2">
+      {stale.map((c) => (
+        <Answer
+          key={c.id}
+          status="bad"
+          headline={reconnectSentence(c.institution_name)}
+          detail="Nothing already in the books changes."
+        >
+          {canEdit ? <ReconnectButton connectionId={c.id} institutionName={c.institution_name} /> : null}
+        </Answer>
+      ))}
+    </div>
   );
 }

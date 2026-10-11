@@ -953,6 +953,24 @@ action returned `ruleSuggestion`. (9) Undo in the toast works for all of the
 above, through `revertCategorizations` → `unpost_bank_transactions`, a
 reversing entry as always.
 
+**Layout (slice D), added 2026-10-10.** Presentation only; no action, RPC
+or table changed. (1) The Transactions card header is two rows: status
+pills with, at the right, "N to go" (the true head count, not the rows
+loaded), a 120px progress bar and "Post N saved"; then filter & search with
+"Rules · N" at its right, which opens the rules list inline — the separate
+Rules card is gone. (2) Pills are All / Needs category / Ready to post /
+Posted; "Ready to post" is brass-tinted while anything is saved for later;
+Excluded and Retracted sit behind "More ▾", Retracted only when it has rows.
+(3) "In $X · Out $Y this month" moved under the big bank total (it follows
+the range when one is chosen), summed in TypeScript from the rows RLS
+returns for that bounded period. (4) A board member can click anywhere on
+an editable row to open or close its form; below the sm breakpoint each row
+is a card made from the same `<tr>`/`<td>` elements with flex ordering, so
+there is one row to maintain. (5) "Showing the latest N of M · Load earlier"
+is a centered line under the table. (6) A bank that wants a fresh sign-in
+has that one sentence and the Reconnect button in place of its button row,
+and the same sentence tops the Transactions card as a bad-status Answer.
+
 ## 30. Access reviews, automated deprovisioning, and personal-data redaction — including the one path that edits the audit log
 
 *Decided: Doug, 2026-09-26. Plaid's security review (submitted the same

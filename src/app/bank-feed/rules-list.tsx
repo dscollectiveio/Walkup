@@ -11,6 +11,36 @@ export interface RuleRecord {
   auto_post: boolean;
 }
 
+/**
+ * "Rules · 3" in the filters row; the list opens inline beneath it. Rendered
+ * as a fragment so the button sits at the right of a flex-wrap row and the
+ * list takes the full width below it.
+ */
+export function RulesToggle({ rules, canEdit }: { rules: RuleRecord[]; canEdit: boolean }) {
+  const [open, setOpen] = useState(false);
+  if (rules.length === 0) return null;
+  return (
+    <>
+      <button
+        type="button"
+        onClick={() => setOpen((o) => !o)}
+        aria-expanded={open}
+        className="ml-auto text-[12px] text-mute underline-offset-2 hover:text-ink hover:underline"
+      >
+        Rules · <span className="figures">{rules.length}</span>
+      </button>
+      {open ? (
+        <div className="basis-full rounded-lg border border-line bg-fill/40 px-3 py-1">
+          <p className="py-2 text-[12px] text-mute">
+            Applied to new transactions as they sync. Transfers and “Not for the books” are remembered on their own.
+          </p>
+          <RulesList rules={rules} canEdit={canEdit} />
+        </div>
+      ) : null}
+    </>
+  );
+}
+
 export function RulesList({ rules, canEdit }: { rules: RuleRecord[]; canEdit: boolean }) {
   const [pending, start] = useTransition();
   const [error, setError] = useState<string | null>(null);

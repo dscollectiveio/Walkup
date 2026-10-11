@@ -6,29 +6,27 @@ import { CircleHelp, X } from "lucide-react";
 const STEPS: { title: string; body: string }[] = [
   {
     title: "Start with what's waiting",
-    body: "The table opens on “Needs category”. The number at the top shows how many are left, and the bar fills as you go.",
+    body: "The list opens on “Needs category”. “N to go” at the top counts down and the bar beside it fills as you work.",
   },
   {
     title: "Click the recommended category",
-    body: "Most rows show a “Recommended” chip. One click files it and posts it to the books; “Save for later” files it without posting. A filled chip is how you filed that payee before; an outlined one is a guess. If it says “+3 more”, the other transactions from the same payee go with it.",
+    body: "One click files the row and posts it to the books. “Save for later” files it without posting; the Post button at the top posts everything saved. A filled chip is how you filed that payee before; an outlined one is a guess. “+3 more” means the other transactions from the same payee go with it.",
   },
   {
     title: "Pick one yourself when needed",
-    body: "No recommendation, or it’s wrong? Click Categorize and start typing — Utilities, Dues, Transfer — then pick from the list and Save & post.",
+    body: "No recommendation, or it’s wrong? Click the row and start typing — Utilities, Dues, Transfer, Not for the books — then pick from the list and Save & post.",
   },
   {
     title: "Do many at once",
     body: "“Accept all” posts every recommendation your own history backs. Or tick the boxes on the left: a bar appears at the bottom of the screen to file them all together.",
   },
   {
-    title: "Keyboard, if you like",
-    body: "j/k move, Enter accepts, c categorizes, x marks not for the books, Escape closes.",
-  },
-  {
     title: "Undo any time",
     body: "Posting is what updates the budget, dues balances and financial statements. Every post shows Undo for 10 seconds, and a posted row always has “Undo posting”.",
   },
 ];
+
+const KEYBOARD = "Keyboard: j/k move · Enter posts · c categorizes · x marks not for the books · Esc closes.";
 
 /** "How this works" for the Transactions card — a short, plain walkthrough in a dialog. */
 export function TransactionsHelp() {
@@ -91,7 +89,7 @@ export function TransactionsHelp() {
         </ol>
 
         <footer className="flex flex-wrap items-center justify-between gap-3 border-t border-line px-5 py-3">
-          <p className="text-[12px] text-mute">Made a mistake? Every save shows an Undo button for 10 seconds.</p>
+          <p className="text-[12px] text-mute">{KEYBOARD}</p>
           <button
             type="button"
             onClick={() => dialogRef.current?.close()}

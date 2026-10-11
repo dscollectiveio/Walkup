@@ -1,8 +1,9 @@
 import Link from "next/link";
 import { Suspense } from "react";
 import { after } from "next/server";
+import { ChevronDown } from "lucide-react";
 import { createClient } from "@/lib/supabase/server";
-import { Card, Empty, Restricted, money } from "@/components/ui";
+import { Card, Empty, Restricted } from "@/components/ui";
 import { ConnectBankButton } from "./connect-bank-button";
 import { TransactionsHelp } from "./transactions-help";
 import { type Pickers, type TransactionRecord } from "./transaction-row";
@@ -14,11 +15,12 @@ import { DEFAULT_LIMIT, MAX_LIMIT, bankFeedHref, type Range, type Sort, type Sta
 import {
   BankAccountsSection,
   BankAccountsSkeleton,
-  BankBalanceInline,
+  ReconnectNotice,
   getConnectionBalance,
   type ConnectionBalance,
+  type MoneyFlow,
 } from "./balances";
-import { RulesList, type RuleRecord } from "./rules-list";
+import { RulesToggle, type RuleRecord } from "./rules-list";
 import {
   buildHistoryIndex,
   recommend,
@@ -39,6 +41,15 @@ const STATUS_LABEL: Record<Status, string> = {
   excluded: "Excluded",
   retracted: "Retracted",
 };
+
+/** The pills a treasurer works from; Excluded and Retracted sit behind "More". */
+const MAIN_STATUSES: Status[] = ["all", "needs", "ready", "posted"];
+
+const PILL_ACTIVE = "rounded-full bg-ink px-3 py-1 text-[12px] font-medium text-paper";
+const PILL = "rounded-full border border-line-strong px-3 py-1 text-[12px] text-ink hover:bg-fill";
+/** "Ready to post" with rows saved for later: the next thing to do, so it is brass-tinted. */
+const PILL_WAITING =
+  "rounded-full border border-warning-line bg-warning-tint px-3 py-1 text-[12px] font-medium text-warning-text hover:brightness-95";
 
 const KIND_LABEL: Record<string, string> = {
   expense: "Expense",
@@ -207,6 +218,10 @@ export default async function BankFeedPage({
   const firstStatus: Status = explicitStatus ?? (account ? "all" : "needs");
   const now = new Date();
   const since45Days = new Date(now.getTime() - 45 * 86_400_000).toISOString().slice(0, 10);
+  // In and out for the bank card: this month unless a range is chosen. Always
+  // a bounded period, so it is a few hundred rows at most, never the whole history.
+  const flowRange: Range = range === "last_30" ? "last_30" : "this_month";
+  const flowPeriod = flowRange === "last_30" ? "in the last 30 days" : "this month";
 
   const [
     { data: isBoardAdminRes },
@@ -228,6 +243,7 @@ export default async function BankFeedPage({
     // transactions are still in the books, so they still show here.
     { data: firstRows },
     { data: readyRows },
+    { data: flowRows },
   ] = await Promise.all([
     associationId
       ? supabase.rpc("has_role_in", { assoc: associationId, roles: ["board_admin"] })
@@ -275,6 +291,12 @@ export default async function BankFeedPage({
     withStatus(supabase.from("bank_transactions").select("id, description, amount"), "ready")
       .eq("pending", false)
       .order("posted_on")
+      .limit(MAX_LIMIT),
+    supabase
+      .from("bank_transactions")
+      .select("amount")
+      .is("removed_at", null)
+      .gte("posted_on", rangeStart(flowRange) ?? "")
       .limit(MAX_LIMIT),
   ]);
   const canEdit = isBoardAdminRes === true;
@@ -371,6 +393,8 @@ export default async function BankFeedPage({
   }
 
   const filtersActive = Boolean(q) || range !== "all" || Boolean(account);
+  // The "More ▾" pill names the status when one of the two behind it is showing.
+  const moreOpen = status === "excluded" || status === "retracted";
   const rulePatternById = new Map((rules ?? []).map((r) => [r.id, r.pattern]));
 
   const transactionsWithSuggestions: SuggestedTransaction[] = transactions.map((t) => {
@@ -412,14 +436,15 @@ export default async function BankFeedPage({
   // The finish line: a board admin opened the tab with nothing left to categorize.
   const caughtUp = canEdit && explicitStatus === null && counts.needs === 0 && counts.all > 0;
 
-  // In and out across the rows on screen — exact when they are all loaded,
-  // and said to be "of the N shown" when they aren't.
-  const moneyIn = transactions
-    .filter((t) => !t.removed_at && Number(t.amount) > 0)
-    .reduce((s, t) => s + Number(t.amount), 0);
-  const moneyOut = transactions
-    .filter((t) => !t.removed_at && Number(t.amount) < 0)
-    .reduce((s, t) => s + Math.abs(Number(t.amount)), 0);
+  // What moved through the bank over the period, for the line under the total.
+  const flow: MoneyFlow | undefined =
+    flowRows && flowRows.length > 0
+      ? {
+          in: flowRows.reduce((s, r) => s + Math.max(0, Number(r.amount)), 0),
+          out: flowRows.reduce((s, r) => s + Math.max(0, -Number(r.amount)), 0),
+          period: flowPeriod,
+        }
+      : undefined;
 
   const ruleRecords: RuleRecord[] = (rules ?? []).map((r) => ({
     id: r.id,
@@ -465,6 +490,7 @@ export default async function BankFeedPage({
             canEdit={canEdit}
             cashAccounts={pickers.cashAccounts}
             checkingIds={checking.map((c) => c.id)}
+            flow={flow}
           />
         </Suspense>
       ) : null}
@@ -490,12 +516,15 @@ export default async function BankFeedPage({
                 : "Categorize, then post. Posted rows are in the books."
             }
           >
+            <Suspense fallback={null}>
+              <ReconnectNotice balancesPromise={balancesPromise} active={active} canEdit={canEdit} />
+            </Suspense>
+
             {caughtUp ? (
               <div className="mb-4 rounded-lg border border-good-line bg-good-tint px-4 py-3">
                 <p className="text-[13px] font-medium text-good-text">Nothing waiting — you&rsquo;re caught up.</p>
                 <p className="mt-1 text-[12px] text-good-text">
-                  {counts.posted} in the books
-                  {hasMore ? "" : ` · ${money(moneyIn)} in · ${money(moneyOut)} out`}
+                  <span className="figures">{counts.posted}</span> in the books
                 </p>
                 {settledReady > 0 ? (
                   <p className="mt-1 text-[12px] text-good-text">
@@ -512,72 +541,77 @@ export default async function BankFeedPage({
               </div>
             ) : null}
 
+            {/* Row 1: where you are (status pills) and how far along (N to go, Post what's saved). */}
             <div className="mb-3 flex flex-wrap items-center justify-between gap-3">
-              <div className="flex flex-wrap gap-1.5">
-                {(Object.keys(STATUS_LABEL) as Status[]).map((s) => (
+              <div className="flex flex-wrap items-center gap-1.5">
+                {MAIN_STATUSES.map((s) => (
                   <Link
                     key={s}
                     href={hrefFor(q, range, s, sort, account)}
-                    className={
-                      status === s
-                        ? "rounded-full bg-ink px-3 py-1 text-[12px] font-medium text-paper"
-                        : "rounded-full border border-line-strong px-3 py-1 text-[12px] text-ink hover:bg-fill"
-                    }
+                    className={status === s ? PILL_ACTIVE : s === "ready" && counts.ready > 0 ? PILL_WAITING : PILL}
                   >
                     {STATUS_LABEL[s]}
                     {s !== "all" && counts[s] > 0 ? ` · ${counts[s]}` : ""}
                   </Link>
                 ))}
-              </div>
-              <div className="flex items-center gap-4">
-                {canEdit && counts.needs > 0 ? (
-                  <div className="figures text-[22px] leading-none text-ink">
-                    {counts.needs} <span className="text-[12px] font-normal text-mute">to go</span>
+                <details className="relative">
+                  <summary
+                    className={`${moreOpen ? PILL_ACTIVE : PILL} inline-flex cursor-pointer select-none list-none items-center gap-1 [&::-webkit-details-marker]:hidden`}
+                  >
+                    {moreOpen ? STATUS_LABEL[status] : "More"}
+                    <ChevronDown size={12} strokeWidth={1.6} aria-hidden="true" />
+                  </summary>
+                  <div className="absolute left-0 top-full z-20 mt-1 flex min-w-[11rem] flex-col rounded-lg border border-line bg-paper p-1 shadow-lg">
+                    {(["excluded", "retracted"] as const)
+                      .filter((s) => s === "excluded" || counts.retracted > 0)
+                      .map((s) => (
+                        <Link
+                          key={s}
+                          href={hrefFor(q, range, s, sort, account)}
+                          className={`rounded-md px-2.5 py-1.5 text-[12px] hover:bg-fill ${status === s ? "font-medium text-ink" : "text-ink"}`}
+                        >
+                          {STATUS_LABEL[s]}
+                          {counts[s] > 0 ? ` · ${counts[s]}` : ""}
+                        </Link>
+                      ))}
                   </div>
-                ) : null}
-                {canEdit ? <PostAllButton readyCount={settledReady} preview={readyPreview} /> : null}
+                </details>
               </div>
+              {canEdit ? (
+                <div className="flex flex-wrap items-center gap-3">
+                  {counts.needs > 0 ? (
+                    <div className="flex items-center gap-2" aria-label={`${progressDone} of ${progressTotal} categorized`}>
+                      <span className="whitespace-nowrap text-[13px] text-ink">
+                        <span className="figures font-medium">{counts.needs}</span>{" "}
+                        <span className="text-[12px] text-mute">to go</span>
+                      </span>
+                      <div
+                        role="progressbar"
+                        aria-valuemin={0}
+                        aria-valuemax={progressTotal}
+                        aria-valuenow={progressDone}
+                        className="h-1.5 w-[120px] overflow-hidden rounded-full bg-fill"
+                      >
+                        <div
+                          className="h-full rounded-full bg-brass transition-[width] duration-300"
+                          style={{ width: `${progressPct}%` }}
+                        />
+                      </div>
+                    </div>
+                  ) : null}
+                  <PostAllButton readyCount={settledReady} preview={readyPreview} />
+                </div>
+              ) : null}
             </div>
 
-            {canEdit && progressTotal > 0 ? (
-              <div className="mb-3" aria-label={`${progressDone} of ${progressTotal} categorized`}>
-                <div className="flex items-baseline justify-between text-[11px] text-mute">
-                  <span>
-                    <span className="figures text-ink">{progressDone}</span> of{" "}
-                    <span className="figures">{progressTotal}</span> categorized
-                  </span>
-                  <span className="figures">{progressPct}%</span>
-                </div>
-                <div
-                  role="progressbar"
-                  aria-valuemin={0}
-                  aria-valuemax={progressTotal}
-                  aria-valuenow={progressDone}
-                  className="mt-1 h-1.5 overflow-hidden rounded-full bg-fill"
-                >
-                  <div
-                    className={`h-full rounded-full transition-[width] duration-300 ${progressPct === 100 ? "bg-moss" : "bg-brass"}`}
-                    style={{ width: `${progressPct}%` }}
-                  />
-                </div>
-              </div>
-            ) : null}
-
-            <div className="mb-3 flex flex-wrap items-center justify-between gap-x-4 gap-y-1 text-[12px] text-mute">
-              <span>
-                <Suspense fallback={null}>
-                  <BankBalanceInline promise={balancesPromise} />
-                </Suspense>
-                In <span className="figures text-good-text">{money(moneyIn)}</span> · Out{" "}
-                <span className="figures text-ink">{money(moneyOut)}</span>
-                {hasMore ? ` of the ${transactions.length} shown` : range === "all" ? "" : " in this range"}
-              </span>
+            {/* Row 2: filter & search, with the rules tucked at its right. */}
+            <div className="mb-4 flex flex-wrap items-start gap-x-4 gap-y-2">
+              <FiltersBar
+                current={{ q, range, status, sort, account }}
+                accountLabel={account ? (accountNameById.get(account) ?? null) : null}
+              />
+              <RulesToggle rules={ruleRecords} canEdit={canEdit} />
             </div>
-
-            <FiltersBar
-              current={{ q, range, status, sort, account }}
-              accountLabel={account ? (accountNameById.get(account) ?? null) : null}
-            />
 
             {transactions.length === 0 ? (
               <Empty>
@@ -603,31 +637,25 @@ export default async function BankFeedPage({
                   amountHref={hrefFor(q, range, status, nextSort(sort, "amount"), account, limit)}
                 />
                 {hasMore ? (
-                  <p className="mt-3 text-[12px] text-mute">
-                    Showing <span className="figures text-ink">{transactions.length}</span> of{" "}
-                    <span className="figures">{statusTotal}</span>.{" "}
+                  <p className="mt-4 text-center text-[12px] text-mute">
+                    Showing {sort === "date_desc" ? "the latest " : ""}
+                    <span className="figures text-ink">{transactions.length}</span> of{" "}
+                    <span className="figures">{statusTotal}</span>
                     {loadMoreHref ? (
-                      <Link href={loadMoreHref} className="font-medium text-ink underline-offset-2 hover:underline">
-                        Load earlier
-                      </Link>
+                      <>
+                        {" · "}
+                        <Link href={loadMoreHref} className="font-medium text-ink underline-offset-2 hover:underline">
+                          {sort === "date_desc" ? "Load earlier" : "Load more"}
+                        </Link>
+                      </>
                     ) : (
-                      "Narrow the range or search to see the rest."
+                      " · narrow the range or search to see the rest"
                     )}
                   </p>
                 ) : null}
               </>
             )}
           </Card>
-
-          {ruleRecords.length > 0 ? (
-            <Card
-              navy
-              title="Rules"
-              hint="Applied to new transactions as they sync. Transfers and “Not for the books” are remembered on their own."
-            >
-              <RulesList rules={ruleRecords} canEdit={canEdit} />
-            </Card>
-          ) : null}
         </>
       ) : null}
     </div>

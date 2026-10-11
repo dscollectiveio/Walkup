@@ -196,6 +196,27 @@ describe("TransactionRow", () => {
     expect(html).not.toContain("Remember this");
   });
 
+  it("is a card below sm and a table row above it, with the category and actions columns sized", () => {
+    const html = render({});
+    // the row: flex-wrap card on a phone, table row from sm up; editable rows are clickable
+    expect(html).toMatch(/<tr[^>]*class="[^"]*flex flex-wrap[^"]*sm:table-row/);
+    expect(html).toContain("cursor-pointer");
+    // description + amount first, date (with the status beside it) second, category third, actions last
+    expect(html).toContain("order-2 min-w-0 flex-1");
+    expect(html).toContain("order-3 sm:order-none figures");
+    expect(html).toContain("order-4 basis-full");
+    expect(html).toContain("order-5 basis-full sm:basis-auto sm:order-none min-w-[14rem]");
+    expect(html).toContain("order-6 basis-full");
+    expect(html).toContain("sm:w-[11rem]");
+    expect(html).toContain('<span class="ml-2 sm:hidden">');
+  });
+
+  it("posted rows are not clickable", () => {
+    const html = render({ transaction: { ...base, posting_kind: "expense", account_id: "a1", journal_entry_id: "j1" } });
+    expect(html).not.toContain("cursor-pointer");
+    expect(html).toContain("Undo posting");
+  });
+
   it("owners see no actions column", () => {
     const html = renderToStaticMarkup(
       createElement(

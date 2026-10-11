@@ -146,6 +146,29 @@ const BTN_OUTLINE =
 const LINK_QUIET =
   "whitespace-nowrap text-[11px] text-mute underline-offset-2 hover:text-ink hover:underline disabled:opacity-50";
 
+/**
+ * Below the sm breakpoint a row is a card: the <tr> becomes a wrapping flex
+ * box and each cell takes an order — description and amount first, then the
+ * date with its status, the category, and the actions. From sm up the same
+ * elements are ordinary table cells, so there is one row to maintain.
+ */
+const ROW = "flex flex-wrap items-center gap-x-3 py-2 sm:table-row sm:py-0";
+const CELL = {
+  lead: "order-1 sm:order-none sm:py-2.5 sm:pr-2 sm:align-middle",
+  description: "order-2 min-w-0 flex-1 sm:order-none sm:py-2.5 sm:pr-3 sm:align-middle",
+  amount: "order-3 sm:order-none figures whitespace-nowrap text-right sm:py-2.5 sm:align-middle",
+  date: "order-4 basis-full sm:basis-auto sm:order-none figures whitespace-nowrap text-[12px] text-mute sm:py-2.5 sm:pr-3 sm:align-middle",
+  category: "order-5 basis-full sm:basis-auto sm:order-none min-w-[14rem] py-1 sm:py-2.5 sm:pr-3 sm:align-middle",
+  actions:
+    "order-6 basis-full sm:basis-auto sm:order-none whitespace-nowrap pt-1 text-[11px] sm:w-[11rem] sm:py-2.5 sm:pl-3 sm:text-right sm:align-middle",
+  form: "basis-full sm:basis-auto pb-3",
+};
+
+/** Clicks on a row's own controls are theirs; anywhere else on an editable row opens or closes the form. */
+function onControl(target: EventTarget | null): boolean {
+  return target instanceof Element && target.closest("a,button,input,select,label,summary") !== null;
+}
+
 function StatusPill({ t }: { t: TransactionRecord }) {
   if (t.removed_at && t.journal_entry_id) {
     return <Pill tone="bad">Retracted by bank — review</Pill>;
@@ -441,15 +464,22 @@ export function TransactionRow({
       <tr
         id={`tx-${t.id}`}
         data-focused={focused || undefined}
-        className={`${faded ? "opacity-60" : ""} ${focused ? "bg-fill outline outline-1 -outline-offset-1 outline-brass" : ""}`}
+        onClick={canEditRow ? (e) => (onControl(e.target) ? undefined : setEditing(!editing)) : undefined}
+        className={`${ROW} ${faded ? "opacity-60" : ""} ${canEditRow ? "cursor-pointer hover:bg-fill/60" : ""} ${
+          focused ? "bg-fill outline outline-1 -outline-offset-1 outline-brass" : ""
+        }`}
       >
-        {leadingCell !== undefined ? <td className="py-2.5 pr-2 align-middle">{leadingCell}</td> : null}
+        {leadingCell !== undefined ? <td className={CELL.lead}>{leadingCell}</td> : null}
 
-        <td className="figures whitespace-nowrap py-2.5 pr-3 align-middle text-[12px] text-mute">
+        <td className={CELL.date}>
           {shortDate(t.posted_on, today)}
+          {/* On a phone the status sits by the date; from sm up it is in the Category column. */}
+          <span className="ml-2 sm:hidden">
+            <StatusPill t={t} />
+          </span>
         </td>
 
-        <td className="min-w-0 py-2.5 pr-3 align-middle">
+        <td className={CELL.description}>
           <div className="text-ink">{t.description}</div>
           {!t.posting_kind && t.raw_category ? (
             <div className="text-[11px] text-mute-soft">bank says: {t.raw_category}</div>
@@ -457,7 +487,7 @@ export function TransactionRow({
           {error ? <p className="mt-1 text-[11px] text-bad-text">{error}</p> : null}
         </td>
 
-        <td className="py-2.5 pr-3 align-middle">
+        <td className={CELL.category}>
           <div className="flex flex-wrap items-center gap-1.5">
             {t.posting_kind ? (
               <>
@@ -466,7 +496,9 @@ export function TransactionRow({
                 >
                   {target ?? KIND_LABEL[t.posting_kind]}
                 </span>
-                <StatusPill t={t} />
+                <span className="hidden sm:contents">
+                  <StatusPill t={t} />
+                </span>
                 {t.rule_id ? <RuleTag ruleId={t.rule_id} pattern={rulePattern} canEdit={canEdit} /> : null}
               </>
             ) : canEdit && suggestion && onAcceptSuggestion ? (
@@ -520,24 +552,22 @@ export function TransactionRow({
                 </span>
               </div>
             ) : (
-              <StatusPill t={t} />
+              <span className="hidden sm:contents">
+                <StatusPill t={t} />
+              </span>
             )}
           </div>
         </td>
 
-        <td
-          className={`figures whitespace-nowrap py-2.5 text-right align-middle ${
-            moneyIn ? "text-good-text" : "text-ink"
-          }`}
-        >
+        <td className={`${CELL.amount} ${moneyIn ? "text-good-text" : "text-ink"}`}>
           {moneyIn ? "+" : amount < 0 ? "−" : ""}
           {money(Math.abs(amount))}
         </td>
 
         {canEdit ? (
-          <td className="whitespace-nowrap py-2.5 pl-3 text-right align-middle text-[11px]">
+          <td className={CELL.actions}>
             {!editing ? (
-              <div className="flex justify-end gap-2">
+              <div className="flex gap-2 sm:justify-end">
                 {canEditRow ? (
                   <button
                     type="button"
@@ -576,8 +606,8 @@ export function TransactionRow({
       </tr>
 
       {editing ? (
-        <tr className="!border-t-0">
-          <td colSpan={columns} className="pb-3">
+        <tr className={`${ROW} !border-t-0`}>
+          <td colSpan={columns} className={CELL.form}>
             <CategorizeForm
               t={t}
               pickers={pickers}
