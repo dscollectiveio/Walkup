@@ -1,3 +1,4 @@
+import { ChevronRight } from "lucide-react";
 import { createClient } from "@/lib/supabase/server";
 import { money } from "@/components/ui";
 import { syncedAgo } from "@/lib/dates";
@@ -123,22 +124,34 @@ export async function BankAccountsSection({
 }) {
   const balances = await balancesPromise;
   const balanceByConnection = new Map(balances.map((b) => [b.connectionId, b]));
+  // Cash the association can spend: depository accounts only. A credit card is
+  // money owed and a retirement/brokerage account isn't operating cash.
+  const totalCashCents = balances.reduce(
+    (sum, b) => sum + b.accounts.filter((a) => a.type === "depository").reduce((s, a) => s + (a.currentCents ?? 0), 0),
+    0,
+  );
+  const hasCash = balances.some((b) => b.accounts.some((a) => a.type === "depository"));
+  const anyCached = balances.some((b) => b.source === "last_sync");
   return (
     <section className="divide-y divide-line rounded-xl border border-line bg-paper">
-      <header className="rounded-t-[7px] bg-ink px-5 py-4">
-        <h2 className="eyebrow text-paper">Bank accounts</h2>
-        <p className="mt-1 text-[13px] text-ondark-mute">
-          Live balances from your connected banks. Transactions flow in from here.
-        </p>
+      <header className="flex flex-wrap items-end justify-between gap-x-6 gap-y-2 rounded-t-[7px] bg-ink px-5 py-5">
+        <div>
+          <h2 className="eyebrow text-paper">Total bank balance</h2>
+          <p className="mt-1.5 text-[13px] text-ondark-mute">
+            {hasCash
+              ? `Cash across ${active.length} connected bank${active.length === 1 ? "" : "s"}${anyCached ? " · as of each bank's last update" : ""}`
+              : "Checking, savings, CD and money market accounts, added together."}
+          </p>
+        </div>
+        <div className="figures text-[40px] leading-none text-paper sm:text-[48px]">
+          {hasCash ? money(totalCashCents / 100) : "—"}
+        </div>
       </header>
       {active.map((c) => {
         const balance = balanceByConnection.get(c.id);
         const accts = [...(balance?.accounts ?? [])].sort(
           (x, y) => ACCOUNT_TYPE_ORDER.indexOf(x.type) - ACCOUNT_TYPE_ORDER.indexOf(y.type),
         );
-        const cashCents = accts
-          .filter((a) => a.type === "depository")
-          .reduce((sum, a) => sum + (a.currentCents ?? 0), 0);
         return (
           <div key={c.id} className="px-5 py-4">
             <div className="flex flex-wrap items-center justify-between gap-3">
@@ -148,12 +161,6 @@ export async function BankAccountsSection({
                   {accts.length > 0 ? (
                     <span className="text-[12px] text-mute">
                       {accts.length} account{accts.length === 1 ? "" : "s"}
-                      {cashCents > 0 ? (
-                        <>
-                          {" · "}
-                          <span className="figures text-ink">{money(cashCents / 100)}</span> in cash
-                        </>
-                      ) : null}
                     </span>
                   ) : null}
                 </div>
@@ -163,14 +170,19 @@ export async function BankAccountsSection({
             </div>
 
             {balance?.error ? <p className="mt-3 text-[12px] text-mute-soft">{balance.error}</p> : null}
-            {balance?.source === "last_sync" ? (
-              <p className="mt-3 text-[11px] text-mute-soft">
-                Balances are as of the bank&rsquo;s last update, not real-time.
-              </p>
-            ) : null}
-
             {accts.length > 0 ? (
-              <ul className="mt-3 grid gap-2 sm:grid-cols-2 lg:grid-cols-4">
+              <details className="group mt-3">
+                <summary className="inline-flex cursor-pointer select-none list-none items-center gap-1.5 text-[12px] font-medium text-ink hover:underline [&::-webkit-details-marker]:hidden">
+                  <ChevronRight size={14} strokeWidth={1.6} aria-hidden="true" className="text-mute transition-transform group-open:rotate-90" />
+                  <span className="group-open:hidden">Show individual accounts</span>
+                  <span className="hidden group-open:inline">Hide individual accounts</span>
+                </summary>
+                {balance?.source === "last_sync" ? (
+                  <p className="mt-2 text-[11px] text-mute-soft">
+                    Balances are as of the bank&rsquo;s last update, not real-time.
+                  </p>
+                ) : null}
+                <ul className="mt-3 grid gap-2 sm:grid-cols-2 lg:grid-cols-4">
                 {accts.map((a, i) => (
                   <li key={`${a.mask ?? ""}-${i}`} className="rounded-lg border border-line bg-fill/40 px-3 py-2">
                     <div className="flex items-baseline justify-between gap-2">
@@ -191,7 +203,8 @@ export async function BankAccountsSection({
                     </div>
                   </li>
                 ))}
-              </ul>
+                </ul>
+              </details>
             ) : null}
 
             {canEdit && !c.cash_account_id ? (

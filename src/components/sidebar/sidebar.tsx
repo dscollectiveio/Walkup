@@ -14,7 +14,7 @@ function isActive(pathname: string, href: string) {
 }
 
 /** How long the mouse rests on the rail before it slides out. */
-const PEEK_DELAY_MS = 1000;
+const PEEK_DELAY_MS = 500;
 
 const isTyping = (el: EventTarget | null) =>
   el instanceof HTMLElement &&
