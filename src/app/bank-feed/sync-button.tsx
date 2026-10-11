@@ -2,6 +2,7 @@
 
 import { useState, useTransition } from "react";
 import { syncBankTransactions } from "./actions";
+import { CARD_BUTTON } from "./bank-card-actions";
 
 export function SyncButton({ connectionId }: { connectionId: string }) {
   const [pending, start] = useTransition();
@@ -27,7 +28,7 @@ export function SyncButton({ connectionId }: { connectionId: string }) {
             }
           })
         }
-        className="rounded-md bg-ink px-4 py-2 text-[13px] font-medium text-paper transition hover:bg-ink-mid disabled:opacity-50"
+        className={CARD_BUTTON}
       >
         {pending ? "Syncing…" : "Sync now"}
       </button>

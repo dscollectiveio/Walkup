@@ -34,7 +34,7 @@ PART 1 — GETTING IN
      declaration), the short name you'll see in the app (usually the
      address), and the state.
    - Walkup sets up the fiscal year, the operating and reserve funds, and a
-     chart of accounts for you. You land on Home.
+     chart of accounts for you. You land on the Dashboard.
 
    Invited members skip this step — they join the building that invited
    them.
@@ -44,9 +44,9 @@ PART 1 — GETTING IN
 PART 2 — SETTING UP (about an hour, can be spread over a week)
 --------------------------------------------------------------------------
 
-Home shows "Set up your building": a checklist in the right order. Each
+The Dashboard shows "Set up your building": a checklist in the right order. Each
 step ticks itself off when the information exists — there is nothing to
-check off by hand. You can skip it and come back; it stays on Home until
+check off by hand. You can skip it and come back; it stays on the Dashboard until
 it's done.
 
 STEP 1 — BUILDING INFO  (Sidebar: Building Info)
@@ -142,7 +142,7 @@ PART 3 — THE MONTHLY ROUTINE (about 15 minutes)
      you'd be if spending were spread evenly. Over-budget categories are
      listed first. Click one to see what's in it.
 
-4. Home
+4. Dashboard
    - "Worth a minute today" lists anything that needs attention (late
      dues, a category over budget, an insurance renewal coming up,
      missing W-9s). It empties itself as things get handled.
@@ -168,7 +168,7 @@ Board meeting or an owner asks for the numbers
    your accountant.
 
 Insurance renewal
-   Home warns you 60 days ahead. Insurance Marketplace has the policy, and
+   The Dashboard warns you 60 days ahead. Insurance Marketplace has the policy, and
    lets you compare quotes year to year.
 
 Year end

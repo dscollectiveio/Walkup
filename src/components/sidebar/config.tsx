@@ -18,6 +18,8 @@ export interface NavItemConfig {
   icon: LucideIcon;
   /** Key into the badges map passed to the sidebar: currently only "uncategorized". */
   badgeKey?: string;
+  /** The one item that should stand out from the rest (the Dashboard). */
+  featured?: boolean;
 }
 
 export interface NavGroupConfig {
@@ -28,7 +30,7 @@ export interface NavGroupConfig {
 // Presentation only — labels and grouping change here, not the routes
 // themselves. See DECISIONS.md and the nav audit that produced this grouping.
 export const UNGROUPED_NAV: NavItemConfig[] = [
-  { href: "/", label: "Home", icon: Home },
+  { href: "/", label: "Dashboard", icon: Home, featured: true },
 ];
 
 export const NAV_GROUPS: NavGroupConfig[] = [
@@ -77,7 +79,7 @@ const EXTRA_TITLES: { prefix: string; label: string }[] = [
 
 /** The current page's name for the slim top bar, from the nav config first. */
 export function pageTitleFor(pathname: string): string | null {
-  if (pathname === "/") return "Home";
+  if (pathname === "/") return "Dashboard";
   const all = [...UNGROUPED_NAV, ...NAV_GROUPS.flatMap((g) => g.items), ...TRAILING_NAV].filter((i) => i.href !== "/");
   const hit = all.find((i) => pathname === i.href || pathname.startsWith(`${i.href}/`) || pathname.startsWith(`${i.href}?`));
   if (hit) return hit.label;

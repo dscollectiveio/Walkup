@@ -48,13 +48,13 @@ describe("Bank accounts section", () => {
     expect(html).toContain("as of each bank");
   });
 
-  it("tucks the individual accounts behind an expander, closed by default", async () => {
+  it("puts Sync now, Show individual accounts and Manage connection in one matching row, accounts closed by default", async () => {
     const html = await render();
-    expect(html).toContain("Show individual accounts");
-    expect(html).toContain("Hide individual accounts");
-    expect(html).toContain("<details");
-    expect(html).not.toMatch(/<details[^>]*open/);
-    expect(html).toContain("Plaid Checking");
+    expect(html).toContain("Sync now");
+    expect(html).toContain("Show individual accounts (4)");
+    expect(html).toContain("Manage connection");
+    expect(html).toContain('aria-expanded="false"');
+    expect(html).not.toContain("Plaid Checking"); // hidden until expanded
     expect(html).toContain("4 accounts");
   });
 

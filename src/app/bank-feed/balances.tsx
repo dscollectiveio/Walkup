@@ -1,10 +1,10 @@
-import { ChevronRight } from "lucide-react";
 import { createClient } from "@/lib/supabase/server";
 import { money } from "@/components/ui";
 import { syncedAgo } from "@/lib/dates";
 import { plaidClient, describePlaidError, isProductNotEnabled } from "@/lib/plaid";
 import { ConnectBankButton } from "./connect-bank-button";
 import { SyncButton } from "./sync-button";
+import { BankCardActions } from "./bank-card-actions";
 import { DisconnectButton } from "./disconnect-button";
 import { LedgerAccountSelect } from "./ledger-account-select";
 
@@ -152,46 +152,22 @@ export async function BankAccountsSection({
         const accts = [...(balance?.accounts ?? [])].sort(
           (x, y) => ACCOUNT_TYPE_ORDER.indexOf(x.type) - ACCOUNT_TYPE_ORDER.indexOf(y.type),
         );
-        return (
-          <div key={c.id} className="px-5 py-4">
-            <div className="flex flex-wrap items-center justify-between gap-3">
-              <div className="min-w-0">
-                <div className="flex flex-wrap items-baseline gap-x-2">
-                  <span className="font-bold tracking-tight text-ink">{c.institution_name}</span>
-                  {accts.length > 0 ? (
-                    <span className="text-[12px] text-mute">
-                      {accts.length} account{accts.length === 1 ? "" : "s"}
-                    </span>
-                  ) : null}
-                </div>
-                <div className="mt-0.5 text-[11px] text-mute-soft">{syncedAgo(c.last_synced_at)}</div>
-              </div>
-              <SyncButton connectionId={c.id} />
-            </div>
-
-            {balance?.error ? <p className="mt-3 text-[12px] text-mute-soft">{balance.error}</p> : null}
-            {accts.length > 0 ? (
-              <details className="group mt-3">
-                <summary className="inline-flex cursor-pointer select-none list-none items-center gap-1.5 text-[12px] font-medium text-ink hover:underline [&::-webkit-details-marker]:hidden">
-                  <ChevronRight size={14} strokeWidth={1.6} aria-hidden="true" className="text-mute transition-transform group-open:rotate-90" />
-                  <span className="group-open:hidden">Show individual accounts</span>
-                  <span className="hidden group-open:inline">Hide individual accounts</span>
-                </summary>
-                {balance?.source === "last_sync" ? (
-                  <p className="mt-2 text-[11px] text-mute-soft">
-                    Balances are as of the bank&rsquo;s last update, not real-time.
-                  </p>
-                ) : null}
-                <ul className="mt-3 grid gap-2 sm:grid-cols-2 lg:grid-cols-4">
+        const accountsPanel =
+          accts.length > 0 ? (
+            <div>
+              {balance?.source === "last_sync" ? (
+                <p className="mb-2 text-[11px] text-mute-soft">
+                  Balances are as of the bank&rsquo;s last update, not real-time.
+                </p>
+              ) : null}
+              <ul className="grid gap-2 sm:grid-cols-2 lg:grid-cols-4">
                 {accts.map((a, i) => (
                   <li key={`${a.mask ?? ""}-${i}`} className="rounded-lg border border-line bg-fill/40 px-3 py-2">
                     <div className="flex items-baseline justify-between gap-2">
                       <span className="truncate text-[12px] text-ink" title={a.name}>
                         {a.name}
                       </span>
-                      {a.mask ? (
-                        <span className="figures shrink-0 text-[11px] text-mute-soft">···{a.mask}</span>
-                      ) : null}
+                      {a.mask ? <span className="figures shrink-0 text-[11px] text-mute-soft">···{a.mask}</span> : null}
                     </div>
                     <div className="mt-0.5 flex items-baseline justify-between gap-2">
                       <span className="figures text-[15px] text-ink">
@@ -203,34 +179,48 @@ export async function BankAccountsSection({
                     </div>
                   </li>
                 ))}
-                </ul>
-              </details>
-            ) : null}
+              </ul>
+            </div>
+          ) : null;
+
+        const managePanel =
+          canEdit && c.cash_account_id ? (
+            <div className="flex flex-wrap items-center gap-3">
+              <LedgerAccountSelect connectionId={c.id} cashAccounts={cashAccounts} currentId={c.cash_account_id} />
+              <DisconnectButton connectionId={c.id} />
+            </div>
+          ) : null;
+
+        return (
+          <div key={c.id} className="px-5 py-4">
+            <div className="min-w-0">
+              <div className="flex flex-wrap items-baseline gap-x-2">
+                <span className="font-bold tracking-tight text-ink">{c.institution_name}</span>
+                {accts.length > 0 ? (
+                  <span className="text-[12px] text-mute">
+                    {accts.length} account{accts.length === 1 ? "" : "s"}
+                  </span>
+                ) : null}
+              </div>
+              <div className="mt-0.5 text-[11px] text-mute-soft">{syncedAgo(c.last_synced_at)}</div>
+            </div>
+
+            {balance?.error ? <p className="mt-3 text-[12px] text-mute-soft">{balance.error}</p> : null}
 
             {canEdit && !c.cash_account_id ? (
               <div className="mt-3">
-                <LedgerAccountSelect
-                  connectionId={c.id}
-                  cashAccounts={cashAccounts}
-                  currentId={c.cash_account_id}
-                />
+                <LedgerAccountSelect connectionId={c.id} cashAccounts={cashAccounts} currentId={c.cash_account_id} />
               </div>
             ) : null}
-            {canEdit && c.cash_account_id ? (
-              <details className="mt-3">
-                <summary className="cursor-pointer select-none text-[11px] text-mute-soft hover:text-ink">
-                  Manage connection
-                </summary>
-                <div className="mt-2 flex flex-wrap items-center gap-3">
-                  <LedgerAccountSelect
-                    connectionId={c.id}
-                    cashAccounts={cashAccounts}
-                    currentId={c.cash_account_id}
-                  />
-                  <DisconnectButton connectionId={c.id} />
-                </div>
-              </details>
-            ) : null}
+
+            <div className="mt-3">
+              <BankCardActions
+                sync={<SyncButton connectionId={c.id} />}
+                accountsPanel={accountsPanel}
+                managePanel={managePanel}
+                accountCount={accts.length}
+              />
+            </div>
           </div>
         );
       })}

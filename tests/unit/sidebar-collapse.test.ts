@@ -53,13 +53,22 @@ describe("Sidebar: expanded and rail", () => {
     expect(render("rail")).toContain('aria-current="page"');
   });
 
+  it("labels the first item Dashboard and gives it its own hue in both states", () => {
+    for (const mode of ["expanded", "rail"] as const) {
+      const html = render(mode);
+      expect(html).toContain("Dashboard");
+      expect(html).not.toMatch(/>Home</);
+      expect(html).toContain("bg-warning-tint");
+    }
+  });
+
   it("selected tab sits on the dark fill in both states", () => {
     expect(render("expanded")).toContain("bg-nav-active text-nav-active-text");
     expect(render("rail")).toContain("bg-nav-active text-nav-active-text");
   });
 
   it("names the current page for the top bar", () => {
-    expect(pageTitleFor("/")).toBe("Home");
+    expect(pageTitleFor("/")).toBe("Dashboard");
     expect(pageTitleFor("/budget")).toBe("Budget & spending");
     expect(pageTitleFor("/repairs?view=upkeep")).toBe("Repairs & Upkeep");
     expect(pageTitleFor("/units/abc")).toBe("Unit statement");

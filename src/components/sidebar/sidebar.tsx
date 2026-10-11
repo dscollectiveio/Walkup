@@ -53,7 +53,9 @@ function NavItemLink({
         className={`relative flex min-h-[40px] items-center gap-2.5 rounded-md border-l-[3px] px-2.5 text-[13px] font-bold transition-colors ${
           active
             ? "border-brass bg-nav-active text-nav-active-text"
-            : "border-transparent text-nav-muted hover:bg-nav-hover hover:text-nav-text"
+            : item.featured
+              ? "border-brass/60 bg-warning-tint text-warning-text hover:brightness-95"
+              : "border-transparent text-nav-muted hover:bg-nav-hover hover:text-nav-text"
         }`}
       >
         <Icon size={16} strokeWidth={1.6} className={active ? "text-brass" : "text-current"} aria-hidden="true" />
@@ -80,7 +82,11 @@ function NavItemLink({
         aria-current={active ? "page" : undefined}
         aria-describedby={tipId}
         className={`relative mx-auto flex h-11 w-11 items-center justify-center rounded-lg transition-colors ${
-          active ? "bg-nav-active text-nav-active-text" : "text-nav-muted hover:bg-nav-hover hover:text-nav-text"
+          active
+            ? "bg-nav-active text-nav-active-text"
+            : item.featured
+              ? "bg-warning-tint text-warning-text hover:brightness-95"
+              : "text-nav-muted hover:bg-nav-hover hover:text-nav-text"
         }`}
       >
         {/* The "where am I" cue: a 3px gold bar on the rail's left edge, level with the active item. */}
@@ -210,7 +216,7 @@ export function Sidebar({
         data-expanded={expanded ? "true" : "false"}
         onMouseEnter={startPeek}
         onMouseLeave={endPeek}
-        className={`fixed inset-y-0 left-0 z-40 flex flex-col border-r border-nav-divider bg-nav transition-[width,box-shadow] duration-[420ms] ease-[cubic-bezier(0.45,0,0.25,1)] motion-reduce:transition-none ${
+        className={`fixed inset-y-0 left-0 z-40 flex flex-col border-r-[0.5px] border-nav-divider/70 bg-nav transition-[width,box-shadow] duration-[420ms] ease-[cubic-bezier(0.45,0,0.25,1)] motion-reduce:transition-none ${
           phone && !drawerOpen ? "invisible w-0" : wantOpen ? "w-[288px]" : "w-[72px]"
         } ${!pinned && (drawnOpen || wantOpen) ? "overflow-hidden" : ""} ${wantOpen && !pinned ? "shadow-xl" : ""}`}
       >

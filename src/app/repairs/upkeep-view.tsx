@@ -196,7 +196,7 @@ export async function UpkeepView({ isBoard }: { isBoard: boolean }) {
       >
         {(bills ?? []).length === 0 ? (
           <p className="text-[13px] text-mute">
-            No recurring bills recorded yet — a utility, the insurance premium, a cleaning contract. They show up on Home under
+            No recurring bills recorded yet — a utility, the insurance premium, a cleaning contract. They show up on the Dashboard under
             &ldquo;Coming up&rdquo; once they&rsquo;re here.
           </p>
         ) : (

@@ -8,7 +8,7 @@ import { setDrawerOpen, useSidebarState } from "./sidebar-state";
 
 const HELP: { title: string; body: string }[] = [
   {
-    title: "Start with Home",
+    title: "Start with the Dashboard",
     body: "The setup guide walks you through everything in order. Steps tick themselves off as you finish them.",
   },
   {
