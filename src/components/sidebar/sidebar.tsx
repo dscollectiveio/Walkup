@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { useEffect, useId, useRef, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { PanelLeftClose, PanelLeftOpen, X } from "lucide-react";
 import { Mark } from "@/components/mark";
 import { ThemeToggle } from "./theme-toggle";
@@ -41,7 +41,6 @@ function NavItemLink({
   expanded: boolean;
 }) {
   const Icon = item.icon;
-  const tipId = useId();
   const count = typeof badgeCount === "number" && badgeCount > 0 ? badgeCount : 0;
   const countWords = count > 0 ? `${count > 99 ? "99+" : count} waiting` : "";
 
@@ -76,11 +75,10 @@ function NavItemLink({
   }
 
   return (
-    <div className="group relative">
+    <div className="relative">
       <Link
         href={item.href}
         aria-current={active ? "page" : undefined}
-        aria-describedby={tipId}
         className={`relative mx-auto flex h-11 w-11 items-center justify-center rounded-lg transition-colors ${
           active
             ? "bg-nav-active text-nav-active-text"
@@ -100,13 +98,6 @@ function NavItemLink({
           {count > 0 ? `, ${countWords}` : ""}
         </span>
       </Link>
-      <span
-        role="tooltip"
-        id={tipId}
-        className="pointer-events-none fixed z-50 ml-[60px] -mt-9 whitespace-nowrap rounded-md border border-line bg-paper px-2.5 py-1.5 text-[12.5px] text-ink opacity-0 shadow transition-opacity group-focus-within:opacity-100 group-hover:opacity-100"
-      >
-        {item.label}
-        {count > 0 ? <span className="text-mute">, {countWords}</span> : null}
       </span>
     </div>
   );

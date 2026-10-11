@@ -33,16 +33,15 @@ describe("Sidebar: expanded and rail", () => {
     for (const item of items) expect(html).toContain(item.label.replace("&", "&amp;"));
   });
 
-  it("rail: 72px, labels kept for screen readers, tooltips with the count in words, dot badge", () => {
+  it("rail: 72px, labels kept for screen readers, no hover pop-out, dot badge", () => {
     const html = render("rail");
     expect(html).toContain("w-[72px]");
     expect(html).not.toContain("Finances &amp; Dues"); // group headings become dividers
     expect(html).toContain("Expand navigation");
-    expect((html.match(/role="tooltip"/g) ?? []).length).toBe(items.length);
+    expect(html).not.toContain('role="tooltip"'); // the hover pop-out label is gone; the sidebar slides out instead
     expect(html).toContain("3 waiting");
     expect(html).not.toContain(">3<");
     for (const item of items) expect(html).toContain(item.label.replace("&", "&amp;"));
-    expect((html.match(/aria-describedby=/g) ?? []).length).toBe(items.length);
   });
 
   it("same items in the same order in both states, active item marked", () => {
