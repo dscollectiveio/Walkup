@@ -1,6 +1,6 @@
 import "server-only";
 import type { SupabaseClient } from "@supabase/supabase-js";
-import { plaidClient, describePlaidError } from "@/lib/plaid";
+import { plaidClient, describePlaidError, isLoginRequired } from "@/lib/plaid";
 import {
   matchRule,
   planSyncWrites,
@@ -39,7 +39,7 @@ export async function syncOneConnection(
   connection: { id: string; association_id: string; sync_cursor: string | null },
   accessToken: string,
   options: { autoPost: boolean },
-): Promise<SyncResult | { error: string }> {
+): Promise<SyncResult | { error: string; needsReconnect?: boolean }> {
   const client = plaidClient();
   let cursor = connection.sync_cursor ?? undefined;
   const incoming: IncomingTransaction[] = [];
@@ -58,6 +58,18 @@ export async function syncOneConnection(
       cursor = response.data.next_cursor;
     }
   } catch (cause) {
+    if (isLoginRequired(cause)) {
+      // The bank wants a person to sign in again. status 'error' is what
+      // the Home tile already reads as "needs reconnecting"; the cron only
+      // syncs 'active' rows, so it stops hammering a dead login. A
+      // successful sync (below) flips it back.
+      await supabase
+        .from("bank_connections")
+        .update({ status: "error" })
+        .eq("id", connection.id)
+        .neq("status", "disconnected");
+      return { error: describePlaidError(cause), needsReconnect: true };
+    }
     return { error: describePlaidError(cause) };
   }
 
@@ -160,6 +172,8 @@ export async function syncOneConnection(
           account_id: rule.account_id,
           matched_unit_id: rule.matched_unit_id,
           vendor_id: rule.vendor_id,
+          // Which rule pre-filled it, so the page can say "from your rule".
+          rule_id: rule.id,
         })
         .eq("id", row.id);
       if (error) continue;
@@ -167,19 +181,24 @@ export async function syncOneConnection(
       if (rule.auto_post && !row.pending) readyToAutoPost.push(row.id);
     }
 
-    if (options.autoPost) {
-      for (const id of readyToAutoPost) {
-        const { error } = await supabase.rpc("post_bank_transaction", { p_transaction_id: id });
-        if (error) postErrors.push(error.message);
-        else posted += 1;
+    // One round trip; post_bank_transactions() loops the per-row RPC with
+    // its own checks (0046), so nothing is bypassed.
+    if (options.autoPost && readyToAutoPost.length > 0) {
+      const { data, error } = await supabase.rpc("post_bank_transactions", { p_ids: readyToAutoPost });
+      if (error) postErrors.push(error.message);
+      for (const r of (data ?? []) as { ok: boolean; error: string | null }[]) {
+        if (r.ok) posted += 1;
+        else postErrors.push(r.error ?? "Couldn't be posted.");
       }
     }
   }
 
+  // A sync that got this far means the login works: clear a stale 'error'.
   await supabase
     .from("bank_connections")
-    .update({ sync_cursor: cursor, last_synced_at: new Date().toISOString() })
-    .eq("id", connection.id);
+    .update({ sync_cursor: cursor, last_synced_at: new Date().toISOString(), status: "active" })
+    .eq("id", connection.id)
+    .neq("status", "disconnected");
 
   return { count: incoming.length, categorized, posted, postErrors };
 }

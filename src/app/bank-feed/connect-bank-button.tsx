@@ -38,7 +38,16 @@ export function ConnectBankButton({
           an empty token even after the real one arrived. Mounting this
           component only once linkToken is real avoids that entirely. */}
       {linkToken ? (
-        <PlaidLinkButton linkToken={linkToken} onError={setError} label={label} className={STYLES[variant]} />
+        <PlaidLinkButton
+          linkToken={linkToken}
+          onError={setError}
+          label={label}
+          busyLabel="Connecting…"
+          className={STYLES[variant]}
+          onLinked={(publicToken, metadata) =>
+            connectBank(publicToken, metadata.institution?.name ?? "Connected account")
+          }
+        />
       ) : (
         <button
           type="button"
@@ -57,35 +66,44 @@ export function ConnectBankButton({
   );
 }
 
-function PlaidLinkButton({
+/**
+ * Opens Plaid Link for a ready token and hands the result to `onLinked` —
+ * connectBank for a new bank, reconnectBank for update mode. Shared so the
+ * OAuth stash/clear dance lives in one place.
+ */
+export function PlaidLinkButton({
   linkToken,
   onError,
   label,
+  busyLabel,
   className,
+  onLinked,
+  reconnectConnectionId,
 }: {
   linkToken: string;
   onError: (message: string) => void;
   label: string;
+  busyLabel: string;
   className: string;
+  onLinked: (publicToken: string, metadata: PlaidLinkOnSuccessMetadata) => Promise<{ error?: string }>;
+  /** Set for update mode, so an OAuth round trip comes back knowing which connection to repair. */
+  reconnectConnectionId?: string;
 }) {
   const router = useRouter();
-  const [connecting, setConnecting] = useState(false);
+  const [busy, setBusy] = useState(false);
 
   const onSuccess = useCallback(
     async (publicToken: string | null, metadata: PlaidLinkOnSuccessMetadata) => {
       clearLinkTokenForOAuth();
       if (!publicToken) return;
-      setConnecting(true);
+      setBusy(true);
       onError("");
-      const result = await connectBank(
-        publicToken,
-        metadata.institution?.name ?? "Connected account",
-      );
-      setConnecting(false);
+      const result = await onLinked(publicToken, metadata);
+      setBusy(false);
       if (result.error) onError(result.error);
       else router.refresh();
     },
-    [router, onError],
+    [router, onError, onLinked],
   );
 
   const { open, ready } = usePlaidLink({
@@ -101,13 +119,13 @@ function PlaidLinkButton({
         // Stashed before open(), not on success — an OAuth institution
         // leaves the page entirely, so this has to be in place before the
         // redirect, not after it returns. /bank-feed/oauth reads it back.
-        storeLinkTokenForOAuth(linkToken);
+        storeLinkTokenForOAuth(linkToken, reconnectConnectionId);
         open();
       }}
-      disabled={!ready || connecting}
+      disabled={!ready || busy}
       className={className}
     >
-      {connecting ? "Connecting…" : label}
+      {busy ? busyLabel : label}
     </button>
   );
 }

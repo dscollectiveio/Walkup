@@ -62,6 +62,17 @@ export function isProductNotEnabled(cause: unknown): boolean {
   );
 }
 
+/**
+ * True when the bank wants the person to sign in again — expired consent, a
+ * changed password, a locked account, or access the bank withdrew. Retrying
+ * cannot fix any of these; reopening Plaid Link in update mode can, so
+ * callers show "Reconnect" instead of an error.
+ */
+export function isLoginRequired(cause: unknown): boolean {
+  const code = (cause as { response?: { data?: { error_code?: string } } })?.response?.data?.error_code;
+  return code === "ITEM_LOGIN_REQUIRED" || code === "ITEM_LOCKED" || code === "ACCESS_NOT_GRANTED";
+}
+
 /** Plaid's own error shape carries a plain-English display_message. Falls
  * back to something a board member can still act on when it doesn't. */
 export function describePlaidError(cause: unknown): string {

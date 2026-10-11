@@ -1,8 +1,9 @@
 import { createClient } from "@/lib/supabase/server";
 import { money } from "@/components/ui";
 import { syncedAgo } from "@/lib/dates";
-import { plaidClient, describePlaidError, isProductNotEnabled } from "@/lib/plaid";
+import { plaidClient, describePlaidError, isLoginRequired, isProductNotEnabled } from "@/lib/plaid";
 import { ConnectBankButton } from "./connect-bank-button";
+import { ReconnectButton } from "./reconnect-button";
 import { SyncButton } from "./sync-button";
 import { BankCardActions } from "./bank-card-actions";
 import { DisconnectButton } from "./disconnect-button";
@@ -27,6 +28,8 @@ export interface ConnectionBalance {
     type: string;
   }[];
   error?: string;
+  /** The bank wants the person to sign in again — show Reconnect, not an error. */
+  needsReconnect?: boolean;
   /** "live" = real-time Balance product; "last_sync" = Plaid's cached balance as of its last update. */
   source?: "live" | "last_sync";
 }
@@ -67,6 +70,7 @@ export async function getConnectionBalance(
     const response = await plaidClient().accountsBalanceGet({ access_token: accessToken });
     return { connectionId, accounts: toAccounts(response.data.accounts), source: "live" };
   } catch (cause) {
+    if (isLoginRequired(cause)) return { connectionId, accounts: [], needsReconnect: true };
     if (!isProductNotEnabled(cause)) {
       console.error("Plaid accountsBalanceGet failed", cause);
       return { connectionId, accounts: [], error: describePlaidError(cause) };
@@ -76,6 +80,7 @@ export async function getConnectionBalance(
       const response = await plaidClient().accountsGet({ access_token: accessToken });
       return { connectionId, accounts: toAccounts(response.data.accounts), source: "last_sync" };
     } catch (fallback) {
+      if (isLoginRequired(fallback)) return { connectionId, accounts: [], needsReconnect: true };
       console.error("Plaid accountsGet failed", fallback);
       return { connectionId, accounts: [], error: describePlaidError(fallback) };
     }
@@ -86,6 +91,8 @@ export async function getConnectionBalance(
 interface ActiveConnection {
   id: string;
   institution_name: string;
+  /** 'active', or 'error' when the last sync found the bank wanting a fresh sign-in. */
+  status: string;
   last_synced_at: string | null;
   cash_account_id: string | null;
 }
@@ -116,11 +123,14 @@ export async function BankAccountsSection({
   active,
   canEdit,
   cashAccounts,
+  checkingIds = [],
 }: {
   balancesPromise: Promise<ConnectionBalance[]>;
   active: ActiveConnection[];
   canEdit: boolean;
   cashAccounts: { id: string; label: string }[];
+  /** Connections the page kicked off a sync for after responding (stale by 12+ hours). */
+  checkingIds?: string[];
 }) {
   const balances = await balancesPromise;
   const balanceByConnection = new Map(balances.map((b) => [b.connectionId, b]));
@@ -191,6 +201,8 @@ export async function BankAccountsSection({
             </div>
           ) : null;
 
+        const needsReconnect = c.status === "error" || balance?.needsReconnect === true;
+
         return (
           <div key={c.id} className="px-5 py-4">
             <div className="min-w-0">
@@ -202,10 +214,23 @@ export async function BankAccountsSection({
                   </span>
                 ) : null}
               </div>
-              <div className="mt-0.5 text-[11px] text-mute-soft">{syncedAgo(c.last_synced_at)}</div>
+              <div className="mt-0.5 text-[11px] text-mute-soft">
+                {syncedAgo(c.last_synced_at)}
+                {checkingIds.includes(c.id) ? " · Checking the bank for new transactions…" : ""}
+              </div>
             </div>
 
-            {balance?.error ? <p className="mt-3 text-[12px] text-mute-soft">{balance.error}</p> : null}
+            {needsReconnect ? (
+              <div className="mt-3 flex flex-wrap items-center gap-3 rounded-lg border border-warning-line bg-warning-tint px-3 py-2">
+                <p className="text-[12px] text-warning-text">
+                  {c.institution_name} wants you to sign in again before it will share new transactions.
+                  Nothing already in the books changes.
+                </p>
+                {canEdit ? <ReconnectButton connectionId={c.id} institutionName={c.institution_name} /> : null}
+              </div>
+            ) : balance?.error ? (
+              <p className="mt-3 text-[12px] text-mute-soft">{balance.error}</p>
+            ) : null}
 
             {canEdit && !c.cash_account_id ? (
               <div className="mt-3">

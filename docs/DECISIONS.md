@@ -898,6 +898,33 @@ their own authorization and accounting. `bank_transactions.rule_id` records
 which saved rule pre-filled a row during sync (the column only; the sync
 writes it in a later slice).
 
+**Fewer clicks (slice B), added 2026-10-10.** Six behaviours, none of which
+changes who can write the ledger. (1) Filing a row as a transfer or "Not for
+the books" saves a rule for that exact description on its own — those are
+never judgement calls twice — with `auto_post` false; the "Remember this"
+checkbox is gone. (2) After an expense/income/dues choice the action returns
+`ruleSuggestion` when `bank_payee_history` shows this is at least the second
+time the payee was filed that way and no rule matches, so the client can
+ask "Always file X as Y?" and call `saveCategorizationRule()`; the sync now
+writes `rule_id` and auto-posts through the batch RPC. (3) The page counts
+each status with head-count queries and loads one status at a time, 200
+rows by default (`?limit=` up to 2,000, fetched as limit+1 so it knows
+whether to offer "Load earlier"); it no longer silently truncates at 500.
+(4) When a board admin opens the page and an active bank last synced more
+than 12 hours ago, a sync runs *after the response* (`after()` from
+`next/server`) with `autoPost: false` — a page load is not a click, so
+nothing reaches the ledger from it. Home nudges when no bank has synced in
+over three days. (5) A deposit whose amount matches a check/cash/other
+payment recorded by hand on Dues for the recommended unit within ±10 days
+is recommended as "Not for the books" with `source: 'duplicate'`, so the
+same dues are not posted twice. (6) Reconnect: `isLoginRequired()` names
+Plaid's sign-in-again errors; the sync marks the connection `status =
+'error'` (the existing value the Home tile already reads as "needs
+reconnecting", so no migration) and clears it on the next successful sync;
+`createUpdateLinkToken()` opens Link in update mode and `reconnectBank()`
+sets it active and syncs. The Item, its ID and its history survive, so
+nothing is re-imported.
+
 ## 30. Access reviews, automated deprovisioning, and personal-data redaction — including the one path that edits the audit log
 
 *Decided: Doug, 2026-09-26. Plaid's security review (submitted the same

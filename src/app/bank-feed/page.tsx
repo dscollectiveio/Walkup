@@ -1,5 +1,6 @@
 import Link from "next/link";
 import { Suspense } from "react";
+import { after } from "next/server";
 import { createClient } from "@/lib/supabase/server";
 import { Card, Empty, Restricted, money } from "@/components/ui";
 import { ConnectBankButton } from "./connect-bank-button";
@@ -15,7 +16,14 @@ import {
   type ConnectionBalance,
 } from "./balances";
 import { RulesList, type RuleRecord } from "./rules-list";
-import { buildHistoryIndex, recommend, type PayeeHistoryRow, type Recommendation } from "@/lib/plaid/recommend";
+import {
+  buildHistoryIndex,
+  recommend,
+  type ManualPayment,
+  type PayeeHistoryRow,
+  type Recommendation,
+} from "@/lib/plaid/recommend";
+import { syncOneConnection } from "@/lib/plaid/sync";
 
 export const dynamic = "force-dynamic";
 
@@ -40,6 +48,25 @@ const KIND_LABEL: Record<string, string> = {
   excluded: "Not for the books",
 };
 
+/** Rows per page load. "Load earlier" doubles it, up to the cap. */
+const DEFAULT_LIMIT = 200;
+const MAX_LIMIT = 2000;
+
+/** A bank last synced longer ago than this gets a sync kicked off when a board admin opens the page. */
+const STALE_SYNC_MS = 12 * 60 * 60 * 1000;
+
+const TRANSACTION_COLUMNS =
+  "id, posted_on, description, amount, pending, raw_category, posting_kind, account_id, matched_unit_id, vendor_id, journal_entry_id, excluded_at, removed_at";
+
+const ORDER: Record<Sort, { column: string; ascending: boolean }> = {
+  date_desc: { column: "posted_on", ascending: false },
+  date_asc: { column: "posted_on", ascending: true },
+  name_asc: { column: "description", ascending: true },
+  name_desc: { column: "description", ascending: false },
+  amount_desc: { column: "amount", ascending: false },
+  amount_asc: { column: "amount", ascending: true },
+};
+
 function rangeStart(range: Range): string | null {
   const now = new Date();
   if (range === "this_month") {
@@ -53,21 +80,81 @@ function rangeStart(range: Range): string | null {
   return null;
 }
 
-function statusOf(t: TransactionRecord): Status {
-  if (t.removed_at) return "retracted";
-  if (t.journal_entry_id) return "posted";
-  if (t.excluded_at) return "excluded";
-  if (t.posting_kind) return "ready";
-  return "needs";
+/**
+ * The slice of a PostgREST filter builder these helpers use. Typed by hand
+ * because supabase-js's own generics, threaded through a generic helper,
+ * send the type checker into "excessively deep" territory; every one of
+ * these methods returns the same builder, which is all the helpers rely on.
+ */
+interface Chain {
+  ilike(column: string, pattern: string): Chain;
+  gte(column: string, value: string): Chain;
+  eq(column: string, value: string): Chain;
+  is(column: string, value: null | boolean): Chain;
+  not(column: string, operator: string, value: unknown): Chain;
+  or(filters: string): Chain;
 }
 
-function hrefFor(q: string | undefined, range: Range, status: Status, sort: Sort, account?: string): string {
+interface Filters {
+  q?: string;
+  start: string | null;
+  account?: string;
+}
+
+/** Search, range and category filters — the same ones on every query so the counts and the rows agree. */
+function scoped<T>(query: T, f: Filters): T {
+  let q = query as unknown as Chain;
+  if (f.q) q = q.ilike("description", `%${f.q}%`);
+  if (f.start) q = q.gte("posted_on", f.start);
+  if (f.account) q = q.eq("account_id", f.account);
+  return q as unknown as T;
+}
+
+/**
+ * One status per row, decided in this order: retracted by the bank, posted,
+ * excluded, categorized ("ready"), or still needing a category. "All" hides
+ * retracted rows unless they were posted — those still need a human to undo.
+ */
+function withStatus<T>(query: T, status: Status): T {
+  const q = query as unknown as Chain;
+  const filtered = (() => {
+    switch (status) {
+      case "retracted":
+        return q.not("removed_at", "is", null);
+      case "posted":
+        return q.not("journal_entry_id", "is", null).is("removed_at", null);
+      case "excluded":
+        return q.not("excluded_at", "is", null).is("journal_entry_id", null).is("removed_at", null);
+      case "ready":
+        return q
+          .not("posting_kind", "is", null)
+          .is("excluded_at", null)
+          .is("journal_entry_id", null)
+          .is("removed_at", null);
+      case "needs":
+        return q.is("posting_kind", null).is("excluded_at", null).is("journal_entry_id", null).is("removed_at", null);
+      case "all":
+        return q.or("removed_at.is.null,journal_entry_id.not.is.null");
+    }
+  })();
+  return filtered as unknown as T;
+}
+
+function hrefFor(
+  q: string | undefined,
+  range: Range,
+  status: Status,
+  sort: Sort,
+  account?: string,
+  limit: number = DEFAULT_LIMIT,
+): string {
   const params = new URLSearchParams();
   if (q) params.set("q", q);
   if (account) params.set("account", account);
   if (range !== "all") params.set("range", range);
   if (status !== "all") params.set("status", status);
   if (sort !== "date_desc") params.set("sort", sort);
+  if (limit !== DEFAULT_LIMIT) params.set("limit", String(limit));
   const qs = params.toString();
   return `/bank-feed${qs ? `?${qs}` : ""}`;
 }
@@ -78,30 +165,26 @@ function nextSort(current: Sort, column: "date" | "name" | "amount"): Sort {
   return current === "amount_desc" ? "amount_asc" : "amount_desc";
 }
 
-function compareBySort(a: TransactionRecord, b: TransactionRecord, sort: Sort): number {
-  switch (sort) {
-    case "name_asc":
-      return a.description.localeCompare(b.description);
-    case "name_desc":
-      return b.description.localeCompare(a.description);
-    case "amount_asc":
-      return Number(a.amount) - Number(b.amount);
-    case "amount_desc":
-      return Number(b.amount) - Number(a.amount);
-    case "date_asc":
-      return a.posted_on.localeCompare(b.posted_on);
-    case "date_desc":
-    default:
-      return b.posted_on.localeCompare(a.posted_on);
-  }
-}
-
 export default async function BankFeedPage({
   searchParams,
 }: {
-  searchParams: Promise<{ q?: string; range?: string; status?: string; sort?: string; account?: string }>;
+  searchParams: Promise<{
+    q?: string;
+    range?: string;
+    status?: string;
+    sort?: string;
+    account?: string;
+    limit?: string;
+  }>;
 }) {
-  const { q, range: rangeParam, status: statusParam, sort: sortParam, account: accountParam } = await searchParams;
+  const {
+    q,
+    range: rangeParam,
+    status: statusParam,
+    sort: sortParam,
+    account: accountParam,
+    limit: limitParam,
+  } = await searchParams;
   // From the Budget page: "see the transactions behind this category".
   const account = accountParam?.trim() || undefined;
   const range: Range =
@@ -111,24 +194,31 @@ export default async function BankFeedPage({
     statusParam && statusParam in STATUS_LABEL ? (statusParam as Status) : null;
   const SORTS: Sort[] = ["date_desc", "date_asc", "name_asc", "name_desc", "amount_desc", "amount_asc"];
   const sort: Sort = sortParam && SORTS.includes(sortParam as Sort) ? (sortParam as Sort) : "date_desc";
+  const parsedLimit = Number.parseInt(limitParam ?? "", 10);
+  const limit = Number.isFinite(parsedLimit) && parsedLimit > 0 ? Math.min(parsedLimit, MAX_LIMIT) : DEFAULT_LIMIT;
 
   const supabase = await createClient();
 
-  // Two round trips to the database, no more: the association row first
-  // (the role check needs its id), then everything else at once.
+  // Two round trips to the database, no more, in the common case: the
+  // association row first (the role check needs its id), then everything
+  // else at once. A third happens only when the default status turns out
+  // to be "all" rather than "needs category".
   const { data: associations } = await supabase.from("associations").select("id").limit(1);
   const associationId = associations?.[0]?.id ?? null;
 
-  let transactionsQuery = supabase
-    .from("bank_transactions")
-    .select(
-      "id, posted_on, description, amount, pending, raw_category, posting_kind, account_id, matched_unit_id, vendor_id, journal_entry_id, excluded_at, removed_at",
-    )
-    .order("posted_on", { ascending: false })
-    .limit(500);
-  if (q) transactionsQuery = transactionsQuery.ilike("description", `%${q}%`);
-  const start = rangeStart(range);
-  if (start) transactionsQuery = transactionsQuery.gte("posted_on", start);
+  const filters: Filters = { q, start: rangeStart(range), account };
+  const countFor = (status: Status) =>
+    withStatus(scoped(supabase.from("bank_transactions").select("id", { count: "exact", head: true }), filters), status);
+  // One more than the page shows, so the page knows whether there is more.
+  const rowsFor = (status: Status) =>
+    withStatus(scoped(supabase.from("bank_transactions").select(TRANSACTION_COLUMNS), filters), status)
+      .order(ORDER[sort].column, { ascending: ORDER[sort].ascending })
+      .order("id")
+      .limit(limit + 1);
+  // The best first guess at the status to show; corrected below if needed.
+  const firstStatus: Status = explicitStatus ?? (account ? "all" : "needs");
+  const now = new Date();
+  const since45Days = new Date(now.getTime() - 45 * 86_400_000).toISOString().slice(0, 10);
 
   const [
     { data: isBoardAdminRes },
@@ -138,9 +228,17 @@ export default async function BankFeedPage({
     { data: rules },
     { data: historyRows },
     { data: connections },
+    { data: manualPaymentRows },
+    { count: needsCount },
+    { count: readyCount },
+    { count: postedCount },
+    { count: excludedCount },
+    { count: retractedCount },
+    { count: settledReadyCount },
+    { count: retractedPostedCount },
     // History persists across disconnects — a disconnected bank's
     // transactions are still in the books, so they still show here.
-    { data: transactionRows },
+    { data: firstRows },
   ] = await Promise.all([
     associationId
       ? supabase.rpc("has_role_in", { assoc: associationId, roles: ["board_admin"] })
@@ -164,13 +262,50 @@ export default async function BankFeedPage({
       .select("payee_key, direction, posting_kind, account_id, matched_unit_id, count, amount_cents_total"),
     supabase
       .from("bank_connections")
-      .select("id, institution_name, status, last_synced_at, cash_account_id")
+      .select("id, association_id, institution_name, status, last_synced_at, sync_cursor, cash_account_id")
       .order("created_at", { ascending: false }),
-    transactionsQuery,
+    // Dues recorded by hand lately ("Record a payment"): a deposit that
+    // matches one is already in the books and must not be posted twice.
+    supabase
+      .from("payments")
+      .select("unit_id, amount, received_on")
+      .in("method", ["check", "cash", "other"])
+      .not("unit_id", "is", null)
+      .gte("received_on", since45Days),
+    countFor("needs"),
+    countFor("ready"),
+    countFor("posted"),
+    countFor("excluded"),
+    countFor("retracted"),
+    countFor("ready").eq("pending", false),
+    countFor("retracted").not("journal_entry_id", "is", null),
+    rowsFor(firstStatus),
   ]);
   const canEdit = isBoardAdminRes === true;
 
   if (!connections) return <Restricted what="the bank feed" />;
+
+  const counts: Record<Status, number> = {
+    all: 0,
+    needs: needsCount ?? 0,
+    ready: readyCount ?? 0,
+    posted: postedCount ?? 0,
+    excluded: excludedCount ?? 0,
+    retracted: retractedCount ?? 0,
+  };
+  counts.all = counts.needs + counts.ready + counts.posted + counts.excluded + counts.retracted;
+  const settledReady = settledReadyCount ?? 0;
+  const retractedPosted = retractedPostedCount ?? 0;
+
+  const status: Status = explicitStatus ?? (canEdit && counts.needs > 0 && !account ? "needs" : "all");
+  const { data: rows } = status === firstStatus ? { data: firstRows } : await rowsFor(status);
+  const loaded = (rows ?? []) as TransactionRecord[];
+  const hasMore = loaded.length > limit;
+  const transactions = hasMore ? loaded.slice(0, limit) : loaded;
+  // How many rows this status holds in total; "All" leaves out retracted rows that were never posted.
+  const statusTotal = status === "all" ? counts.all - (counts.retracted - retractedPosted) : counts[status];
+  const loadMoreHref =
+    hasMore && limit < MAX_LIMIT ? hrefFor(q, range, status, sort, account, Math.min(limit * 2, MAX_LIMIT)) : null;
 
   const active = connections.filter((c) => c.status !== "disconnected");
   // Plaid is an external call; start it now and stream the parts of the
@@ -179,6 +314,32 @@ export default async function BankFeedPage({
     active.length > 0
       ? Promise.all(active.map((c) => getConnectionBalance(supabase, c.id)))
       : Promise.resolve([]);
+
+  // Auto-sync on open: a board admin shouldn't have to remember "Sync now".
+  // Runs after the response is sent, with autoPost: false — a page load is
+  // not a click, so nothing reaches the ledger from here (DECISIONS #29).
+  // Banks marked 'error' are skipped: they want a sign-in, not a retry.
+  const checking = canEdit
+    ? active.filter(
+        (c) =>
+          c.status === "active" &&
+          (!c.last_synced_at || now.getTime() - new Date(c.last_synced_at).getTime() > STALE_SYNC_MS),
+      )
+    : [];
+  if (checking.length > 0) {
+    after(async () => {
+      for (const c of checking) {
+        try {
+          const { data: token } = await supabase.rpc("get_bank_access_token", { p_connection_id: c.id });
+          if (!token) continue;
+          const result = await syncOneConnection(supabase, c, token, { autoPost: false });
+          if ("error" in result) console.warn(`Auto-sync of ${c.institution_name} failed: ${result.error}`);
+        } catch (cause) {
+          console.warn(`Auto-sync of ${c.institution_name} failed`, cause);
+        }
+      }
+    });
+  }
 
   const accountList = accounts ?? [];
   const label = (a: { code: string; name: string }) => `${a.code} ${a.name}`;
@@ -201,6 +362,7 @@ export default async function BankFeedPage({
     .map((a) => ({ id: a.id, name: a.name }));
 
   const history = buildHistoryIndex((historyRows ?? []) as PayeeHistoryRow[]);
+  const manualPayments = (manualPaymentRows ?? []) as ManualPayment[];
 
   function recommendationLabel(r: Recommendation): string {
     if (r.kind === "dues") return r.unitId ? `Dues · ${unitLabelById.get(r.unitId) ?? "unit"}` : "Dues";
@@ -212,26 +374,11 @@ export default async function BankFeedPage({
     return accountNameById.get(r.accountId ?? "") ?? KIND_LABEL[r.kind];
   }
 
-  const allTransactions = ((transactionRows ?? []) as TransactionRecord[]).filter(
-    (t) => !account || t.account_id === account,
-  );
-
-  const counts: Record<Status, number> = { all: 0, needs: 0, ready: 0, posted: 0, excluded: 0, retracted: 0 };
-  for (const t of allTransactions) {
-    counts.all += 1;
-    counts[statusOf(t)] += 1;
-  }
-  const status: Status = explicitStatus ?? (canEdit && counts.needs > 0 && !account ? "needs" : "all");
   const filtersActive = Boolean(q) || range !== "all" || Boolean(account);
-  const transactions = (
-    status === "all"
-      ? allTransactions.filter((t) => !t.removed_at || t.journal_entry_id)
-      : allTransactions.filter((t) => statusOf(t) === status)
-  ).sort((a, b) => compareBySort(a, b, sort));
 
   const transactionsWithSuggestions: SuggestedTransaction[] = transactions.map((t) => {
     if (t.posting_kind || t.journal_entry_id || t.removed_at) return { ...t, suggestion: null };
-    const r = recommend(t, history, { expense: expenseSuggestable, income: incomeSuggestable });
+    const r = recommend(t, history, { expense: expenseSuggestable, income: incomeSuggestable }, { manualPayments });
     return {
       ...t,
       suggestion: r
@@ -247,15 +394,6 @@ export default async function BankFeedPage({
     };
   });
 
-  const settledReady = allTransactions.filter(
-    (t) => statusOf(t) === "ready" && !t.pending,
-  ).length;
-  const retractedPosted = allTransactions.filter((t) => t.removed_at && t.journal_entry_id).length;
-  const duesUnits = new Set(
-    allTransactions
-      .filter((t) => t.posting_kind === "dues" && t.journal_entry_id && t.matched_unit_id)
-      .map((t) => t.matched_unit_id),
-  ).size;
   // Progress through the queue: everything the bank still stands behind,
   // minus what hasn't been given a category yet.
   const progressTotal = counts.all - counts.retracted;
@@ -264,10 +402,12 @@ export default async function BankFeedPage({
   // The finish line: a board admin opened the tab with nothing left to categorize.
   const caughtUp = canEdit && explicitStatus === null && counts.needs === 0 && counts.all > 0;
 
-  const moneyIn = allTransactions
+  // In and out across the rows on screen — exact when they are all loaded,
+  // and said to be "of the N shown" when they aren't.
+  const moneyIn = transactions
     .filter((t) => !t.removed_at && Number(t.amount) > 0)
     .reduce((s, t) => s + Number(t.amount), 0);
-  const moneyOut = allTransactions
+  const moneyOut = transactions
     .filter((t) => !t.removed_at && Number(t.amount) < 0)
     .reduce((s, t) => s + Math.abs(Number(t.amount)), 0);
 
@@ -314,11 +454,12 @@ export default async function BankFeedPage({
             active={active}
             canEdit={canEdit}
             cashAccounts={pickers.cashAccounts}
+            checkingIds={checking.map((c) => c.id)}
           />
         </Suspense>
       ) : null}
 
-      {allTransactions.length > 0 || active.length > 0 ? (
+      {counts.all > 0 || active.length > 0 ? (
         <>
           {retractedPosted > 0 ? (
             <p className="border-l-[3px] border-bad bg-bad-tint px-3 py-2 text-[13px] text-bad-text">
@@ -343,8 +484,8 @@ export default async function BankFeedPage({
               <div className="mb-4 rounded-lg border border-good-line bg-good-tint px-4 py-3">
                 <p className="text-[13px] font-medium text-good-text">Nothing waiting — you&rsquo;re caught up.</p>
                 <p className="mt-1 text-[12px] text-good-text">
-                  {counts.posted} in the books · {money(moneyIn)} in · {money(moneyOut)} out
-                  {duesUnits > 0 ? ` · dues from ${duesUnits} unit${duesUnits === 1 ? "" : "s"}` : ""}
+                  {counts.posted} in the books
+                  {hasMore ? "" : ` · ${money(moneyIn)} in · ${money(moneyOut)} out`}
                 </p>
                 {settledReady > 0 ? (
                   <p className="mt-1 text-[12px] text-good-text">
@@ -419,7 +560,7 @@ export default async function BankFeedPage({
                 </Suspense>
                 In <span className="figures text-good-text">{money(moneyIn)}</span> · Out{" "}
                 <span className="figures text-ink">{money(moneyOut)}</span>
-                {range === "all" ? "" : " in this range"}
+                {hasMore ? ` of the ${transactions.length} shown` : range === "all" ? "" : " in this range"}
               </span>
             </div>
 
@@ -484,18 +625,35 @@ export default async function BankFeedPage({
                     ? "Nothing needs a category."
                     : status !== "all"
                       ? `Nothing ${STATUS_LABEL[status].toLowerCase()} yet.`
-                      : "No transactions synced yet. Click “Sync now” above."}
+                      : checking.length > 0
+                        ? "Checking the bank for transactions now — refresh in a moment."
+                        : "No transactions synced yet. Click “Sync now” above."}
               </Empty>
             ) : (
-              <TransactionsTable
-                transactions={transactionsWithSuggestions}
-                pickers={pickers}
-                canEdit={canEdit}
-                sort={sort}
-                dateHref={hrefFor(q, range, status, nextSort(sort, "date"), account)}
-                nameHref={hrefFor(q, range, status, nextSort(sort, "name"), account)}
-                amountHref={hrefFor(q, range, status, nextSort(sort, "amount"), account)}
-              />
+              <>
+                <TransactionsTable
+                  transactions={transactionsWithSuggestions}
+                  pickers={pickers}
+                  canEdit={canEdit}
+                  sort={sort}
+                  dateHref={hrefFor(q, range, status, nextSort(sort, "date"), account, limit)}
+                  nameHref={hrefFor(q, range, status, nextSort(sort, "name"), account, limit)}
+                  amountHref={hrefFor(q, range, status, nextSort(sort, "amount"), account, limit)}
+                />
+                {hasMore ? (
+                  <p className="mt-3 text-[12px] text-mute">
+                    Showing <span className="figures text-ink">{transactions.length}</span> of{" "}
+                    <span className="figures">{statusTotal}</span>.{" "}
+                    {loadMoreHref ? (
+                      <Link href={loadMoreHref} className="font-medium text-ink underline-offset-2 hover:underline">
+                        Load earlier
+                      </Link>
+                    ) : (
+                      "Narrow the range or search to see the rest."
+                    )}
+                  </p>
+                ) : null}
+              </>
             )}
           </Card>
 
@@ -503,7 +661,7 @@ export default async function BankFeedPage({
             <Card
               navy
               title="Rules"
-              hint="Saved from “Remember this”. Applied to new transactions as they sync."
+              hint="Applied to new transactions as they sync. Transfers and “Not for the books” are remembered on their own."
             >
               <RulesList rules={ruleRecords} canEdit={canEdit} />
             </Card>

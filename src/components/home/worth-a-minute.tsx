@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { Scale, Hourglass, Users, Shield, Landmark, BarChart3, type LucideIcon } from "lucide-react";
+import { Scale, Hourglass, Users, Shield, Landmark, RefreshCw, BarChart3, type LucideIcon } from "lucide-react";
 import type { UrgentItem } from "@/lib/home/urgent-items";
 
 const ICONS: Record<UrgentItem["key"], LucideIcon> = {
@@ -8,6 +8,7 @@ const ICONS: Record<UrgentItem["key"], LucideIcon> = {
   w9: Users,
   insurance: Shield,
   bank: Landmark,
+  sync: RefreshCw,
   budget: BarChart3,
 };
 

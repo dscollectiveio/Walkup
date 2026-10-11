@@ -4,7 +4,7 @@ import { useCallback, useEffect, useState } from "react";
 import { usePlaidLink, type PlaidLinkOnSuccessMetadata } from "react-plaid-link";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
-import { connectBank } from "../actions";
+import { connectBank, reconnectBank } from "../actions";
 import { takeLinkTokenForOAuth } from "../oauth-link-token";
 
 /**
@@ -17,19 +17,19 @@ import { takeLinkTokenForOAuth } from "../oauth-link-token";
  * itself — usePlaidLink handles it via receivedRedirectUri.
  */
 export default function BankFeedOAuthPage() {
-  const [linkToken, setLinkToken] = useState<string | null | undefined>(undefined);
+  const [stash, setStash] = useState<ReturnType<typeof takeLinkTokenForOAuth> | undefined>(undefined);
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
     // Wrapped in a resolved promise, matching the pattern already used in
     // connect-bank-button.tsx — reading localStorage only client-side, but
     // without setState synchronously inside the effect body.
-    Promise.resolve().then(() => setLinkToken(takeLinkTokenForOAuth()));
+    Promise.resolve().then(() => setStash(takeLinkTokenForOAuth()));
   }, []);
 
-  if (linkToken === undefined) return null;
+  if (stash === undefined) return null;
 
-  if (!linkToken) {
+  if (!stash) {
     return (
       <div className="space-y-3">
         <p className="text-[13px] text-ink">
@@ -43,15 +43,25 @@ export default function BankFeedOAuthPage() {
     );
   }
 
-  return <ResumeLink linkToken={linkToken} error={error} onError={setError} />;
+  return (
+    <ResumeLink
+      linkToken={stash.linkToken}
+      reconnectConnectionId={stash.reconnectConnectionId}
+      error={error}
+      onError={setError}
+    />
+  );
 }
 
 function ResumeLink({
   linkToken,
+  reconnectConnectionId,
   error,
   onError,
 }: {
   linkToken: string;
+  /** Set when this round trip was Link's update mode for an existing connection. */
+  reconnectConnectionId: string | null;
   error: string | null;
   onError: (message: string) => void;
 }) {
@@ -60,14 +70,15 @@ function ResumeLink({
   const onSuccess = useCallback(
     async (publicToken: string | null, metadata: PlaidLinkOnSuccessMetadata) => {
       if (!publicToken) return;
-      const result = await connectBank(
-        publicToken,
-        metadata.institution?.name ?? "Connected account",
-      );
+      // Update mode repairs the connection that already exists; exchanging
+      // its public token would create a second one.
+      const result = reconnectConnectionId
+        ? await reconnectBank(reconnectConnectionId)
+        : await connectBank(publicToken, metadata.institution?.name ?? "Connected account");
       if (result.error) onError(result.error);
       else router.replace("/bank-feed");
     },
-    [router, onError],
+    [router, onError, reconnectConnectionId],
   );
 
   const { open, ready } = usePlaidLink({

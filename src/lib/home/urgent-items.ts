@@ -9,7 +9,7 @@
 // them lie.
 
 export interface UrgentItem {
-  key: "books" | "delinquent" | "w9" | "insurance" | "bank" | "budget";
+  key: "books" | "delinquent" | "w9" | "insurance" | "bank" | "sync" | "budget";
   severity: number; // lower sorts first
   title: string;
   why: string;
@@ -31,6 +31,8 @@ interface UrgentInputs {
   nec1099Due: Date;
   insuranceExpiry: Date | null; // soonest active policy end
   bankConnected: boolean;
+  /** Most recent successful sync across the connected banks; null when none has synced. */
+  lastSyncedAt?: string | null;
   today: Date;
   /** Categories more than 10% over their share of the budget so far this year, biggest first. */
   budgetOver?: { name: string; overCents: number }[];
@@ -122,6 +124,20 @@ export function urgentItems(input: UrgentInputs): UrgentItem[] {
       action: { label: "Connect the bank", href: "/bank-feed" },
       tone: "warning",
     });
+  } else if (input.lastSyncedAt) {
+    // A bank that stops syncing usually wants someone to sign in again.
+    // Three days covers a weekend plus the daily sync missing once.
+    const staleDays = Math.floor((input.today.getTime() - new Date(input.lastSyncedAt).getTime()) / 86400000);
+    if (staleDays > 3) {
+      items.push({
+        key: "sync",
+        severity: 2,
+        title: `The bank hasn't synced in ${staleDays} days`,
+        why: "New transactions aren't reaching the books. Opening the bank feed checks the connection; if the bank wants you to sign in again, a Reconnect button is there.",
+        action: { label: "Open the bank feed", href: "/bank-feed" },
+        tone: "warning",
+      });
+    }
   }
 
   // Cap at the three highest-priority. The count chip equals what renders.

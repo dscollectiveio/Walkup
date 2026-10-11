@@ -82,6 +82,47 @@ describe("recommend", () => {
     });
   });
 
+  describe("duplicate guard", () => {
+    const history = buildHistoryIndex([
+      filed("zelle j smith", 1, { posting_kind: "dues", account_id: null, matched_unit_id: "u2b" }, 3, 45000),
+    ]);
+    const deposit = { description: "ZELLE J SMITH", amount: "450.00", posted_on: "2026-10-06" };
+
+    it("keeps a deposit out of the books when the same dues were already recorded by hand", () => {
+      const r = recommend(deposit, history, accounts, {
+        manualPayments: [{ unit_id: "u2b", amount: 450, received_on: "2026-10-03" }],
+      });
+      expect(r).toMatchObject({ kind: "excluded", source: "duplicate", needsPick: false, unitId: null });
+      expect(r?.reason).toBe("looks like the $450 you recorded by hand on Oct 3 — already in the books");
+    });
+
+    it("picks the closest payment and keeps the cents when they matter", () => {
+      const r = recommend({ ...deposit, amount: 450.5 }, history, accounts, {
+        manualPayments: [
+          { unit_id: "u2b", amount: "450.50", received_on: "2026-09-28" },
+          { unit_id: "u2b", amount: "450.50", received_on: "2026-10-07" },
+        ],
+      });
+      expect(r?.reason).toContain("$450.50 you recorded by hand on Oct 7");
+    });
+
+    it("still recommends dues when the hand-recorded payment is another unit's, another amount, or too far away", () => {
+      const cases = [
+        { unit_id: "u1a", amount: 450, received_on: "2026-10-03" },
+        { unit_id: "u2b", amount: 400, received_on: "2026-10-03" },
+        { unit_id: "u2b", amount: 450, received_on: "2026-09-20" },
+      ];
+      for (const p of cases) {
+        expect(recommend(deposit, history, accounts, { manualPayments: [p] })).toMatchObject({
+          kind: "dues",
+          unitId: "u2b",
+          source: "history",
+        });
+      }
+      expect(recommend(deposit, history, accounts)).toMatchObject({ kind: "dues", source: "history" });
+    });
+  });
+
   it("recommends nothing when it has nothing to go on", () => {
     expect(recommend({ description: "XQZ 99", amount: -12 }, new Map(), accounts)).toBeNull();
   });

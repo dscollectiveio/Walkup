@@ -4,6 +4,8 @@ import { revalidatePath } from "next/cache";
 import { createClient } from "@/lib/supabase/server";
 import { plaidClient, describePlaidError } from "@/lib/plaid";
 import { syncOneConnection } from "@/lib/plaid/sync";
+import { matchRule, type CategorizationRule } from "@/lib/plaid/dedupe";
+import { isMatchableDescription, normalizeDescription } from "@/lib/plaid/similar";
 import { CountryCode, Products } from "plaid";
 
 async function currentAssociationId(): Promise<string | null> {
@@ -47,6 +49,61 @@ export async function createLinkToken(): Promise<{ linkToken?: string; error?: s
   } catch (cause) {
     return { error: describePlaidError(cause) };
   }
+}
+
+/**
+ * A Link token for update mode: the bank wants the person to sign in again
+ * (ITEM_LOGIN_REQUIRED and friends). Plaid takes the existing access token
+ * and no products — Link only redoes the sign-in; the Item, its ID and its
+ * transaction history stay the same, so nothing is re-imported.
+ */
+export async function createUpdateLinkToken(
+  connectionId: string,
+): Promise<{ linkToken?: string; error?: string }> {
+  const associationId = await currentAssociationId();
+  if (!associationId) return { error: "No association is visible to you." };
+
+  const supabase = await createClient();
+  const { data: accessToken, error: tokenError } = await supabase.rpc("get_bank_access_token", {
+    p_connection_id: connectionId,
+  });
+  if (tokenError || !accessToken) return { error: tokenError?.message ?? "No access token on file." };
+
+  try {
+    const response = await plaidClient().linkTokenCreate({
+      user: { client_user_id: associationId },
+      client_name: "Walkup",
+      country_codes: [CountryCode.Us],
+      language: "en",
+      access_token: accessToken,
+      ...(process.env.PLAID_REDIRECT_URI
+        ? { redirect_uri: process.env.PLAID_REDIRECT_URI }
+        : {}),
+    });
+    return { linkToken: response.data.link_token };
+  } catch (cause) {
+    return { error: describePlaidError(cause) };
+  }
+}
+
+/**
+ * After Link's update mode succeeds: the login is repaired, so mark the
+ * connection active again and pull whatever the bank held back meanwhile.
+ * Same sync as the "Sync now" button — a board member's own click.
+ */
+export async function reconnectBank(
+  connectionId: string,
+): Promise<{ ok?: true; count?: number; posted?: number; warning?: string; error?: string }> {
+  const supabase = await createClient();
+  const { data, error } = await supabase
+    .from("bank_connections")
+    .update({ status: "active" })
+    .eq("id", connectionId)
+    .neq("status", "disconnected")
+    .select("id");
+  if (error) return { error: error.message };
+  if (!data || data.length === 0) return { error: "Only a board admin can reconnect a bank." };
+  return syncBankTransactions(connectionId);
 }
 
 /**
@@ -247,7 +304,15 @@ async function postBatch(
  */
 export async function syncBankTransactions(
   connectionId: string,
-): Promise<{ ok?: true; count?: number; posted?: number; warning?: string; error?: string }> {
+): Promise<{
+  ok?: true;
+  count?: number;
+  posted?: number;
+  warning?: string;
+  error?: string;
+  /** The bank wants a fresh sign-in; the fix is the Reconnect button, not a retry. */
+  needsReconnect?: boolean;
+}> {
   const supabase = await createClient();
 
   const { data: connectionRows, error: connectionError } = await supabase
@@ -267,7 +332,10 @@ export async function syncBankTransactions(
   if (tokenError) return { error: tokenError.message };
 
   const result = await syncOneConnection(supabase, connection, accessToken, { autoPost: true });
-  if ("error" in result) return { error: result.error };
+  if ("error" in result) {
+    if (result.needsReconnect) revalidatePath("/bank-feed");
+    return { error: result.error, needsReconnect: result.needsReconnect };
+  }
 
   revalidateLedgerPages();
   return {
@@ -282,13 +350,166 @@ export type PostingKind = "expense" | "income" | "dues" | "transfer" | "excluded
 
 const POSTING_KINDS: PostingKind[] = ["expense", "income", "dues", "transfer", "excluded"];
 
+type Supabase = Awaited<ReturnType<typeof createClient>>;
+
+interface Categorization {
+  posting_kind: PostingKind;
+  account_id: string | null;
+  matched_unit_id: string | null;
+  vendor_id: string | null;
+}
+
+/** The columns bank_transactions gets from a (kind, account, unit, vendor) choice. */
+function categorizationOf(item: {
+  kind: PostingKind;
+  accountId: string | null;
+  unitId: string | null;
+  vendorId: string | null;
+}): Categorization {
+  return {
+    posting_kind: item.kind,
+    account_id: ["expense", "income", "transfer"].includes(item.kind) ? item.accountId : null,
+    matched_unit_id: item.kind === "dues" ? item.unitId : null,
+    vendor_id: item.kind === "expense" ? item.vendorId : null,
+  };
+}
+
+/** Plain-words reason a choice can't be saved, or null when it can. */
+function invalidChoice(item: { kind: PostingKind; accountId: string | null; unitId: string | null }): string | null {
+  if (!POSTING_KINDS.includes(item.kind)) return "Choose how this should be recorded.";
+  if (["expense", "income", "transfer"].includes(item.kind) && !item.accountId) return "Choose an account.";
+  if (item.kind === "dues" && !item.unitId) return "Choose the unit this is dues for.";
+  return null;
+}
+
 /**
- * Records how a bank transaction should hit the books, optionally remembers
- * that as a rule for future rows with the same description, and optionally
- * posts it right now. The categorization itself is a board_admin UPDATE
+ * Transfers and "Not for the books" are never judgement calls twice: a move
+ * to the association's own savings is always a transfer, and a payee the
+ * board has said to keep out of the books stays out. So the first time a
+ * person files one, remember it as a rule for that exact description — no
+ * checkbox to find, nothing to ask. auto_post stays false: the rule pre-fills
+ * the next matching row and a person still posts it. A rule that already
+ * exists for the description is left exactly as it is.
+ */
+async function rememberObviousRules(
+  supabase: Supabase,
+  rows: { association_id: string; description: string }[],
+  categorization: Categorization,
+): Promise<void> {
+  if (categorization.posting_kind !== "transfer" && categorization.posting_kind !== "excluded") return;
+  const seen = new Set<string>();
+  const rules = [];
+  for (const r of rows) {
+    const pattern = r.description.trim();
+    const key = `${r.association_id}:${pattern}`;
+    if (pattern.length < 3 || seen.has(key)) continue;
+    seen.add(key);
+    rules.push({ association_id: r.association_id, pattern, ...categorization, auto_post: false });
+  }
+  if (rules.length === 0) return;
+  const { error } = await supabase
+    .from("bank_categorization_rules")
+    .upsert(rules, { onConflict: "association_id,pattern", ignoreDuplicates: true });
+  // The categorization itself already saved; a rule that didn't is a lost
+  // convenience, not an error worth stopping the person for.
+  if (error) console.warn("bank_categorization_rules upsert failed", error.message);
+}
+
+/**
+ * After an expense, income or dues choice: is this at least the second time
+ * the board has filed this payee this way, with no rule yet? Then the client
+ * can ask "Always file X as Y?" — one click instead of a checkbox nobody
+ * finds. Reads the trigger-kept tally (0046), which already includes the row
+ * just filed, so "second time" is count >= 2.
+ */
+async function suggestRule(
+  supabase: Supabase,
+  row: { association_id: string; description: string; amount: string | number },
+  c: Categorization,
+): Promise<{ pattern: string; label: string } | null> {
+  if (!["expense", "income", "dues"].includes(c.posting_kind)) return null;
+  const pattern = row.description.trim();
+  const payeeKey = normalizeDescription(row.description);
+  const direction = Math.sign(Number(row.amount));
+  if (pattern.length < 3 || !isMatchableDescription(payeeKey) || direction === 0) return null;
+
+  const tallyQuery = supabase
+    .from("bank_payee_history")
+    .select("count")
+    .eq("association_id", row.association_id)
+    .eq("payee_key", payeeKey)
+    .eq("direction", direction)
+    .eq("posting_kind", c.posting_kind);
+  const labelQuery =
+    c.posting_kind === "dues"
+      ? supabase
+          .from("units")
+          .select("label")
+          .eq("id", c.matched_unit_id)
+          .limit(1)
+          .then(({ data }) => (data?.[0]?.label as string | undefined) ?? null)
+      : supabase
+          .from("accounts")
+          .select("name")
+          .eq("id", c.account_id)
+          .limit(1)
+          .then(({ data }) => (data?.[0]?.name as string | undefined) ?? null);
+  const [{ data: tally }, { data: rules }, label] = await Promise.all([
+    (c.posting_kind === "dues"
+      ? tallyQuery.eq("matched_unit_id", c.matched_unit_id)
+      : tallyQuery.eq("account_id", c.account_id)
+    ).limit(1),
+    supabase
+      .from("bank_categorization_rules")
+      .select("id, pattern, posting_kind, account_id, matched_unit_id, vendor_id, auto_post")
+      .eq("association_id", row.association_id),
+    labelQuery,
+  ]);
+
+  if (Number(tally?.[0]?.count ?? 0) < 2 || !label) return null;
+  if (matchRule(row.description, (rules ?? []) as CategorizationRule[])) return null;
+  return { pattern, label };
+}
+
+/**
+ * Saves "description contains pattern ⇒ this choice" for future syncs. The
+ * table's RLS makes this board_admin-only. Never auto-posts: a rule
+ * pre-fills, a person posts (DECISIONS #29).
+ */
+export async function saveCategorizationRule(input: {
+  pattern: string;
+  kind: PostingKind;
+  accountId: string | null;
+  unitId: string | null;
+  vendorId: string | null;
+}): Promise<{ ok?: true; error?: string }> {
+  const pattern = input.pattern.trim();
+  if (pattern.length < 3) return { error: "The description is too short to make a rule from." };
+  const invalid = invalidChoice(input);
+  if (invalid) return { error: invalid };
+
+  const associationId = await currentAssociationId();
+  if (!associationId) return { error: "No association is visible to you." };
+
+  const supabase = await createClient();
+  const { error } = await supabase
+    .from("bank_categorization_rules")
+    .upsert(
+      { association_id: associationId, pattern, ...categorizationOf(input), auto_post: false },
+      { onConflict: "association_id,pattern" },
+    );
+  if (error) return { error: error.message };
+  revalidatePath("/bank-feed");
+  return { ok: true };
+}
+
+/**
+ * Records how a bank transaction should hit the books and optionally posts
+ * it right now. The categorization itself is a board_admin UPDATE
  * (bank_transactions_update, 0016); the posting is post_bank_transaction()
  * (0036), which does its own checks and is the only thing that ever sets
- * journal_entry_id.
+ * journal_entry_id. Transfers and "Not for the books" become rules on their
+ * own; for the rest, `ruleSuggestion` says when it's worth asking.
  */
 export async function categorizeBankTransaction(input: {
   transactionId: string;
@@ -296,51 +517,35 @@ export async function categorizeBankTransaction(input: {
   accountId: string | null;
   unitId: string | null;
   vendorId: string | null;
-  saveRule: boolean;
-  autoPostRule: boolean;
   postNow: boolean;
-}): Promise<{ ok?: true; posted?: boolean; error?: string }> {
-  if (!POSTING_KINDS.includes(input.kind)) return { error: "Choose how this should be recorded." };
-  if (["expense", "income", "transfer"].includes(input.kind) && !input.accountId) {
-    return { error: "Choose an account." };
-  }
-  if (input.kind === "dues" && !input.unitId) return { error: "Choose the unit this is dues for." };
+}): Promise<{
+  ok?: true;
+  posted?: boolean;
+  /** Set when this is at least the second time the payee was filed this way and no rule exists yet. */
+  ruleSuggestion?: { pattern: string; label: string };
+  error?: string;
+}> {
+  const invalid = invalidChoice(input);
+  if (invalid) return { error: invalid };
 
   const supabase = await createClient();
-
-  const categorization = {
-    posting_kind: input.kind,
-    account_id: ["expense", "income", "transfer"].includes(input.kind) ? input.accountId : null,
-    matched_unit_id: input.kind === "dues" ? input.unitId : null,
-    vendor_id: input.kind === "expense" ? input.vendorId : null,
-  };
+  const categorization = categorizationOf(input);
 
   const { data, error } = await supabase
     .from("bank_transactions")
     .update(categorization)
     .eq("id", input.transactionId)
     .is("journal_entry_id", null)
-    .select("id, association_id, description");
+    .select("id, association_id, description, amount");
 
   if (error) return { error: error.message };
   const row = data?.[0];
   if (!row) return { error: "Only a board admin can categorize a transaction, and it can't already be posted." };
 
-  if (input.saveRule) {
-    const pattern = row.description.trim();
-    if (pattern.length >= 3) {
-      const { error: ruleError } = await supabase.from("bank_categorization_rules").upsert(
-        {
-          association_id: row.association_id,
-          pattern,
-          ...categorization,
-          auto_post: input.autoPostRule,
-        },
-        { onConflict: "association_id,pattern" },
-      );
-      if (ruleError) return { error: `Categorized, but the rule couldn't be saved: ${ruleError.message}` };
-    }
-  }
+  const [ruleSuggestion] = await Promise.all([
+    suggestRule(supabase, row, categorization),
+    rememberObviousRules(supabase, [row], categorization),
+  ]);
 
   let posted = false;
   if (input.postNow) {
@@ -352,7 +557,7 @@ export async function categorizeBankTransaction(input: {
   }
 
   revalidateLedgerPages();
-  return { ok: true, posted };
+  return { ok: true, posted, ...(ruleSuggestion ? { ruleSuggestion } : {}) };
 }
 
 /**
@@ -372,32 +577,25 @@ export async function categorizeBankTransactionsBulk(input: {
   postNow: boolean;
 }): Promise<{ ok?: true; posted?: number; errors?: string[]; error?: string }> {
   if (input.transactionIds.length === 0) return { error: "Nothing selected." };
-  if (!POSTING_KINDS.includes(input.kind)) return { error: "Choose how these should be recorded." };
-  if (["expense", "income", "transfer"].includes(input.kind) && !input.accountId) {
-    return { error: "Choose an account." };
-  }
-  if (input.kind === "dues" && !input.unitId) return { error: "Choose the unit this is dues for." };
+  const invalid = invalidChoice(input);
+  if (invalid) return { error: invalid };
 
   const supabase = await createClient();
-
-  const categorization = {
-    posting_kind: input.kind,
-    account_id: ["expense", "income", "transfer"].includes(input.kind) ? input.accountId : null,
-    matched_unit_id: input.kind === "dues" ? input.unitId : null,
-    vendor_id: input.kind === "expense" ? input.vendorId : null,
-  };
+  const categorization = categorizationOf(input);
 
   const { data, error } = await supabase
     .from("bank_transactions")
     .update(categorization)
     .in("id", input.transactionIds)
     .is("journal_entry_id", null)
-    .select("id, description");
+    .select("id, association_id, description");
 
   if (error) return { error: error.message };
   if (!data || data.length === 0) {
     return { error: "None of those could be categorized — only a board admin can, and none can already be posted." };
   }
+
+  await rememberObviousRules(supabase, data, categorization);
 
   const { done: posted, errors } = input.postNow
     ? await postBatch(supabase, "post_bank_transactions", data)
@@ -429,33 +627,25 @@ export async function applyCategorizations(input: {
   if (input.items.length === 0) return { error: "Nothing to apply." };
   const supabase = await createClient();
 
-  const applied: { id: string; description: string }[] = [];
+  const applied: { id: string; association_id: string; description: string }[] = [];
   const errors: string[] = [];
+  // Rows filed as a transfer or "Not for the books", grouped by the exact
+  // choice, so each becomes one rule upsert rather than one per row.
+  const obvious = new Map<string, { categorization: Categorization; rows: typeof applied }>();
 
   for (const item of input.items) {
-    if (!POSTING_KINDS.includes(item.kind)) {
-      errors.push("Unknown category.");
+    const invalid = invalidChoice(item);
+    if (invalid) {
+      errors.push(invalid);
       continue;
     }
-    if (["expense", "income", "transfer"].includes(item.kind) && !item.accountId) {
-      errors.push("A row is missing its account.");
-      continue;
-    }
-    if (item.kind === "dues" && !item.unitId) {
-      errors.push("A dues row is missing its unit.");
-      continue;
-    }
+    const categorization = categorizationOf(item);
     const { data, error } = await supabase
       .from("bank_transactions")
-      .update({
-        posting_kind: item.kind,
-        account_id: ["expense", "income", "transfer"].includes(item.kind) ? item.accountId : null,
-        matched_unit_id: item.kind === "dues" ? item.unitId : null,
-        vendor_id: item.kind === "expense" ? item.vendorId : null,
-      })
+      .update(categorization)
       .eq("id", item.id)
       .is("journal_entry_id", null)
-      .select("id, description");
+      .select("id, association_id, description");
     if (error) {
       errors.push(error.message);
       continue;
@@ -466,6 +656,16 @@ export async function applyCategorizations(input: {
       continue;
     }
     applied.push(row);
+    if (item.kind === "transfer" || item.kind === "excluded") {
+      const key = JSON.stringify(categorization);
+      const group = obvious.get(key) ?? { categorization, rows: [] };
+      group.rows.push(row);
+      obvious.set(key, group);
+    }
+  }
+
+  for (const group of obvious.values()) {
+    await rememberObviousRules(supabase, group.rows, group.categorization);
   }
 
   const { done: posted, errors: postErrors } = input.postNow

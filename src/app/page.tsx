@@ -239,7 +239,16 @@ export default async function HomePage() {
     vendorsMissingW9,
     nec1099Due: nextOccurrence(1, 31, today),
     insuranceExpiry: soonestExpiry ?? null,
-    bankConnected: (bankConnections ?? []).some((c) => c.status === "active"),
+    // 'error' is a bank waiting for a fresh sign-in — connected, just stale;
+    // the sync nudge below covers it rather than "not connected yet".
+    bankConnected: (bankConnections ?? []).some((c) => c.status !== "disconnected"),
+    lastSyncedAt:
+      (bankConnections ?? [])
+        .filter((c) => c.status !== "disconnected")
+        .map((c) => c.last_synced_at as string | null)
+        .filter((d): d is string => Boolean(d))
+        .sort()
+        .at(-1) ?? null,
     today,
     budgetOver,
   });

@@ -70,8 +70,6 @@ export async function categorizeAsExpense(transactionId: string, accountId: stri
     accountId,
     unitId: null,
     vendorId: null,
-    saveRule: false,
-    autoPostRule: false,
     postNow: true,
   });
   revalidatePath("/budget");

@@ -182,8 +182,6 @@ function CategorizeForm({
   const [unitId, setUnitId] = useState(t.matched_unit_id ?? (prefillKind ? (prefill?.unitId ?? "") : ""));
   const [vendorId, setVendorId] = useState(t.vendor_id ?? "");
   const [applyToSimilar, setApplyToSimilar] = useState(true);
-  const [saveRule, setSaveRule] = useState(false);
-  const [autoPostRule, setAutoPostRule] = useState(false);
   const [pending, start] = useTransition();
   const [error, setError] = useState<string | null>(null);
 
@@ -211,8 +209,6 @@ function CategorizeForm({
       const result = await categorizeBankTransaction({
         transactionId: t.id,
         ...item,
-        saveRule,
-        autoPostRule: saveRule && autoPostRule,
         postNow,
       });
       if (result.error) {
@@ -307,8 +303,8 @@ function CategorizeForm({
         ) : null}
       </div>
 
-      <div className="flex flex-wrap items-center gap-x-4 gap-y-1 text-[11px] text-ink">
-        {similar.length > 0 ? (
+      {similar.length > 0 ? (
+        <div className="flex flex-wrap items-center gap-x-4 gap-y-1 text-[11px] text-ink">
           <label className="flex items-center gap-1.5">
             <input
               type="checkbox"
@@ -318,22 +314,8 @@ function CategorizeForm({
             Also file the {similar.length} other “{t.description.trim()}” transaction
             {similar.length === 1 ? "" : "s"} the same way
           </label>
-        ) : null}
-        <label className="flex items-center gap-1.5">
-          <input type="checkbox" checked={saveRule} onChange={(e) => setSaveRule(e.target.checked)} />
-          Remember this for “{t.description.trim()}”
-        </label>
-        {saveRule ? (
-          <label className="flex items-center gap-1.5">
-            <input
-              type="checkbox"
-              checked={autoPostRule}
-              onChange={(e) => setAutoPostRule(e.target.checked)}
-            />
-            and post matches automatically on sync
-          </label>
-        ) : null}
-      </div>
+        </div>
+      ) : null}
 
       <div className="flex flex-wrap items-center gap-2">
         <button

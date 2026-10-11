@@ -7,6 +7,11 @@ vi.mock("@/lib/plaid", () => ({
   plaidClient: vi.fn(),
   describePlaidError: () => "",
   isProductNotEnabled: () => false,
+  isLoginRequired: () => false,
+}));
+vi.mock("@/app/bank-feed/reconnect-button", () => ({
+  ReconnectButton: ({ institutionName }: { institutionName: string }) =>
+    createElement("button", null, `Reconnect ${institutionName}`),
 }));
 vi.mock("@/app/bank-feed/sync-button", () => ({ SyncButton: () => createElement("button", null, "Sync now") }));
 vi.mock("@/app/bank-feed/disconnect-button", () => ({ DisconnectButton: () => createElement("button", null, "Disconnect") }));
@@ -27,7 +32,7 @@ const balances: ConnectionBalance[] = [
     ],
   },
 ];
-const active = [{ id: "c1", institution_name: "Chase", last_synced_at: null, cash_account_id: "x" }];
+const active = [{ id: "c1", institution_name: "Chase", status: "active", last_synced_at: null, cash_account_id: "x" }];
 
 async function render() {
   const el = await BankAccountsSection({
@@ -61,5 +66,28 @@ describe("Bank accounts section", () => {
   it("the inline strip figure matches the headline total", async () => {
     const el = await BankBalanceInline({ promise: Promise.resolve(balances) });
     expect(renderToStaticMarkup(el as never)).toContain("$320.00");
+  });
+
+  it("offers Reconnect, not an error, when the bank wants a fresh sign-in", async () => {
+    const el = await BankAccountsSection({
+      balancesPromise: Promise.resolve([{ connectionId: "c1", accounts: [], needsReconnect: true }]),
+      active,
+      canEdit: true,
+      cashAccounts: [],
+    });
+    const html = renderToStaticMarkup(el);
+    expect(html).toContain("Reconnect Chase");
+    expect(html).toContain("sign in again");
+  });
+
+  it("says when the page is checking the bank on its own", async () => {
+    const el = await BankAccountsSection({
+      balancesPromise: Promise.resolve(balances),
+      active,
+      canEdit: true,
+      cashAccounts: [],
+      checkingIds: ["c1"],
+    });
+    expect(renderToStaticMarkup(el)).toContain("Checking the bank for new transactions");
   });
 });

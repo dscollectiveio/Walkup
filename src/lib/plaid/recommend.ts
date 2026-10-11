@@ -21,10 +21,23 @@ export interface Recommendation {
   kind: PostingKind;
   accountId: string | null;
   unitId: string | null;
-  source: "history" | "keyword";
+  /** "duplicate": the deposit matches a payment someone already recorded by hand on Dues. */
+  source: "history" | "keyword" | "duplicate";
   /** Plain words for the line under the chip. */
   reason: string;
   needsPick: boolean;
+}
+
+/**
+ * A payment recorded by hand on the Dues page ("Record a payment") — check,
+ * cash or other, never a bank-feed posting. If a deposit in the feed is the
+ * same money, posting it would count the dues twice.
+ */
+export interface ManualPayment {
+  unit_id: string;
+  amount: string | number;
+  /** ISO date. */
+  received_on: string;
 }
 
 /**
@@ -108,10 +121,51 @@ export function typicalAmountCents(
 
 const times = (n: number) => (n === 1 ? "once" : n === 2 ? "twice" : `${n} times`);
 
+const MONTHS = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
+const dayNumber = (iso: string) => Math.round(new Date(`${iso.slice(0, 10)}T00:00:00Z`).getTime() / 86_400_000);
+const cents = (v: string | number) => Math.round(Number(v) * 100);
+const dollars = (c: number) =>
+  new Intl.NumberFormat("en-US", {
+    style: "currency",
+    currency: "USD",
+    maximumFractionDigits: c % 100 === 0 ? 0 : 2,
+  }).format(c / 100);
+
+/** How far apart a bank deposit and a hand-recorded payment may land and still be the same money. */
+const DUPLICATE_WINDOW_DAYS = 10;
+
+/**
+ * The hand-recorded payment this deposit most likely IS: same unit, same
+ * amount, received within ten days either side. A check written on the 1st,
+ * recorded on Dues the same day and clearing at the bank on the 6th is the
+ * common case; the window is wide enough for a slow deposit, narrow enough
+ * that next month's identical dues don't match.
+ */
+function manualTwin(
+  t: { amount: string | number; posted_on: string },
+  unitId: string,
+  payments: ManualPayment[],
+): ManualPayment | null {
+  const want = cents(t.amount);
+  const day = dayNumber(t.posted_on);
+  let best: ManualPayment | null = null;
+  let bestGap = Infinity;
+  for (const p of payments) {
+    if (p.unit_id !== unitId || cents(p.amount) !== want) continue;
+    const gap = Math.abs(dayNumber(p.received_on) - day);
+    if (gap <= DUPLICATE_WINDOW_DAYS && gap < bestGap) {
+      best = p;
+      bestGap = gap;
+    }
+  }
+  return best;
+}
+
 export function recommend(
-  t: { description: string; amount: string | number },
+  t: { description: string; amount: string | number; posted_on?: string },
   history: HistoryIndex,
   accounts: { expense: SuggestableAccount[]; income: SuggestableAccount[] },
+  extras: { manualPayments?: ManualPayment[] } = {},
 ): Recommendation | null {
   const amount = Number(t.amount);
   const key = payeeKey(t.description, amount);
@@ -120,6 +174,24 @@ export function recommend(
     const needsPick =
       (past.kind === "dues" && !past.unitId) ||
       (["expense", "income", "transfer"].includes(past.kind) && !past.accountId);
+    // Duplicate guard: the board already recorded this money by hand on
+    // Dues. Recommend keeping it out of the books rather than posting the
+    // same dues twice. A distinct source so the UI can say so plainly.
+    const twin =
+      past.kind === "dues" && past.unitId && amount > 0 && t.posted_on && extras.manualPayments?.length
+        ? manualTwin({ amount: t.amount, posted_on: t.posted_on }, past.unitId, extras.manualPayments)
+        : null;
+    if (twin) {
+      const [, m, d] = twin.received_on.slice(0, 10).split("-").map(Number);
+      return {
+        kind: "excluded",
+        accountId: null,
+        unitId: null,
+        source: "duplicate",
+        reason: `looks like the ${dollars(cents(twin.amount))} you recorded by hand on ${MONTHS[m - 1]} ${d} — already in the books`,
+        needsPick: false,
+      };
+    }
     return {
       kind: past.kind,
       accountId: past.accountId,
