@@ -2,7 +2,7 @@ import Link from "next/link";
 import { createClient } from "@/lib/supabase/server";
 import { Card, Empty, Restricted, money } from "@/components/ui";
 import { syncedAgo } from "@/lib/dates";
-import { plaidClient, describePlaidError } from "@/lib/plaid";
+import { plaidClient, describePlaidError, isProductNotEnabled } from "@/lib/plaid";
 import { ConnectBankButton } from "./connect-bank-button";
 import { TransactionsHelp } from "./transactions-help";
 import { SyncButton } from "./sync-button";
@@ -56,11 +56,18 @@ interface ConnectionBalance {
     type: string;
   }[];
   error?: string;
+  /** "live" = real-time Balance product; "last_sync" = Plaid's cached balance as of its last update. */
+  source?: "live" | "last_sync";
 }
 
 /**
- * Live balance, straight from Plaid — not derived from bank_transactions and
+ * Balances straight from Plaid — not derived from bank_transactions and
  * never written anywhere. Purely a display fetch.
+ *
+ * Real-time Balance is its own Plaid product and production access is
+ * granted per account. When Plaid says this client isn't approved for it,
+ * fall back to accountsGet, which needs only the Transactions access we
+ * already have and returns the balance as of the bank's last update.
  */
 async function getConnectionBalance(
   supabase: Awaited<ReturnType<typeof createClient>>,
@@ -74,23 +81,33 @@ async function getConnectionBalance(
     return { connectionId, accounts: [], error: tokenError?.message ?? "No access token on file." };
   }
 
+  const toAccounts = (
+    accounts: { name: string; mask?: string | null; type: unknown; balances: { current?: number | null } }[],
+  ) =>
+    accounts.map((a) => ({
+      name: a.name,
+      mask: a.mask ?? null,
+      type: String(a.type),
+      currentCents:
+        a.balances.current !== null && a.balances.current !== undefined ? Math.round(a.balances.current * 100) : null,
+    }));
+
   try {
     const response = await plaidClient().accountsBalanceGet({ access_token: accessToken });
-    return {
-      connectionId,
-      accounts: response.data.accounts.map((a) => ({
-        name: a.name,
-        mask: a.mask,
-        type: String(a.type),
-        currentCents:
-          a.balances.current !== null && a.balances.current !== undefined
-            ? Math.round(a.balances.current * 100)
-            : null,
-      })),
-    };
+    return { connectionId, accounts: toAccounts(response.data.accounts), source: "live" };
   } catch (cause) {
-    console.error("Plaid accountsBalanceGet failed", cause);
-    return { connectionId, accounts: [], error: describePlaidError(cause) };
+    if (!isProductNotEnabled(cause)) {
+      console.error("Plaid accountsBalanceGet failed", cause);
+      return { connectionId, accounts: [], error: describePlaidError(cause) };
+    }
+    console.warn("Plaid Balance isn't enabled for this client; using cached balances from accountsGet.");
+    try {
+      const response = await plaidClient().accountsGet({ access_token: accessToken });
+      return { connectionId, accounts: toAccounts(response.data.accounts), source: "last_sync" };
+    } catch (fallback) {
+      console.error("Plaid accountsGet failed", fallback);
+      return { connectionId, accounts: [], error: describePlaidError(fallback) };
+    }
   }
 }
 
@@ -409,6 +426,11 @@ export default async function BankFeedPage({
                 </div>
 
                 {balance?.error ? <p className="mt-3 text-[12px] text-mute-soft">{balance.error}</p> : null}
+                {balance?.source === "last_sync" ? (
+                  <p className="mt-3 text-[11px] text-mute-soft">
+                    Balances are as of the bank&rsquo;s last update, not real-time.
+                  </p>
+                ) : null}
 
                 {accts.length > 0 ? (
                   <ul className="mt-3 grid gap-2 sm:grid-cols-2 lg:grid-cols-4">

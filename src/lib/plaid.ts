@@ -46,6 +46,22 @@ export function plaidClient() {
   );
 }
 
+/**
+ * True when Plaid refused because this client isn't approved for a product
+ * (e.g. real-time Balance in production, which Plaid enables per account —
+ * sandbox allows everything). A fixable account setting, not a bug, so
+ * callers can fall back rather than fail.
+ */
+export function isProductNotEnabled(cause: unknown): boolean {
+  const data = (cause as { response?: { data?: { error_code?: string; error_message?: string } } })?.response?.data;
+  if (!data) return false;
+  return (
+    data.error_code === "INVALID_PRODUCT" ||
+    data.error_code === "PRODUCT_NOT_ENABLED" ||
+    /not authorized to access the following products/i.test(data.error_message ?? "")
+  );
+}
+
 /** Plaid's own error shape carries a plain-English display_message. Falls
  * back to something a board member can still act on when it doesn't. */
 export function describePlaidError(cause: unknown): string {
