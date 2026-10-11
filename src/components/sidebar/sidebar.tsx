@@ -161,6 +161,9 @@ export function Sidebar({
   }, [drawnOpen, wantOpen]);
   const expanded = drawnOpen;
   const crossfading = drawnOpen !== wantOpen;
+  const fade = `transition-opacity motion-reduce:transition-none ${
+    crossfading ? "opacity-0 duration-[160ms] ease-in" : "opacity-100 duration-[280ms] ease-out"
+  }`;
 
   // [ collapses, ] expands — never while typing, never when the viewport forces the rail.
   useEffect(() => {
@@ -211,14 +214,12 @@ export function Sidebar({
           phone && !drawerOpen ? "invisible w-0" : wantOpen ? "w-[288px]" : "w-[72px]"
         } ${!pinned && (drawnOpen || wantOpen) ? "overflow-hidden" : ""} ${wantOpen && !pinned ? "shadow-xl" : ""}`}
       >
-        <div
-          className={`flex min-h-0 flex-1 flex-col transition-opacity motion-reduce:transition-none ${
-            crossfading ? "opacity-0 duration-[160ms] ease-in" : "opacity-100 duration-[280ms] ease-out"
-          }`}
-        >
         {/* The logo band: same height and colour as the page header, so the two
-            read as one bar across the top. It collapses with the sidebar. */}
-        <div className={`relative -mr-px flex h-[56px] shrink-0 items-center bg-ink text-paper ${expanded ? "gap-3 px-4" : "justify-center"}`}>
+            read as one bar across the top. It collapses with the sidebar. Its
+            navy never fades — only what's on it does — so no white shows
+            through while the sidebar slides. */}
+        <div className="relative -mr-px h-[56px] shrink-0 bg-ink text-paper">
+        <div className={`flex h-full items-center ${expanded ? "gap-3 px-4" : "justify-center"} ${fade}`}>
           <Link href="/" aria-label="Walkup home" className="flex min-w-0 items-center gap-3">
             <Mark variant="dark" size={30} className="shrink-0" />
             {expanded ? (
@@ -239,7 +240,9 @@ export function Sidebar({
             </button>
           ) : null}
         </div>
+        </div>
 
+        <div className={`flex min-h-0 flex-1 flex-col ${fade}`}>
         <div className={`flex-1 overflow-y-auto pb-4 pt-2 ${expanded ? "px-3" : "px-[14px]"}`}>
           <div className="space-y-0.5">
             {UNGROUPED_NAV.map((item) => (
