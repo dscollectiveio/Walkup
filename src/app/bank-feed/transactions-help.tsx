@@ -10,19 +10,23 @@ const STEPS: { title: string; body: string }[] = [
   },
   {
     title: "Click the recommended category",
-    body: "Most rows show a blue “Recommended” chip. One click files it. If it says “+3 more”, the other transactions from the same payee are filed with it.",
+    body: "Most rows show a “Recommended” chip. One click files it and posts it to the books; “Save for later” files it without posting. A filled chip is how you filed that payee before; an outlined one is a guess. If it says “+3 more”, the other transactions from the same payee go with it.",
   },
   {
     title: "Pick one yourself when needed",
-    body: "No recommendation, or it’s wrong? Click Categorize, choose what it is (an expense, dues from a unit, a transfer…) and the account, then Save.",
+    body: "No recommendation, or it’s wrong? Click Categorize and start typing — Utilities, Dues, Transfer — then pick from the list and Save & post.",
   },
   {
     title: "Do many at once",
-    body: "Tick the boxes on the left. A bar appears at the bottom of the screen — choose a category there and save them all together.",
+    body: "“Accept all” posts every recommendation your own history backs. Or tick the boxes on the left: a bar appears at the bottom of the screen to file them all together.",
   },
   {
-    title: "Post to the books",
-    body: "Saving a category doesn’t change the books yet. When you’re ready, click “Post … ready to the books” at the top. That’s what updates the budget, dues balances and financial statements.",
+    title: "Keyboard, if you like",
+    body: "j/k move, Enter accepts, c categorizes, x marks not for the books, Escape closes.",
+  },
+  {
+    title: "Undo any time",
+    body: "Posting is what updates the budget, dues balances and financial statements. Every post shows Undo for 10 seconds, and a posted row always has “Undo posting”.",
   },
 ];
 

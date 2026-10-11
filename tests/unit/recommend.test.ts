@@ -59,6 +59,21 @@ describe("recommend", () => {
     expect(typicalAmountCents({ description: "NEVER SEEN", amount: -1 }, history)).toBeNull();
   });
 
+  it("leaves a row's own amount out of 'typical' once it has been filed", () => {
+    // Three $100 bills and this $900 one, all already tallied by the trigger.
+    const history = buildHistoryIndex([
+      filed("comed", -1, { posting_kind: "expense", account_id: "util", matched_unit_id: null }, 4, 30000),
+    ]);
+    const big = { description: "COMED 8841", amount: -900 };
+    expect(typicalAmountCents(big, history)).toBe(30000);
+    expect(typicalAmountCents(big, history, { alreadyFiled: true })).toBe(10000);
+    // The only filing there is: a first-time payee, not a typical amount.
+    const once = buildHistoryIndex([
+      filed("new vendor", -1, { posting_kind: "expense", account_id: "util", matched_unit_id: null }, 1, 5000),
+    ]);
+    expect(typicalAmountCents({ description: "NEW VENDOR", amount: -50 }, once, { alreadyFiled: true })).toBeNull();
+  });
+
   it("ignores payee keys too short to mean anything", () => {
     const history = buildHistoryIndex([
       filed("ab", -1, { posting_kind: "expense", account_id: "util", matched_unit_id: null }, 5, 100),

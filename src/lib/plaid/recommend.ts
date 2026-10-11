@@ -109,14 +109,25 @@ export function buildHistoryIndex(rows: PayeeHistoryRow[]): HistoryIndex {
  * What this payee usually costs, in cents, from the board's own history —
  * or null when the payee has never been filed. For "this is three times
  * what you normally pay them" style nudges; never a reason to block anything.
+ *
+ * `alreadyFiled`: the row has a category, so the trigger-kept tally already
+ * counts it. Its own amount is taken back out so a $900 bill is compared with
+ * the earlier $250 ones, not with a mean it has pulled up itself; with no
+ * earlier filing left, that is a first-time payee and the answer is null.
  */
 export function typicalAmountCents(
   t: { description: string; amount: string | number },
   history: HistoryIndex,
+  options: { alreadyFiled?: boolean } = {},
 ): number | null {
   const key = payeeKey(t.description, Number(t.amount));
   const past = key ? history.get(key) : undefined;
-  return past && past.typicalAmountCents > 0 ? past.typicalAmountCents : null;
+  if (!past || past.typicalAmountCents <= 0) return null;
+  if (!options.alreadyFiled) return past.typicalAmountCents;
+  const others = past.count - 1;
+  if (others <= 0) return null;
+  const centsWithoutSelf = past.typicalAmountCents * past.count - Math.abs(cents(t.amount));
+  return centsWithoutSelf > 0 ? Math.round(centsWithoutSelf / others) : null;
 }
 
 const times = (n: number) => (n === 1 ? "once" : n === 2 ? "twice" : `${n} times`);
@@ -230,7 +241,7 @@ export function recommend(
     accountId: guess.accountId,
     unitId: null,
     source: "keyword",
-    reason: "based on the description",
+    reason: "a guess from the description",
     needsPick: !guess.accountId,
   };
 }

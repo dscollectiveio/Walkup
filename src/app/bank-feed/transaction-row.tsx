@@ -4,12 +4,14 @@ import { useState, useTransition } from "react";
 import {
   applyCategorizations,
   categorizeBankTransaction,
+  deleteCategorizationRule,
   postBankTransaction,
   unpostBankTransaction,
   type CategorizationItem,
   type PostingKind,
   type PriorState,
 } from "./actions";
+import { CategoryPicker, plainName, type CategoryChoice } from "./category-picker";
 import { money } from "@/components/ui";
 import { shortDate, todayIso } from "@/lib/dates";
 
@@ -27,6 +29,8 @@ export interface TransactionRecord {
   journal_entry_id: string | null;
   excluded_at: string | null;
   removed_at: string | null;
+  /** The saved rule that pre-filled this row during sync, if one did. */
+  rule_id: string | null;
 }
 
 export interface Option {
@@ -42,13 +46,15 @@ export interface Pickers {
   vendors: Option[];
 }
 
-const KIND_LABEL: Record<PostingKind, string> = {
+export const KIND_LABEL: Record<PostingKind, string> = {
   expense: "Expense",
   income: "Other income",
   dues: "Dues",
   transfer: "Transfer",
   excluded: "Not for the books",
 };
+
+export const PENDING_NOTE = "The bank hasn't settled this yet; it will post once it does";
 
 /** The row as it stands now, so a categorization can be undone. */
 export function priorOf(t: TransactionRecord): PriorState {
@@ -62,7 +68,7 @@ export function priorOf(t: TransactionRecord): PriorState {
   };
 }
 
-/** Plain-language name for where a categorization sends a transaction ("Utilities", "Unit 2B", …). */
+/** Plain-language name for where a categorization sends a transaction ("Utilities", "Dues · 2B", "Transfer · Reserve Cash"). */
 export function labelForCategorization(
   item: Pick<CategorizationItem, "kind" | "accountId" | "unitId">,
   pickers: Pickers,
@@ -70,19 +76,22 @@ export function labelForCategorization(
   const find = (list: Option[], id: string | null) => list.find((o) => o.id === id)?.label ?? null;
   switch (item.kind) {
     case "expense":
-      return find(pickers.expenseAccounts, item.accountId) ?? KIND_LABEL.expense;
+      return plainName(find(pickers.expenseAccounts, item.accountId) ?? KIND_LABEL.expense);
     case "income":
-      return find(pickers.incomeAccounts, item.accountId) ?? KIND_LABEL.income;
-    case "transfer":
-      return find(pickers.cashAccounts, item.accountId) ?? KIND_LABEL.transfer;
-    case "dues":
-      return find(pickers.units, item.unitId) ?? KIND_LABEL.dues;
+      return plainName(find(pickers.incomeAccounts, item.accountId) ?? KIND_LABEL.income);
+    case "transfer": {
+      const name = find(pickers.cashAccounts, item.accountId);
+      return name ? `Transfer · ${plainName(name)}` : KIND_LABEL.transfer;
+    }
+    case "dues": {
+      const unit = find(pickers.units, item.unitId);
+      return unit ? `Dues · ${unit}` : KIND_LABEL.dues;
+    }
     default:
       return KIND_LABEL.excluded;
   }
 }
 
-/** Fired after a human saves a categorization, so the table can show the Undo toast. */
 /** What the table knows about a row's recommended category. */
 export interface RowRecommendation {
   kind: PostingKind;
@@ -91,14 +100,19 @@ export interface RowRecommendation {
   label: string;
   reason: string;
   needsPick: boolean;
+  /** history: the board filed this payee so before. keyword: a guess. duplicate: already recorded by hand. */
+  source: "history" | "keyword" | "duplicate";
 }
 
+/** Fired after a human saves a categorization, so the table can show the Undo toast. */
 export interface CategorizedEvent {
   item: Omit<CategorizationItem, "id">;
   /** Every row that was changed — the one edited plus any same-payee rows filed along with it. */
   ids: string[];
   postNow: boolean;
   prior: PriorState[];
+  /** The server says this payee has been filed this way before: worth offering a rule. */
+  ruleSuggestion?: { pattern: string; label: string };
 }
 
 function describeTarget(t: TransactionRecord, pickers: Pickers): string | null {
@@ -109,11 +123,6 @@ function describeTarget(t: TransactionRecord, pickers: Pickers): string | null {
   );
 }
 
-/** Strip the "6100 " account code so the chip reads "Utilities", not "6100 Utilities". */
-function plainName(label: string): string {
-  return label.replace(/^\d{3,5}\s+/, "");
-}
-
 const CATEGORY_TONE: Record<PostingKind, string> = {
   expense: "border-line bg-fill text-ink",
   income: "border-good-line bg-good-tint text-good-text",
@@ -122,11 +131,20 @@ const CATEGORY_TONE: Record<PostingKind, string> = {
   excluded: "border-line bg-paper text-mute",
 };
 
+/** How sure the chip looks: filled for the board's own history, outlined for a guess, warning for a likely duplicate. */
+const CHIP_TONE: Record<RowRecommendation["source"], string> = {
+  history: "border-info-line bg-info-tint text-info-text hover:brightness-95",
+  keyword: "border-info-line bg-paper text-info-text hover:bg-info-tint",
+  duplicate: "border-warning-line bg-warning-tint text-warning-text hover:brightness-95",
+};
+
 /** Whole-surface buttons: the entire pill is the click target, not just the label. */
 const BTN_PRIMARY =
   "inline-flex items-center justify-center whitespace-nowrap rounded-md bg-ink px-3 py-1.5 text-[12px] font-medium text-paper transition-colors hover:bg-ink-mid focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-brass disabled:opacity-50";
 const BTN_OUTLINE =
   "inline-flex items-center justify-center whitespace-nowrap rounded-md border border-line-strong bg-paper px-3 py-1.5 text-[12px] font-medium text-ink transition-colors hover:bg-fill focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-brass disabled:opacity-50";
+const LINK_QUIET =
+  "whitespace-nowrap text-[11px] text-mute underline-offset-2 hover:text-ink hover:underline disabled:opacity-50";
 
 function StatusPill({ t }: { t: TransactionRecord }) {
   if (t.removed_at && t.journal_entry_id) {
@@ -135,12 +153,25 @@ function StatusPill({ t }: { t: TransactionRecord }) {
   if (t.removed_at) return <Pill tone="mute">Retracted by bank</Pill>;
   if (t.journal_entry_id) return <Pill tone="good">Posted</Pill>;
   if (t.excluded_at) return <Pill tone="mute">Excluded</Pill>;
-  if (t.pending) return <Pill tone="mute">Pending</Pill>;
+  if (t.pending)
+    return (
+      <Pill tone="mute" title={PENDING_NOTE}>
+        Pending
+      </Pill>
+    );
   if (t.posting_kind) return <Pill tone="info">Ready to post</Pill>;
   return <Pill tone="warning">Needs category</Pill>;
 }
 
-function Pill({ tone, children }: { tone: "good" | "bad" | "info" | "warning" | "mute"; children: React.ReactNode }) {
+function Pill({
+  tone,
+  title,
+  children,
+}: {
+  tone: "good" | "bad" | "info" | "warning" | "mute";
+  title?: string;
+  children: React.ReactNode;
+}) {
   const cls =
     tone === "good"
       ? "bg-good-tint text-good-text"
@@ -151,7 +182,43 @@ function Pill({ tone, children }: { tone: "good" | "bad" | "info" | "warning" | 
           : tone === "warning"
             ? "bg-warning-tint text-warning-text"
             : "bg-fill text-mute";
-  return <span className={`whitespace-nowrap rounded-full px-2 py-0.5 text-[11px] ${cls}`}>{children}</span>;
+  return (
+    <span title={title} className={`whitespace-nowrap rounded-full px-2 py-0.5 text-[11px] ${cls}`}>
+      {children}
+    </span>
+  );
+}
+
+/** "rule" tag on a row a saved rule pre-filled, with Remove rule on hover or focus. */
+function RuleTag({ ruleId, pattern, canEdit }: { ruleId: string; pattern: string | null; canEdit: boolean }) {
+  const [busy, start] = useTransition();
+  const [error, setError] = useState<string | null>(null);
+  const title = pattern ? `Filed by your rule for ‘${pattern}’` : "Filed by one of your rules";
+  return (
+    <span className="group/rule inline-flex items-center gap-1">
+      <span title={title} className="rounded-sm bg-fill px-1 py-px text-[10px] uppercase tracking-[0.05em] text-mute">
+        rule
+      </span>
+      {canEdit ? (
+        <button
+          type="button"
+          disabled={busy}
+          onClick={() =>
+            start(async () => {
+              setError(null);
+              const result = await deleteCategorizationRule(ruleId);
+              if (result.error) setError(result.error);
+            })
+          }
+          title={pattern ? `Stop filing ‘${pattern}’ this way automatically` : undefined}
+          className={`${LINK_QUIET} opacity-0 focus:opacity-100 group-hover/rule:opacity-100`}
+        >
+          {busy ? "Removing…" : "Remove rule"}
+        </button>
+      ) : null}
+      {error ? <span className="text-[11px] text-bad-text">{error}</span> : null}
+    </span>
+  );
 }
 
 function CategorizeForm({
@@ -171,37 +238,31 @@ function CategorizeForm({
   onDone: () => void;
   onCategorized?: (event: CategorizedEvent) => void;
 }) {
-  const moneyIn = Number(t.amount) > 0;
-  const kinds: PostingKind[] = moneyIn
-    ? ["dues", "income", "transfer", "excluded"]
-    : ["expense", "transfer", "excluded"];
-  const prefillKind = prefill && kinds.includes(prefill.kind) ? prefill.kind : null;
+  const direction = Number(t.amount) > 0 ? "in" : "out";
+  const initial: CategoryChoice | null = t.posting_kind
+    ? { kind: t.posting_kind, accountId: t.account_id, unitId: t.matched_unit_id }
+    : prefill && !prefill.needsPick
+      ? { kind: prefill.kind, accountId: prefill.accountId, unitId: prefill.unitId }
+      : null;
 
-  const [kind, setKind] = useState<PostingKind>(t.posting_kind ?? prefillKind ?? kinds[0]);
-  const [accountId, setAccountId] = useState(t.account_id ?? (prefillKind ? (prefill?.accountId ?? "") : ""));
-  const [unitId, setUnitId] = useState(t.matched_unit_id ?? (prefillKind ? (prefill?.unitId ?? "") : ""));
+  const [choice, setChoice] = useState<CategoryChoice | null>(initial);
   const [vendorId, setVendorId] = useState(t.vendor_id ?? "");
   const [applyToSimilar, setApplyToSimilar] = useState(true);
   const [pending, start] = useTransition();
   const [error, setError] = useState<string | null>(null);
 
-  const accountOptions =
-    kind === "expense"
-      ? pickers.expenseAccounts
-      : kind === "income"
-        ? pickers.incomeAccounts
-        : kind === "transfer"
-          ? pickers.cashAccounts
-          : [];
-
-  const submit = (postNow: boolean) =>
+  const submit = (postNow: boolean) => {
+    if (!choice) {
+      setError("Pick a category first.");
+      return;
+    }
     start(async () => {
       setError(null);
       const item = {
-        kind,
-        accountId: accountId || null,
-        unitId: unitId || null,
-        vendorId: vendorId || null,
+        kind: choice.kind,
+        accountId: choice.accountId,
+        unitId: choice.unitId,
+        vendorId: choice.kind === "expense" && vendorId ? vendorId : null,
       };
       const others = applyToSimilar ? similar : [];
       const prior = [priorOf(t), ...others.map(priorOf)];
@@ -228,70 +289,40 @@ function CategorizeForm({
           ids.push(...(more.applied ?? []));
         }
       }
-      onCategorized?.({ item, ids, postNow, prior });
+      onCategorized?.({ item, ids, postNow, prior, ruleSuggestion: result.ruleSuggestion });
       onDone();
     });
+  };
 
-  const selectClass =
-    "mt-1 rounded-lg border border-line-strong bg-paper px-2 py-1 text-[12px] text-ink";
+  const isExcluded = choice?.kind === "excluded";
 
   return (
     <div className="space-y-2 rounded-lg border border-line-strong bg-fill p-3">
       <div className="flex flex-wrap items-end gap-3">
         <div>
           <label className="block text-[11px] text-mute">This is</label>
-          <select
-            value={kind}
-            onChange={(e) => {
-              setKind(e.target.value as PostingKind);
-              setAccountId("");
-            }}
-            className={selectClass}
-          >
-            {kinds.map((k) => (
-              <option key={k} value={k}>
-                {KIND_LABEL[k]}
-              </option>
-            ))}
-          </select>
+          <CategoryPicker
+            pickers={pickers}
+            direction={direction}
+            value={choice}
+            onChange={setChoice}
+            autoFocus
+            defaultOpen={!choice}
+            // "Dues" or "Transfer" pre-typed when the kind is known but not the unit or account.
+            defaultQuery={!choice && prefill?.needsPick ? KIND_LABEL[prefill.kind] : ""}
+          />
         </div>
 
-        {kind === "dues" ? (
-          <div>
-            <label className="block text-[11px] text-mute">Unit</label>
-            <select value={unitId} onChange={(e) => setUnitId(e.target.value)} className={selectClass}>
-              <option value="">Choose…</option>
-              {pickers.units.map((u) => (
-                <option key={u.id} value={u.id}>
-                  {u.label}
-                </option>
-              ))}
-            </select>
-          </div>
-        ) : null}
-
-        {accountOptions.length > 0 || kind === "transfer" ? (
-          <div>
-            <label className="block text-[11px] text-mute">
-              {kind === "transfer" ? "To / from account" : "Account"}
-            </label>
-            <select value={accountId} onChange={(e) => setAccountId(e.target.value)} className={selectClass}>
-              <option value="">Choose…</option>
-              {accountOptions.map((a) => (
-                <option key={a.id} value={a.id}>
-                  {a.label}
-                </option>
-              ))}
-            </select>
-          </div>
-        ) : null}
-
-        {kind === "expense" && pickers.vendors.length > 0 ? (
+        {choice?.kind === "expense" && pickers.vendors.length > 0 ? (
           <div>
             <label className="block text-[11px] text-mute">
               Vendor <span className="text-mute-soft">(optional, for 1099s)</span>
             </label>
-            <select value={vendorId} onChange={(e) => setVendorId(e.target.value)} className={selectClass}>
+            <select
+              value={vendorId}
+              onChange={(e) => setVendorId(e.target.value)}
+              className="mt-1 rounded-lg border border-line-strong bg-paper px-2 py-1.5 text-[12px] text-ink"
+            >
               <option value="">No vendor</option>
               {pickers.vendors.map((v) => (
                 <option key={v.id} value={v.id}>
@@ -304,32 +335,28 @@ function CategorizeForm({
       </div>
 
       {similar.length > 0 ? (
-        <div className="flex flex-wrap items-center gap-x-4 gap-y-1 text-[11px] text-ink">
-          <label className="flex items-center gap-1.5">
-            <input
-              type="checkbox"
-              checked={applyToSimilar}
-              onChange={(e) => setApplyToSimilar(e.target.checked)}
-            />
-            Also file the {similar.length} other “{t.description.trim()}” transaction
-            {similar.length === 1 ? "" : "s"} the same way
-          </label>
-        </div>
+        <label className="flex items-center gap-1.5 text-[11px] text-ink">
+          <input type="checkbox" checked={applyToSimilar} onChange={(e) => setApplyToSimilar(e.target.checked)} />
+          Also file the {similar.length} other “{t.description.trim()}” transaction
+          {similar.length === 1 ? "" : "s"} the same way
+        </label>
       ) : null}
+
+      {t.pending ? <p className="text-[11px] text-mute">{PENDING_NOTE}.</p> : null}
 
       <div className="flex flex-wrap items-center gap-2">
         <button
           type="button"
-          disabled={pending || t.pending}
+          disabled={pending || t.pending || !choice}
           onClick={() => submit(true)}
-          title={t.pending ? "Pending transactions can't be posted until the bank settles them" : undefined}
+          title={t.pending ? PENDING_NOTE : undefined}
           className="rounded-md bg-ink px-2.5 py-1 text-[11px] font-medium text-paper hover:bg-ink-mid disabled:opacity-50"
         >
-          {pending ? "Saving…" : kind === "excluded" ? "Save & exclude" : "Save & post"}
+          {pending ? "Saving…" : isExcluded ? "Save & exclude" : "Save & post"}
         </button>
         <button
           type="button"
-          disabled={pending}
+          disabled={pending || !choice}
           onClick={() => submit(false)}
           className="rounded-md border border-line-strong px-2.5 py-1 text-[11px] text-ink hover:bg-fill disabled:opacity-50"
         >
@@ -351,6 +378,10 @@ export function TransactionRow({
   leadingCell,
   suggestion,
   similar = [],
+  rulePattern = null,
+  focused = false,
+  editing: editingProp,
+  onEditingChange,
   onAcceptSuggestion,
   onCategorized,
 }: {
@@ -359,14 +390,23 @@ export function TransactionRow({
   canEdit: boolean;
   /** Extra <td> rendered before the date column — used by TransactionsTable for its bulk-select checkbox. */
   leadingCell?: React.ReactNode;
-  /** The recommended category: one click saves it, or opens the form pre-set when a unit/account is still needed. */
+  /** The recommended category: one click files and posts it, or opens the form pre-set when a unit/account is still needed. */
   suggestion?: RowRecommendation | null;
   /** Other un-categorized rows from the same payee; the chip and the form file them along with this one. */
   similar?: TransactionRecord[];
+  /** Pattern of the rule in rule_id, for the "rule" tag's title. */
+  rulePattern?: string | null;
+  /** Keyboard focus from the table (j/k); highlights the row. */
+  focused?: boolean;
+  /** When the table drives the form (keyboard "c" / Escape) it owns this; otherwise the row does. */
+  editing?: boolean;
+  onEditingChange?: (open: boolean) => void;
   onAcceptSuggestion?: (postNow: boolean) => Promise<{ error?: string }>;
   onCategorized?: (event: CategorizedEvent) => void;
 }) {
-  const [editing, setEditing] = useState(false);
+  const [localEditing, setLocalEditing] = useState(false);
+  const editing = editingProp ?? localEditing;
+  const setEditing = onEditingChange ?? setLocalEditing;
   const [busy, start] = useTransition();
   const [error, setError] = useState<string | null>(null);
   const amount = Number(t.amount);
@@ -386,9 +426,23 @@ export function TransactionRow({
   const faded = t.removed_at && !t.journal_entry_id;
   const columns = (leadingCell !== undefined ? 1 : 0) + 4 + (canEdit ? 1 : 0);
 
+  const chipTitle = (() => {
+    if (!suggestion) return undefined;
+    if (suggestion.source === "duplicate") return "Keeps this out of the books so the dues aren't counted twice";
+    if (t.pending) return "Saves the category; it posts once the bank settles it";
+    const alsoOthers = similar.length > 0 ? ` and ${similar.length} more “${t.description.trim()}”` : "";
+    return `Files this${alsoOthers} as ${suggestion.label} and posts it to the books`;
+  })();
+  const chipText =
+    suggestion?.source === "duplicate" ? "Already recorded · not for the books" : (suggestion?.label ?? "");
+
   return (
     <>
-      <tr className={faded ? "opacity-60" : ""}>
+      <tr
+        id={`tx-${t.id}`}
+        data-focused={focused || undefined}
+        className={`${faded ? "opacity-60" : ""} ${focused ? "bg-fill outline outline-1 -outline-offset-1 outline-brass" : ""}`}
+      >
         {leadingCell !== undefined ? <td className="py-2.5 pr-2 align-middle">{leadingCell}</td> : null}
 
         <td className="figures whitespace-nowrap py-2.5 pr-3 align-middle text-[12px] text-mute">
@@ -410,9 +464,10 @@ export function TransactionRow({
                 <span
                   className={`whitespace-nowrap rounded-full border px-2 py-0.5 text-[11px] font-medium ${CATEGORY_TONE[t.posting_kind]}`}
                 >
-                  {t.posting_kind === "dues" && target ? `Dues · ${target}` : plainName(target ?? KIND_LABEL[t.posting_kind])}
+                  {target ?? KIND_LABEL[t.posting_kind]}
                 </span>
                 <StatusPill t={t} />
+                {t.rule_id ? <RuleTag ruleId={t.rule_id} pattern={rulePattern} canEdit={canEdit} /> : null}
               </>
             ) : canEdit && suggestion && onAcceptSuggestion ? (
               <div className="flex flex-col gap-0.5">
@@ -425,7 +480,7 @@ export function TransactionRow({
                       type="button"
                       onClick={() => setEditing(true)}
                       title="Opens the form with this already chosen"
-                      className="inline-flex items-center gap-1 whitespace-nowrap rounded-full border border-info-line bg-paper px-2.5 py-0.5 text-[11px] font-medium text-info-text hover:bg-info-tint"
+                      className={`inline-flex items-center gap-1 whitespace-nowrap rounded-full border px-2.5 py-0.5 text-[11px] font-medium ${CHIP_TONE[suggestion.source]}`}
                     >
                       {suggestion.label}
                       <span className="font-normal opacity-80">· choose →</span>
@@ -434,19 +489,15 @@ export function TransactionRow({
                     <button
                       type="button"
                       disabled={busy}
-                      onClick={() => run(() => onAcceptSuggestion(false))}
-                      aria-label={`File ${t.description} as ${suggestion.label}${
+                      onClick={() => run(() => onAcceptSuggestion(!t.pending))}
+                      aria-label={`${t.pending ? "File" : "Post"} ${t.description} as ${suggestion.label}${
                         similar.length > 0 ? ` along with ${similar.length} more from the same payee` : ""
                       }`}
-                      title={
-                        similar.length > 0
-                          ? `Files this and ${similar.length} more “${t.description.trim()}” the same way`
-                          : "Save this category"
-                      }
-                      className="inline-flex items-center gap-1 whitespace-nowrap rounded-full border border-info-line bg-info-tint px-2.5 py-0.5 text-[11px] font-medium text-info-text hover:brightness-95 disabled:opacity-50"
+                      title={chipTitle}
+                      className={`inline-flex items-center gap-1 whitespace-nowrap rounded-full border px-2.5 py-0.5 text-[11px] font-medium disabled:opacity-50 ${CHIP_TONE[suggestion.source]}`}
                     >
                       <span aria-hidden="true">✓</span>
-                      {busy ? "Saving…" : suggestion.label}
+                      {busy ? (t.pending ? "Saving…" : "Posting…") : chipText}
                       {!busy && similar.length > 0 ? (
                         <span className="font-normal opacity-80">· +{similar.length} more</span>
                       ) : null}
@@ -456,14 +507,17 @@ export function TransactionRow({
                     <button
                       type="button"
                       disabled={busy}
-                      onClick={() => run(() => onAcceptSuggestion(true))}
-                      className="whitespace-nowrap text-[11px] text-mute underline-offset-2 hover:text-ink hover:underline disabled:opacity-50"
+                      onClick={() => run(() => onAcceptSuggestion(false))}
+                      title="Saves the category without posting it yet"
+                      className={LINK_QUIET}
                     >
-                      Accept &amp; post
+                      Save for later
                     </button>
                   ) : null}
                 </div>
-                <span className="text-[11px] text-mute-soft">{suggestion.reason}</span>
+                <span className="text-[11px] text-mute-soft">
+                  {t.pending && !suggestion.needsPick ? "Pending at the bank — posts once it settles" : suggestion.reason}
+                </span>
               </div>
             ) : (
               <StatusPill t={t} />

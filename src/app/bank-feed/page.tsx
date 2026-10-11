@@ -8,6 +8,9 @@ import { TransactionsHelp } from "./transactions-help";
 import { type Pickers, type TransactionRecord } from "./transaction-row";
 import { TransactionsTable, type SuggestedTransaction } from "./transactions-table";
 import { PostAllButton } from "./post-all-button";
+import { FiltersBar } from "./filters-bar";
+import type { PreviewRow } from "./post-preview";
+import { DEFAULT_LIMIT, MAX_LIMIT, bankFeedHref, type Range, type Sort, type Status } from "./href";
 import {
   BankAccountsSection,
   BankAccountsSkeleton,
@@ -19,6 +22,7 @@ import { RulesList, type RuleRecord } from "./rules-list";
 import {
   buildHistoryIndex,
   recommend,
+  typicalAmountCents,
   type ManualPayment,
   type PayeeHistoryRow,
   type Recommendation,
@@ -26,10 +30,6 @@ import {
 import { syncOneConnection } from "@/lib/plaid/sync";
 
 export const dynamic = "force-dynamic";
-
-type Range = "this_month" | "last_30" | "all";
-type Status = "all" | "needs" | "ready" | "posted" | "excluded" | "retracted";
-type Sort = "date_desc" | "date_asc" | "name_asc" | "name_desc" | "amount_desc" | "amount_asc";
 
 const STATUS_LABEL: Record<Status, string> = {
   all: "All",
@@ -48,15 +48,11 @@ const KIND_LABEL: Record<string, string> = {
   excluded: "Not for the books",
 };
 
-/** Rows per page load. "Load earlier" doubles it, up to the cap. */
-const DEFAULT_LIMIT = 200;
-const MAX_LIMIT = 2000;
-
 /** A bank last synced longer ago than this gets a sync kicked off when a board admin opens the page. */
 const STALE_SYNC_MS = 12 * 60 * 60 * 1000;
 
 const TRANSACTION_COLUMNS =
-  "id, posted_on, description, amount, pending, raw_category, posting_kind, account_id, matched_unit_id, vendor_id, journal_entry_id, excluded_at, removed_at";
+  "id, posted_on, description, amount, pending, raw_category, posting_kind, account_id, matched_unit_id, vendor_id, journal_entry_id, excluded_at, removed_at, rule_id";
 
 const ORDER: Record<Sort, { column: string; ascending: boolean }> = {
   date_desc: { column: "posted_on", ascending: false },
@@ -148,15 +144,7 @@ function hrefFor(
   account?: string,
   limit: number = DEFAULT_LIMIT,
 ): string {
-  const params = new URLSearchParams();
-  if (q) params.set("q", q);
-  if (account) params.set("account", account);
-  if (range !== "all") params.set("range", range);
-  if (status !== "all") params.set("status", status);
-  if (sort !== "date_desc") params.set("sort", sort);
-  if (limit !== DEFAULT_LIMIT) params.set("limit", String(limit));
-  const qs = params.toString();
-  return `/bank-feed${qs ? `?${qs}` : ""}`;
+  return bankFeedHref({ q, range, status, sort, account, limit });
 }
 
 function nextSort(current: Sort, column: "date" | "name" | "amount"): Sort {
@@ -239,6 +227,7 @@ export default async function BankFeedPage({
     // History persists across disconnects — a disconnected bank's
     // transactions are still in the books, so they still show here.
     { data: firstRows },
+    { data: readyRows },
   ] = await Promise.all([
     associationId
       ? supabase.rpc("has_role_in", { assoc: associationId, roles: ["board_admin"] })
@@ -280,6 +269,13 @@ export default async function BankFeedPage({
     countFor("ready").eq("pending", false),
     countFor("retracted").not("journal_entry_id", "is", null),
     rowsFor(firstStatus),
+    // What "Post all ready" would post, so the button can say how much and
+    // flag anything unusual before it does. Ignores the filters on purpose:
+    // the action posts everything ready, not just what is on screen.
+    withStatus(supabase.from("bank_transactions").select("id, description, amount"), "ready")
+      .eq("pending", false)
+      .order("posted_on")
+      .limit(MAX_LIMIT),
   ]);
   const canEdit = isBoardAdminRes === true;
 
@@ -375,12 +371,18 @@ export default async function BankFeedPage({
   }
 
   const filtersActive = Boolean(q) || range !== "all" || Boolean(account);
+  const rulePatternById = new Map((rules ?? []).map((r) => [r.id, r.pattern]));
 
   const transactionsWithSuggestions: SuggestedTransaction[] = transactions.map((t) => {
-    if (t.posting_kind || t.journal_entry_id || t.removed_at) return { ...t, suggestion: null };
+    // A categorized row is already in the payee tally, so its own amount is left out of "typical".
+    const typicalCents = typicalAmountCents(t, history, { alreadyFiled: !!t.posting_kind });
+    const rulePattern = t.rule_id ? (rulePatternById.get(t.rule_id) ?? null) : null;
+    if (t.posting_kind || t.journal_entry_id || t.removed_at) return { ...t, suggestion: null, typicalCents, rulePattern };
     const r = recommend(t, history, { expense: expenseSuggestable, income: incomeSuggestable }, { manualPayments });
     return {
       ...t,
+      typicalCents,
+      rulePattern,
       suggestion: r
         ? {
             kind: r.kind,
@@ -389,10 +391,18 @@ export default async function BankFeedPage({
             label: recommendationLabel(r),
             reason: r.reason,
             needsPick: r.needsPick,
+            source: r.source,
           }
         : null,
     };
   });
+
+  const readyPreview: PreviewRow[] = (readyRows ?? []).map((r) => ({
+    id: r.id,
+    description: r.description,
+    amount: r.amount,
+    typicalCents: typicalAmountCents(r, history, { alreadyFiled: true }),
+  }));
 
   // Progress through the queue: everything the bank still stands behind,
   // minus what hasn't been given a category yet.
@@ -476,7 +486,7 @@ export default async function BankFeedPage({
             action={<TransactionsHelp />}
             hint={
               canEdit && counts.needs > 0
-                ? "Pick a category for each one — suggestions are one click. Post when you're done."
+                ? "Click a recommendation to post it, or Categorize and start typing. Undo for 10 seconds after each."
                 : "Categorize, then post. Posted rows are in the books."
             }
           >
@@ -525,7 +535,7 @@ export default async function BankFeedPage({
                     {counts.needs} <span className="text-[12px] font-normal text-mute">to go</span>
                   </div>
                 ) : null}
-                {canEdit ? <PostAllButton readyCount={settledReady} /> : null}
+                {canEdit ? <PostAllButton readyCount={settledReady} preview={readyPreview} /> : null}
               </div>
             </div>
 
@@ -564,58 +574,10 @@ export default async function BankFeedPage({
               </span>
             </div>
 
-            {account ? (
-              <p className="mb-3 text-[12px] text-ink">
-                Showing only <span className="font-medium">{accountNameById.get(account) ?? "one category"}</span>.{" "}
-                <Link href={hrefFor(q, range, status, sort)} className="text-mute underline-offset-2 hover:underline">
-                  Show all
-                </Link>
-              </p>
-            ) : null}
-
-            <details className="mb-4" open={filtersActive}>
-              <summary className="cursor-pointer select-none text-[12px] text-mute hover:text-ink">
-                Filter &amp; search{filtersActive ? " · on" : ""}
-              </summary>
-              <form className="mt-3 flex flex-wrap items-end gap-2" method="get">
-                {status !== "all" ? <input type="hidden" name="status" value={status} /> : null}
-                {sort !== "date_desc" ? <input type="hidden" name="sort" value={sort} /> : null}
-                <div className="min-w-[10rem] flex-1">
-                  <label htmlFor="q" className="block text-[12px] font-medium text-ink">
-                    Search
-                  </label>
-                  <input
-                    id="q"
-                    name="q"
-                    type="text"
-                    defaultValue={q ?? ""}
-                    placeholder="Description contains…"
-                    className="mt-1 w-full rounded-lg border border-line-strong bg-paper px-3 py-2 text-[13px] text-ink"
-                  />
-                </div>
-                <div>
-                  <label htmlFor="range" className="block text-[12px] font-medium text-ink">
-                    Range
-                  </label>
-                  <select
-                    id="range"
-                    name="range"
-                    defaultValue={range}
-                    className="mt-1 rounded-lg border border-line-strong bg-paper px-3 py-2 text-[13px] text-ink"
-                  >
-                    <option value="all">All synced</option>
-                    <option value="this_month">This month</option>
-                    <option value="last_30">Last 30 days</option>
-                  </select>
-                </div>
-                <button
-                  type="submit"
-                  className="rounded-md border border-line-strong px-4 py-2 text-[13px] text-ink hover:bg-fill"
-                >
-                  Filter
-                </button>
-              </form>
-            </details>
+            <FiltersBar
+              current={{ q, range, status, sort, account }}
+              accountLabel={account ? (accountNameById.get(account) ?? null) : null}
+            />
 
             {transactions.length === 0 ? (
               <Empty>

@@ -5,7 +5,9 @@ import { useEffect, useMemo, useState, useTransition } from "react";
 import {
   applyCategorizations,
   categorizeBankTransactionsBulk,
+  postBankTransaction,
   revertCategorizations,
+  saveCategorizationRule,
   type CategorizationItem,
   type PostingKind,
   type PriorState,
@@ -16,34 +18,33 @@ import {
   priorOf,
   type CategorizedEvent,
   type Pickers,
+  type RowRecommendation,
   type TransactionRecord,
 } from "./transaction-row";
+import { CategoryPicker, type CategoryChoice, type Direction } from "./category-picker";
+import { PREVIEW_ABOVE, PostPreview, inOutLabel, type PreviewRow } from "./post-preview";
 import { money } from "@/components/ui";
 import { isMatchableDescription, normalizeDescription } from "@/lib/plaid/similar";
 
 export interface SuggestedTransaction extends TransactionRecord {
   /** Server-computed recommendation (src/lib/plaid/recommend.ts) — never written anywhere until a human clicks it. */
-  suggestion: {
-    kind: PostingKind;
-    accountId: string | null;
-    unitId: string | null;
-    label: string;
-    reason: string;
-    /** The kind is clear but the unit/account isn't: clicking opens the form pre-set instead of saving. */
-    needsPick: boolean;
-  } | null;
+  suggestion: RowRecommendation | null;
+  /** What this payee usually costs, in cents, from the board's own history; null for a first-time payee. */
+  typicalCents: number | null;
+  /** Pattern of the rule in rule_id, when the sync filed this row by a rule. */
+  rulePattern: string | null;
 }
-
-const KIND_LABEL: Record<PostingKind, string> = {
-  expense: "Expense",
-  income: "Other income",
-  dues: "Dues",
-  transfer: "Transfer",
-  excluded: "Not for the books",
-};
 
 function selectable(t: TransactionRecord): boolean {
   return !t.journal_entry_id && !t.removed_at;
+}
+
+/** Plain words for the toast: "Posted as Utilities", "3 saved as Dues · 2B", "Marked not for the books". */
+function outcome(n: number, label: string, posted: boolean, kind: PostingKind): string {
+  const count = n === 1 ? "" : `${n} `;
+  if (kind === "excluded" && posted) return n === 1 ? "Marked not for the books" : `${n} marked not for the books`;
+  const verb = posted ? "posted" : "saved";
+  return n === 1 ? `${verb[0].toUpperCase()}${verb.slice(1)} as ${label}` : `${count}${verb} as ${label}`;
 }
 
 interface BulkApplied {
@@ -56,60 +57,52 @@ interface BulkApplied {
 function BulkForm({
   transactionIds,
   totalLabel,
+  direction,
   pickers,
-  initial,
   snapshot,
+  confirmPost,
   onApplied,
   onCancel,
 }: {
   transactionIds: string[];
   totalLabel: string;
+  direction: Direction;
   pickers: Pickers;
-  initial: { kind: PostingKind; accountId: string | null } | null;
   snapshot: (ids: string[]) => PriorState[];
+  /** Runs `post` straight away, or after a look when there are many rows. */
+  confirmPost: (ids: string[], post: () => void) => void;
   onApplied: (e: BulkApplied) => void;
   onCancel: () => void;
 }) {
-  const [kind, setKind] = useState<PostingKind>(initial?.kind ?? "expense");
-  const [accountId, setAccountId] = useState(initial?.accountId ?? "");
-  const [unitId, setUnitId] = useState("");
+  const [choice, setChoice] = useState<CategoryChoice | null>(null);
   const [vendorId, setVendorId] = useState("");
   const [pending, start] = useTransition();
   const [error, setError] = useState<string | null>(null);
 
-  const accountOptions =
-    kind === "expense"
-      ? pickers.expenseAccounts
-      : kind === "income"
-        ? pickers.incomeAccounts
-        : kind === "transfer"
-          ? pickers.cashAccounts
-          : [];
-
-  const submit = (postNow: boolean) =>
+  const run = (postNow: boolean) =>
     start(async () => {
+      if (!choice) return;
       setError(null);
+      const item = {
+        kind: choice.kind,
+        accountId: choice.accountId,
+        unitId: choice.unitId,
+        vendorId: choice.kind === "expense" && vendorId ? vendorId : null,
+      };
       const prior = snapshot(transactionIds);
-      const result = await categorizeBankTransactionsBulk({
-        transactionIds,
-        kind,
-        accountId: accountId || null,
-        unitId: unitId || null,
-        vendorId: vendorId || null,
-        postNow,
-      });
+      const result = await categorizeBankTransactionsBulk({ transactionIds, ...item, postNow });
       if (result.error) setError(result.error);
-      else {
-        onApplied({
-          ids: transactionIds,
-          item: { kind, accountId: accountId || null, unitId: unitId || null, vendorId: vendorId || null },
-          postNow,
-          prior,
-        });
-      }
+      else onApplied({ ids: transactionIds, item, postNow, prior });
     });
 
-  const selectClass = "mt-1 rounded-lg border border-line-strong bg-paper px-2 py-1 text-[12px] text-ink";
+  const submit = (postNow: boolean) => {
+    if (!choice) {
+      setError("Pick a category first.");
+      return;
+    }
+    if (postNow) confirmPost(transactionIds, () => run(true));
+    else run(false);
+  };
 
   return (
     <div className="space-y-2 rounded-xl border border-brass bg-warning-tint p-3 shadow-lg">
@@ -119,56 +112,19 @@ function BulkForm({
       </div>
       <div className="flex flex-wrap items-end gap-3">
         <div>
-          <label className="block text-[11px] text-mute">This is</label>
-          <select
-            value={kind}
-            onChange={(e) => {
-              setKind(e.target.value as PostingKind);
-              setAccountId("");
-            }}
-            className={selectClass}
-          >
-            {(["expense", "income", "dues", "transfer", "excluded"] as PostingKind[]).map((k) => (
-              <option key={k} value={k}>
-                {KIND_LABEL[k]}
-              </option>
-            ))}
-          </select>
+          <label className="block text-[11px] text-mute">File them all as</label>
+          <CategoryPicker pickers={pickers} direction={direction} value={choice} onChange={setChoice} autoFocus />
         </div>
-        {kind === "dues" ? (
-          <div>
-            <label className="block text-[11px] text-mute">Unit</label>
-            <select value={unitId} onChange={(e) => setUnitId(e.target.value)} className={selectClass}>
-              <option value="">Choose…</option>
-              {pickers.units.map((u) => (
-                <option key={u.id} value={u.id}>
-                  {u.label}
-                </option>
-              ))}
-            </select>
-          </div>
-        ) : null}
-        {accountOptions.length > 0 || kind === "transfer" ? (
-          <div>
-            <label className="block text-[11px] text-mute">
-              {kind === "transfer" ? "To / from account" : "Account"}
-            </label>
-            <select value={accountId} onChange={(e) => setAccountId(e.target.value)} className={selectClass}>
-              <option value="">Choose…</option>
-              {accountOptions.map((a) => (
-                <option key={a.id} value={a.id}>
-                  {a.label}
-                </option>
-              ))}
-            </select>
-          </div>
-        ) : null}
-        {kind === "expense" && pickers.vendors.length > 0 ? (
+        {choice?.kind === "expense" && pickers.vendors.length > 0 ? (
           <div>
             <label className="block text-[11px] text-mute">
               Vendor <span className="text-mute-soft">(optional)</span>
             </label>
-            <select value={vendorId} onChange={(e) => setVendorId(e.target.value)} className={selectClass}>
+            <select
+              value={vendorId}
+              onChange={(e) => setVendorId(e.target.value)}
+              className="mt-1 rounded-lg border border-line-strong bg-paper px-2 py-1.5 text-[12px] text-ink"
+            >
               <option value="">No vendor</option>
               {pickers.vendors.map((v) => (
                 <option key={v.id} value={v.id}>
@@ -182,15 +138,15 @@ function BulkForm({
       <div className="flex flex-wrap items-center gap-2">
         <button
           type="button"
-          disabled={pending}
+          disabled={pending || !choice}
           onClick={() => submit(true)}
           className="rounded-md bg-ink px-2.5 py-1 text-[11px] font-medium text-paper hover:bg-ink-mid disabled:opacity-50"
         >
-          {pending ? "Saving…" : "Save & post all"}
+          {pending ? "Saving…" : choice?.kind === "excluded" ? "Save & exclude all" : "Save & post all"}
         </button>
         <button
           type="button"
-          disabled={pending}
+          disabled={pending || !choice}
           onClick={() => submit(false)}
           className="rounded-md border border-line-strong px-2.5 py-1 text-[11px] text-ink hover:bg-fill disabled:opacity-50"
         >
@@ -230,12 +186,37 @@ function SortableHeader({
   );
 }
 
-/** A recommendation can be saved in one click only when it already names its target. */
-function oneClick(t: SuggestedTransaction): boolean {
+/** A recommendation can be applied in one click only when it already names its target. */
+function oneClick(t: SuggestedTransaction): t is SuggestedTransaction & { suggestion: RowRecommendation } {
   return !!t.suggestion && !t.suggestion.needsPick;
 }
 
 const UNDO_MS = 10000;
+/** A toast that also asks about a rule stays a little longer. */
+const UNDO_WITH_RULE_MS = 20000;
+
+interface Toast {
+  message: string;
+  prior: PriorState[];
+  rule?: { pattern: string; label: string; item: Omit<CategorizationItem, "id"> };
+}
+
+const LINK_QUIET = "text-[11px] text-mute underline-offset-2 hover:text-ink hover:underline disabled:opacity-50";
+
+/** True when a key press came from somewhere that is already using the keyboard. */
+function isTyping(target: EventTarget | null): boolean {
+  if (!(target instanceof HTMLElement)) return false;
+  if (target.isContentEditable) return true;
+  const tag = target.tagName;
+  return tag === "INPUT" || tag === "SELECT" || tag === "TEXTAREA";
+}
+
+/** Buttons and links act on Enter themselves; the table must not act too. */
+function isInteractive(target: EventTarget | null): boolean {
+  if (!(target instanceof HTMLElement)) return false;
+  const tag = target.tagName;
+  return isTyping(target) || tag === "BUTTON" || tag === "A" || tag === "SUMMARY";
+}
 
 export function TransactionsTable({
   transactions,
@@ -255,20 +236,23 @@ export function TransactionsTable({
   amountHref: string;
 }) {
   const [selected, setSelected] = useState<Set<string>>(new Set());
-  const [prefill, setPrefill] = useState<{ kind: PostingKind; accountId: string | null; label: string } | null>(
-    null,
-  );
   const [pending, start] = useTransition();
-  const [bulkError, setBulkError] = useState<string | null>(null);
   const [groupError, setGroupError] = useState<string | null>(null);
 
-  const [toast, setToast] = useState<{ message: string; prior: PriorState[] } | null>(null);
+  const [toast, setToast] = useState<Toast | null>(null);
   const [undoing, startUndo] = useTransition();
   const [undoError, setUndoError] = useState<string | null>(null);
 
+  /** A bulk post of many rows waiting for a look: what to post, and how. */
+  const [confirm, setConfirm] = useState<{ rows: PreviewRow[]; run: () => void } | null>(null);
+
+  // Keyboard: which row j/k has landed on, and which row's form is open.
+  const [focusIdx, setFocusIdx] = useState<number | null>(null);
+  const [editingId, setEditingId] = useState<string | null>(null);
+
   useEffect(() => {
     if (!toast) return;
-    const timer = setTimeout(() => setToast(null), UNDO_MS);
+    const timer = setTimeout(() => setToast(null), toast.rule ? UNDO_WITH_RULE_MS : UNDO_MS);
     return () => clearTimeout(timer);
   }, [toast]);
 
@@ -276,10 +260,16 @@ export function TransactionsTable({
     const wanted = new Set(ids);
     return transactions.filter((t) => wanted.has(t.id)).map(priorOf);
   };
+  const rowsFor = (ids: string[]): SuggestedTransaction[] => {
+    const wanted = new Set(ids);
+    return transactions.filter((t) => wanted.has(t.id));
+  };
+  const previewFor = (ids: string[]): PreviewRow[] =>
+    rowsFor(ids).map((t) => ({ id: t.id, description: t.description, amount: t.amount, typicalCents: t.typicalCents }));
 
-  function announce(message: string, prior: PriorState[]) {
+  function announce(message: string, prior: PriorState[], rule?: Toast["rule"]) {
     setUndoError(null);
-    setToast({ message, prior });
+    setToast({ message, prior, rule });
   }
 
   function undo() {
@@ -290,6 +280,23 @@ export function TransactionsTable({
       if (result.error) setUndoError(result.error);
       else setToast(null);
     });
+  }
+
+  function saveRule() {
+    if (!toast?.rule) return;
+    const { pattern, label, item } = toast.rule;
+    const keep = toast;
+    startUndo(async () => {
+      const result = await saveCategorizationRule({ pattern, ...item });
+      if (result.error) setUndoError(result.error);
+      else setToast({ message: `${keep.message} · new ‘${pattern}’ rows will be filed as ${label}`, prior: keep.prior });
+    });
+  }
+
+  /** Posts more than PREVIEW_ABOVE rows only after a look at what that means. */
+  function confirmPost(ids: string[], run: () => void) {
+    if (ids.length > PREVIEW_ABOVE) setConfirm({ rows: previewFor(ids), run });
+    else run();
   }
 
   // Same payee, same direction, still un-categorized: "COMED 8841" and
@@ -325,63 +332,88 @@ export function TransactionsTable({
       return { error: result.errors[0] };
     }
     const n = result.applied?.length ?? 0;
-    announce(
-      `${n === 1 ? "Filed" : `${n} filed`} as ${s.label}${postNow ? " and posted" : ""}.`,
-      prior,
-    );
+    announce(outcome(n, s.label, postNow, s.kind), prior);
+    return {};
+  }
+
+  /** Enter on a row that already has a category: post it, with Undo. */
+  async function postRow(t: SuggestedTransaction): Promise<{ error?: string }> {
+    if (!t.posting_kind) return { error: "Categorize this transaction first." };
+    const result = await postBankTransaction(t.id);
+    if (result.error) return result;
+    const item = { kind: t.posting_kind, accountId: t.account_id, unitId: t.matched_unit_id };
+    announce(outcome(1, labelForCategorization(item, pickers), true, t.posting_kind), [priorOf(t)]);
+    return {};
+  }
+
+  /** "x": keep this row out of the books. Posting an excluded row only stamps excluded_at; pending rows just save. */
+  async function excludeRow(t: SuggestedTransaction): Promise<{ error?: string }> {
+    const item = { kind: "excluded" as const, accountId: null, unitId: null, vendorId: null };
+    const postNow = !t.pending;
+    const result = await applyCategorizations({ items: [{ id: t.id, ...item }], postNow });
+    if (result.error) return { error: result.error };
+    announce(outcome(1, "Not for the books", postNow, "excluded"), [priorOf(t)]);
     return {};
   }
 
   function handleCategorized(e: CategorizedEvent) {
     const label = labelForCategorization(e.item, pickers);
-    const n = e.ids.length;
-    announce(`${n === 1 ? "Saved" : `${n} saved`} as ${label}${e.postNow ? " and posted" : ""}.`, e.prior);
+    announce(
+      outcome(e.ids.length, label, e.postNow, e.item.kind),
+      e.prior,
+      e.ruleSuggestion ? { ...e.ruleSuggestion, item: e.item } : undefined,
+    );
   }
 
   function handleBulkApplied(e: BulkApplied) {
     const label = labelForCategorization(e.item, pickers);
-    announce(
-      `${e.ids.length} transaction${e.ids.length === 1 ? "" : "s"} saved as ${label}${e.postNow ? " and posted" : ""}.`,
-      e.prior,
-    );
+    announce(outcome(e.ids.length, label, e.postNow, e.item.kind), e.prior);
     setSelected(new Set());
-    setPrefill(null);
   }
 
-  // Everything with a ready-to-accept suggestion.
-  const acceptable = useMemo(() => {
-    const items: CategorizationItem[] = [];
+  // Everything with a one-click recommendation that can post now (settled),
+  // split into what the board's own history backs and what is only a guess.
+  const { postable, guesses } = useMemo(() => {
+    const postable: SuggestedTransaction[] = [];
+    const guesses: SuggestedTransaction[] = [];
     for (const t of transactions) {
-      if (t.posting_kind || !selectable(t) || !t.suggestion || !oneClick(t)) continue;
-      items.push({
-        id: t.id,
-        kind: t.suggestion.kind,
-        accountId: t.suggestion.accountId,
-        unitId: t.suggestion.unitId,
-        vendorId: null,
-      });
+      if (t.posting_kind || !selectable(t) || t.pending || !oneClick(t)) continue;
+      (t.suggestion.source === "keyword" ? guesses : postable).push(t);
     }
-    return items;
+    return { postable, guesses };
   }, [transactions]);
 
-  function acceptAll() {
-    const items = acceptable;
-    start(async () => {
-      setGroupError(null);
-      const prior = priorFor(items.map((i) => i.id));
-      const result = await applyCategorizations({ items, postNow: false });
-      if (result.error) {
-        setGroupError(result.error);
-        return;
-      }
-      const n = result.applied?.length ?? 0;
-      announce(
-        `${n} suggestion${n === 1 ? "" : "s"} accepted — saved, not posted yet.${
-          result.errors && result.errors.length > 0 ? ` ${result.errors.length} couldn't be applied.` : ""
-        }`,
-        prior,
-      );
-    });
+  function acceptAll(rows: SuggestedTransaction[]) {
+    const items: CategorizationItem[] = rows.map((t) => ({
+      id: t.id,
+      kind: t.suggestion!.kind,
+      accountId: t.suggestion!.accountId,
+      unitId: t.suggestion!.unitId,
+      vendorId: null,
+    }));
+    const post = () =>
+      start(async () => {
+        setGroupError(null);
+        setConfirm(null);
+        const prior = priorFor(items.map((i) => i.id));
+        const result = await applyCategorizations({ items, postNow: true });
+        if (result.error) {
+          setGroupError(result.error);
+          return;
+        }
+        const applied = new Set(result.applied ?? []);
+        const moved = rows.filter((t) => applied.has(t.id) && t.suggestion?.kind !== "excluded");
+        const sums = inOutLabel(moved);
+        const failed = result.errors?.length ?? 0;
+        announce(
+          `${result.posted ?? 0} posted${sums ? ` · ${sums}` : ""}${failed > 0 ? ` · ${failed} couldn't be posted` : ""}`,
+          prior,
+        );
+      });
+    confirmPost(
+      items.map((i) => i.id),
+      post,
+    );
   }
 
   function toggle(id: string) {
@@ -391,58 +423,100 @@ export function TransactionsTable({
       else next.add(id);
       return next;
     });
-    setPrefill(null);
   }
 
-  const selectedSum = useMemo(
-    () => transactions.filter((t) => selected.has(t.id)).reduce((sum, t) => sum + Number(t.amount), 0),
-    [transactions, selected],
-  );
+  const selectedRows = useMemo(() => transactions.filter((t) => selected.has(t.id)), [transactions, selected]);
+  const selectedSum = selectedRows.reduce((sum, t) => sum + Number(t.amount), 0);
   const totalLabel = `${selectedSum < 0 ? "−" : ""}${money(Math.abs(selectedSum))}`;
+  const selectedDirection: Direction = selectedRows.every((t) => Number(t.amount) > 0)
+    ? "in"
+    : selectedRows.every((t) => Number(t.amount) < 0)
+      ? "out"
+      : "any";
 
-  const runBulk = (postNow: boolean) =>
-    start(async () => {
-      setBulkError(null);
-      const kind = prefill?.kind ?? "expense";
-      const ids = [...selected];
-      const prior = priorFor(ids);
-      const result = await categorizeBankTransactionsBulk({
-        transactionIds: ids,
-        kind,
-        accountId: prefill?.accountId ?? null,
-        unitId: null,
-        vendorId: null,
-        postNow,
-      });
-      if (result.error) setBulkError(result.error);
-      else {
-        handleBulkApplied({
-          ids,
-          item: { kind, accountId: prefill?.accountId ?? null, unitId: null, vendorId: null },
-          postNow,
-          prior,
-        });
+  // Keyboard for the backlog: j/k or arrows move, Enter accepts, c categorizes,
+  // x marks not for the books, Escape closes. Never while typing in a field.
+  useEffect(() => {
+    if (!canEdit) return;
+    const onKey = (e: KeyboardEvent) => {
+      if (e.metaKey || e.ctrlKey || e.altKey) return;
+      if (document.querySelector("dialog[open]")) return;
+      if (e.key === "Escape") {
+        if (confirm) setConfirm(null);
+        else if (editingId) setEditingId(null);
+        else if (isTyping(e.target)) return;
+        else setFocusIdx(null);
+        return;
       }
-    });
+      if (confirm || isTyping(e.target)) return;
+      const n = transactions.length;
+      if (n === 0) return;
+      const move = (delta: number) => {
+        e.preventDefault();
+        setFocusIdx((i) => (i === null ? (delta > 0 ? 0 : n - 1) : Math.max(0, Math.min(n - 1, i + delta))));
+      };
+      if (e.key === "j" || e.key === "ArrowDown") return move(1);
+      if (e.key === "k" || e.key === "ArrowUp") return move(-1);
+      if (focusIdx === null || editingId) return;
+      const t = transactions[focusIdx];
+      if (!t || !selectable(t)) return;
+      const report = (p: Promise<{ error?: string }>) =>
+        start(async () => {
+          const r = await p;
+          if (r.error) announce(r.error, []);
+        });
+      if (e.key === "Enter") {
+        if (isInteractive(e.target)) return;
+        e.preventDefault();
+        if (t.posting_kind && !t.pending && !t.excluded_at) report(postRow(t));
+        else if (oneClick(t)) report(acceptSuggestion(t, !t.pending));
+        else setEditingId(t.id);
+      } else if (e.key === "c") {
+        e.preventDefault();
+        setEditingId(t.id);
+      } else if (e.key === "x") {
+        e.preventDefault();
+        report(excludeRow(t));
+      }
+    };
+    window.addEventListener("keydown", onKey);
+    return () => window.removeEventListener("keydown", onKey);
+  });
 
-  const btnPrimary =
-    "rounded-md bg-ink px-2.5 py-1 text-[11px] font-medium text-paper hover:bg-ink-mid disabled:opacity-50";
-  const btnGhost =
-    "rounded-md border border-line-strong px-2.5 py-1 text-[11px] text-ink hover:bg-fill disabled:opacity-50";
+  useEffect(() => {
+    if (focusIdx === null) return;
+    const t = transactions[focusIdx];
+    if (t) document.getElementById(`tx-${t.id}`)?.scrollIntoView({ block: "nearest" });
+  }, [focusIdx, transactions]);
+
+  const mainAccept = postable.length > 0 ? postable : guesses;
+  const showAcceptAll = canEdit && postable.length + guesses.length > 1;
 
   return (
     <div>
-      {canEdit && acceptable.length > 1 ? (
-        <div className="mb-3 flex flex-wrap items-center gap-2">
+      {showAcceptAll ? (
+        <div className="mb-3 flex flex-wrap items-center gap-x-3 gap-y-1">
           <button
             type="button"
             disabled={pending}
-            onClick={acceptAll}
+            onClick={() => acceptAll(mainAccept)}
             className="rounded-full bg-ink px-3 py-1.5 text-[12px] font-medium text-paper hover:bg-ink-mid disabled:opacity-50"
           >
-            {pending ? "Saving…" : `Accept all ${acceptable.length} recommendations`}
+            {pending
+              ? "Posting…"
+              : postable.length > 0
+                ? `Accept all ${postable.length}`
+                : `Accept the ${guesses.length} guesses`}
           </button>
-          <span className="text-[11px] text-mute">Saved, not posted — you can undo for 10 seconds.</span>
+          {postable.length > 0 && guesses.length > 0 ? (
+            <button type="button" disabled={pending} onClick={() => acceptAll([...postable, ...guesses])} className={LINK_QUIET}>
+              also the {guesses.length} guess{guesses.length === 1 ? "" : "es"}
+            </button>
+          ) : null}
+          <span className="text-[11px] text-mute">
+            {postable.length > 0 ? "Posts the ones you've filed this way before" : "Posts them to the books"} — undo for 10
+            seconds.
+          </span>
           {groupError ? <span className="w-full text-[11px] text-bad-text">{groupError}</span> : null}
         </div>
       ) : null}
@@ -471,7 +545,7 @@ export function TransactionsTable({
             </tr>
           </thead>
           <tbody className="divide-y divide-line">
-            {transactions.map((t) => (
+            {transactions.map((t, i) => (
               <TransactionRow
                 key={t.id}
                 transaction={t}
@@ -479,6 +553,10 @@ export function TransactionsTable({
                 canEdit={canEdit}
                 suggestion={t.suggestion}
                 similar={similarByRow.get(t.id) ?? []}
+                rulePattern={t.rulePattern}
+                focused={focusIdx === i}
+                editing={editingId === t.id}
+                onEditingChange={(open) => setEditingId(open ? t.id : null)}
                 onAcceptSuggestion={(postNow) => acceptSuggestion(t, postNow)}
                 onCategorized={handleCategorized}
                 leadingCell={
@@ -500,64 +578,75 @@ export function TransactionsTable({
       </div>
 
       {/* Selection bar: pinned to the bottom of the screen so it's never scrolled away from the rows. */}
-      {canEdit && selected.size > 0 ? (
+      {canEdit && selected.size > 0 && !confirm ? (
         <div className="pointer-events-none fixed inset-x-0 bottom-4 z-30 pl-[calc(var(--sidebar-width)+1rem)] pr-4 min-[900px]:pl-[calc(var(--sidebar-width)+1.5rem)] min-[900px]:pr-8">
           <div className="pointer-events-auto mx-auto max-h-[60vh] max-w-[1100px] overflow-y-auto rounded-xl">
-            {prefill ? (
-              <div className="flex flex-wrap items-center gap-2 rounded-xl border border-brass bg-warning-tint p-3 shadow-lg">
-                <span className="text-[12px] text-ink">
-                  Post {selected.size} transaction{selected.size === 1 ? "" : "s"}{" "}
-                  <span className="figures text-mute">({totalLabel})</span> as{" "}
-                  <span className="font-medium">{prefill.label}</span>?
-                </span>
-                <button type="button" disabled={pending} onClick={() => runBulk(true)} className={btnPrimary}>
-                  {pending ? "Saving…" : "Save & post all"}
-                </button>
-                <button type="button" disabled={pending} onClick={() => runBulk(false)} className={btnGhost}>
-                  Save all for later
-                </button>
-                <button
-                  type="button"
-                  onClick={() => {
-                    setSelected(new Set());
-                    setPrefill(null);
-                  }}
-                  className="text-[11px] text-mute underline-offset-2 hover:underline"
-                >
-                  Clear
-                </button>
-                {bulkError ? <span className="w-full text-[11px] text-bad-text">{bulkError}</span> : null}
-              </div>
-            ) : (
-              <BulkForm
-                transactionIds={[...selected]}
-                totalLabel={totalLabel}
-                pickers={pickers}
-                initial={null}
-                snapshot={priorFor}
-                onCancel={() => setSelected(new Set())}
-                onApplied={handleBulkApplied}
-              />
-            )}
+            <BulkForm
+              transactionIds={[...selected]}
+              totalLabel={totalLabel}
+              direction={selectedDirection}
+              pickers={pickers}
+              snapshot={priorFor}
+              confirmPost={confirmPost}
+              onCancel={() => setSelected(new Set())}
+              onApplied={handleBulkApplied}
+            />
           </div>
         </div>
+      ) : null}
+
+      {confirm ? (
+        <PostPreview
+          rows={confirm.rows}
+          busy={pending}
+          onPost={() => {
+            const { run } = confirm;
+            setConfirm(null);
+            run();
+          }}
+          onCancel={() => setConfirm(null)}
+        />
       ) : null}
 
       {toast ? (
         <div
           role="status"
           aria-live="polite"
-          className="fixed bottom-4 left-1/2 z-40 flex max-w-[92vw] -translate-x-1/2 items-center gap-3 rounded-lg bg-ink px-4 py-2.5 text-[13px] text-paper shadow-lg"
+          className="fixed bottom-4 left-1/2 z-40 flex max-w-[92vw] flex-wrap items-center gap-x-3 gap-y-1 rounded-lg bg-ink px-4 py-2.5 text-[13px] text-paper shadow-lg"
         >
           <span>{undoError ?? toast.message}</span>
-          <button
-            type="button"
-            disabled={undoing}
-            onClick={undo}
-            className="rounded-md border border-ondark-mute px-2.5 py-0.5 text-[12px] font-medium hover:bg-ink-mid disabled:opacity-50"
-          >
-            {undoing ? "Undoing…" : "Undo"}
-          </button>
+          {toast.prior.length > 0 ? (
+            <button
+              type="button"
+              disabled={undoing}
+              onClick={undo}
+              className="rounded-md border border-ondark-mute px-2.5 py-0.5 text-[12px] font-medium hover:bg-ink-mid disabled:opacity-50"
+            >
+              {undoing ? "Undoing…" : "Undo"}
+            </button>
+          ) : null}
+          {toast.rule ? (
+            <span className="flex items-center gap-2 text-[12px]">
+              <span className="text-ondark-mute">
+                Always file ‘{toast.rule.pattern}’ as {toast.rule.label}?
+              </span>
+              <button
+                type="button"
+                disabled={undoing}
+                onClick={saveRule}
+                className="rounded-md border border-ondark-mute px-2 py-0.5 font-medium hover:bg-ink-mid disabled:opacity-50"
+              >
+                Yes
+              </button>
+              <button
+                type="button"
+                onClick={() => setToast({ message: toast.message, prior: toast.prior })}
+                className="text-ondark-mute underline-offset-2 hover:text-paper hover:underline"
+              >
+                No
+              </button>
+            </span>
+          ) : null}
           <button
             type="button"
             onClick={() => setToast(null)}

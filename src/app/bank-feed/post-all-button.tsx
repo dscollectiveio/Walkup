@@ -2,35 +2,42 @@
 
 import { useState, useTransition } from "react";
 import { postAllReady } from "./actions";
+import { PREVIEW_ABOVE, PostPreview, type PreviewRow } from "./post-preview";
 
-export function PostAllButton({ readyCount }: { readyCount: number }) {
+/**
+ * Posts every categorized, settled row. More than a handful gets a look
+ * first: how many, how much in and out, and anything unusual among them.
+ */
+export function PostAllButton({ readyCount, preview }: { readyCount: number; preview: PreviewRow[] }) {
   const [pending, start] = useTransition();
   const [message, setMessage] = useState<string | null>(null);
+  const [confirming, setConfirming] = useState(false);
 
   if (readyCount === 0) return null;
+
+  const post = () =>
+    start(async () => {
+      setConfirming(false);
+      setMessage(null);
+      const result = await postAllReady();
+      if (result.error) setMessage(result.error);
+      else if (result.errors && result.errors.length > 0) {
+        setMessage(`Posted ${result.posted}. ${result.errors.length} couldn't be posted: ${result.errors.join(" · ")}`);
+      }
+    });
 
   return (
     <div>
       <button
         type="button"
         disabled={pending}
-        onClick={() =>
-          start(async () => {
-            setMessage(null);
-            const result = await postAllReady();
-            if (result.error) setMessage(result.error);
-            else if (result.errors && result.errors.length > 0) {
-              setMessage(
-                `Posted ${result.posted}. ${result.errors.length} couldn't be posted: ${result.errors.join(" · ")}`,
-              );
-            }
-          })
-        }
+        onClick={() => (readyCount > PREVIEW_ABOVE ? setConfirming(true) : post())}
         className="rounded-md bg-ink px-4 py-2 text-[13px] font-medium text-paper hover:bg-ink-mid disabled:opacity-50"
       >
         {pending ? "Posting…" : `Post ${readyCount} ready to the books`}
       </button>
       {message ? <p className="mt-2 text-[12px] text-bad-text">{message}</p> : null}
+      {confirming ? <PostPreview rows={preview} busy={pending} onPost={post} onCancel={() => setConfirming(false)} /> : null}
     </div>
   );
 }

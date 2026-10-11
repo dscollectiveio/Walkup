@@ -925,6 +925,34 @@ reconnecting", so no migration) and clears it on the next successful sync;
 sets it active and syncs. The Item, its ID and its history survive, so
 nothing is re-imported.
 
+**Categorizing (slice C), added 2026-10-10.** Client-side only; the server
+actions and RPCs above are unchanged. (1) Clicking a recommendation chip now
+files *and posts* a settled row (`applyCategorizations` with `postNow`), with
+"Save for later" beside it to file without posting; a pending row's chip
+only files, and says it posts once the bank settles it. This is still a
+person's click per row or per batch — nothing posts on its own. (2) "Accept
+all N" posts the settled recommendations the board's own history backs;
+keyword guesses are a separate, quieter "also the N guesses" link, and
+pending rows are left out. (3) One searchable category picker (a combobox
+grouped Expenses / Other income / Dues per unit / Transfers per cash account
+/ Not for the books) replaces the three dropdowns; a pick sets kind, account
+and unit together, and vendor is a second line only for an expense. (4) The
+chip shows how sure it is: filled for history, outlined for a keyword guess
+("a guess from the description"), warning-tinted "Already recorded · not for
+the books" for a likely duplicate. (5) Posting more than ten rows at once
+(Accept all, the bulk bar, Post all ready) shows a preview first: count,
+money out and in, and up to three flags computed from what the page already
+has — first-time payees and amounts over three times the payee's usual
+(`typicalAmountCents`, which leaves an already-filed row's own amount out of
+the mean). A nudge, never a block. (6) Search and range apply as you type
+(`router.replace` of the same query params the page reads) with removable
+chips; the Filter button is gone. (7) j/k, Enter, c, x and Escape work the
+backlog from the keyboard. (8) A row filed by a rule shows a "rule" tag with
+"Remove rule"; after a save, the toast asks "Always file X as Y?" when the
+action returned `ruleSuggestion`. (9) Undo in the toast works for all of the
+above, through `revertCategorizations` → `unpost_bank_transactions`, a
+reversing entry as always.
+
 ## 30. Access reviews, automated deprovisioning, and personal-data redaction — including the one path that edits the audit log
 
 *Decided: Doug, 2026-09-26. Plaid's security review (submitted the same
