@@ -14,7 +14,7 @@ function isActive(pathname: string, href: string) {
 }
 
 /** How long the mouse rests on the rail before it slides out. */
-const PEEK_DELAY_MS = 500;
+const PEEK_DELAY_MS = 250;
 /** How long the content takes to fade out before the layout swaps. */
 const FADE_OUT_MS = 160;
 
