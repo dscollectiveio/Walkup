@@ -1,9 +1,9 @@
 import { money } from "@/components/ui";
-import { monthBounds, quarterBounds, type FiscalYear, type PeriodGrain } from "./periods";
+import type { PeriodGrain } from "./periods";
 
 /**
  * Pure helpers for the statement page: the budget share for a period, the
- * period dropdown's options, the plain-English headline, and the words for
+ * picker's date math, the plain-English headline, and the words for
  * a budget variance. No queries, so all of it is unit-tested.
  */
 
@@ -19,37 +19,35 @@ export function prorateBudget(
   return { byAccount, note };
 }
 
-export interface PeriodOption {
-  label: string;
-  period: PeriodGrain;
-  offset: number;
-  group: "Months" | "Quarters" | "Years";
+const ym = (iso: string): [number, number] => {
+  const [y, m] = iso.slice(0, 10).split("-").map(Number);
+  return [y, m];
+};
+
+/** How many months back from today's month a given calendar month is (0 = this month). */
+export function monthOffsetFor(year: number, month1: number, todayIso: string): number {
+  const [ty, tm] = ym(todayIso);
+  return (ty * 12 + (tm - 1)) - (year * 12 + (month1 - 1));
+}
+
+/** How many quarters back from today's quarter a given quarter (1–4) is. */
+export function quarterOffsetFor(year: number, quarter: number, todayIso: string): number {
+  const [ty, tm] = ym(todayIso);
+  return (ty * 4 + Math.floor((tm - 1) / 3)) - (year * 4 + (quarter - 1));
 }
 
 /**
- * Months and quarters back to the start of the earliest fiscal year (capped
- * so the list stays short), then every fiscal year. One list, three groups.
+ * What the picker may offer: nothing in the future, and nothing before the
+ * earliest fiscal year (or twelve months back when none exists yet).
  */
-export function periodOptions(fiscalYears: FiscalYear[], now: Date = new Date()): PeriodOption[] {
+export function pickerBounds(
+  fiscalYears: { starts_on: string }[],
+  todayIso: string,
+): { minYear: number; minMonthIndex: number; maxYear: number; maxMonthIndex: number } {
+  const [ty, tm] = ym(todayIso);
   const earliest = fiscalYears.length > 0 ? fiscalYears[fiscalYears.length - 1].starts_on : null;
-  const options: PeriodOption[] = [];
-
-  for (let offset = 0; offset < 24; offset++) {
-    const b = monthBounds(offset, now);
-    if (earliest && b.end < earliest) break;
-    if (!earliest && offset >= 12) break;
-    options.push({ label: b.label, period: "monthly", offset, group: "Months" });
-  }
-  for (let offset = 0; offset < 8; offset++) {
-    const b = quarterBounds(offset, now);
-    if (earliest && b.end < earliest) break;
-    if (!earliest && offset >= 4) break;
-    options.push({ label: b.label, period: "quarterly", offset, group: "Quarters" });
-  }
-  fiscalYears.forEach((fy, offset) => {
-    options.push({ label: fy.label, period: "annual", offset, group: "Years" });
-  });
-  return options;
+  const minMonthIndex = earliest ? ym(earliest)[0] * 12 + (ym(earliest)[1] - 1) : ty * 12 + (tm - 1) - 11;
+  return { minYear: Math.floor(minMonthIndex / 12), minMonthIndex, maxYear: ty, maxMonthIndex: ty * 12 + (tm - 1) };
 }
 
 export interface HeadlineInput {

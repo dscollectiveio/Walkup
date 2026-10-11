@@ -71,29 +71,35 @@ export default async function DuesPage() {
   const association = associations?.[0];
   if (!association) return <Restricted what="HOA dues" />;
 
-  const { data: isMemberRes } = await supabase.rpc("is_member", { assoc: association.id });
-  if (isMemberRes !== true) return <Restricted what="HOA dues" />;
+  const today = new Date();
+  const todayKey = todayIso(today);
 
-  const [{ data: isBoardAdminRes }, { data: isBoardRes }, { data: canReadFinancialsRes }, { data: ownedUnitIds }] =
-    await Promise.all([
-      supabase.rpc("has_role_in", { assoc: association.id, roles: ["board_admin"] }),
-      supabase.rpc("is_board", { assoc: association.id }),
-      supabase.rpc("can_read_financials", { assoc: association.id }),
-      supabase.rpc("owned_unit_ids", { assoc: association.id }),
-    ]);
+  // One round trip for everything that doesn't depend on the answers: the
+  // membership check, the role checks, and the (RLS-scoped) unit list.
+  const [
+    { data: isMemberRes },
+    { data: isBoardAdminRes },
+    { data: isBoardRes },
+    { data: canReadFinancialsRes },
+    { data: ownedUnitIds },
+    { data: units },
+    { data: owners },
+  ] = await Promise.all([
+    supabase.rpc("is_member", { assoc: association.id }),
+    supabase.rpc("has_role_in", { assoc: association.id, roles: ["board_admin"] }),
+    supabase.rpc("is_board", { assoc: association.id }),
+    supabase.rpc("can_read_financials", { assoc: association.id }),
+    supabase.rpc("owned_unit_ids", { assoc: association.id }),
+    supabase.from("units").select("id, label, sort_order").order("sort_order"),
+    supabase.from("unit_owners").select("unit_id, effective_to, persons(full_name, email)"),
+  ]);
+  if (isMemberRes !== true) return <Restricted what="HOA dues" />;
   const isBoardAdmin = isBoardAdminRes === true;
   const isBoard = isBoardRes === true;
   const canReadFinancials = canReadFinancialsRes === true;
   const myUnitIds: string[] = ownedUnitIds ?? [];
 
-  const today = new Date();
-  const todayKey = todayIso(today);
-
   // Everyone sees the units; what's attached to them is RLS-scoped below.
-  const [{ data: units }, { data: owners }] = await Promise.all([
-    supabase.from("units").select("id, label, sort_order").order("sort_order"),
-    supabase.from("unit_owners").select("unit_id, effective_to, persons(full_name, email)"),
-  ]);
   const unitList = units ?? [];
   const ownerByUnit = new Map<string, { name: string; email: string | null }>();
   for (const o of owners ?? []) {

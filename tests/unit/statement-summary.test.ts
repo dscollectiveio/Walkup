@@ -1,5 +1,12 @@
 import { describe, expect, it } from "vitest";
-import { headlineFor, periodOptions, prorateBudget, varianceWords } from "@/app/financial-statements/summary";
+import {
+  headlineFor,
+  monthOffsetFor,
+  pickerBounds,
+  prorateBudget,
+  quarterOffsetFor,
+  varianceWords,
+} from "@/app/financial-statements/summary";
 
 describe("prorateBudget", () => {
   it("splits an annual budget by the period", () => {
@@ -10,29 +17,25 @@ describe("prorateBudget", () => {
   });
 });
 
-describe("periodOptions", () => {
-  const now = new Date(2026, 9, 15); // Oct 15, 2026
-  const fys = [
-    { label: "2026", starts_on: "2026-01-01", ends_on: "2026-12-31" },
-    { label: "2025", starts_on: "2025-01-01", ends_on: "2025-12-31" },
-  ];
-
-  it("lists months and quarters back to the earliest fiscal year, then the years", () => {
-    const opts = periodOptions(fys, now);
-    const months = opts.filter((o) => o.group === "Months");
-    const quarters = opts.filter((o) => o.group === "Quarters");
-    const years = opts.filter((o) => o.group === "Years");
-    expect(months[0]).toMatchObject({ label: "October 2026", period: "monthly", offset: 0 });
-    expect(months.length).toBe(22); // Oct 2026 back to Jan 2025, capped at 24
-    expect(quarters[0].label).toBe("Q4 2026");
-    expect(quarters.length).toBe(8);
-    expect(years.map((y) => y.label)).toEqual(["2026", "2025"]);
+describe("picker date math", () => {
+  const today = "2026-10-15";
+  it("counts months and quarters back from today", () => {
+    expect(monthOffsetFor(2026, 10, today)).toBe(0);
+    expect(monthOffsetFor(2026, 1, today)).toBe(9);
+    expect(monthOffsetFor(2025, 12, today)).toBe(10);
+    expect(quarterOffsetFor(2026, 4, today)).toBe(0);
+    expect(quarterOffsetFor(2026, 1, today)).toBe(3);
+    expect(quarterOffsetFor(2025, 4, today)).toBe(4);
   });
-
+  it("offers nothing in the future and nothing before the first fiscal year", () => {
+    const b = pickerBounds([{ starts_on: "2026-01-01" }, { starts_on: "2025-01-01" }], today);
+    expect(b).toMatchObject({ minYear: 2025, maxYear: 2026 });
+    expect(b.minMonthIndex).toBe(2025 * 12);
+    expect(b.maxMonthIndex).toBe(2026 * 12 + 9);
+  });
   it("offers a year of months when no fiscal year exists yet", () => {
-    const opts = periodOptions([], now);
-    expect(opts.filter((o) => o.group === "Months").length).toBe(12);
-    expect(opts.filter((o) => o.group === "Years").length).toBe(0);
+    const b = pickerBounds([], today);
+    expect(b.maxMonthIndex - b.minMonthIndex).toBe(11);
   });
 });
 

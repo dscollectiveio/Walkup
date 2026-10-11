@@ -5,7 +5,7 @@ import { Answer, Card, Empty, Restricted, money } from "@/components/ui";
 import { shortDate, todayIso } from "@/lib/dates";
 import { statementHref, type PeriodBounds, type PeriodGrain } from "./periods";
 import { loadStatement, type AccountLine, type LineEntry } from "./data";
-import { headlineFor, periodOptions, varianceWords } from "./summary";
+import { headlineFor, varianceWords } from "./summary";
 import { PeriodPicker } from "./period-picker";
 
 export const dynamic = "force-dynamic";
@@ -234,9 +234,11 @@ export default async function FinancialStatementsPage({
             ←
           </Link>
           <PeriodPicker
-            options={periodOptions(fiscalYears)}
+            label={bounds?.label ?? "Choose a period"}
             current={{ period, offset }}
-            currentLabel={bounds?.label ?? null}
+            currentStart={bounds?.start ?? null}
+            fiscalYears={fiscalYears}
+            today={today}
             sort={sort}
           />
           <Link

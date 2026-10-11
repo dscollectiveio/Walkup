@@ -122,6 +122,36 @@ export default async function BudgetPage({ searchParams }: { searchParams: Promi
   const accountName = new Map((accounts ?? []).map((a) => [a.id, a.name]));
   const p = resolvePeriod(period, fiscalYear, today);
 
+  // Spending data doesn't depend on the budget rows, so it starts now and
+  // runs alongside them instead of after them. Owners never see actuals, so
+  // they don't pay for it.
+  const actualsPromise = canSeeActuals
+    ? Promise.all([
+    supabase.from("monthly_expense_actuals").select("month, account_id, account_name, fund_id, total").order("month"),
+    supabase
+      .from("monthly_cash_activity")
+      .select("month, fund_kind, inflow, outflow, transfer_inflow, transfer_outflow")
+      .order("month"),
+    supabase.from("bank_connections").select("last_synced_at").order("last_synced_at", { ascending: false, nullsFirst: false }).limit(1),
+    // The entries behind each bar, for "click a row to see what's in it".
+    expenseAccounts.length > 0
+      ? supabase
+          .from("journal_lines")
+          .select("account_id, debit, credit, line_memo, entry:journal_entries!inner(id, entry_date, memo, is_posted)")
+          .eq("association_id", association.id)
+          .eq("fund_id", operatingFund.id)
+          .in(
+            "account_id",
+            expenseAccounts.map((a) => a.id),
+          )
+          .eq("entry.is_posted", true)
+          .gte("entry.entry_date", p.startDate)
+          .lte("entry.entry_date", p.endDate)
+          .limit(2000)
+      : Promise.resolve({ data: null }),
+      ])
+    : null;
+
   const [{ data: budgetRows }, { data: priorBudgetRows }] = await Promise.all([
     supabase
       .from("budget_vs_actual")
@@ -225,30 +255,7 @@ export default async function BudgetPage({ searchParams }: { searchParams: Promi
 
   const currentMonth = monthKey(today);
 
-  const [{ data: expenseRows }, { data: cashRows }, { data: connections }, { data: entryLines }] = await Promise.all([
-    supabase.from("monthly_expense_actuals").select("month, account_id, account_name, fund_id, total").order("month"),
-    supabase
-      .from("monthly_cash_activity")
-      .select("month, fund_kind, inflow, outflow, transfer_inflow, transfer_outflow")
-      .order("month"),
-    supabase.from("bank_connections").select("last_synced_at").order("last_synced_at", { ascending: false, nullsFirst: false }).limit(1),
-    // The entries behind each bar, for "click a row to see what's in it".
-    expenseAccounts.length > 0
-      ? supabase
-          .from("journal_lines")
-          .select("account_id, debit, credit, line_memo, entry:journal_entries!inner(id, entry_date, memo, is_posted)")
-          .eq("association_id", association.id)
-          .eq("fund_id", operatingFund.id)
-          .in(
-            "account_id",
-            expenseAccounts.map((a) => a.id),
-          )
-          .eq("entry.is_posted", true)
-          .gte("entry.entry_date", p.startDate)
-          .lte("entry.entry_date", p.endDate)
-          .limit(2000)
-      : Promise.resolve({ data: null }),
-  ]);
+  const [{ data: expenseRows }, { data: cashRows }, { data: connections }, { data: entryLines }] = await actualsPromise!;
 
   const expenses = (expenseRows ?? []) as ExpenseActualRow[];
   const cash = (cashRows ?? []) as CashActivityRow[];

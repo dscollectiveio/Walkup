@@ -124,22 +124,17 @@ export async function loadStatement(
   period: PeriodGrain,
   offset: number,
 ): Promise<Statement | { restricted: true }> {
-  const { data: associations } = await supabase
-    .from("associations")
-    .select("id, display_name")
-    .limit(1);
+  // Round trips are the cost here (the database is a continent away from
+  // some callers), so independent reads go out together. Every one of them is
+  // row-level-secured, so reading before the access check below returns
+  // nothing a caller couldn't already see; the check still decides what we
+  // hand back.
+  const [{ data: associations }, { data: fyRows }] = await Promise.all([
+    supabase.from("associations").select("id, display_name").limit(1),
+    supabase.from("fiscal_years").select("label, starts_on, ends_on").order("starts_on", { ascending: false }),
+  ]);
   const association = associations?.[0];
   if (!association) return { restricted: true };
-
-  const { data: canReadFinancialsRes } = await supabase.rpc("can_read_financials", {
-    assoc: association.id,
-  });
-  if (canReadFinancialsRes !== true) return { restricted: true };
-
-  const { data: fyRows } = await supabase
-    .from("fiscal_years")
-    .select("label, starts_on, ends_on")
-    .order("starts_on", { ascending: false });
   const fiscalYears: FiscalYear[] = fyRows ?? [];
 
   const bounds = boundsFor(period, offset, fiscalYears);
@@ -176,6 +171,9 @@ export async function loadStatement(
     { data: openCharges },
     { data: budgets },
     { data: latestEntry },
+    { data: canReadFinancialsRes },
+    { data: entryLines },
+    { data: bankRows },
   ] = await Promise.all([
     sumLines(supabase, association.id, bounds),
     priorBounds ? sumLines(supabase, association.id, priorBounds) : Promise.resolve(null),
@@ -219,7 +217,31 @@ export async function loadStatement(
       .eq("is_posted", true)
       .order("entry_date", { ascending: false })
       .limit(1),
+    supabase.rpc("can_read_financials", { assoc: association.id }),
+    // The entries behind each income/expense line, fetched with everything
+    // else instead of after the totals are known: the join filters to the
+    // same accounts the totals are built from.
+    supabase
+      .from("journal_lines")
+      .select(
+        "account_id, debit, credit, line_memo, account:accounts!inner(type), entry:journal_entries!inner(id, entry_date, memo, is_posted)",
+      )
+      .eq("association_id", association.id)
+      .in("account.type", ["income", "expense"])
+      .eq("entry.is_posted", true)
+      .gte("entry.entry_date", bounds.start)
+      .lte("entry.entry_date", bounds.end)
+      .limit(2000),
+    supabase
+      .from("bank_transactions")
+      .select("journal_entry_id, description")
+      .eq("association_id", association.id)
+      .not("journal_entry_id", "is", null)
+      .gte("posted_on", bounds.start)
+      .lte("posted_on", bounds.end)
+      .limit(2000),
   ]);
+  if (canReadFinancialsRes !== true) return { restricted: true };
 
   const incomeRows = current.rows.filter((r) => r.account_type === "income");
   const expenseRows = current.rows
@@ -277,50 +299,31 @@ export async function loadStatement(
   }
 
   // --- Entries behind each line --------------------------------------------
-  const accountIds = current.rows.map((r) => r.account_id);
   const typeById = new Map(current.rows.map((r) => [r.account_id, r.account_type]));
   const entriesByAccount: Record<string, LineEntry[]> = {};
-  if (accountIds.length > 0) {
-    type EntryLine = {
-      account_id: string;
-      debit: string | number;
-      credit: string | number;
-      line_memo: string | null;
-      entry: { id: string; entry_date: string; memo: string | null } | { id: string; entry_date: string; memo: string | null }[];
-    };
-    const { data: entryLines } = await supabase
-      .from("journal_lines")
-      .select("account_id, debit, credit, line_memo, entry:journal_entries!inner(id, entry_date, memo, is_posted)")
-      .eq("association_id", association.id)
-      .in("account_id", accountIds)
-      .eq("entry.is_posted", true)
-      .gte("entry.entry_date", bounds.start)
-      .lte("entry.entry_date", bounds.end)
-      .limit(2000);
-    const lines = ((entryLines ?? []) as unknown as EntryLine[]).map((l) => ({
-      ...l,
-      entry: Array.isArray(l.entry) ? l.entry[0] : l.entry,
-    }));
-    const entryIds = [...new Set(lines.map((l) => l.entry.id))];
-    const { data: bankRows } =
-      entryIds.length > 0
-        ? await supabase.from("bank_transactions").select("journal_entry_id, description").in("journal_entry_id", entryIds)
-        : { data: [] };
-    const bankByEntry = new Map((bankRows ?? []).map((b) => [b.journal_entry_id as string, b.description as string]));
-    for (const l of lines) {
-      const type = typeById.get(l.account_id);
-      const amount = type === "income" ? Number(l.credit) - Number(l.debit) : Number(l.debit) - Number(l.credit);
-      const list = entriesByAccount[l.account_id] ?? (entriesByAccount[l.account_id] = []);
-      list.push({
-        entry_id: l.entry.id,
-        entry_date: l.entry.entry_date,
-        memo: (l.entry.memo ?? l.line_memo ?? "").replace(/^\[DEMO\]\s*/, "") || "Journal entry",
-        amount,
-        bank_description: bankByEntry.get(l.entry.id) ?? null,
-      });
-    }
-    for (const list of Object.values(entriesByAccount)) list.sort((a, b) => b.entry_date.localeCompare(a.entry_date));
+  type EntryLine = {
+    account_id: string;
+    debit: string | number;
+    credit: string | number;
+    line_memo: string | null;
+    entry: { id: string; entry_date: string; memo: string | null } | { id: string; entry_date: string; memo: string | null }[];
+  };
+  const bankByEntry = new Map((bankRows ?? []).map((b) => [b.journal_entry_id as string, b.description as string]));
+  for (const raw of (entryLines ?? []) as unknown as EntryLine[]) {
+    const entry = Array.isArray(raw.entry) ? raw.entry[0] : raw.entry;
+    const type = typeById.get(raw.account_id);
+    if (!entry || !type) continue;
+    const amount = type === "income" ? Number(raw.credit) - Number(raw.debit) : Number(raw.debit) - Number(raw.credit);
+    const list = entriesByAccount[raw.account_id] ?? (entriesByAccount[raw.account_id] = []);
+    list.push({
+      entry_id: entry.id,
+      entry_date: entry.entry_date,
+      memo: (entry.memo ?? raw.line_memo ?? "").replace(/^\[DEMO\]\s*/, "") || "Journal entry",
+      amount,
+      bank_description: bankByEntry.get(entry.id) ?? null,
+    });
   }
+  for (const list of Object.values(entriesByAccount)) list.sort((a, b) => b.entry_date.localeCompare(a.entry_date));
 
   return {
     ...empty,

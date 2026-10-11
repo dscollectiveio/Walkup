@@ -2,6 +2,11 @@ import { createServerClient } from "@supabase/ssr";
 import { NextResponse, type NextRequest } from "next/server";
 import { PENDING_INVITE_COOKIE } from "@/lib/invite-cookie";
 
+// Set once we've seen this user's persons row, so later requests skip that
+// query. Convenience only (like the redirect it feeds): pages already degrade
+// gracefully for someone with no association, and RLS is the real check.
+const MEMBER_COOKIE = "walkup.member";
+
 // /invite is public because a redeemer may not have an account yet — the
 // invite page itself handles sign-up, and the redemption RPC is the real
 // authorization check, not this list. /security, /privacy, and /policies
@@ -59,10 +64,13 @@ export async function updateSession(request: NextRequest) {
     },
   );
 
-  // getUser, not getSession — this call is what refreshes the token.
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
+  // getClaims verifies the access token's signature locally (no round trip to
+  // the auth server) and refreshes it when it has expired — the same two jobs
+  // getUser did here, without a network call on every navigation. Where the
+  // project still uses a shared-secret JWT, supabase-js falls back to asking
+  // the auth server itself, so this is never weaker than getUser was.
+  const { data: claimsData } = await supabase.auth.getClaims();
+  const user = claimsData?.claims?.sub ? { id: claimsData.claims.sub } : null;
 
   const path = request.nextUrl.pathname;
   const isPublic = PUBLIC_PATHS.some((p) => path.startsWith(p));
@@ -89,13 +97,22 @@ export async function updateSession(request: NextRequest) {
   // already permits "my own row" at AAL1 (DECISIONS #26's one accepted gap),
   // so this read is always safe regardless of AAL, it's just wasted work here.
   let needsOnboarding = false;
-  if (!mfaTarget) {
+  if (!mfaTarget && request.cookies.get(MEMBER_COOKIE)?.value !== user.id) {
     const { data: ownPerson } = await supabase
       .from("persons")
       .select("id")
       .eq("auth_user_id", user.id)
       .limit(1);
     needsOnboarding = !ownPerson || ownPerson.length === 0;
+    if (!needsOnboarding) {
+      response.cookies.set(MEMBER_COOKIE, user.id, {
+        path: "/",
+        httpOnly: true,
+        sameSite: "lax",
+        secure: process.env.NODE_ENV === "production",
+        maxAge: 60 * 60 * 24 * 30,
+      });
+    }
   }
 
   // A pending invite (set by signUp() in login/actions.ts) takes the place of
