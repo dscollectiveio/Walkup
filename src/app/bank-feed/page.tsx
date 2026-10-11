@@ -15,7 +15,7 @@ import {
   type ConnectionBalance,
 } from "./balances";
 import { RulesList, type RuleRecord } from "./rules-list";
-import { buildHistoryIndex, recommend, type HistoryRow, type Recommendation } from "@/lib/plaid/recommend";
+import { buildHistoryIndex, recommend, type PayeeHistoryRow, type Recommendation } from "@/lib/plaid/recommend";
 
 export const dynamic = "force-dynamic";
 
@@ -114,30 +114,37 @@ export default async function BankFeedPage({
 
   const supabase = await createClient();
 
-  const { data: connections } = await supabase
-    .from("bank_connections")
-    .select("id, institution_name, status, last_synced_at, cash_account_id")
-    .order("created_at", { ascending: false });
+  // Two round trips to the database, no more: the association row first
+  // (the role check needs its id), then everything else at once.
+  const { data: associations } = await supabase.from("associations").select("id").limit(1);
+  const associationId = associations?.[0]?.id ?? null;
 
-  if (!connections) return <Restricted what="the bank feed" />;
-
-  const active = connections.filter((c) => c.status !== "disconnected");
-  // Plaid is an external call; start it now so it overlaps the database
-  // queries below, and stream the parts of the page that need it.
-  const balancesPromise: Promise<ConnectionBalance[]> =
-    active.length > 0
-      ? Promise.all(active.map((c) => getConnectionBalance(supabase, c.id)))
-      : Promise.resolve([]);
+  let transactionsQuery = supabase
+    .from("bank_transactions")
+    .select(
+      "id, posted_on, description, amount, pending, raw_category, posting_kind, account_id, matched_unit_id, vendor_id, journal_entry_id, excluded_at, removed_at",
+    )
+    .order("posted_on", { ascending: false })
+    .limit(500);
+  if (q) transactionsQuery = transactionsQuery.ilike("description", `%${q}%`);
+  const start = rangeStart(range);
+  if (start) transactionsQuery = transactionsQuery.gte("posted_on", start);
 
   const [
-    { data: associations },
+    { data: isBoardAdminRes },
     { data: units },
     { data: accounts },
     { data: vendors },
     { data: rules },
     { data: historyRows },
+    { data: connections },
+    // History persists across disconnects — a disconnected bank's
+    // transactions are still in the books, so they still show here.
+    { data: transactionRows },
   ] = await Promise.all([
-    supabase.from("associations").select("id").limit(1),
+    associationId
+      ? supabase.rpc("has_role_in", { assoc: associationId, roles: ["board_admin"] })
+      : Promise.resolve({ data: false }),
     supabase.from("units").select("id, label").order("sort_order"),
     supabase
       .from("accounts")
@@ -150,20 +157,28 @@ export default async function BankFeedPage({
       .select("id, pattern, posting_kind, account_id, matched_unit_id, auto_post")
       .order("created_at"),
     // What this board filed each payee as before — the strongest source for
-    // the "Recommended" chip. Read-only; recommendations are never saved.
+    // the "Recommended" chip. A trigger-maintained tally (0046), one row per
+    // payee and choice, instead of re-reading every categorized transaction.
     supabase
-      .from("bank_transactions")
-      .select("description, amount, posting_kind, account_id, matched_unit_id")
-      .not("posting_kind", "is", null)
-      .is("removed_at", null)
-      .order("posted_on", { ascending: false })
-      .limit(2000),
+      .from("bank_payee_history")
+      .select("payee_key, direction, posting_kind, account_id, matched_unit_id, count, amount_cents_total"),
+    supabase
+      .from("bank_connections")
+      .select("id, institution_name, status, last_synced_at, cash_account_id")
+      .order("created_at", { ascending: false }),
+    transactionsQuery,
   ]);
-  const associationId = associations?.[0]?.id ?? null;
-  const { data: isBoardAdminRes } = associationId
-    ? await supabase.rpc("has_role_in", { assoc: associationId, roles: ["board_admin"] })
-    : { data: false };
   const canEdit = isBoardAdminRes === true;
+
+  if (!connections) return <Restricted what="the bank feed" />;
+
+  const active = connections.filter((c) => c.status !== "disconnected");
+  // Plaid is an external call; start it now and stream the parts of the
+  // page that need it, so a slow bank never holds up the transactions list.
+  const balancesPromise: Promise<ConnectionBalance[]> =
+    active.length > 0
+      ? Promise.all(active.map((c) => getConnectionBalance(supabase, c.id)))
+      : Promise.resolve([]);
 
   const accountList = accounts ?? [];
   const label = (a: { code: string; name: string }) => `${a.code} ${a.name}`;
@@ -185,7 +200,7 @@ export default async function BankFeedPage({
     .filter((a) => a.type === "income")
     .map((a) => ({ id: a.id, name: a.name }));
 
-  const history = buildHistoryIndex((historyRows ?? []) as HistoryRow[]);
+  const history = buildHistoryIndex((historyRows ?? []) as PayeeHistoryRow[]);
 
   function recommendationLabel(r: Recommendation): string {
     if (r.kind === "dues") return r.unitId ? `Dues · ${unitLabelById.get(r.unitId) ?? "unit"}` : "Dues";
@@ -197,20 +212,6 @@ export default async function BankFeedPage({
     return accountNameById.get(r.accountId ?? "") ?? KIND_LABEL[r.kind];
   }
 
-  let transactionsQuery = supabase
-    .from("bank_transactions")
-    .select(
-      "id, posted_on, description, amount, pending, raw_category, posting_kind, account_id, matched_unit_id, vendor_id, journal_entry_id, excluded_at, removed_at",
-    )
-    .order("posted_on", { ascending: false })
-    .limit(500);
-  if (q) transactionsQuery = transactionsQuery.ilike("description", `%${q}%`);
-  const start = rangeStart(range);
-  if (start) transactionsQuery = transactionsQuery.gte("posted_on", start);
-
-  // History persists across disconnects — a disconnected bank's transactions
-  // are still in the books, so they still show here.
-  const { data: transactionRows } = await transactionsQuery;
   const allTransactions = ((transactionRows ?? []) as TransactionRecord[]).filter(
     (t) => !account || t.account_id === account,
   );

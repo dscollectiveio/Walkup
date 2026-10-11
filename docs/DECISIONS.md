@@ -878,6 +878,26 @@ How a bank transaction becomes a ledger entry (0035 schema, 0036 functions):
   double-counts. The bank feed is the intended entry point now; the manual
   forms are for what the bank never sees.
 
+**Speed (0046), added 2026-10-10.** Two things changed for a treasurer who
+opens this tab for ten minutes a month, neither of which changes what can
+reach the ledger. `bank_payee_history` is a *derived* table — one row per
+payee (`bank_payee_key()`, the SQL twin of `normalizeDescription()`),
+direction, and choice, with a count, a cents total and a last-seen date —
+maintained only by a SECURITY DEFINER trigger on `bank_transactions` and
+backfilled once in the migration. It is read-only to every role (select for
+`can_read_financials`, no write policies, no audit trigger because it is a
+tally of rows that are already audited) and exists so the "Recommended" chip
+reads a few dozen rows instead of re-tallying every categorized transaction
+on each page load. `post_bank_transactions(uuid[])` and
+`unpost_bank_transactions(uuid[])` are batch wrappers that loop over the
+per-row RPCs above in a sub-transaction each, returning `(id, ok, error)` per
+row — "Post all ready" is one round trip instead of one per row, a failing
+row is reported rather than fatal, and nothing is bypassed: every id still
+goes through `post_bank_transaction()` / `unpost_bank_transaction()` with
+their own authorization and accounting. `bank_transactions.rule_id` records
+which saved rule pre-filled a row during sync (the column only; the sync
+writes it in a later slice).
+
 ## 30. Access reviews, automated deprovisioning, and personal-data redaction — including the one path that edits the audit log
 
 *Decided: Doug, 2026-09-26. Plaid's security review (submitted the same

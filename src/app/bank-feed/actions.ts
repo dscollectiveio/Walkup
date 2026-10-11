@@ -193,13 +193,50 @@ function isItemAlreadyGone(cause: unknown): boolean {
   return code === "ITEM_NOT_FOUND" || code === "INVALID_ACCESS_TOKEN";
 }
 
+/**
+ * Only the bank feed itself is revalidated after a posting. The ledger pages
+ * that read the result (financial statements, budget, dues, delinquency,
+ * home) are dynamic and re-render on their next visit anyway; the only
+ * thing revalidating them would buy is skipping the 30-second router cache
+ * (next.config.ts staleTimes), at the cost of six invalidations on every
+ * click while someone works through forty rows.
+ */
 function revalidateLedgerPages() {
   revalidatePath("/bank-feed");
-  revalidatePath("/financial-statements");
-  revalidatePath("/budget");
-  revalidatePath("/dues");
-  revalidatePath("/delinquency");
-  revalidatePath("/");
+}
+
+type BatchRow = { id: string; ok: boolean; error: string | null };
+
+/**
+ * Posts (or unposts) many rows in one round trip via post_bank_transactions /
+ * unpost_bank_transactions (0046), which loop over the per-row RPCs — nothing
+ * is bypassed, one failing row does not stop the rest. Returns how many
+ * succeeded and a plain-words line for each that did not.
+ */
+async function postBatch(
+  supabase: Awaited<ReturnType<typeof createClient>>,
+  fn: "post_bank_transactions" | "unpost_bank_transactions",
+  rows: { id: string; description?: string }[],
+): Promise<{ done: number; errors: string[]; failedIds: Set<string> }> {
+  if (rows.length === 0) return { done: 0, errors: [], failedIds: new Set() };
+  const { data, error } = await supabase.rpc(fn, { p_ids: rows.map((r) => r.id) });
+  if (error) {
+    return { done: 0, errors: [error.message], failedIds: new Set(rows.map((r) => r.id)) };
+  }
+  const descriptionById = new Map(rows.map((r) => [r.id, r.description]));
+  const errors: string[] = [];
+  const failedIds = new Set<string>();
+  let done = 0;
+  for (const r of (data ?? []) as BatchRow[]) {
+    if (r.ok) {
+      done += 1;
+      continue;
+    }
+    failedIds.add(r.id);
+    const description = descriptionById.get(r.id);
+    errors.push(description ? `${description}: ${r.error}` : (r.error ?? "Couldn't be posted."));
+  }
+  return { done, errors, failedIds };
 }
 
 /**
@@ -362,17 +399,9 @@ export async function categorizeBankTransactionsBulk(input: {
     return { error: "None of those could be categorized — only a board admin can, and none can already be posted." };
   }
 
-  let posted = 0;
-  const errors: string[] = [];
-  if (input.postNow) {
-    for (const row of data) {
-      const { error: postError } = await supabase.rpc("post_bank_transaction", {
-        p_transaction_id: row.id,
-      });
-      if (postError) errors.push(`${row.description}: ${postError.message}`);
-      else posted += 1;
-    }
-  }
+  const { done: posted, errors } = input.postNow
+    ? await postBatch(supabase, "post_bank_transactions", data)
+    : { done: 0, errors: [] };
 
   revalidateLedgerPages();
   return { ok: true, posted, errors };
@@ -400,9 +429,8 @@ export async function applyCategorizations(input: {
   if (input.items.length === 0) return { error: "Nothing to apply." };
   const supabase = await createClient();
 
-  const applied: string[] = [];
+  const applied: { id: string; description: string }[] = [];
   const errors: string[] = [];
-  let posted = 0;
 
   for (const item of input.items) {
     if (!POSTING_KINDS.includes(item.kind)) {
@@ -437,17 +465,17 @@ export async function applyCategorizations(input: {
       errors.push("A transaction couldn't be changed — it may already be posted, or you may not be a board admin.");
       continue;
     }
-    applied.push(row.id);
-    if (input.postNow) {
-      const { error: postError } = await supabase.rpc("post_bank_transaction", { p_transaction_id: row.id });
-      if (postError) errors.push(`${row.description}: ${postError.message}`);
-      else posted += 1;
-    }
+    applied.push(row);
   }
+
+  const { done: posted, errors: postErrors } = input.postNow
+    ? await postBatch(supabase, "post_bank_transactions", applied)
+    : { done: 0, errors: [] };
+  errors.push(...postErrors);
 
   revalidateLedgerPages();
   if (applied.length === 0) return { error: errors[0] ?? "Nothing could be applied." };
-  return { ok: true, applied, posted, errors };
+  return { ok: true, applied: applied.map((r) => r.id), posted, errors };
 }
 
 /** What a row looked like before a categorization, so it can be put back. */
@@ -481,16 +509,17 @@ export async function revertCategorizations(
   if (readError) return { error: readError.message };
   const postedIds = new Set((current ?? []).filter((r) => r.journal_entry_id).map((r) => r.id));
 
+  // Take back every posting first, in one call; a row whose reversal failed
+  // is still in the books and must keep its categorization.
+  const unposted = await postBatch(
+    supabase,
+    "unpost_bank_transactions",
+    prior.filter((p) => postedIds.has(p.id)),
+  );
   let reverted = 0;
-  const errors: string[] = [];
+  const errors: string[] = [...unposted.errors];
   for (const p of prior) {
-    if (postedIds.has(p.id)) {
-      const { error } = await supabase.rpc("unpost_bank_transaction", { p_transaction_id: p.id });
-      if (error) {
-        errors.push(error.message);
-        continue;
-      }
-    }
+    if (unposted.failedIds.has(p.id)) continue;
     const { data, error } = await supabase
       .from("bank_transactions")
       .update({
@@ -551,15 +580,7 @@ export async function postAllReady(): Promise<{
     .order("posted_on");
   if (error) return { error: error.message };
 
-  let posted = 0;
-  const errors: string[] = [];
-  for (const row of ready ?? []) {
-    const { error: postError } = await supabase.rpc("post_bank_transaction", {
-      p_transaction_id: row.id,
-    });
-    if (postError) errors.push(`${row.description}: ${postError.message}`);
-    else posted += 1;
-  }
+  const { done: posted, errors } = await postBatch(supabase, "post_bank_transactions", ready ?? []);
 
   revalidateLedgerPages();
   return { ok: true, posted, errors };
