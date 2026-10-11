@@ -21,10 +21,10 @@ export function ComingUp({ reminders, today }: { reminders: Reminder[]; today: D
         </p>
       </header>
       <ul className="divide-y divide-line px-5">
-        {reminders.slice(0, 6).map((r) => {
+        {reminders.slice(0, 6).map((r, i) => {
           const days = daysUntil(r.due, today);
           return (
-            <li key={`${r.name}-${r.due.toISOString()}`} className="flex items-center gap-3 py-3">
+            <li key={`${r.name}-${r.kind}-${r.due.toISOString()}-${i}`} className="flex items-center gap-3 py-3">
               <span className="w-12 shrink-0 text-right">
                 <span className="figures block text-[18px] leading-none text-ink">{days}</span>
                 <span className="block text-[10px] text-mute-soft">
