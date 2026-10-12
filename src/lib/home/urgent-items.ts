@@ -27,7 +27,9 @@ interface UrgentInputs {
     days_60_plus: string | number;
     total_owed: string | number;
   }[];
+  /** Contractors paid this year at or above the 1099 threshold with no W-9 on file. */
   vendorsMissingW9: number;
+  /** When this year's 1099-NECs are due (lib/tax/deadlines — verified or estimated), or the general January 31 when none is in play. */
   nec1099Due: Date;
   insuranceExpiry: Date | null; // soonest active policy end
   bankConnected: boolean;

@@ -1142,3 +1142,286 @@ the Taxes prompt adapted in docs/reference/build-prompt-budget-contractors-insur
   flattened official form) and a CPA packet (editable PDF + provenance
   worksheet). "Mark as filed" records a date and optional proof, and locks the
   1120-H figures (0022).
+
+---
+
+## 33. Taxes: links registry, suggested templates, accountant handoff, deadlines
+
+**Decided 2026-10-11** — Doug set the direction (the four goals in
+docs/reference/build-prompt-tax-center-v2.md §0: show the official links the
+building needs, auto-fill the forms, draft the email to the accountant, remind
+the board when things are due); Claude settled the details below from a pass
+over the code and the official IRS and Illinois pages, all retrieved that same
+day. Amends #32; where this entry and that spec disagree, this entry wins.
+
+The problem #32 left: dev and production both still had **zero**
+`tax_form_templates`, so a board opening the Taxes tab saw no official link,
+no due date and no way to hand figures to a CPA — the template gate, which
+exists for anything Walkup *fills*, was also gating things that never needed
+it. Every piece below keeps that gate exactly where it was (a person verifies
+and activates; nothing in this build sets `active`, `verified_at` or
+`verified_on` from code) and gives the board something honest on day one
+without it. The honesty rule is the same one `tax_parameters` has lived under
+since 0005: a link, a date or a threshold Walkup *retrieved* is shown as
+"retrieved 2026-10-11 · not yet checked by a person" until a person checks
+it, and anything Walkup can't source reads "ask your CPA" — never a guess,
+and never "verified by Walkup".
+
+- **Official links are a registry, retrieved and dated.** `tax_form_links`
+  (global, #31: any signed-in user reads, only `is_platform_admin()` writes,
+  not on `tg_audit()`, listed in the scoping lint) ships seeded with the 19
+  URLs research opened on 2026-10-11 — IRS "About Form …" pages,
+  instructions, the W-9, IRIS, the paper-form order page, the Illinois DOR
+  pages and the ILSOS annual-report portal and statute — every row
+  `retrieved_on '2026-10-11'`, `verified_at null`. A platform admin's "I
+  opened this and it's current" sets `verified_at`; "Check all links" only
+  records `'200'`, `'blocked'` or `'error: …'` and is never a verification
+  (ilsos.gov refuses non-browser clients, so its rows stay "couldn't be
+  checked automatically" until a person opens them). A link checked more
+  than 12 months ago reads "last checked over a year ago". Board-facing
+  "latest" links are the About pages, which stay current; pinned PDFs exist
+  only for the fill template. A verified active template's `source_url` /
+  `instructions_url` outranks the registry for that form and year. Only
+  https URLs on irs.gov, illinois.gov, ilsos.gov or ilga.gov (any subdomain)
+  are accepted, by CHECK and by `isOfficialLinkUrl()`.
+- **Day-one autofill comes from a suggested registry in code, still gated by
+  a person.** `src/lib/tax/suggested/` carries cited field maps authored
+  against the real 2025 Form 1120-H (49 entries, the full calculated chain
+  8 → 16 → 17 → 19 → 20 → 22 → 23g → 24/25) and the Rev. December 2026
+  1099-NEC (13 Copy B entries), plus three link-only entries. The admin's
+  one-click `applySuggestedTemplate()` fetches the pinned PDF through the
+  existing `fetchOfficialPdf` → `storeTemplate` path and **refuses** to
+  apply the map unless the file's sha256 equals `authoredAgainstSha256` and
+  its title equals `expectedTitle` (otherwise the template is stored
+  inactive with a note and no map); the map is validated exactly as
+  `saveFieldMap` validates a hand-entered one. `tax_form_templates` still
+  ships with zero rows, and the admin still opens the labeled preview and
+  clicks "Verify and activate". The IRS PDFs carry no field tooltips, so
+  the name → line mapping was corroborated by widget geometry on the
+  labeled render, not printed captions — the preview *is* the human check.
+  Citations follow the official headings rather than the spec's shorthand:
+  the 1099-NEC due rule cites "Reminders — Filing dates" (IRC 6071(c)) plus
+  General Instructions Part C (i1099mec has no "When To File" heading); its
+  filing citation adds Part E (where "Copy A printed from the IRS website
+  can't be filed" actually lives; Part O is penalties); the IL-1120 note
+  records the extension as 7 months (8 for June-30 year ends) per the DOR
+  due-date page and says "Ask your CPA what to attach" because the DOR
+  answer page does not mention attaching the 1120-H. Each entry's `notes`
+  lists the boxes left blank on purpose, for the admin page.
+- **Link-only templates** (`kind = 'link_only'`, no PDF; CHECK
+  `tax_form_templates_pdf_has_file` ties `storage_path`/`sha256` to the
+  kind) carry a cited due rule, filing instructions and notes for the forms
+  Walkup never fills: the Illinois SOS annual report, IL-1120 and Form 1096.
+  Same verify/activate gate. `tax_forms.template_id` points at a link-only
+  template too — rules without fields — so "no PDF template" in code is
+  `template.kind !== 'pdf'`, not a null id.
+- **No template is never a dead end.** The worksheet always carries the
+  figures from the records (`figuresPack`: association, the five 1120-H
+  figures with transaction counts, non-exempt income by account, the two
+  tests, the provisional estimate, and the contractor for a 1099 — no TIN;
+  the EIN appears in the worksheet file and never in an email body), the
+  official link is one click away, "Send to your accountant" works, and a
+  form with nothing to confirm in Walkup can be **marked filed by hand**.
+- **1120-H is an election, not "Required".** When both tests pass the
+  determination is the new value `eligible`: "You qualify — elect it by
+  filing. Ask your CPA whether 1120-H or Form 1120 is better this year."
+  `likely_required` stays for Form 1120 when a test fails; the
+  `determination` CHECK widens accordingly.
+- **Form 1096 turns on a stored answer**, never "optional":
+  `associations.information_returns_filing` — `paper` → required,
+  `electronic` → not_required, null → ask_cpa ("Tell Walkup how you file
+  1099s with the IRS, or ask your CPA") — and it appears only when at
+  least one 1099 is determined. Beside the chooser: Copy A and Form 1096
+  printed from the IRS website can't be filed.
+- **1099-NEC exports are recipient copies only.** `include_pages [4, 5, 6]`
+  (Copy B, the recipient instructions, Copy 2); Copy 2 is filled by
+  mirroring Copy B at export (`mirror_json`); Copy A and Form 1096 are
+  never produced; the cover says to file through IRIS or on official
+  forms; the contractor's TIN prints blank by design (#4) and the map has
+  no field for it.
+- **Thresholds and rates resolve as of the period, half-open.** The $600
+  `form_1099_nec_threshold` row now ends `2026-01-01` and a **$2,000** row
+  starts there — `verified_on null`, cited to the Rev. December 2026
+  instructions and P.L. 119-21 §70433, with a note that the amount is
+  inflation-indexed from 2027 (add a new row when the IRS publishes it;
+  never edit this one). Readers resolve the 1099 threshold **as of Dec 31
+  of the payment year** and the 1120-H parameters **as of the fiscal year
+  end**, with `effective_from <= date and (effective_to is null or
+  effective_to > date)` — the closed interval the old code used matched
+  both rows on exactly 2026-01-01. In code that is `parametersAsOf()` /
+  `resolveParameters()` in src/app/tax/data.ts (keys starting `form_1099`
+  by payment year, everything else by fiscal year end; determine.ts gets
+  the resolved list and does no date filtering). In SQL,
+  `compute_and_save_tax_filing()` is re-created with the same figures,
+  provenance rows and arithmetic as 0022/0024 but `v_as_of =
+  fiscal_years.ends_on`; each `parameters_snapshot` element now carries
+  `"as_of"` (filings saved before 0048 lack it — treat it as optional),
+  and the fiscal-year lookup is scoped to the association and raises
+  `P0002` 'fiscal year not found for this association' instead of saving a
+  filing against another building's year. `verify_tax_parameter(uuid)`
+  (platform admin) is the only way `verified_on` gets set.
+- **The accountant is a `persons` row** — `associations.accountant_person_id`
+  plus `accountant_firm`, set through `set_accountant(assoc, person, firm)`,
+  which any board member may call (it is a contact, not an access grant; a
+  null person clears both columns). A BEFORE trigger refuses a person from
+  another association (42501), and `redact_person()` refuses while the
+  person is the accountant ("choose another accountant first"). This is
+  independent of the expiring `accountant` role grant; "Give them read
+  access to the books" stays a separate link.
+- **The handoff is a mailto draft plus a recorded "sent".** Three drafts
+  (`1120h`, `1099`, `heads_up`), each under 1,800 characters so the URL
+  opens in every mail client, every figure named with its checked /
+  not-yet-checked state, the due date as verified-with-citation /
+  "estimated — please confirm" / "not on file — can you confirm it?", and
+  no EIN, TIN or account number anywhere (`scrubIdentifiers()` runs over
+  the whole body and subject). A draft cannot carry attachments, so the
+  panel orders the downloads first and the body names the files. "Mark as
+  sent" writes `sent_to_accountant_at`, `sent_to_accountant_by` (the CHECK
+  needs both in one write) and `sent_snapshot_json`: subject, attachment
+  filenames, the figures in cents, the as-of dates and the accountant's
+  **person id** — and the body with its greeting and sign-off lines
+  replaced by "[greeting removed]" / "[sender removed]", so no person's
+  name is stored outside `persons` (#30: `tax_forms` is audited and
+  `redact_person()` does not scrub this column, so the column must never
+  hold a name).
+- **Reminders come from one pure module**, `src/lib/tax/deadlines.ts`,
+  read by the Taxes tab, Home's "Coming up", the Next-filing tile, the
+  urgent items and the `.ics` download, so they can't disagree. A date
+  comes from exactly one of three places and says which: a verified active
+  template's cited rule (`verified`), the built-in estimate (`estimated`,
+  always with "Estimated — not yet checked against this year's
+  instructions."), or nothing (`none`, "ask your CPA"). The estimates:
+  1120-H and IL-1120 = the 15th of the 4th month after the fiscal year end,
+  and **none** for a June-30 year end (the IRS carves that case out — 3rd
+  month — so Walkup doesn't guess); 1099-NEC and 1096 = Jan 31 after the
+  payment year; the Illinois annual report = the **last day of the month
+  before the anniversary month** (805 ILCS 105/114.10 says within the 60
+  days before that month; the earlier month-end replaces the old
+  anniversary-date estimate because it is the safer one; a January
+  anniversary means Dec 31 of the prior year; no incorporation date → none,
+  "add it in Building Info"); Form 1120 = none, since no rule is sourced.
+  The due-rule grammar gains `INCORPORATION_ANNIVERSARY_MONTH - 1 MONTHS,
+  DAY LAST` for the verified version of that rule. An overdue deadline
+  stays for 120 days, then its next instance replaces it; milestones are
+  "send to your accountant" at due − 60 days while an accountant is set
+  and nothing has been sent, else "start" at due − 45 days. Home builds a
+  light outcome list from its own queries and never calls
+  `loadTaxContext`. Delivery is in-app, an RFC 5545 `.ics` with alarms
+  (−30/−7 days, plus −60 for the returns; estimated dates are `TENTATIVE`
+  and say "(estimated)"), and mailto drafts ("Send the dates to the board"
+  goes to the other current board members). No cron, no service role (#28).
+- **The filing year is the one whose return is next to file.**
+  `filingYearFor()`: the newest fiscal year that has ended within the last
+  12 months and whose 1120-H is neither filed nor locked; else the year
+  containing today; else the newest. `?fy=` overrides on the tab. Autofill
+  and the exports always load the context for the **form's own** fiscal
+  year or payment year, so last year's form never fills from this year's
+  books.
+- **One "filed".** `markFormFiled` on the form page is allowed when the
+  form is `ready_to_sign` **or** when there is no PDF template and no
+  lines (nothing to confirm in Walkup — filed by hand or by the
+  accountant). For the 1120-H it saves the year's figures
+  (`compute_and_save_tax_filing`) when no `tax_filings` row exists and
+  locks them (`lock_tax_filing`) in the same step. The tab's FilingStatus
+  keeps "Save this year's figures" only; `markTaxFilingFiled` is gone.
+- **The editable PDF for a CPA opens with a one-page draft cover** —
+  "Draft from Walkup — figures not yet confirmed by the board. Not the
+  official filing." — while the form is `draft`/`in_review`. It is
+  prepended *inside* the form's own document (`prependCover`), because
+  copying pages into a new document drops the AcroForm and the "editable"
+  packet would have no fields. The signable packet is unchanged (cover +
+  flattened form).
+- **`is_platform_admin()` now also requires `session_is_aal2()`.** A
+  password-only session must not be able to change what every
+  association's tax pages read from. The admin page already runs behind
+  the MFA proxy; this closes the database side.
+- **Autofill details that changed with the maps.** A `calculated` line
+  reads a manual operand from what the person has `entered` (a line they
+  chose to leave blank counts as 0 — a blank money line on a tax form
+  means zero), is stored auto-confirmed (derived figures need no click),
+  and always takes the fresh value on refresh. Map entries may carry
+  `kind`, `review` (confidence capped), `zeroOk` ("Enter 0") and `hint`;
+  the settings vocabulary gains the US-formatted incorporation date, the
+  three non-calendar fiscal-year header boxes and the form's tax year.
+
+**Related choices made in the same build:**
+
+- `set_tax_filing_settings(assoc, method, file_number)` writes **both**
+  settings on every call (null method = "not yet answered"; the file
+  number is trimmed, empty → null). The two controls on the tab submit
+  separately, so `setFilingSettings` reads the untouched column's current
+  value and passes it through. Known to be a slightly fragile shape; if it
+  bites, a 0049 can split it into one RPC per setting.
+- Form 1096 produces a deadline only when the answer is `paper`; an
+  unanswered question is "ask your CPA" on the card, not a date on the
+  calendar.
+- Non-Illinois buildings (production has one in NH) get an honest "Walkup
+  only knows Illinois' state filings so far — ask your CPA which {state}
+  filings apply", and the federal forms still show. IL-1120 stays
+  `ask_cpa` as a determination; it now also carries a date and a note once
+  a template records them.
+- `revision_title` (the PDF's own title) is captured at fetch; the
+  January "Check active forms for updates" compares titles and says
+  "probably next year's form — set its tax year by hand" rather than
+  guessing. `storeTemplate` no longer upserts.
+- `tax_forms` is linkable from the Document Hub (`LINKABLE_TABLES`).
+- 1099 "Ask for a W-9" is a mailto to the contractor with the registry's
+  W-9 link. The W-9 itself is still never a template.
+
+**Still open — a CPA has reviewed none of this (open question A).** Every
+number, date and link above is what the official pages said on 2026-10-11,
+labeled "not yet checked" in-app; the $2,000 threshold, the 19 links, every
+due rule and every line of both field maps are owed a person's check (the
+admin page) and a CPA's review before anyone files. Smaller items, recorded
+so they aren't lost: the tax year for a non-calendar fiscal year is taken
+from the year the fiscal year *ends* in, while IRS form years follow the
+year a tax year *begins* in — the header boxes fill correctly either way,
+but template lookup by `tax_year` should be checked with a CPA before a
+July–June building relies on it; line 19 prints 0 when line 17 is below the
+$100 deduction (`max0`), which a CPA should confirm; the 1099-NEC "For
+calendar year" box takes the four-digit year — confirm against the labeled
+preview at Verify and activate; whether IL-1120 must have the 1120-H
+attached could not be sourced from tax.illinois.gov; 805 ILCS 105/114.10
+could not be re-fetched (ilga.gov TLS error) and stands as recorded; a
+verified SOS template date can never read as overdue, because `dueDate()`
+returns the next occurrence; after 120 days an unfiled form's deadline rolls
+to the next tax year, so a stale year's card finds no deadline by key and
+reads "Due date not on file — ask your CPA"; and migration 0048 was written
+and tested against PGlite but not yet applied to any Supabase project.
+
+**How to apply:**
+
+- Nothing in code sets `tax_form_templates.active` / `verified_at`,
+  `tax_form_links.verified_at` or `tax_parameters.verified_on`. A person
+  clicks; the RPCs that record the click require a platform admin at AAL2.
+- Every tax date, threshold and link a view shows carries its source and
+  its checked / not-yet-checked state, in words a board member reads.
+  Unsourced means "ask your CPA" — don't add an estimate without a cited
+  rule (the June-30 year end is the standing example). Never "verified by
+  Walkup".
+- Resolve `tax_parameters` as of the period with the half-open range —
+  `parametersAsOf()` in TS, `effective_to > v_as_of` in SQL — never "as of
+  today", and never pass every row to something that picks the first by
+  key. A changed amount is a new row with a new `effective_from`; the old
+  row gets an `effective_to`.
+- Anything that needs a due date reads `deadlines.ts`; don't compute dates
+  anywhere else. Dates stay ISO strings end to end — no `Date` arithmetic,
+  no UTC/local mixing (`todayIso` from lib/dates, not `toISOString()`).
+- Anything that stores email text or a draft strips the names, runs
+  `scrubIdentifiers()`, and references people by `persons` id (#30).
+  Nothing is ever sent by Walkup: every email is a mailto draft the
+  person opens, and the UI says so under the button.
+- Recipient TINs are never stored, filled or mirrored (#4). A new 1099 map
+  entry is refused by the tests if it names `f2_11` or any Copy A / Copy 1
+  field.
+- Applying 0048: dev/staging now, production on "General Kenobi". No
+  backfill. Afterwards the admin runs "Set up from Walkup's suggestions"
+  for 1120-H 2025 and 1099-NEC 2026, opens each labeled preview, verifies
+  and activates; opens and confirms the links; and marks the rules checked
+  only once confirmed against the instructions — both threshold rows
+  reading "not yet checked" after the migration is correct, not a bug.
+- Adding a suggested map for a new revision: author it against the pinned
+  PDF, record its sha256 and title, cite the printed line and the
+  instructions heading (only headings that exist — none invented), list
+  the deliberately blank boxes in `notes`, and let `applySuggestedTemplate`
+  refuse any file that doesn't match byte for byte.

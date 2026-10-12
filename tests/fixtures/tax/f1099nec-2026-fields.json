@@ -1,0 +1,848 @@
+{
+  "file": "f1099nec-2026.pdf",
+  "sha256": "68a8f00078be6dd6a4912cc4209df317b31840d5fe19560222d39df9f2f7ff49",
+  "title": "Form 1099-NEC (Rev. December 2026)",
+  "pageCount": 6,
+  "fields": [
+    {
+      "name": "topmostSubform[0].CopyA[0].PgHeader[0].CalendarYear[0].f1_1[0]",
+      "type": "text",
+      "page": 2,
+      "maxLength": 4
+    },
+    {
+      "name": "topmostSubform[0].CopyA[0].c1_1[0]",
+      "type": "checkbox",
+      "page": 2,
+      "maxLength": null
+    },
+    {
+      "name": "topmostSubform[0].CopyA[0].c1_1[1]",
+      "type": "checkbox",
+      "page": 2,
+      "maxLength": null
+    },
+    {
+      "name": "topmostSubform[0].CopyA[0].LeftCol[0].f1_2[0]",
+      "type": "text",
+      "page": 2,
+      "maxLength": null
+    },
+    {
+      "name": "topmostSubform[0].CopyA[0].LeftCol[0].f1_3[0]",
+      "type": "text",
+      "page": 2,
+      "maxLength": null
+    },
+    {
+      "name": "topmostSubform[0].CopyA[0].LeftCol[0].f1_4[0]",
+      "type": "text",
+      "page": 2,
+      "maxLength": null
+    },
+    {
+      "name": "topmostSubform[0].CopyA[0].LeftCol[0].f1_5[0]",
+      "type": "text",
+      "page": 2,
+      "maxLength": null
+    },
+    {
+      "name": "topmostSubform[0].CopyA[0].LeftCol[0].f1_6[0]",
+      "type": "text",
+      "page": 2,
+      "maxLength": null
+    },
+    {
+      "name": "topmostSubform[0].CopyA[0].LeftCol[0].f1_7[0]",
+      "type": "text",
+      "page": 2,
+      "maxLength": 2
+    },
+    {
+      "name": "topmostSubform[0].CopyA[0].LeftCol[0].f1_8[0]",
+      "type": "text",
+      "page": 2,
+      "maxLength": 2
+    },
+    {
+      "name": "topmostSubform[0].CopyA[0].LeftCol[0].f1_9[0]",
+      "type": "text",
+      "page": 2,
+      "maxLength": null
+    },
+    {
+      "name": "topmostSubform[0].CopyA[0].LeftCol[0].f1_10[0]",
+      "type": "text",
+      "page": 2,
+      "maxLength": 11
+    },
+    {
+      "name": "topmostSubform[0].CopyA[0].LeftCol[0].f1_11[0]",
+      "type": "text",
+      "page": 2,
+      "maxLength": 11
+    },
+    {
+      "name": "topmostSubform[0].CopyA[0].LeftCol[0].f1_12[0]",
+      "type": "text",
+      "page": 2,
+      "maxLength": null
+    },
+    {
+      "name": "topmostSubform[0].CopyA[0].LeftCol[0].f1_13[0]",
+      "type": "text",
+      "page": 2,
+      "maxLength": null
+    },
+    {
+      "name": "topmostSubform[0].CopyA[0].LeftCol[0].f1_14[0]",
+      "type": "text",
+      "page": 2,
+      "maxLength": null
+    },
+    {
+      "name": "topmostSubform[0].CopyA[0].LeftCol[0].f1_15[0]",
+      "type": "text",
+      "page": 2,
+      "maxLength": null
+    },
+    {
+      "name": "topmostSubform[0].CopyA[0].LeftCol[0].f1_16[0]",
+      "type": "text",
+      "page": 2,
+      "maxLength": 2
+    },
+    {
+      "name": "topmostSubform[0].CopyA[0].LeftCol[0].f1_17[0]",
+      "type": "text",
+      "page": 2,
+      "maxLength": 2
+    },
+    {
+      "name": "topmostSubform[0].CopyA[0].LeftCol[0].f1_18[0]",
+      "type": "text",
+      "page": 2,
+      "maxLength": null
+    },
+    {
+      "name": "topmostSubform[0].CopyA[0].LeftCol[0].f1_19[0]",
+      "type": "text",
+      "page": 2,
+      "maxLength": 44
+    },
+    {
+      "name": "topmostSubform[0].CopyA[0].LeftCol[0].c1_2[0]",
+      "type": "checkbox",
+      "page": 2,
+      "maxLength": null
+    },
+    {
+      "name": "topmostSubform[0].CopyA[0].RightCol[0].f1_20[0]",
+      "type": "text",
+      "page": 2,
+      "maxLength": null
+    },
+    {
+      "name": "topmostSubform[0].CopyA[0].RightCol[0].Box1b_ReadOrder[0].f1_21[0]",
+      "type": "text",
+      "page": 2,
+      "maxLength": null
+    },
+    {
+      "name": "topmostSubform[0].CopyA[0].RightCol[0].f1_22[0]",
+      "type": "text",
+      "page": 2,
+      "maxLength": 3
+    },
+    {
+      "name": "topmostSubform[0].CopyA[0].RightCol[0].f1_23[0]",
+      "type": "text",
+      "page": 2,
+      "maxLength": 3
+    },
+    {
+      "name": "topmostSubform[0].CopyA[0].RightCol[0].f1_24[0]",
+      "type": "text",
+      "page": 2,
+      "maxLength": null
+    },
+    {
+      "name": "topmostSubform[0].CopyA[0].RightCol[0].c1_3[0]",
+      "type": "checkbox",
+      "page": 2,
+      "maxLength": null
+    },
+    {
+      "name": "topmostSubform[0].CopyA[0].RightCol[0].f1_25[0]",
+      "type": "text",
+      "page": 2,
+      "maxLength": null
+    },
+    {
+      "name": "topmostSubform[0].CopyA[0].RightCol[0].f1_26[0]",
+      "type": "text",
+      "page": 2,
+      "maxLength": null
+    },
+    {
+      "name": "topmostSubform[0].CopyA[0].RightCol[0].Box5_ReadOrder[0].f1_27[0]",
+      "type": "text",
+      "page": 2,
+      "maxLength": null
+    },
+    {
+      "name": "topmostSubform[0].CopyA[0].RightCol[0].Box5_ReadOrder[0].f1_28[0]",
+      "type": "text",
+      "page": 2,
+      "maxLength": null
+    },
+    {
+      "name": "topmostSubform[0].CopyA[0].RightCol[0].Box6_ReadOrder[0].f1_29[0]",
+      "type": "text",
+      "page": 2,
+      "maxLength": null
+    },
+    {
+      "name": "topmostSubform[0].CopyA[0].RightCol[0].Box6_ReadOrder[0].f1_30[0]",
+      "type": "text",
+      "page": 2,
+      "maxLength": null
+    },
+    {
+      "name": "topmostSubform[0].CopyA[0].RightCol[0].f1_31[0]",
+      "type": "text",
+      "page": 2,
+      "maxLength": null
+    },
+    {
+      "name": "topmostSubform[0].CopyA[0].RightCol[0].f1_32[0]",
+      "type": "text",
+      "page": 2,
+      "maxLength": null
+    },
+    {
+      "name": "topmostSubform[0].Copy1[0].PgHeader[0].CalendarYear[0].f2_1[0]",
+      "type": "text",
+      "page": 3,
+      "maxLength": 4
+    },
+    {
+      "name": "topmostSubform[0].Copy1[0].PgHeader[0].c2_1[0]",
+      "type": "checkbox",
+      "page": 3,
+      "maxLength": null
+    },
+    {
+      "name": "topmostSubform[0].Copy1[0].PgHeader[0].c2_1[1]",
+      "type": "checkbox",
+      "page": 3,
+      "maxLength": null
+    },
+    {
+      "name": "topmostSubform[0].Copy1[0].LeftCol[0].f2_2[0]",
+      "type": "text",
+      "page": 3,
+      "maxLength": null
+    },
+    {
+      "name": "topmostSubform[0].Copy1[0].LeftCol[0].f2_3[0]",
+      "type": "text",
+      "page": 3,
+      "maxLength": null
+    },
+    {
+      "name": "topmostSubform[0].Copy1[0].LeftCol[0].f2_4[0]",
+      "type": "text",
+      "page": 3,
+      "maxLength": null
+    },
+    {
+      "name": "topmostSubform[0].Copy1[0].LeftCol[0].f2_5[0]",
+      "type": "text",
+      "page": 3,
+      "maxLength": null
+    },
+    {
+      "name": "topmostSubform[0].Copy1[0].LeftCol[0].f2_6[0]",
+      "type": "text",
+      "page": 3,
+      "maxLength": null
+    },
+    {
+      "name": "topmostSubform[0].Copy1[0].LeftCol[0].f2_7[0]",
+      "type": "text",
+      "page": 3,
+      "maxLength": 2
+    },
+    {
+      "name": "topmostSubform[0].Copy1[0].LeftCol[0].f2_8[0]",
+      "type": "text",
+      "page": 3,
+      "maxLength": 2
+    },
+    {
+      "name": "topmostSubform[0].Copy1[0].LeftCol[0].f2_9[0]",
+      "type": "text",
+      "page": 3,
+      "maxLength": null
+    },
+    {
+      "name": "topmostSubform[0].Copy1[0].LeftCol[0].f2_10[0]",
+      "type": "text",
+      "page": 3,
+      "maxLength": 11
+    },
+    {
+      "name": "topmostSubform[0].Copy1[0].LeftCol[0].f2_11[0]",
+      "type": "text",
+      "page": 3,
+      "maxLength": 11
+    },
+    {
+      "name": "topmostSubform[0].Copy1[0].LeftCol[0].f2_12[0]",
+      "type": "text",
+      "page": 3,
+      "maxLength": null
+    },
+    {
+      "name": "topmostSubform[0].Copy1[0].LeftCol[0].f2_13[0]",
+      "type": "text",
+      "page": 3,
+      "maxLength": null
+    },
+    {
+      "name": "topmostSubform[0].Copy1[0].LeftCol[0].f2_14[0]",
+      "type": "text",
+      "page": 3,
+      "maxLength": null
+    },
+    {
+      "name": "topmostSubform[0].Copy1[0].LeftCol[0].f2_15[0]",
+      "type": "text",
+      "page": 3,
+      "maxLength": null
+    },
+    {
+      "name": "topmostSubform[0].Copy1[0].LeftCol[0].f2_16[0]",
+      "type": "text",
+      "page": 3,
+      "maxLength": 2
+    },
+    {
+      "name": "topmostSubform[0].Copy1[0].LeftCol[0].f2_17[0]",
+      "type": "text",
+      "page": 3,
+      "maxLength": 2
+    },
+    {
+      "name": "topmostSubform[0].Copy1[0].LeftCol[0].f2_18[0]",
+      "type": "text",
+      "page": 3,
+      "maxLength": null
+    },
+    {
+      "name": "topmostSubform[0].Copy1[0].LeftCol[0].f2_19[0]",
+      "type": "text",
+      "page": 3,
+      "maxLength": 44
+    },
+    {
+      "name": "topmostSubform[0].Copy1[0].RightCol[0].f2_20[0]",
+      "type": "text",
+      "page": 3,
+      "maxLength": null
+    },
+    {
+      "name": "topmostSubform[0].Copy1[0].RightCol[0].Box1b_ReadOrder[0].f2_21[0]",
+      "type": "text",
+      "page": 3,
+      "maxLength": null
+    },
+    {
+      "name": "topmostSubform[0].Copy1[0].RightCol[0].f2_22[0]",
+      "type": "text",
+      "page": 3,
+      "maxLength": 3
+    },
+    {
+      "name": "topmostSubform[0].Copy1[0].RightCol[0].f2_23[0]",
+      "type": "text",
+      "page": 3,
+      "maxLength": 3
+    },
+    {
+      "name": "topmostSubform[0].Copy1[0].RightCol[0].f2_24[0]",
+      "type": "text",
+      "page": 3,
+      "maxLength": null
+    },
+    {
+      "name": "topmostSubform[0].Copy1[0].RightCol[0].c1_3[0]",
+      "type": "checkbox",
+      "page": 3,
+      "maxLength": null
+    },
+    {
+      "name": "topmostSubform[0].Copy1[0].RightCol[0].f2_25[0]",
+      "type": "text",
+      "page": 3,
+      "maxLength": null
+    },
+    {
+      "name": "topmostSubform[0].Copy1[0].RightCol[0].f2_26[0]",
+      "type": "text",
+      "page": 3,
+      "maxLength": null
+    },
+    {
+      "name": "topmostSubform[0].Copy1[0].RightCol[0].Box5_ReadOrder[0].f2_27[0]",
+      "type": "text",
+      "page": 3,
+      "maxLength": null
+    },
+    {
+      "name": "topmostSubform[0].Copy1[0].RightCol[0].Box5_ReadOrder[0].f2_28[0]",
+      "type": "text",
+      "page": 3,
+      "maxLength": null
+    },
+    {
+      "name": "topmostSubform[0].Copy1[0].RightCol[0].Box6_ReadOrder[0].f2_29[0]",
+      "type": "text",
+      "page": 3,
+      "maxLength": null
+    },
+    {
+      "name": "topmostSubform[0].Copy1[0].RightCol[0].Box6_ReadOrder[0].f2_30[0]",
+      "type": "text",
+      "page": 3,
+      "maxLength": null
+    },
+    {
+      "name": "topmostSubform[0].Copy1[0].RightCol[0].f2_31[0]",
+      "type": "text",
+      "page": 3,
+      "maxLength": null
+    },
+    {
+      "name": "topmostSubform[0].Copy1[0].RightCol[0].f2_32[0]",
+      "type": "text",
+      "page": 3,
+      "maxLength": null
+    },
+    {
+      "name": "topmostSubform[0].CopyB[0].PgHeader[0].CalendarYear[0].f2_1[0]",
+      "type": "text",
+      "page": 4,
+      "maxLength": 4
+    },
+    {
+      "name": "topmostSubform[0].CopyB[0].c2_1[0]",
+      "type": "checkbox",
+      "page": 4,
+      "maxLength": null
+    },
+    {
+      "name": "topmostSubform[0].CopyB[0].LeftCol[0].f2_2[0]",
+      "type": "text",
+      "page": 4,
+      "maxLength": null
+    },
+    {
+      "name": "topmostSubform[0].CopyB[0].LeftCol[0].f2_3[0]",
+      "type": "text",
+      "page": 4,
+      "maxLength": null
+    },
+    {
+      "name": "topmostSubform[0].CopyB[0].LeftCol[0].f2_4[0]",
+      "type": "text",
+      "page": 4,
+      "maxLength": null
+    },
+    {
+      "name": "topmostSubform[0].CopyB[0].LeftCol[0].f2_5[0]",
+      "type": "text",
+      "page": 4,
+      "maxLength": null
+    },
+    {
+      "name": "topmostSubform[0].CopyB[0].LeftCol[0].f2_6[0]",
+      "type": "text",
+      "page": 4,
+      "maxLength": null
+    },
+    {
+      "name": "topmostSubform[0].CopyB[0].LeftCol[0].f2_7[0]",
+      "type": "text",
+      "page": 4,
+      "maxLength": 2
+    },
+    {
+      "name": "topmostSubform[0].CopyB[0].LeftCol[0].f2_8[0]",
+      "type": "text",
+      "page": 4,
+      "maxLength": 2
+    },
+    {
+      "name": "topmostSubform[0].CopyB[0].LeftCol[0].f2_9[0]",
+      "type": "text",
+      "page": 4,
+      "maxLength": null
+    },
+    {
+      "name": "topmostSubform[0].CopyB[0].LeftCol[0].f2_10[0]",
+      "type": "text",
+      "page": 4,
+      "maxLength": 11
+    },
+    {
+      "name": "topmostSubform[0].CopyB[0].LeftCol[0].f2_11[0]",
+      "type": "text",
+      "page": 4,
+      "maxLength": 11
+    },
+    {
+      "name": "topmostSubform[0].CopyB[0].LeftCol[0].f2_12[0]",
+      "type": "text",
+      "page": 4,
+      "maxLength": null
+    },
+    {
+      "name": "topmostSubform[0].CopyB[0].LeftCol[0].f2_13[0]",
+      "type": "text",
+      "page": 4,
+      "maxLength": null
+    },
+    {
+      "name": "topmostSubform[0].CopyB[0].LeftCol[0].f2_14[0]",
+      "type": "text",
+      "page": 4,
+      "maxLength": null
+    },
+    {
+      "name": "topmostSubform[0].CopyB[0].LeftCol[0].f2_15[0]",
+      "type": "text",
+      "page": 4,
+      "maxLength": null
+    },
+    {
+      "name": "topmostSubform[0].CopyB[0].LeftCol[0].f2_16[0]",
+      "type": "text",
+      "page": 4,
+      "maxLength": 2
+    },
+    {
+      "name": "topmostSubform[0].CopyB[0].LeftCol[0].f2_17[0]",
+      "type": "text",
+      "page": 4,
+      "maxLength": 2
+    },
+    {
+      "name": "topmostSubform[0].CopyB[0].LeftCol[0].f2_18[0]",
+      "type": "text",
+      "page": 4,
+      "maxLength": null
+    },
+    {
+      "name": "topmostSubform[0].CopyB[0].LeftCol[0].f2_19[0]",
+      "type": "text",
+      "page": 4,
+      "maxLength": 44
+    },
+    {
+      "name": "topmostSubform[0].CopyB[0].RightCol[0].f2_20[0]",
+      "type": "text",
+      "page": 4,
+      "maxLength": null
+    },
+    {
+      "name": "topmostSubform[0].CopyB[0].RightCol[0].Box1b_ReadOrder[0].f2_21[0]",
+      "type": "text",
+      "page": 4,
+      "maxLength": null
+    },
+    {
+      "name": "topmostSubform[0].CopyB[0].RightCol[0].f2_22[0]",
+      "type": "text",
+      "page": 4,
+      "maxLength": 3
+    },
+    {
+      "name": "topmostSubform[0].CopyB[0].RightCol[0].f2_23[0]",
+      "type": "text",
+      "page": 4,
+      "maxLength": 3
+    },
+    {
+      "name": "topmostSubform[0].CopyB[0].RightCol[0].f2_24[0]",
+      "type": "text",
+      "page": 4,
+      "maxLength": null
+    },
+    {
+      "name": "topmostSubform[0].CopyB[0].RightCol[0].c1_3[0]",
+      "type": "checkbox",
+      "page": 4,
+      "maxLength": null
+    },
+    {
+      "name": "topmostSubform[0].CopyB[0].RightCol[0].f2_25[0]",
+      "type": "text",
+      "page": 4,
+      "maxLength": null
+    },
+    {
+      "name": "topmostSubform[0].CopyB[0].RightCol[0].f2_26[0]",
+      "type": "text",
+      "page": 4,
+      "maxLength": null
+    },
+    {
+      "name": "topmostSubform[0].CopyB[0].RightCol[0].Box5_ReadOrder[0].f2_27[0]",
+      "type": "text",
+      "page": 4,
+      "maxLength": null
+    },
+    {
+      "name": "topmostSubform[0].CopyB[0].RightCol[0].Box5_ReadOrder[0].f2_28[0]",
+      "type": "text",
+      "page": 4,
+      "maxLength": null
+    },
+    {
+      "name": "topmostSubform[0].CopyB[0].RightCol[0].Box6_ReadOrder[0].f2_29[0]",
+      "type": "text",
+      "page": 4,
+      "maxLength": null
+    },
+    {
+      "name": "topmostSubform[0].CopyB[0].RightCol[0].Box6_ReadOrder[0].f2_30[0]",
+      "type": "text",
+      "page": 4,
+      "maxLength": null
+    },
+    {
+      "name": "topmostSubform[0].CopyB[0].RightCol[0].f2_31[0]",
+      "type": "text",
+      "page": 4,
+      "maxLength": null
+    },
+    {
+      "name": "topmostSubform[0].CopyB[0].RightCol[0].f2_32[0]",
+      "type": "text",
+      "page": 4,
+      "maxLength": null
+    },
+    {
+      "name": "topmostSubform[0].Copy2[0].PgHeader[0].CalendarYear[0].f2_1[0]",
+      "type": "text",
+      "page": 6,
+      "maxLength": 4
+    },
+    {
+      "name": "topmostSubform[0].Copy2[0].c2_1[0]",
+      "type": "checkbox",
+      "page": 6,
+      "maxLength": null
+    },
+    {
+      "name": "topmostSubform[0].Copy2[0].c2_1[1]",
+      "type": "checkbox",
+      "page": 6,
+      "maxLength": null
+    },
+    {
+      "name": "topmostSubform[0].Copy2[0].LeftCol[0].f2_2[0]",
+      "type": "text",
+      "page": 6,
+      "maxLength": null
+    },
+    {
+      "name": "topmostSubform[0].Copy2[0].LeftCol[0].f2_3[0]",
+      "type": "text",
+      "page": 6,
+      "maxLength": null
+    },
+    {
+      "name": "topmostSubform[0].Copy2[0].LeftCol[0].f2_4[0]",
+      "type": "text",
+      "page": 6,
+      "maxLength": null
+    },
+    {
+      "name": "topmostSubform[0].Copy2[0].LeftCol[0].f2_5[0]",
+      "type": "text",
+      "page": 6,
+      "maxLength": null
+    },
+    {
+      "name": "topmostSubform[0].Copy2[0].LeftCol[0].f2_6[0]",
+      "type": "text",
+      "page": 6,
+      "maxLength": null
+    },
+    {
+      "name": "topmostSubform[0].Copy2[0].LeftCol[0].f2_7[0]",
+      "type": "text",
+      "page": 6,
+      "maxLength": 2
+    },
+    {
+      "name": "topmostSubform[0].Copy2[0].LeftCol[0].f2_8[0]",
+      "type": "text",
+      "page": 6,
+      "maxLength": 2
+    },
+    {
+      "name": "topmostSubform[0].Copy2[0].LeftCol[0].f2_9[0]",
+      "type": "text",
+      "page": 6,
+      "maxLength": null
+    },
+    {
+      "name": "topmostSubform[0].Copy2[0].LeftCol[0].f2_10[0]",
+      "type": "text",
+      "page": 6,
+      "maxLength": 11
+    },
+    {
+      "name": "topmostSubform[0].Copy2[0].LeftCol[0].f2_11[0]",
+      "type": "text",
+      "page": 6,
+      "maxLength": 11
+    },
+    {
+      "name": "topmostSubform[0].Copy2[0].LeftCol[0].f2_12[0]",
+      "type": "text",
+      "page": 6,
+      "maxLength": null
+    },
+    {
+      "name": "topmostSubform[0].Copy2[0].LeftCol[0].f2_13[0]",
+      "type": "text",
+      "page": 6,
+      "maxLength": null
+    },
+    {
+      "name": "topmostSubform[0].Copy2[0].LeftCol[0].f2_14[0]",
+      "type": "text",
+      "page": 6,
+      "maxLength": null
+    },
+    {
+      "name": "topmostSubform[0].Copy2[0].LeftCol[0].f2_15[0]",
+      "type": "text",
+      "page": 6,
+      "maxLength": null
+    },
+    {
+      "name": "topmostSubform[0].Copy2[0].LeftCol[0].f2_16[0]",
+      "type": "text",
+      "page": 6,
+      "maxLength": 2
+    },
+    {
+      "name": "topmostSubform[0].Copy2[0].LeftCol[0].f2_17[0]",
+      "type": "text",
+      "page": 6,
+      "maxLength": 2
+    },
+    {
+      "name": "topmostSubform[0].Copy2[0].LeftCol[0].f2_18[0]",
+      "type": "text",
+      "page": 6,
+      "maxLength": null
+    },
+    {
+      "name": "topmostSubform[0].Copy2[0].LeftCol[0].f2_19[0]",
+      "type": "text",
+      "page": 6,
+      "maxLength": 44
+    },
+    {
+      "name": "topmostSubform[0].Copy2[0].RightCol[0].f2_20[0]",
+      "type": "text",
+      "page": 6,
+      "maxLength": null
+    },
+    {
+      "name": "topmostSubform[0].Copy2[0].RightCol[0].Box1b_ReadOrder[0].f2_21[0]",
+      "type": "text",
+      "page": 6,
+      "maxLength": null
+    },
+    {
+      "name": "topmostSubform[0].Copy2[0].RightCol[0].f2_22[0]",
+      "type": "text",
+      "page": 6,
+      "maxLength": 3
+    },
+    {
+      "name": "topmostSubform[0].Copy2[0].RightCol[0].f2_23[0]",
+      "type": "text",
+      "page": 6,
+      "maxLength": 3
+    },
+    {
+      "name": "topmostSubform[0].Copy2[0].RightCol[0].f2_24[0]",
+      "type": "text",
+      "page": 6,
+      "maxLength": null
+    },
+    {
+      "name": "topmostSubform[0].Copy2[0].RightCol[0].c1_3[0]",
+      "type": "checkbox",
+      "page": 6,
+      "maxLength": null
+    },
+    {
+      "name": "topmostSubform[0].Copy2[0].RightCol[0].f2_25[0]",
+      "type": "text",
+      "page": 6,
+      "maxLength": null
+    },
+    {
+      "name": "topmostSubform[0].Copy2[0].RightCol[0].f2_26[0]",
+      "type": "text",
+      "page": 6,
+      "maxLength": null
+    },
+    {
+      "name": "topmostSubform[0].Copy2[0].RightCol[0].Box5_ReadOrder[0].f2_27[0]",
+      "type": "text",
+      "page": 6,
+      "maxLength": null
+    },
+    {
+      "name": "topmostSubform[0].Copy2[0].RightCol[0].Box5_ReadOrder[0].f2_28[0]",
+      "type": "text",
+      "page": 6,
+      "maxLength": null
+    },
+    {
+      "name": "topmostSubform[0].Copy2[0].RightCol[0].Box6_ReadOrder[0].f2_29[0]",
+      "type": "text",
+      "page": 6,
+      "maxLength": null
+    },
+    {
+      "name": "topmostSubform[0].Copy2[0].RightCol[0].Box6_ReadOrder[0].f2_30[0]",
+      "type": "text",
+      "page": 6,
+      "maxLength": null
+    },
+    {
+      "name": "topmostSubform[0].Copy2[0].RightCol[0].f2_31[0]",
+      "type": "text",
+      "page": 6,
+      "maxLength": null
+    },
+    {
+      "name": "topmostSubform[0].Copy2[0].RightCol[0].f2_32[0]",
+      "type": "text",
+      "page": 6,
+      "maxLength": null
+    }
+  ]
+}

@@ -1,7 +1,7 @@
 import { createClient, getUser } from "@/lib/supabase/server";
 import { Empty, money, moneyRounded } from "@/components/ui";
 import { toCents } from "@/lib/tax/form1120h";
-import { assembleReminders, nextOccurrence } from "@/lib/home/reminders";
+import { assembleReminders, homeTaxDeadlines, nextFilingReminder, nextOccurrence } from "@/lib/home/reminders";
 import { urgentItems } from "@/lib/home/urgent-items";
 import {
   buildSetupGuide,
@@ -13,7 +13,8 @@ import {
 import { Greeting } from "@/components/home/greeting";
 import { SetupGuidePanel } from "@/components/home/setup-guide-panel";
 import { cashByMonth } from "@/lib/money/cash";
-import { dueDate } from "@/lib/tax/due-rules";
+import { todayIso as localIso } from "@/lib/dates";
+import { defaultContractorYear, parametersAsOf } from "@/app/tax/data";
 import { buildSnapshot } from "@/lib/home/snapshot";
 import { spendByAccount } from "@/lib/money/spending";
 import { monthKey, monthKeyOf, monthsBetween } from "@/lib/money/months";
@@ -43,6 +44,9 @@ export default async function HomePage() {
   const supabase = await createClient();
   const user = await getUser();
   const todayIso = new Date().toISOString().slice(0, 10);
+  // 1099s are prepared in January and February for the year just ended; the
+  // rest of the year looks at the current one (the Taxes tab's rule).
+  const contractorYear = defaultContractorYear(localIso(new Date()));
 
   const [
     { data: associations },
@@ -72,13 +76,19 @@ export default async function HomePage() {
     { data: duesCollection },
     { data: spendingRows },
     { data: budgetRows },
+    { data: taxTemplates },
+    { data: taxForms },
+    { data: thresholdRows },
+    { data: contractorTotals },
   ] = await Promise.all([
     supabase
       .from("associations")
       .select(
-        "id, display_name, state_code, fiscal_year_end_month, incorporated_on, reserve_target, ein, city, county, dues_payee_name, dues_account_number, dues_zelle_handle, setup_dismissed_at",
+        "id, display_name, state_code, fiscal_year_end_month, incorporated_on, reserve_target, ein, city, county, dues_payee_name, dues_account_number, dues_zelle_handle, setup_dismissed_at, information_returns_filing, accountant_person_id",
       ),
-    supabase.from("fiscal_years").select("id, label, starts_on, ends_on").order("starts_on", { ascending: false }).limit(1),
+    // Every year, newest first: [0] is the latest, and the tax deadlines pick
+    // the one whose return is next to file from the whole list.
+    supabase.from("fiscal_years").select("id, label, starts_on, ends_on").order("starts_on", { ascending: false }),
     supabase
       .from("fund_cash_balances")
       .select("fund_id, name, kind, cash_balance, visible_lines")
@@ -107,7 +117,7 @@ export default async function HomePage() {
     supabase.from("invites").select("id", { count: "exact", head: true }),
     supabase.from("budget_lines").select("id, budgets(fiscal_year_id)"),
     supabase.from("assessment_schedules").select("id", { count: "exact", head: true }),
-    supabase.from("tax_filings").select("fiscal_year_id, computed_at").eq("form", "1120-H"),
+    supabase.from("tax_filings").select("fiscal_year_id, computed_at, locked_at").eq("form", "1120-H"),
     supabase
       .from("bank_transactions")
       .select("id", { count: "exact", head: true })
@@ -146,6 +156,23 @@ export default async function HomePage() {
       .select("month, account_id, account_name, fund_id, total")
       .order("month"),
     supabase.from("budget_vs_actual").select("type, variance, account_id, fund_id, name, budgeted"),
+    // The tax deadlines (lib/tax/deadlines) are built from these rows alone —
+    // Home never loads the full tax context.
+    supabase
+      .from("tax_form_templates")
+      .select("form_code, tax_year, due_rule, due_rule_citation, notes, verified_at, active")
+      .eq("active", true),
+    supabase
+      .from("tax_forms")
+      .select("id, form_code, tax_year, vendor_id, fiscal_year_id, status, filed_on, sent_to_accountant_at"),
+    supabase
+      .from("tax_parameters")
+      .select("numeric_value, effective_from, effective_to")
+      .eq("key", "form_1099_nec_threshold"),
+    supabase
+      .from("vendor_1099_calendar_totals")
+      .select("vendor_id, name, total_paid, w9_on_file")
+      .eq("calendar_year", contractorYear),
   ]);
 
   const association = associations?.[0];
@@ -202,9 +229,61 @@ export default async function HomePage() {
     .map((p) => new Date(`${p.effective_to}T00:00:00`))
     .sort((a, b) => a.getTime() - b.getTime())[0];
 
-  const vendorsMissingW9 = (vendors ?? []).filter(
-    (v) => !v.w9_on_file && !v.is_1099_exempt,
-  ).length;
+  // Tax deadlines: the one list the Taxes tab and the .ics download also read
+  // (lib/tax/deadlines), built from rows alone. The 1099 threshold is the row
+  // in force on Dec 31 of the payment year, resolved the way the tab and
+  // compute_and_save_tax_filing() resolve it (half-open: on 2026-01-01 the
+  // $600 row is out and the $2,000 row is in).
+  const threshold = parametersAsOf(
+    (thresholdRows ?? []).map((p) => ({
+      value: Number(p.numeric_value),
+      effectiveFrom: p.effective_from as string,
+      effectiveTo: (p.effective_to as string | null) ?? null,
+    })),
+    `${contractorYear}-12-31`,
+  )[0];
+  const taxHome = homeTaxDeadlines({
+    todayIso: localIso(today),
+    association: {
+      stateCode: association.state_code,
+      fiscalYearEndMonth: association.fiscal_year_end_month ?? null,
+      incorporatedOn: association.incorporated_on,
+      informationReturnsFiling:
+        association.information_returns_filing === "paper" || association.information_returns_filing === "electronic"
+          ? association.information_returns_filing
+          : null,
+      accountantSet: Boolean(association.accountant_person_id),
+    },
+    fiscalYears: fiscalYears ?? [],
+    contractorYear,
+    thresholdCents: threshold ? Math.round(threshold.value * 100) : null,
+    contractors: (contractorTotals ?? []).map((c) => ({
+      vendorId: c.vendor_id,
+      name: c.name,
+      totalCents: toCents(String(c.total_paid)),
+      w9OnFile: c.w9_on_file === true,
+    })),
+    templates: (taxTemplates ?? []).map((t) => ({
+      formCode: t.form_code,
+      taxYear: t.tax_year,
+      dueRule: t.due_rule ?? null,
+      dueRuleCitation: t.due_rule_citation ?? null,
+      notes: t.notes ?? null,
+      verified: t.verified_at !== null,
+      active: t.active === true,
+    })),
+    forms: (taxForms ?? []).map((f) => ({
+      id: f.id,
+      formCode: f.form_code,
+      taxYear: f.tax_year,
+      vendorId: f.vendor_id ?? null,
+      status: f.status,
+      filedOn: f.filed_on ?? null,
+      sentToAccountantAt: f.sent_to_accountant_at ?? null,
+    })),
+    locked1120hFiscalYearIds: (taxFilings ?? []).filter((f) => f.locked_at).map((f) => f.fiscal_year_id as string),
+  });
+  const nec1099 = taxHome.deadlines.find((d) => d.formCode === "irs_1099_nec" && d.dueOn !== null);
 
   // Safe to call regardless of booksVisible — urgentItems only raises the
   // "books don't match" item when booksVisible is true itself; every other
@@ -236,8 +315,10 @@ export default async function HomePage() {
     booksVisible,
     booksBalance: booksBalanced,
     aging: aging ?? [],
-    vendorsMissingW9,
-    nec1099Due: nextOccurrence(1, 31, today),
+    vendorsMissingW9: taxHome.contractorsMissingW9,
+    // The 1099 deadline when one is in play (verified or estimated); the
+    // general January 31 otherwise, so the W-9 nudge keeps its six-month lead.
+    nec1099Due: nec1099?.dueOn ? new Date(`${nec1099.dueOn}T00:00:00`) : nextOccurrence(1, 31, today),
     insuranceExpiry: soonestExpiry ?? null,
     // 'error' is a bank waiting for a fresh sign-in — connected, just stale;
     // the sync nudge below covers it rather than "not connected yet".
@@ -293,6 +374,10 @@ export default async function HomePage() {
     assessmentScheduleCount: scheduleCount ?? 0,
     taxFilingComputedAt:
       (taxFilings ?? []).find((f) => f.fiscal_year_id === currentFyId && f.computed_at)?.computed_at ?? null,
+    // The return by its fiscal year; 1099s carry no fiscal_year_id, so by their payment year.
+    taxFormsStarted: (taxForms ?? []).filter((f) =>
+      f.fiscal_year_id ? f.fiscal_year_id === taxHome.filingYear?.id : f.tax_year === contractorYear,
+    ).length,
     policies: policies ?? [],
     vendors: vendors ?? [],
     documents: (setupDocuments ?? []).map((d) => ({
@@ -394,51 +479,18 @@ export default async function HomePage() {
     lastAccessReviewAt = lastReview?.[0]?.reviewed_at ?? null;
   }
 
-  // Tax deadlines from verified official-form templates, when they exist.
-  const [{ data: dueTemplates }, { data: w9Gaps }] = await Promise.all([
-    supabase
-      .from("tax_form_templates")
-      .select("form_code, tax_year, due_rule")
-      .eq("active", true)
-      .in("form_code", ["irs_1120h", "irs_1099_nec", "il_sos_annual_report"]),
-    supabase
-      .from("vendor_1099_calendar_totals")
-      .select("vendor_id")
-      .eq("calendar_year", today.getFullYear())
-      .eq("w9_on_file", false),
-  ]);
-  const fyEndsOn = fiscalYears?.[0]?.ends_on ?? null;
-  const verifiedTaxDeadlines: Partial<Record<"irs_1120h" | "irs_1099_nec" | "il_sos_annual_report", string>> = {};
-  for (const t of dueTemplates ?? []) {
-    const due = dueDate(t.due_rule, {
-      fiscalYearEnd: t.form_code === "irs_1120h" ? fyEndsOn : null,
-      calendarYear: t.form_code === "irs_1099_nec" ? t.tax_year : null,
-      incorporatedOn: association.incorporated_on,
-      today,
-    });
-    const matchesYear =
-      t.form_code === "il_sos_annual_report" ||
-      (t.form_code === "irs_1120h" && fyEndsOn?.startsWith(String(t.tax_year))) ||
-      t.form_code === "irs_1099_nec";
-    if (due && matchesYear) verifiedTaxDeadlines[t.form_code as keyof typeof verifiedTaxDeadlines] = due;
-  }
-
   const reminders = assembleReminders({
-    association,
     bills: bills ?? [],
     policies: policies ?? [],
     upcomingChargeDates: (futureCharges ?? []).map((c) => c.due_on as string),
     today,
     lastAccessReviewAt,
-    verifiedTaxDeadlines,
-    contractorsMissingW9: (w9Gaps ?? []).length,
+    taxDeadlines: taxHome.deadlines,
+    contractorsMissingW9: taxHome.contractorsMissingW9,
   });
 
-  // The soonest tax or compliance filing among the reminders.
-  const localIso = (d: Date) =>
-    `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
-  const FILINGS = ["Form 1120-H", "1099-NEC to contractors", "Illinois annual report"];
-  const nextFilingReminder = reminders.find((r) => FILINGS.includes(r.name));
+  // The soonest tax filing, picked by key rather than by its display name.
+  const nextFiling = nextFilingReminder(reminders);
 
   const snapshotTiles = buildSnapshot({
     today,
@@ -451,8 +503,8 @@ export default async function HomePage() {
       })),
     uncategorizedCount: uncategorizedCount ?? 0,
     insuranceExpiresOn: activePolicies.map((p) => p.effective_to as string).sort()[0] ?? null,
-    nextFiling: nextFilingReminder
-      ? { name: nextFilingReminder.name, dueOn: localIso(nextFilingReminder.due), estimated: nextFilingReminder.unverified === true }
+    nextFiling: nextFiling
+      ? { name: nextFiling.name, dueOn: localIso(nextFiling.due), estimated: nextFiling.unverified === true }
       : null,
     contractors: (vendors ?? [])
       .filter((v) => v.status !== "do_not_use")

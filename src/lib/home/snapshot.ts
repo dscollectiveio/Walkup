@@ -27,7 +27,11 @@ export interface SnapshotInput {
   uncategorizedCount: number;
   /** Soonest end date among active insurance policies, ISO. */
   insuranceExpiresOn: string | null;
-  /** The next tax or compliance filing, if any, as an ISO date. */
+  /**
+   * The next tax or compliance filing (lib/tax/deadlines, via Home's
+   * reminders), if any, as an ISO date. May already be past: an overdue
+   * deadline keeps showing for a while rather than rolling forward.
+   */
   nextFiling: { name: string; dueOn: string; estimated: boolean } | null;
   /** Contractors the board still uses (not marked "do not use"). */
   contractors: { w9OnFile: boolean; is1099Exempt: boolean; insuredUntil: string | null }[];
@@ -123,7 +127,7 @@ export function buildSnapshot(input: SnapshotInput): SnapshotTile[] {
       key: "filing",
       label: "Next filing",
       value: shortDate(input.nextFiling.dueOn, todayIso),
-      note: `${input.nextFiling.name}${input.nextFiling.estimated ? " (estimated)" : ""} · ${days <= 0 ? "due now" : `in ${plural(days, "day")}`}`,
+      note: `${input.nextFiling.name}${input.nextFiling.estimated ? " (estimated)" : ""} · ${days < 0 ? "overdue" : days === 0 ? "due today" : `in ${plural(days, "day")}`}`,
       href: "/tax",
       tone: days <= 30 ? "attention" : "neutral",
     });

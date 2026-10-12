@@ -56,14 +56,15 @@ describe("migrations", () => {
     // Global reference data and the append-only log are the documented
     // exceptions: tax_parameters is not association-scoped, and audit_log
     // carries association_id without a foreign key so it outlives its subject.
-    // platform_admins, insurance_partners (0041) and tax_form_templates (0042)
-    // are global by design and writable only by a platform admin.
+    // platform_admins, insurance_partners (0041), tax_form_templates (0042)
+    // and tax_form_links (0048) are global by design and writable only by a
+    // platform admin.
     const { rows } = await db.query<{ table_name: string }>(
       `select t.table_name
          from information_schema.tables t
         where t.table_schema = 'public'
           and t.table_type = 'BASE TABLE'
-          and t.table_name not in ('associations', 'tax_parameters', 'platform_admins', 'insurance_partners', 'tax_form_templates')
+          and t.table_name not in ('associations', 'tax_parameters', 'platform_admins', 'insurance_partners', 'tax_form_templates', 'tax_form_links')
           and not exists (
             select 1 from information_schema.columns c
              where c.table_schema = 'public'

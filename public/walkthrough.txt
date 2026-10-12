@@ -51,7 +51,9 @@ it's done.
 
 STEP 1 — BUILDING INFO  (Sidebar: Building Info)
    a. Fill in the association's details: EIN, city, county, date
-      incorporated. The EIN is needed for the tax return.
+      incorporated. The EIN is needed for the tax return; the date
+      incorporated is what the Illinois annual-report reminder is worked
+      out from.
    b. Add every unit (e.g. Unit 1, Unit 2, Garden).
    c. Assign an owner to each unit — name and email. The email is what
       reminders and invites use.
@@ -88,8 +90,24 @@ STEP 2 — FINANCES & DUES
 
 STEP 3 — TAXES & INSURANCE
    a. EIN on file (from Step 1a).
-   b. Taxes: nothing to do now. At year end, Taxes works out the 1120-H
-      from your posted books and shows you what to file.
+   b. Taxes  (Taxes)
+      - Classify your income once. Each income account with activity gets
+        one question — owner fees, or not (interest, laundry, parking…).
+        Walkup pre-fills the answer; you confirm it. The 1120-H tests
+        wait until every account is confirmed.
+      - Add your accountant: name, firm, email. Every email draft Walkup
+        prepares is addressed to them. "Give them read access to the
+        books" is a separate link, with an end date.
+      - Answer "How do you file 1099s with the IRS?" — on paper,
+        electronically (IRIS), or not sure yet. Form 1096 only goes with
+        paper 1099s.
+      - Illinois buildings: add the corporation file number — the
+        Secretary of State's annual-report portal asks for it.
+      - "Add these dates to your calendar" downloads every due date, with
+        reminders, for Apple Calendar, Google Calendar or Outlook. "Send
+        the dates to the board" opens an email draft with the list.
+      At year end, Taxes works out the 1120-H from your posted books and
+      shows you what to file, when, and from which official form.
    c. Record the insurance policy  (Insurance Marketplace)
       - Carrier, policy number, dates, premium, deductible, limits.
       - Upload the declarations page if you have it.
@@ -101,6 +119,7 @@ STEP 4 — BUILDING UPKEEP  (Repairs & Upkeep)
       "Find a contractor" searches near the building.
    b. Collect W-9s from each contractor you pay — you need them before you
       can issue 1099s in January. Record "W-9 on file" on their profile.
+      Taxes has an "Ask for a W-9" email draft for each one still missing.
    c. Set up the upkeep schedule  (Upkeep view)
       - "Start with the usual checklist" offers the dozen jobs most
         buildings do every year (boiler service, gutters, backflow test,
@@ -150,8 +169,9 @@ PART 3 — THE MONTHLY ROUTINE (about 15 minutes)
 
 4. Dashboard
    - "Worth a minute today" lists anything that needs attention (late
-     dues, a category over budget, an insurance renewal coming up,
-     missing W-9s). It empties itself as things get handled.
+     dues, a category over budget, an insurance renewal coming up, a tax
+     form due soon, missing W-9s). It empties itself as things get
+     handled.
 
 
 --------------------------------------------------------------------------
@@ -179,10 +199,24 @@ Insurance renewal
 
 Year end
    1. Make sure every transaction for the year is posted.
-   2. Taxes → review the 1120-H figures Walkup worked out. Have an
+   2. Taxes → "This year" says what is due next and the one thing to do
+      about it. Each form card shows why you need it, the official IRS or
+      Illinois link, and the due date — with whether a person has checked
+      that date or it is estimated.
+   3. Open the 1120-H form → "Send to your accountant": download the
+      figures worksheet (and the editable PDF, once Walkup has that
+      year's official form checked), open the email draft, attach the
+      files and send it from your own email, then "Mark as sent". Have an
       accountant look before you file — Walkup is not a tax adviser.
-   3. Issue 1099-NECs to contractors you paid $600 or more (W-9s first).
-   4. Budget & spending → "Start from the last budget" for next year.
+   4. 1099-NECs: Taxes lists every contractor paid at or above the IRS
+      threshold for that year's payments, shows the amount it used and
+      whether a person has checked it (the threshold changed for payments
+      made from 2026). W-9s first. Walkup prepares the contractor's copies
+      only — file with the IRS through IRIS or on official forms, never a
+      Copy A printed from the IRS website.
+   5. Once a form is filed, "Mark as filed" on its page records the date
+      and, for the 1120-H, locks that year's figures.
+   6. Budget & spending → "Start from the last budget" for next year.
 
 
 --------------------------------------------------------------------------
@@ -198,6 +232,27 @@ FOR OWNERS (not on the board)
 
 
 --------------------------------------------------------------------------
+FOR THE WALKUP ADMIN (one-time setup per form and year — not a board job)
+--------------------------------------------------------------------------
+
+   - Open /admin/tax-templates ("Official tax forms, links and rules").
+   - "Set up from Walkup's suggestions": one click per form fetches the
+     official PDF from irs.gov and installs Walkup's field map for it —
+     only if the file is the exact revision the map was written for.
+     Otherwise it is stored inactive, with a note and no map.
+   - Open the labeled preview and the filled test export, check every
+     mapped line, the due rule and the links, then "Verify and activate".
+     Nothing fills from a form until a person has done this.
+   - "Official links": open each one and click "I opened this and it's
+     current". "Rules and thresholds": "Mark checked today" once a rule
+     is confirmed against the instructions. Both read "not yet checked by
+     a person" to every board until then.
+   - Each January the page asks you to check the active forms for
+     updates. A changed file becomes a new, inactive template to check —
+     never an automatic switch.
+
+
+--------------------------------------------------------------------------
 GOOD TO KNOW
 --------------------------------------------------------------------------
 
@@ -207,4 +262,12 @@ GOOD TO KNOW
      own email app.
    - Posted entries are never deleted. "Undo posting" writes a reversing
      entry, so the history always adds up.
+   - Walkup fills an official tax form only after a person has opened
+     that year's form and checked every mapped line — a one-time setup
+     per form and year, done by Walkup's admin, not the board. Until
+     then you still get your figures, the official link and the email
+     draft to your accountant.
+   - A tax date, threshold or link marked "estimated" or "not yet
+     checked" is exactly that: retrieved from the IRS or Illinois, not
+     yet confirmed by a person. Ask your CPA before relying on it.
    - Light or dark: the moon/sun button at the bottom of the sidebar.

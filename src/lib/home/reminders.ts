@@ -1,5 +1,23 @@
-// Deadline assembly for the home page's "Coming up" section. Extracted from
-// page.tsx so the logic is one place and plain-testable.
+// Deadline assembly for the home page: the tax deadlines Home builds from its
+// own rows (homeTaxDeadlines) and the "Coming up" list (assembleReminders).
+// Extracted from page.tsx so the logic is one place and plain-testable.
+//
+// Tax dates come from lib/tax/deadlines — the same list the Taxes tab, the
+// Next-filing tile and the .ics download read — so Home can't disagree with
+// the tab about a date. Home never loads the full tax context: it hands the
+// rows it already has (fiscal years, active templates, started forms,
+// contractor totals) to taxDeadlines with a light list of which forms apply.
+
+import {
+  filingYearFor,
+  taxDeadlines,
+  type Deadline,
+  type DeadlineForm,
+  type DeadlineInput,
+  type DeadlineTemplate,
+  type FilingFiscalYear,
+} from "@/lib/tax/deadlines";
+import { FORM_LABEL } from "@/lib/tax/determine";
 
 export interface Reminder {
   name: string;
@@ -9,6 +27,14 @@ export interface Reminder {
   // year's instructions. Stale legal information is worse than absent legal
   // information, so these say so instead of reading as authoritative.
   unverified?: boolean;
+  /** The date has passed and the thing isn't done. The row keeps its real date rather than rolling forward. */
+  overdue?: boolean;
+  /**
+   * Set on tax filings only — the deadline's key from lib/tax/deadlines, or
+   * `irs_1099_nec:{year}` for the grouped 1099 row — so the Next-filing tile
+   * can pick one out without matching display names. Nudges carry none.
+   */
+  filingKey?: string;
 }
 
 export type ReminderRail = "bad" | "warning" | "neutral";
@@ -42,12 +68,127 @@ export function nextOccurrence(month: number, day: number, today: Date): Date {
   return thisYear >= today ? thisYear : new Date(today.getFullYear() + 1, month - 1, day);
 }
 
-interface ReminderInputs {
+// ---- Tax deadlines from Home's own rows ----------------------------------------
+
+export interface HomeTaxRows {
+  /** Today as a local ISO date — the same day every other Home figure uses. */
+  todayIso: string;
   association: {
-    state_code: string;
-    fiscal_year_end_month: number | null;
-    incorporated_on: string | null;
+    stateCode: string;
+    fiscalYearEndMonth: number | null;
+    incorporatedOn: string | null;
+    /** How the board files 1099s with the IRS; Form 1096 goes only with paper. Null until someone says. */
+    informationReturnsFiling: "paper" | "electronic" | null;
+    /** An accountant is on file (associations.accountant_person_id), so the early nudge is to send them the figures. */
+    accountantSet: boolean;
   };
+  /** Every fiscal year on file, any order; the filing year is picked here. */
+  fiscalYears: FilingFiscalYear[];
+  /** Calendar year whose contractor payments are reported next January. */
+  contractorYear: number;
+  /**
+   * The 1099-NEC threshold in force on Dec 31 of the contractor year, in
+   * cents, resolved by the caller (tax/data.ts's parametersAsOf: half-open,
+   * so Jan 1 reads the new amount). Null when no row covers that date.
+   */
+  thresholdCents: number | null;
+  /** Everyone paid for services in the contractor year (vendor_1099_calendar_totals), whatever the amount. */
+  contractors: { vendorId: string; name: string; totalCents: number; w9OnFile: boolean }[];
+  /** Active tax_form_templates, PDF and link-only. */
+  templates: DeadlineTemplate[];
+  /** Every tax_forms row. */
+  forms: DeadlineForm[];
+  locked1120hFiscalYearIds: string[];
+}
+
+export interface HomeTaxDeadlines {
+  /** Every open deadline for the filing year, soonest first (lib/tax/deadlines). */
+  deadlines: Deadline[];
+  /** The fiscal year whose return is next to file; null with no fiscal years on file. */
+  filingYear: FilingFiscalYear | null;
+  /** Contractors at or above the threshold with no W-9 on file — everyone paid, when no threshold is on file. */
+  contractorsMissingW9: number;
+}
+
+/**
+ * The deadlines the Taxes tab would show, worked out from rows alone. Home has
+ * no ledger figures to run the two 1120-H tests with, so the return reads
+ * ask_cpa here (the tab says whether you qualify); everything else that
+ * decides which forms appear is a fact on a row — the state, the incorporation
+ * date, who was paid at or above the 1099 threshold, how the board files 1099s.
+ */
+export function homeTaxDeadlines(rows: HomeTaxRows): HomeTaxDeadlines {
+  const { association: a, contractorYear, thresholdCents } = rows;
+  const filingYear = filingYearFor(rows.fiscalYears, rows.forms, rows.locked1120hFiscalYearIds, rows.todayIso);
+  const thisYear = Number(rows.todayIso.slice(0, 4));
+  const taxYear = filingYear ? Number(filingYear.ends_on.slice(0, 4)) : thisYear;
+
+  const outcomes: DeadlineInput["outcomes"] = [];
+  // The return can only be dated against a fiscal year; without one it isn't
+  // listed, rather than guessed at.
+  if (filingYear) {
+    outcomes.push({ formCode: "irs_1120h", taxYear, determination: "ask_cpa", name: FORM_LABEL.irs_1120h });
+    if (a.stateCode === "IL") outcomes.push({ formCode: "il_1120", taxYear, determination: "ask_cpa", name: FORM_LABEL.il_1120 });
+  }
+  // Without the incorporation date the annual report can't be dated either;
+  // the Taxes tab asks for it in Building Info.
+  if (a.stateCode === "IL" && a.incorporatedOn) {
+    outcomes.push({ formCode: "il_sos_annual_report", taxYear, determination: "ask_cpa", name: FORM_LABEL.il_sos_annual_report });
+  }
+
+  const over = thresholdCents === null ? [] : rows.contractors.filter((c) => c.totalCents >= thresholdCents);
+  if (thresholdCents === null) {
+    // No threshold on file: nobody can say which contractors need one. The
+    // date still stands (one row, no contractor behind it); the tab says ask
+    // your CPA.
+    outcomes.push({ formCode: "irs_1099_nec", taxYear: contractorYear, determination: "ask_cpa", name: FORM_LABEL.irs_1099_nec });
+  }
+  for (const c of over) {
+    outcomes.push({ formCode: "irs_1099_nec", taxYear: contractorYear, vendorId: c.vendorId, determination: "required", name: `1099-NEC — ${c.name}` });
+  }
+  if (over.length > 0) {
+    // Same three-way answer as determineForms: paper → required, electronic →
+    // not required, unanswered → ask your CPA (and no date to remind about).
+    const method = a.informationReturnsFiling;
+    outcomes.push({
+      formCode: "irs_1096",
+      taxYear: contractorYear,
+      determination: method === "paper" ? "required" : method === "electronic" ? "not_required" : "ask_cpa",
+      name: FORM_LABEL.irs_1096,
+    });
+  }
+
+  const deadlines = taxDeadlines({
+    today: rows.todayIso,
+    association: {
+      stateCode: a.stateCode,
+      fiscalYearEndMonth: a.fiscalYearEndMonth,
+      incorporatedOn: a.incorporatedOn,
+      informationReturnsFiling: a.informationReturnsFiling,
+    },
+    fiscalYear: filingYear
+      ? { id: filingYear.id, label: filingYear.label, startsOn: filingYear.starts_on, endsOn: filingYear.ends_on, taxYear }
+      : // No fiscal year on file: the calendar year stands in so the 1099s and
+        // the annual report can still be dated. Neither reads it, and the
+        // return (which would) isn't in the list above.
+        { id: "", label: String(thisYear), startsOn: `${thisYear}-01-01`, endsOn: `${thisYear}-12-31`, taxYear: thisYear },
+    contractorYear,
+    templates: rows.templates,
+    forms: rows.forms,
+    locked1120hFiscalYearIds: rows.locked1120hFiscalYearIds,
+    outcomes,
+    accountantSet: a.accountantSet,
+  });
+
+  // Collecting a W-9 is never wasted, so with no threshold on file the nudge
+  // covers everyone paid this year rather than nobody.
+  const contractorsMissingW9 = (thresholdCents === null ? rows.contractors : over).filter((c) => !c.w9OnFile).length;
+  return { deadlines, filingYear, contractorsMissingW9 };
+}
+
+// ---- Coming up ----------------------------------------------------------------------
+
+interface ReminderInputs {
   bills: { name: string; next_due_on: string | null; autopay_arranged: boolean }[];
   policies: { coverage: string; effective_to: string; renewal_reminder_days?: number | null }[];
   upcomingChargeDates: string[]; // due_on of open/partial charges after today
@@ -58,23 +199,22 @@ interface ReminderInputs {
    */
   lastAccessReviewAt?: string | null;
   /**
-   * Due dates from verified official-form templates (lib/tax/due-rules),
-   * keyed by form code. When one exists it replaces the built-in estimate
-   * below and is no longer marked unverified.
+   * Every open tax deadline for the filing year (lib/tax/deadlines, via
+   * homeTaxDeadlines). Dated ones become rows — the 1099s grouped into one —
+   * and their milestones inside the horizon become nudges.
    */
-  verifiedTaxDeadlines?: Partial<Record<"irs_1120h" | "irs_1099_nec" | "il_sos_annual_report", string>>;
-  /** Contractors paid this calendar year with no W-9 on file — nudged every December 1. */
+  taxDeadlines?: Deadline[];
+  /** Contractors paid this year, at or above the 1099 threshold, with no W-9 on file — nudged every December 1. */
   contractorsMissingW9?: number;
 }
 
 export function assembleReminders({
-  association,
   bills,
   policies,
   upcomingChargeDates,
   today,
   lastAccessReviewAt,
-  verifiedTaxDeadlines = {},
+  taxDeadlines = [],
   contractorsMissingW9 = 0,
 }: ReminderInputs): Reminder[] {
   const reminders: Reminder[] = [];
@@ -128,42 +268,65 @@ export function assembleReminders({
     });
   }
 
-  // Tax deadlines. A verified official-form template carries a cited due rule
-  // (lib/tax/due-rules); until one exists for a form, the built-in estimate
-  // is shown and labeled unverified — stale legal information is worse than
-  // absent, so it says so rather than reading as authoritative.
-  const verified = (code: keyof typeof verifiedTaxDeadlines) => {
-    const iso = verifiedTaxDeadlines[code];
-    return iso ? new Date(`${iso}T00:00:00`) : null;
-  };
-  const fyEndMonth = association.fiscal_year_end_month ?? 12;
-  const due1120hMonth = ((fyEndMonth + 3) % 12) + 1;
-  const d1120h = verified("irs_1120h");
-  reminders.push({
-    name: "Form 1120-H",
-    kind: "Federal tax return",
-    due: d1120h ?? nextOccurrence(due1120hMonth, 15, today),
-    unverified: !d1120h,
-  });
-  const d1099 = verified("irs_1099_nec");
-  reminders.push({
-    name: "1099-NEC to contractors",
-    kind: "Federal filing",
-    due: d1099 ?? nextOccurrence(1, 31, today),
-    unverified: !d1099,
-  });
+  // Tax deadlines (lib/tax/deadlines). A date comes from a verified template's
+  // cited rule or from a built-in estimate; one Walkup won't guess at has no
+  // row here — "ask your CPA" belongs on the Taxes tab, not in a list of
+  // dates. An estimate is marked unverified: stale legal information is worse
+  // than absent, so it says so rather than reading as authoritative.
+  const asDate = (iso: string) => new Date(`${iso}T00:00:00`);
+  const dated = taxDeadlines.filter((d): d is Deadline & { dueOn: string } => d.dueOn !== null);
 
-  // Only shown when the state matches and the incorporation date exists —
-  // implying coverage of other states would be worse than staying quiet.
-  if (association.state_code === "IL" && association.incorporated_on) {
-    const inc = new Date(`${association.incorporated_on}T00:00:00`);
-    const dSos = verified("il_sos_annual_report");
+  // Milestones ("send it to your accountant" 60 days out, "start it" 45 days
+  // out) are nudges, so they keep to the horizon. One that has slipped reads
+  // as today, like the quotes and access-review nudges; once the filing itself
+  // is overdue its own row says everything.
+  const nudge = (on: string, name: string, kind: string, unverified: boolean) => {
+    const start = asDate(on);
+    if (start > horizon) return;
+    reminders.push({ name, kind, due: start < today ? today : start, unverified });
+  };
+
+  const necs = dated.filter((d) => d.formCode === "irs_1099_nec");
+  if (necs.length > 0) {
+    // One row for all the 1099s — five contractors would otherwise mean five
+    // copies of the same date — on the earliest of them. The one case with no
+    // contractor behind it is the "threshold not on file" row, whose count
+    // nobody knows.
+    const earliest = necs.reduce((a, b) => (b.dueOn < a.dueOn ? b : a));
+    const n = necs.length;
+    const unverified = necs.some((d) => d.basis !== "verified");
+    const counted = necs.some((d) => d.vendorId);
+    const name = counted
+      ? `${n} 1099-NEC${n === 1 ? "" : "s"} to ${n === 1 ? "a contractor" : "contractors"}`
+      : "1099-NECs to contractors";
+    const dueWords = `1099-NEC${counted && n === 1 ? "" : "s"} due ${formatDueDate(asDate(earliest.dueOn), today)}`;
     reminders.push({
-      name: "Illinois annual report",
-      kind: "Filed on the incorporation anniversary",
-      due: dSos ?? nextOccurrence(inc.getMonth() + 1, inc.getDate(), today),
-      unverified: !dSos,
+      name,
+      kind: earliest.kind,
+      due: asDate(earliest.dueOn),
+      unverified,
+      overdue: earliest.overdue,
+      filingKey: `irs_1099_nec:${earliest.taxYear}`,
     });
+    if (!earliest.overdue) {
+      for (const key of ["send", "start"] as const) {
+        const ms = necs.flatMap((d) => d.milestones.filter((m) => m.key === key));
+        if (ms.length === 0) continue;
+        const k = ms.length;
+        const label = k === 1 ? ms[0].label : key === "send" ? `Send ${k} 1099-NECs to your accountant` : `Start ${k} 1099-NECs`;
+        nudge(ms.map((m) => m.on).sort()[0], label, dueWords, unverified);
+      }
+    }
+  }
+
+  for (const d of dated) {
+    if (d.formCode === "irs_1099_nec") continue;
+    const unverified = d.basis !== "verified";
+    reminders.push({ name: d.name, kind: d.kind, due: asDate(d.dueOn), unverified, overdue: d.overdue, filingKey: d.key });
+    if (d.overdue) continue;
+    for (const m of d.milestones) {
+      nudge(m.on, m.label, `${d.name} due ${formatDueDate(asDate(d.dueOn), today)}`, unverified);
+    }
   }
 
   // W-9s are far easier to collect before January's 1099s than during them.
@@ -195,4 +358,13 @@ export function assembleReminders({
   }
 
   return reminders.sort((a, b) => a.due.getTime() - b.due.getTime());
+}
+
+/**
+ * The soonest tax filing among the reminders, for the Next-filing tile. Picked
+ * by key, never by display name: the grouped 1099 row's name carries a count.
+ * An overdue filing sorts first, so it is the "next" one until it's done.
+ */
+export function nextFilingReminder(reminders: Reminder[]): Reminder | null {
+  return reminders.find((r) => r.filingKey !== undefined) ?? null;
 }

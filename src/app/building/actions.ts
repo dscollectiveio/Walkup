@@ -14,6 +14,9 @@ async function currentAssociationId(supabase: Awaited<ReturnType<typeof createCl
 function revalidateBuilding() {
   revalidatePath("/building");
   revalidatePath("/");
+  // The state, incorporation date, fiscal year end and EIN feed the Taxes
+  // tab's answers and due dates.
+  revalidatePath("/tax");
 }
 
 // ============================================================================

@@ -2,7 +2,6 @@ import { describe, expect, it } from "vitest";
 import { assembleReminders } from "@/lib/home/reminders";
 
 const base = {
-  association: { state_code: "IL", fiscal_year_end_month: 12, incorporated_on: null },
   bills: [],
   policies: [],
   upcomingChargeDates: [],

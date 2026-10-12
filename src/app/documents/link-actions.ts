@@ -10,11 +10,12 @@ import { runExtraction } from "@/lib/documents/pipeline";
 const MAX_BYTES = 25 * 1024 * 1024;
 
 // Kept in step with the check constraint added in 0020
-// (document_links_target_table_known) — a target this doesn't list would be
-// accepted here and rejected at the database, which is a worse place to find
-// out. No `meetings` entry: there is no meetings table. No due-date entry:
-// due dates are computed at render time (0017), never stored, so nothing to
-// point a link at.
+// (document_links_target_table_known, widened in 0042) — a target this
+// doesn't list would be accepted here and rejected at the database, which is
+// a worse place to find out. No `meetings` entry: there is no meetings table.
+// No due-date entry: due dates are computed at render time (0017), never
+// stored, so nothing to point a link at. `tax_forms`: filled packets and
+// proof of filing attach to the form (0042, 0048).
 const LINKABLE_TABLES = [
   "units",
   "persons",
@@ -27,6 +28,7 @@ const LINKABLE_TABLES = [
   "tickets",
   "recurring_bills",
   "fiscal_years",
+  "tax_forms",
 ] as const;
 
 type LinkableTable = (typeof LINKABLE_TABLES)[number];
@@ -37,6 +39,7 @@ function revalidateLinked(targetTable: string, targetId: string) {
   if (targetTable === "tickets") revalidatePath(`/maintenance/${targetId}`);
   if (targetTable === "vendors") revalidatePath(`/contractors/${targetId}`);
   if (targetTable === "insurance_policies") revalidatePath("/insurance");
+  if (targetTable === "tax_forms") revalidatePath(`/tax/forms/${targetId}`);
 }
 
 /**

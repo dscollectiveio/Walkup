@@ -56,6 +56,8 @@ export interface SetupInputs {
   budgetLineCount: number;
   assessmentScheduleCount: number;
   taxFilingComputedAt: string | null;
+  /** tax_forms rows started for the year the Taxes tab is working on — the return by its fiscal year, 1099s by their payment year. */
+  taxFormsStarted: number;
   policies: { effective_from: string; effective_to: string }[];
   vendors: { w9_on_file: boolean; w9_received_on: string | null; is_1099_exempt: boolean }[];
   /** Current, non-deleted documents with their category slug. */
@@ -112,7 +114,9 @@ export function buildSetupGuide(input: SetupInputs): SetupSection[] {
 
   // ---- Taxes & Insurance ---------------------------------------------------
   const einDone = Boolean(a.ein);
-  const taxDone = input.taxFilingComputedAt !== null;
+  // Either way the board has been through Taxes: saved the year's figures, or
+  // started a form under "Your forms".
+  const taxDone = input.taxFilingComputedAt !== null || input.taxFormsStarted > 0;
   const activePolicy = input.policies
     .filter((p) => onOrAfter(p.effective_to, today))
     .sort((x, y) => x.effective_from.localeCompare(y.effective_from))[0];

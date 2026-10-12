@@ -67,8 +67,18 @@ describe("buildSnapshot", () => {
       tile(buildSnapshot({ ...empty, nextFiling: { name: "Form 1120-H", dueOn: "2027-04-15", estimated: true } }), "filing"),
     ).toMatchObject({ value: "Apr 15, 2027", note: "Form 1120-H (estimated) · in 197 days", tone: "neutral" });
     expect(
-      tile(buildSnapshot({ ...empty, nextFiling: { name: "1099-NEC to contractors", dueOn: "2026-10-20", estimated: false } }), "filing"),
-    ).toMatchObject({ note: "1099-NEC to contractors · in 20 days", tone: "attention" });
+      tile(buildSnapshot({ ...empty, nextFiling: { name: "2 1099-NECs to contractors", dueOn: "2026-10-20", estimated: false } }), "filing"),
+    ).toMatchObject({ note: "2 1099-NECs to contractors · in 20 days", tone: "attention" });
+  });
+
+  it("says overdue for a filing whose date has passed, and due today on the day", () => {
+    // lib/tax/deadlines keeps an overdue deadline for 120 days rather than rolling it forward.
+    expect(
+      tile(buildSnapshot({ ...empty, nextFiling: { name: "Illinois annual report", dueOn: "2026-09-20", estimated: true } }), "filing"),
+    ).toMatchObject({ value: "Sep 20", note: "Illinois annual report (estimated) · overdue", tone: "attention" });
+    expect(
+      tile(buildSnapshot({ ...empty, nextFiling: { name: "Form 1096", dueOn: "2026-09-30", estimated: false } }), "filing"),
+    ).toMatchObject({ note: "Form 1096 · due today", tone: "attention" });
   });
 
   describe("contractor paperwork", () => {

@@ -36,27 +36,8 @@ export async function saveTaxFiling(_prev: unknown, formData: FormData) {
   return { ok: true as const };
 }
 
-/** Marks a saved filing as filed. Freezes it — no further recompute or edit. */
-export async function markTaxFilingFiled(_prev: unknown, formData: FormData) {
-  const filingId = String(formData.get("filing_id") ?? "");
-  const filedOn = String(formData.get("filed_on") ?? "").trim();
-  if (!filingId) return { error: "Missing which filing to mark as filed." };
-  if (!filedOn) return { error: "Enter the date it was filed." };
-
-  const supabase = await createClient();
-  const { error } = await supabase.rpc("lock_tax_filing", {
-    p_filing_id: filingId,
-    p_filed_on: filedOn,
-  });
-
-  if (error) {
-    if (error.code === "42501") return { error: "Only the board can mark a filing as filed." };
-    return { error: error.message };
-  }
-
-  revalidateTax();
-  return { ok: true as const };
-}
+// "Mark as filed" lives on the form page (form-actions.ts markFormFiled), which
+// saves and locks the 1120-H figures in the same step. There is one "filed".
 
 /**
  * Sets or clears a transaction's tax treatment. This does not touch the

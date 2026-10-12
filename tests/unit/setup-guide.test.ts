@@ -35,6 +35,7 @@ function freshSignup(): SetupInputs {
     budgetLineCount: 0,
     assessmentScheduleCount: 0,
     taxFilingComputedAt: null,
+    taxFormsStarted: 0,
     policies: [],
     vendors: [],
     documents: [],
@@ -71,6 +72,7 @@ function fullyDone(): SetupInputs {
     budgetLineCount: 4,
     assessmentScheduleCount: 1,
     taxFilingComputedAt: "2026-02-01T00:00:00Z",
+    taxFormsStarted: 0,
     policies: [{ effective_from: "2026-01-01", effective_to: "2027-01-01" }],
     vendors: [{ w9_on_file: true, w9_received_on: "2026-05-01", is_1099_exempt: false }],
     documents: [
@@ -170,6 +172,21 @@ describe("setup guide", () => {
     expect(steps.find((s) => s.key === "bank")!.done).toBe(true);
     expect(steps.find((s) => s.key === "sync")!.done).toBe(false);
     expect(steps.find((s) => s.key === "backlog")!.done).toBe(false);
+  });
+
+  it("ticks the Taxes step once a form is started, even before the year's figures are saved", () => {
+    const input = freshSignup();
+    expect(buildSetupGuide(input)[2].steps.find((s) => s.key === "tax")!.done).toBe(false);
+
+    input.taxFormsStarted = 1;
+    const tax = buildSetupGuide(input)[2].steps.find((s) => s.key === "tax")!;
+    expect(tax.done).toBe(true);
+    // A started form has no "computed on" date to show.
+    expect(tax.doneOn).toBeNull();
+
+    input.taxFormsStarted = 0;
+    input.taxFilingComputedAt = "2026-02-01T00:00:00Z";
+    expect(buildSetupGuide(input)[2].steps.find((s) => s.key === "tax")!).toMatchObject({ done: true, doneOn: "2026-02-01" });
   });
 
   it("does not count an expired insurance policy", () => {

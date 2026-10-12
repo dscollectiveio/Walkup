@@ -3,7 +3,6 @@ import { assembleReminders } from "@/lib/home/reminders";
 
 const today = new Date("2026-09-30T00:00:00");
 const base = {
-  association: { state_code: "IL", fiscal_year_end_month: 12, incorporated_on: null },
   bills: [],
   upcomingChargeDates: [],
   today,

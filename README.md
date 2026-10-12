@@ -14,7 +14,7 @@ shipped and why.
 
 | | |
 |---|---|
-| Schema | `supabase/migrations/0001`–`0026`, applied and tested (`tests/db/`) |
+| Schema | `supabase/migrations/0001`–`0048`, tested (`tests/db/`); `0048` (Tax Center v2, `docs/DECISIONS.md` #33) is written but not yet applied anywhere |
 | Supabase project (dev/staging) | created — see `.env.local` |
 | Supabase project (production) | see `docs/DECISIONS.md` #27 for the split rationale |
 | GitHub remote | `dscollectiveio/Walkup` |
@@ -54,7 +54,7 @@ The Supabase CLI is a dev dependency — use `npx supabase`, no global install.
 ```
 supabase/migrations/   versioned schema; never edit the database by hand
 src/lib/supabase/      typed clients (browser, server) — no service-role client
-src/lib/tax/           1120-H computation
+src/lib/tax/           1120-H computation, form determination, due dates, autofill, email drafts, suggested field maps
 src/lib/documents/     document hub: extraction, classification, redaction
 tests/db/              Vitest against PGlite — schema, RLS, RPCs, run the real migrations
 tests/unit/            Vitest — pure functions (tax math, redaction)
@@ -78,7 +78,11 @@ the entry. See `docs/DECISIONS.md` #1 and #3.
 ## Before anyone files anything
 
 - [ ] A CPA reviews the cash-method treatment and the 60%/90% computations
-- [ ] `tax_parameters` values verified, dated, with source URLs
+- [ ] `tax_parameters` values verified, dated, with source URLs — including the
+      $2,000 1099-NEC threshold for payments made from 2026, still unchecked
+- [ ] The official links (`tax_form_links`) and the suggested 1120-H / 1099-NEC
+      field maps opened and checked by a person on the admin page
+      (`docs/DECISIONS.md` #33)
 - [ ] The UI states plainly that this is not tax or legal advice
 - [ ] Illinois annual report data verified against ilsos.gov
 
