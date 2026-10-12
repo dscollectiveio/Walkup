@@ -98,7 +98,6 @@ function NavItemLink({
           {count > 0 ? `, ${countWords}` : ""}
         </span>
       </Link>
-      </span>
     </div>
   );
 }
