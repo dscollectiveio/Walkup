@@ -374,7 +374,8 @@ export default async function BankFeedPage({
   }
 
   const accountList = accounts ?? [];
-  const label = (a: { code: string; name: string }) => `${a.code} ${a.name}`;
+  // Just the name: account codes are bookkeeping plumbing the board never needs to see.
+  const label = (a: { name: string }) => a.name;
   const pickers: Pickers = {
     expenseAccounts: accountList.filter((a) => a.type === "expense").map((a) => ({ id: a.id, label: label(a) })),
     incomeAccounts: accountList.filter((a) => a.type === "income").map((a) => ({ id: a.id, label: label(a) })),

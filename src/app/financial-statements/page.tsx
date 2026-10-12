@@ -1,11 +1,15 @@
 import Link from "next/link";
+import { redirect } from "next/navigation";
 import { ChevronRight } from "lucide-react";
 import { createClient } from "@/lib/supabase/server";
-import { Answer, Card, Empty, Restricted, money } from "@/components/ui";
+import { Card, Empty, Restricted, money } from "@/components/ui";
 import { shortDate, todayIso } from "@/lib/dates";
-import { statementHref, type PeriodBounds, type PeriodGrain } from "./periods";
+import { statementHref, type PeriodGrain } from "./periods";
 import { loadStatement, type AccountLine, type LineEntry } from "./data";
-import { headlineFor, varianceWords } from "./summary";
+import { headlineFor, parseSelection, periodKeyFor, varianceWords } from "./summary";
+import { MultiPeriodView } from "./multi-view";
+import { ReportActions } from "./report-actions";
+import { buildReport } from "./report";
 import { PeriodPicker } from "./period-picker";
 
 export const dynamic = "force-dynamic";
@@ -14,30 +18,6 @@ const toolBtn =
   "inline-flex h-9 items-center rounded-md border border-line-strong bg-paper px-3 text-[13px] font-medium text-ink transition-colors hover:bg-fill";
 const navBtn =
   "inline-flex h-9 w-9 items-center justify-center rounded-md border border-line-strong bg-paper text-ink transition-colors hover:bg-fill";
-
-function buildEmailDraft(
-  associationName: string,
-  bounds: PeriodBounds,
-  incomeRows: AccountLine[],
-  expenseRows: AccountLine[],
-  totalIncome: number,
-  totalExpenses: number,
-): string {
-  const subject = `${associationName} — Financial statement — ${bounds.label}`;
-  const lines: string[] = [
-    associationName,
-    `Financial statement — ${bounds.label}`,
-    "",
-    "A PDF of this statement is attached — download it from the Financial Statements page and attach it here before sending.",
-    "",
-    "Income",
-  ];
-  for (const r of incomeRows) lines.push(`  ${r.code}  ${r.account_name}: ${money(r.amount)}`);
-  lines.push(`  Total income: ${money(totalIncome)}`, "", "Expenses");
-  for (const r of expenseRows) lines.push(`  ${r.code}  ${r.account_name}: ${money(r.amount)}`);
-  lines.push(`  Total expenses: ${money(totalExpenses)}`, "", `Net income: ${money(totalIncome - totalExpenses)}`);
-  return `mailto:?subject=${encodeURIComponent(subject)}&body=${encodeURIComponent(lines.join("\n"))}`;
-}
 
 const TONE_TEXT = { good: "text-good-text", bad: "text-bad-text", neutral: "text-mute" } as const;
 
@@ -69,7 +49,6 @@ function LineRow({
         />
         <span className="min-w-0 flex-1">
           <span className="text-ink">{row.account_name}</span>
-          <span className="figures ml-2 text-[11px] text-mute-soft">{row.code}</span>
         </span>
         <span className="hidden w-36 items-center gap-2 sm:flex">
           <span className="h-1.5 flex-1 overflow-hidden rounded-full bg-fill">
@@ -142,7 +121,7 @@ function TotalRow({ label, amount, strong = false }: { label: string; amount: nu
 export default async function FinancialStatementsPage({
   searchParams,
 }: {
-  searchParams: Promise<{ view?: string; period?: string; offset?: string; sort?: string }>;
+  searchParams: Promise<{ view?: string; period?: string; offset?: string; sort?: string; periods?: string }>;
 }) {
   const sp = await searchParams;
   const period: PeriodGrain =
@@ -155,8 +134,22 @@ export default async function FinancialStatementsPage({
   const statement = await loadStatement(supabase, sort === "size" ? "expenses" : "total", period, offset);
   if ("restricted" in statement) return <Restricted what="financial statements" />;
 
+  // Several periods chosen: side-by-side columns. A single one is just the ordinary view.
+  if (sp.periods) {
+    const selection = parseSelection(sp.periods, statement.fiscalYears, todayIso());
+    if (selection && selection.items.length > 1) {
+      return <MultiPeriodView selection={selection} sort={sort} fiscalYears={statement.fiscalYears} />;
+    }
+    if (selection) {
+      redirect(
+        statementHref("/financial-statements", "total", selection.grain, selection.items[0].offset, {
+          sort: sort === "size" ? "size" : undefined,
+        }),
+      );
+    }
+  }
+
   const {
-    association,
     bounds,
     fiscalYears,
     incomeRows,
@@ -168,7 +161,6 @@ export default async function FinancialStatementsPage({
     canGoNewer,
     canGoOlder,
     prior,
-    position,
     budgetByAccount,
     budgetNote,
     entriesByAccount,
@@ -189,17 +181,10 @@ export default async function FinancialStatementsPage({
       })
     : null;
 
-  const emailHref = bounds
-    ? buildEmailDraft(association.display_name, bounds, incomeRows, expenseRows, totalIncome, totalExpenses)
-    : null;
+  const report = buildReport([statement]);
   const excelHref = statementHref("/financial-statements/export", "total", period, offset);
   const pdfHref = statementHref("/financial-statements/export/pdf", "total", period, offset);
   const yearEndHref = `/financial-statements/export?period=annual&offset=${period === "annual" ? offset : 0}&pack=year-end`;
-
-  const delta = (now: number, before: number | undefined) =>
-    before === undefined || !prior?.hasActivity ? null : now - before;
-  const deltaWords = (d: number | null) =>
-    d === null ? null : Math.abs(d) < 1 ? "same as" : `${d > 0 ? "+" : "−"}${money(Math.abs(d))} vs`;
 
   return (
     <div className="space-y-6">
@@ -235,8 +220,8 @@ export default async function FinancialStatementsPage({
           </Link>
           <PeriodPicker
             label={bounds?.label ?? "Choose a period"}
-            current={{ period, offset }}
-            currentStart={bounds?.start ?? null}
+            grain={period}
+            selectedKeys={bounds ? [periodKeyFor(period, bounds)] : []}
             fiscalYears={fiscalYears}
             today={today}
             sort={sort}
@@ -250,11 +235,9 @@ export default async function FinancialStatementsPage({
             →
           </Link>
         </div>
-        {rows.length > 0 ? (
+        {rows.length > 0 && report ? (
           <div className="flex items-center gap-2">
-            <a href={pdfHref} className="inline-flex h-9 items-center rounded-md bg-ink px-4 text-[13px] font-medium text-paper hover:bg-ink-mid">
-              Download PDF
-            </a>
+            <ReportActions report={report} pdfHref={pdfHref} />
             <details className="relative">
               <summary
                 aria-label="More ways to share"
@@ -266,15 +249,6 @@ export default async function FinancialStatementsPage({
                 <a href={excelHref} className="block rounded-md px-3 py-2 text-ink hover:bg-fill">
                   Export to Excel
                 </a>
-                {emailHref ? (
-                  <a
-                    href={emailHref}
-                    className="block rounded-md px-3 py-2 text-ink hover:bg-fill"
-                    title="A mailto: link can't carry an attachment — download the PDF, then attach it yourself."
-                  >
-                    Draft an email
-                  </a>
-                ) : null}
                 <div className="my-1 border-t border-line" />
                 <a href={yearEndHref} className="block rounded-md px-3 py-2 hover:bg-fill">
                   <span className="block text-ink">Year-end package for your accountant</span>
@@ -309,74 +283,6 @@ export default async function FinancialStatementsPage({
           </div>
         ) : (
           <div className="space-y-5">
-            {headline ? (
-              <Answer status={headline.status} headline={headline.headline} detail={headline.detail} />
-            ) : null}
-
-            {/* Totals, with the only comparison: against the previous period. */}
-            <dl className="grid divide-y divide-line overflow-hidden rounded-lg border border-line sm:grid-cols-3 sm:divide-x sm:divide-y-0">
-              {(
-                [
-                  { label: "Money in", value: totalIncome, d: delta(totalIncome, prior?.totalIncome), tone: "neutral" },
-                  { label: "Money out", value: totalExpenses, d: delta(totalExpenses, prior?.totalExpenses), tone: "neutral" },
-                  { label: "Left over", value: netIncome, d: delta(netIncome, prior?.netIncome), tone: netIncome < 0 ? "bad" : "good" },
-                ] as const
-              ).map((cell) => (
-                <div key={cell.label} className={`px-5 py-4 ${cell.tone === "bad" ? "bg-bad-tint" : cell.tone === "good" ? "bg-good-tint" : ""}`}>
-                  <dt className={`text-[12px] ${cell.tone === "neutral" ? "text-mute" : TONE_TEXT[cell.tone]}`}>{cell.label}</dt>
-                  <dd className={`figures mt-1 text-[22px] ${cell.tone === "neutral" ? "text-ink" : TONE_TEXT[cell.tone]}`}>
-                    {money(cell.value)}
-                  </dd>
-                  {cell.d !== null && prior ? (
-                    <dd className={`mt-0.5 text-[11px] ${cell.tone === "neutral" ? "text-mute-soft" : TONE_TEXT[cell.tone]} opacity-80`}>
-                      {deltaWords(cell.d)} {prior.label}
-                    </dd>
-                  ) : null}
-                </div>
-              ))}
-            </dl>
-
-            {/* Where the money sits */}
-            {position ? (
-              <section>
-                <h3 className="text-[11px] font-medium uppercase tracking-[0.07em] text-section-label">Where the money sits</h3>
-                <dl className="mt-2 grid grid-cols-2 gap-px overflow-hidden rounded-lg border border-line bg-line sm:grid-cols-4">
-                  <div className="bg-paper px-4 py-3">
-                    <dt className="text-[12px] text-mute">Operating cash</dt>
-                    <dd className="figures mt-0.5 text-[17px] text-ink">{money(position.operatingCash)}</dd>
-                    <dd className="text-[11px] text-mute-soft">day-to-day account</dd>
-                  </div>
-                  <div className="bg-paper px-4 py-3">
-                    <dt className="text-[12px] text-mute">Reserve</dt>
-                    <dd className="figures mt-0.5 text-[17px] text-ink">{money(position.reserveCash)}</dd>
-                    <dd className={`text-[11px] ${position.reserveChange > 0 ? "text-good-text" : position.reserveChange < 0 ? "text-bad-text" : "text-mute-soft"}`}>
-                      {Math.abs(position.reserveChange) < 1
-                        ? "no change this period"
-                        : `${position.reserveChange > 0 ? "↑" : "↓"} ${money(Math.abs(position.reserveChange))} this period`}
-                    </dd>
-                  </div>
-                  <div className="bg-paper px-4 py-3">
-                    <dt className="text-[12px] text-mute">Owed to us</dt>
-                    <dd className="figures mt-0.5 text-[17px] text-ink">{money(position.duesOwed)}</dd>
-                    <dd className="text-[11px]">
-                      {position.unitsBehind > 0 ? (
-                        <Link href="/delinquency" className="text-warning-text underline-offset-2 hover:underline">
-                          {position.unitsBehind} unit{position.unitsBehind === 1 ? "" : "s"} behind on dues →
-                        </Link>
-                      ) : (
-                        <span className="text-mute-soft">unpaid dues</span>
-                      )}
-                    </dd>
-                  </div>
-                  <div className="bg-paper px-4 py-3">
-                    <dt className="text-[12px] text-mute">Owed by us</dt>
-                    <dd className="figures mt-0.5 text-[17px] text-ink">{money(position.billsOwed)}</dd>
-                    <dd className="text-[11px] text-mute-soft">unpaid bills</dd>
-                  </div>
-                </dl>
-              </section>
-            ) : null}
-
             {/* The statement */}
             <section>
               <div className="flex flex-wrap items-baseline justify-between gap-2">

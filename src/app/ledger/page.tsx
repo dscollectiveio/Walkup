@@ -57,7 +57,6 @@ export default async function LedgerPage() {
             <thead>
               <tr className="border-b border-line text-left text-[11px] uppercase tracking-wide text-mute">
                 <th className="pb-2 font-medium">Account for</th>
-                <th className="pb-2 font-medium">No.</th>
                 <th className="pb-2 font-medium">Account</th>
                 <th className="pb-2 font-medium">Type</th>
                 <th className="pb-2 text-right font-medium">Debit</th>
@@ -68,7 +67,6 @@ export default async function LedgerPage() {
               {rows.map((r) => (
                 <tr key={`${r.fund_name}-${r.code}`}>
                   <td className="py-2 text-mute">{r.fund_name}</td>
-                  <td className="figures py-2 font-mono text-[11px] text-ink">{r.code}</td>
                   <td className="py-2 text-ink">{r.name}</td>
                   <td className="py-2 text-[11px] text-mute">{r.type}</td>
                   <td className="figures py-2 text-right">

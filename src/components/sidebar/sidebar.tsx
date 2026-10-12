@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useState } from "react";
 import { PanelLeftClose, PanelLeftOpen, X } from "lucide-react";
 import { Mark } from "@/components/mark";
 import { ThemeToggle } from "./theme-toggle";
@@ -13,10 +13,8 @@ function isActive(pathname: string, href: string) {
   return href === "/" ? pathname === "/" : pathname.startsWith(href);
 }
 
-/** How long the mouse rests on the rail before it slides out. */
-const PEEK_DELAY_MS = 250;
 /** How long the content takes to fade out before the layout swaps. */
-const FADE_OUT_MS = 160;
+const FADE_OUT_MS = 120;
 
 const isTyping = (el: EventTarget | null) =>
   el instanceof HTMLElement &&
@@ -119,30 +117,16 @@ export function Sidebar({
   const state = useSidebarState();
   const { expanded: pinned, phone, narrow, drawerOpen } = state;
 
-  // Hover-to-peek: resting the mouse on the icon rail for a second slides it
-  // out over the page (the content doesn't move) so the labels can be read;
+  // Hover-to-peek: the moment the mouse touches the icon rail it slides out
+  // over the page (the content doesn't move) so the labels can be read;
   // leaving slides it back. The pinned state — what [ ] and the toggle set —
   // is unchanged.
   const [peek, setPeek] = useState(false);
-  const peekTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
   const canPeek = !pinned && !narrow && !phone;
   const startPeek = () => {
-    if (!canPeek || peekTimer.current) return;
-    peekTimer.current = setTimeout(() => {
-      peekTimer.current = null;
-      setPeek(true);
-    }, PEEK_DELAY_MS);
+    if (canPeek) setPeek(true);
   };
-  const endPeek = () => {
-    if (peekTimer.current) {
-      clearTimeout(peekTimer.current);
-      peekTimer.current = null;
-    }
-    setPeek(false);
-  };
-  useEffect(() => () => {
-    if (peekTimer.current) clearTimeout(peekTimer.current);
-  }, []);
+  const endPeek = () => setPeek(false);
   // Where the sidebar is heading: the labeled sidebar when pinned open or peeking.
   const wantOpen = pinned || (peek && canPeek);
   // What's drawn lags it by a beat, so the content can fade out while the
@@ -158,7 +142,7 @@ export function Sidebar({
   const expanded = drawnOpen;
   const crossfading = drawnOpen !== wantOpen;
   const fade = `transition-opacity motion-reduce:transition-none ${
-    crossfading ? "opacity-0 duration-[160ms] ease-in" : "opacity-100 duration-[280ms] ease-out"
+    crossfading ? "opacity-0 duration-[120ms] ease-in" : "opacity-100 duration-[220ms] ease-out"
   }`;
 
   // [ collapses, ] expands — never while typing, never when the viewport forces the rail.
@@ -206,7 +190,7 @@ export function Sidebar({
         data-expanded={expanded ? "true" : "false"}
         onMouseEnter={startPeek}
         onMouseLeave={endPeek}
-        className={`fixed inset-y-0 left-0 z-40 flex flex-col border-r-[0.5px] border-nav-divider/70 bg-nav transition-[width,box-shadow] duration-[420ms] ease-[cubic-bezier(0.45,0,0.25,1)] motion-reduce:transition-none ${
+        className={`fixed inset-y-0 left-0 z-40 flex flex-col border-r-[0.5px] border-nav-divider/70 bg-nav transition-[width,box-shadow] duration-[320ms] ease-[cubic-bezier(0.22,1,0.36,1)] will-change-[width] motion-reduce:transition-none ${
           phone && !drawerOpen ? "invisible w-0" : wantOpen ? "w-[288px]" : "w-[72px]"
         } ${!pinned && (drawnOpen || wantOpen) ? "overflow-hidden" : ""} ${wantOpen && !pinned ? "shadow-xl" : ""}`}
       >

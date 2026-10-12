@@ -3,7 +3,7 @@ import { ChevronRight } from "lucide-react";
 import { createClient } from "@/lib/supabase/server";
 import { Answer, Card, Empty, Restricted } from "@/components/ui";
 import { formatMoney } from "@/lib/tax/form1120h";
-import { SpendingBreakdown } from "@/components/home/charts/spending-breakdown";
+import { WhereItWent } from "./where-it-went";
 import { transfersInByMonth, type CashActivityRow } from "@/lib/money/cash";
 import { spendByAccount, type ExpenseActualRow } from "@/lib/money/spending";
 import { addMonths, monthKey, monthLongLabel, monthsBetween } from "@/lib/money/months";
@@ -204,7 +204,6 @@ export default async function BudgetPage({ searchParams }: { searchParams: Promi
           <table className="w-full min-w-[34rem] text-[13px]">
             <thead>
               <tr className="border-b border-line text-left text-[11px] uppercase tracking-wide text-mute">
-                <th className="pb-2 font-medium">Code</th>
                 <th className="pb-2 font-medium">Category</th>
                 <th className="pb-2 text-right font-medium">Budget for the year</th>
                 <th className="pb-2 text-right font-medium">Spent so far this year</th>
@@ -221,7 +220,6 @@ export default async function BudgetPage({ searchParams }: { searchParams: Promi
                     fiscalYearId={fiscalYear.id}
                     fundId={operatingFund.id}
                     accountId={a.id}
-                    code={a.code}
                     name={a.name}
                     budgeted={annual?.budgeted ?? null}
                     actual={annual?.actual ?? 0}
@@ -286,6 +284,7 @@ export default async function BudgetPage({ searchParams }: { searchParams: Promi
   const periodSpendById = new Map(periodSpend.map((a) => [a.accountId, a.cents]));
   const planRows = buildPlanRows(budgetByAccount, periodSpendById, (id) => accountName.get(id) ?? "", p.budgetShare);
   const unbudgetedSpend = periodSpend.filter((a) => !budgetByAccount.has(a.accountId));
+  const statusById = new Map(planRows.map((r) => [r.accountId, r.status]));
   const totalTarget = planRows.reduce((s, r) => s + r.targetCents, 0);
   const totalSpent = periodSpend.reduce((s, a) => s + a.cents, 0);
   const pace = paceShare(p.startKey, p.endKey, today);
@@ -477,6 +476,34 @@ export default async function BudgetPage({ searchParams }: { searchParams: Promi
         </Card>
       ) : (
         <>
+          <Card navy title="Where the money went" hint="Biggest first. Hover a slice or a row; click one to see its transactions. Moves to the reserve aren't included — they're savings, not spending.">
+            {allSpend.length === 0 ? (
+              <div className="py-6 text-center">
+                <p className="text-[13px] text-mute">Nothing posted for {p.label.toLowerCase()} yet.</p>
+                <Link
+                  href="/bank-feed"
+                  className="mt-3 inline-block rounded-md bg-ink px-4 py-2 text-[13px] font-medium text-paper hover:bg-ink-mid"
+                >
+                  Categorize transactions on the bank feed →
+                </Link>
+              </div>
+            ) : (
+              <WhereItWent
+                slices={allSpend.map((a) => ({
+                  id: a.accountId,
+                  label: a.name,
+                  valueCents: a.cents,
+                  href: transactionsFor(a.accountId),
+                  status: statusById.get(a.accountId) ?? "none",
+                }))}
+                totalCents={allSpendTotal}
+                monthCount={p.months.length}
+                periodLabel={period === "month" ? `in ${p.label}` : period === "year" ? `in fiscal year ${fiscalYear.label} so far` : "in the last 12 months"}
+                comparison={comparison}
+              />
+            )}
+          </Card>
+
           <details id="edit-budget" open={editOpen} className="rounded-xl border border-line bg-paper">
             <summary className="cursor-pointer list-none px-5 py-4 [&::-webkit-details-marker]:hidden">
               <span className="font-bold tracking-tight text-ink">{canEdit ? "Edit the full budget" : "The full budget"}</span>
@@ -495,7 +522,27 @@ export default async function BudgetPage({ searchParams }: { searchParams: Promi
           >
             {headline ? <Answer status={headline.status} headline={headline.headline} detail={headlineDetail} /> : null}
 
-            <ul className="mt-5 overflow-hidden rounded-lg border border-line">
+            {/* The whole budget on one bar, before the category by category view. */}
+            <div className="mt-4 rounded-lg border border-line bg-fill/30 px-4 py-3">
+              <div className="flex flex-wrap items-baseline justify-between gap-2 text-[13px]">
+                <span className="text-mute">
+                  Spent <span className="figures text-ink">{dollars(totalSpent)}</span> of{" "}
+                  <span className="figures text-ink">{dollars(totalTarget)}</span> planned
+                </span>
+                <span className={`figures font-medium ${totalTarget - totalSpent >= 0 ? "text-good-text" : "text-bad-text"}`}>
+                  {totalTarget - totalSpent >= 0 ? `${dollars(totalTarget - totalSpent)} left` : `${dollars(totalSpent - totalTarget)} over`}
+                </span>
+              </div>
+              <PlanBar
+                spent={totalSpent}
+                target={totalTarget}
+                pace={pace}
+                bar={totalSpent > totalTarget * 1.1 ? STATUS_STYLE.over.bar : totalSpent > totalTarget ? STATUS_STYLE.watch.bar : STATUS_STYLE.on_track.bar}
+              />
+              <p className="mt-1.5 text-[11px] text-mute-soft">The thin line is where you&rsquo;d be if spending were spread evenly.</p>
+            </div>
+
+            <ul className="mt-4 overflow-hidden rounded-lg border border-line">
               {planRows.map(planRowItem)}
 
               {unbudgetedSpend.map((a) => (
@@ -582,52 +629,11 @@ export default async function BudgetPage({ searchParams }: { searchParams: Promi
               ) : null}
             </ul>
 
-            <div className="mt-3 grid gap-2 border-t border-line pt-3 text-[13px] sm:grid-cols-3">
-              <div>
-                <span className="text-mute">Planned</span>{" "}
-                <span className="figures text-ink">{dollars(totalTarget)}</span>
-              </div>
-              <div>
-                <span className="text-mute">Spent</span>{" "}
-                <span className="figures text-ink">{dollars(totalSpent)}</span>
-              </div>
-              <div className="sm:text-right">
-                <span className="text-mute">{totalTarget - totalSpent >= 0 ? "Left to spend" : "Over"}</span>{" "}
-                <span className={`figures ${totalTarget - totalSpent >= 0 ? "text-good-text" : "text-bad-text"}`}>
-                  {dollars(Math.abs(totalTarget - totalSpent))}
-                </span>
-              </div>
-            </div>
             <p className="mt-2 text-[11px] text-mute-soft">
-              The thin line on each bar is where you&rsquo;d be if spending were spread evenly. On track: at or under plan ·
-              Watch: up to 10% over · Over budget: more than 10% over. Click a row for what&rsquo;s in it.
+              On track: at or under plan · Watch: up to 10% over · Over budget: more than 10% over. Click a row for what&rsquo;s in it.
             </p>
           </Card>
 
-          <Card navy title="Where the money went" hint="Moves to the reserve aren't included — they're savings, not spending.">
-            {allSpend.length === 0 ? (
-              <div className="py-6 text-center">
-                <p className="text-[13px] text-mute">Nothing posted for {p.label.toLowerCase()} yet.</p>
-                <Link
-                  href="/bank-feed"
-                  className="mt-3 inline-block rounded-md bg-ink px-4 py-2 text-[13px] font-medium text-paper hover:bg-ink-mid"
-                >
-                  Categorize transactions on the bank feed →
-                </Link>
-              </div>
-            ) : (
-              <>
-                <SpendingBreakdown
-                  slices={allSpend.map((a) => ({ label: a.name, valueCents: a.cents, href: transactionsFor(a.accountId) }))}
-                  avgMonthlyCents={Math.round(allSpendTotal / Math.max(1, p.months.length))}
-                  monthCount={p.months.length}
-                  sinceLabel={period === "month" ? `in ${p.label}` : `Since ${monthLongLabel(p.startKey)}`}
-                  ariaLabel={`Spending by category for ${p.label}.`}
-                />
-                {comparison ? <p className="mt-3 text-[12px] text-mute">{comparison}</p> : null}
-              </>
-            )}
-          </Card>
 
         </>
       )}

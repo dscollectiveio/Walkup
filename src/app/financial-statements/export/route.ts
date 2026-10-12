@@ -40,20 +40,19 @@ export async function GET(request: NextRequest) {
   const sheet = workbook.addWorksheet(bounds.label.slice(0, 31) || "Statement");
 
   sheet.columns = [
-    { header: "Code", key: "code", width: 10 },
     { header: "Account", key: "account", width: 36 },
     { header: "Amount", key: "amount", width: 16 },
   ];
 
-  sheet.mergeCells("A1:C1");
+  sheet.mergeCells("A1:B1");
   sheet.getCell("A1").value = association.display_name;
   sheet.getCell("A1").font = { bold: true, size: 14 };
-  sheet.mergeCells("A2:C2");
+  sheet.mergeCells("A2:B2");
   sheet.getCell("A2").value = `${title} — ${bounds.label}`;
   sheet.getCell("A2").font = { size: 11, color: { argb: "FF6E7385" } };
   sheet.addRow([]);
 
-  const headerRow = sheet.addRow(["Code", "Account", "Amount"]);
+  const headerRow = sheet.addRow(["Account", "Amount"]);
   headerRow.font = { bold: true };
   headerRow.eachCell((cell) => {
     cell.border = { bottom: { style: "thin", color: { argb: "FFDCD8CF" } } };
@@ -64,20 +63,20 @@ export async function GET(request: NextRequest) {
     const sectionRow = sheet.addRow([label]);
     sectionRow.font = { bold: true, color: { argb: "FF6E7385" } };
     for (const r of rows) {
-      const row = sheet.addRow([r.code, r.account_name, r.amount]);
-      row.getCell(3).numFmt = moneyFormat;
+      const row = sheet.addRow([r.account_name, r.amount]);
+      row.getCell(2).numFmt = moneyFormat;
     }
-    const totalRow = sheet.addRow(["", totalLabel, total]);
+    const totalRow = sheet.addRow([totalLabel, total]);
     totalRow.font = { bold: true };
-    totalRow.getCell(3).numFmt = moneyFormat;
+    totalRow.getCell(2).numFmt = moneyFormat;
   };
 
   if (view === "total") {
     addSection("Income", incomeRows, totalIncome, "Total income");
     addSection("Expenses", expenseRows, totalExpenses, "Total expenses");
-    const netRow = sheet.addRow(["", "Net income", netIncome]);
+    const netRow = sheet.addRow(["Net income", netIncome]);
     netRow.font = { bold: true, size: 12 };
-    netRow.getCell(3).numFmt = moneyFormat;
+    netRow.getCell(2).numFmt = moneyFormat;
     netRow.eachCell((cell) => {
       cell.border = { top: { style: "medium", color: { argb: "FFC9C4B8" } } };
     });
@@ -191,7 +190,7 @@ export async function GET(request: NextRequest) {
   return new NextResponse(buffer as unknown as BodyInit, {
     headers: {
       "Content-Type": "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
-      "Content-Disposition": `attachment; filename="${filename}"`,
+      "Content-Disposition": `attachment; filename="${filename.replace(/[^\x20-\x7e]/g, "-")}"; filename*=UTF-8''${encodeURIComponent(filename)}`,
     },
   });
 }

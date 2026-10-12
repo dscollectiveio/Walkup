@@ -82,6 +82,8 @@
   --w-series-4: #b3402f;
   --w-series-5: #62677a;
   --w-series-6: #8fa3c4;
+  --w-series-7: #7a5c99;
+  --w-series-8: #3f8fa3;
 
   /* Depth: cards have none; menus, toasts and dialogs get one soft shadow. */
   --w-shadow-pop: 0 8px 24px rgba(0, 0, 0, 0.12);
@@ -146,6 +148,8 @@
   --w-series-4: #d0897e;
   --w-series-5: #9fa3aa;
   --w-series-6: #b7c3da;
+  --w-series-7: #b9a3d6;
+  --w-series-8: #8fc0cc;
 
   --w-shadow-pop: 0 8px 24px rgba(0, 0, 0, 0.5);
 }
@@ -209,6 +213,8 @@
   --color-series-4: var(--w-series-4);
   --color-series-5: var(--w-series-5);
   --color-series-6: var(--w-series-6);
+  --color-series-7: var(--w-series-7);
+  --color-series-8: var(--w-series-8);
 
   /* Shape: cards 8px, nested panels / buttons / inputs 6px, pills 999px.
      Existing classes keep their names; the scale underneath changes. */

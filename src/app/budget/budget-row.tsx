@@ -8,7 +8,6 @@ export function BudgetRow({
   fiscalYearId,
   fundId,
   accountId,
-  code,
   name,
   budgeted,
   actual,
@@ -20,7 +19,6 @@ export function BudgetRow({
   fiscalYearId: string;
   fundId: string;
   accountId: string;
-  code: string;
   name: string;
   budgeted: number | null;
   actual: number;
@@ -36,7 +34,6 @@ export function BudgetRow({
 
   return (
     <tr>
-      <td className="figures py-2 font-mono text-[11px] text-mute-soft">{code}</td>
       <td className="py-2 text-ink">{name}</td>
       <td className="py-2 text-right">
         {canEdit ? (
