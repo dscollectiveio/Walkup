@@ -6,7 +6,7 @@ import { signOut } from "./login/actions";
 import Link from "next/link";
 import { Sidebar } from "@/components/sidebar/sidebar";
 import { TopBar } from "@/components/sidebar/top-bar";
-import { cookies } from "next/headers";
+import { cookies, headers } from "next/headers";
 
 const montserrat = Montserrat({
   subsets: ["latin"],
@@ -18,6 +18,10 @@ const montserrat = Montserrat({
 // Applies the saved theme (or the system preference when nothing is saved)
 // before first paint, so dark mode never flashes light. Mirrors ThemeToggle.
 const THEME_SCRIPT = `(function(){try{var t=localStorage.getItem("walkup.theme");if(t!=="dark"&&t!=="light"){t=window.matchMedia("(prefers-color-scheme: dark)").matches?"dark":"light"}document.documentElement.dataset.theme=t}catch(e){}})();`;
+
+// The sign-up → Dashboard steps draw their own full-page frame (AuthShell),
+// with no sidebar or header even once a session exists.
+const BARE_PATHS = ["/login", "/signup", "/forgot-password", "/reset-password", "/account/mfa", "/onboarding"];
 
 export const metadata: Metadata = {
   title: "Walkup",
@@ -74,6 +78,11 @@ export default async function RootLayout({
     uncategorizedCount = needsCount ?? 0;
   }
 
+  // The landing page ("/" signed out) brings its own full-width header and
+  // footer; everything else gets the app's column and footer.
+  const path = (await headers()).get("x-walkup-path") ?? "";
+  const bare = (!user && path === "/") || BARE_PATHS.some((p) => path === p || path.startsWith(`${p}/`));
+
   return (
     <html
       lang="en"
@@ -94,6 +103,7 @@ export default async function RootLayout({
           />
         ) : null}
 
+        {bare ? children : (
         <div className={user ? "app-shell min-h-screen" : "min-h-screen"}>
           {user ? (
             <TopBar
@@ -127,6 +137,7 @@ export default async function RootLayout({
             </p>
           </footer>
         </div>
+        )}
       </body>
     </html>
   );

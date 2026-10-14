@@ -18,8 +18,15 @@ export async function signIn(_prev: unknown, formData: FormData) {
   const { error } = await supabase.auth.signInWithPassword({ email, password });
 
   if (error) {
-    // Deliberately not distinguishing "no such account" from "wrong password" —
-    // that difference tells an attacker which emails are registered.
+    // Supabase only says "not confirmed" once the password was right, so
+    // this doesn't reveal which emails are registered. Everything else stays
+    // one message: "no such account" vs "wrong password" would.
+    if (error.code === "email_not_confirmed") {
+      return {
+        error: "Your email isn't confirmed yet. Open the link we sent you, or send a new one.",
+        unconfirmedEmail: email,
+      };
+    }
     return { error: "Those credentials were not accepted." };
   }
 
@@ -67,11 +74,9 @@ export async function signUp(_prev: unknown, formData: FormData) {
   // Only meaningful when confirm-email is on and the link actually sends the
   // browser back through here — the email template must include
   // &next={{ .RedirectTo }} for this to reach /auth/confirm at all.
-  let emailRedirectTo: string | undefined;
-  if (inviteToken) {
-    const origin = (await headers()).get("origin");
-    if (origin) emailRedirectTo = `${origin}/invite/${inviteToken}`;
-  }
+  // The link goes through Supabase's verify step and back to /auth/confirm,
+  // which turns it into a session (PKCE code) and carries on to `next`.
+  const emailRedirectTo = await confirmUrl(inviteToken ? `/invite/${inviteToken}` : "/");
 
   const { data, error } = await supabase.auth.signUp({
     email,
@@ -99,7 +104,69 @@ export async function signUp(_prev: unknown, formData: FormData) {
   // Confirm-email is on: no session yet. /auth/confirm picks up from the
   // link in that email and hands off to proxy.ts's normal MFA/onboarding
   // routing once it does.
-  return { ok: true as const, checkEmail: true as const };
+  return { ok: true as const, checkEmail: true as const, email };
+}
+
+/** Where an emailed link should land: this site's /auth/confirm, then `next`. */
+async function confirmUrl(next: string): Promise<string | undefined> {
+  const h = await headers();
+  const origin = h.get("origin") ?? (h.get("host") ? `${h.get("x-forwarded-proto") ?? "https"}://${h.get("host")}` : null);
+  return origin ? `${origin}/auth/confirm?next=${encodeURIComponent(next)}` : undefined;
+}
+
+/** "Didn't get it?" on the check-your-email screen and the sign-in page. */
+export async function resendConfirmation(email: string) {
+  const address = email.trim();
+  if (!address) return { error: "Enter your email first." };
+  const supabase = await createClient();
+  const emailRedirectTo = await confirmUrl("/");
+  const { error } = await supabase.auth.resend({
+    type: "signup",
+    email: address,
+    options: emailRedirectTo ? { emailRedirectTo } : undefined,
+  });
+  if (error) {
+    return {
+      error: error.status === 429 ? "Please wait a minute before asking for another email." : error.message,
+    };
+  }
+  return { ok: true as const };
+}
+
+/**
+ * "Forgot your password?" Always answers the same way, whether or not the
+ * address has an account, so this can't be used to find out who's signed up.
+ */
+export async function requestPasswordReset(_prev: unknown, formData: FormData) {
+  const email = String(formData.get("email") ?? "").trim();
+  if (!email) return { error: "Enter the email you signed up with." };
+  const supabase = await createClient();
+  const redirectTo = await confirmUrl("/reset-password");
+  const { error } = await supabase.auth.resetPasswordForEmail(email, redirectTo ? { redirectTo } : undefined);
+  if (error?.status === 429) return { error: "Please wait a minute before asking for another email." };
+  return { ok: true as const, email };
+}
+
+/** Sets a new password for the signed-in account (after a reset link, or any time). */
+export async function updatePassword(_prev: unknown, formData: FormData) {
+  const password = String(formData.get("password") ?? "");
+  const confirm = String(formData.get("confirm_password") ?? "");
+  if (password.length < 8) return { error: "Password must be at least 8 characters." };
+  if (password !== confirm) return { error: "Those passwords don't match." };
+  const supabase = await createClient();
+  const { error } = await supabase.auth.updateUser({ password });
+  if (error) {
+    return {
+      error:
+        error.code === "same_password"
+          ? "That's your current password — choose a new one."
+          : error.code === "insufficient_aal"
+            ? "Enter your two-step code first, then set your new password."
+            : error.message,
+    };
+  }
+  revalidatePath("/", "layout");
+  redirect("/");
 }
 
 export async function signOut() {

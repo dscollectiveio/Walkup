@@ -1,23 +1,27 @@
 import Link from "next/link";
-import { Lockup } from "@/components/mark";
+import { AuthShell } from "@/components/auth/auth-shell";
 import { SignupForm } from "./signup-form";
 
 export const dynamic = "force-dynamic";
 
+export const metadata = { title: "Create your account — Walkup" };
+
 export default function SignupPage() {
   return (
-    <div className="mx-auto max-w-sm py-16">
-      <Lockup />
-      <p className="mt-4 text-mute">Create your building&rsquo;s account.</p>
-
+    <AuthShell
+      step={0}
+      title="Create your account"
+      subtitle="Free during early access. No card needed — you'll set up your building in the next two steps."
+      footer={
+        <>
+          Already have an account?{" "}
+          <Link href="/login" className="font-semibold text-ink underline-offset-2 hover:underline">
+            Sign in
+          </Link>
+        </>
+      }
+    >
       <SignupForm />
-
-      <p className="mt-4 text-[13px] text-mute">
-        Already have an account?{" "}
-        <Link href="/login" className="text-ink underline-offset-2 hover:underline">
-          Sign in
-        </Link>
-      </p>
-    </div>
+    </AuthShell>
   );
 }

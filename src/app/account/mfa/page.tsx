@@ -1,6 +1,6 @@
 import { redirect } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
-import { Lockup } from "@/components/mark";
+import { AuthShell } from "@/components/auth/auth-shell";
 import { MfaSetupForm } from "./mfa-setup-form";
 
 export const dynamic = "force-dynamic";
@@ -37,37 +37,29 @@ export default async function MfaSetupPage() {
 
   if (error || !enrolled) {
     return (
-      <div className="mx-auto max-w-sm py-16">
-        <Lockup />
-        <h1 className="mt-4 text-[20px] font-bold text-ink">
-          Couldn&rsquo;t start MFA setup
-        </h1>
-        <p className="mt-2 text-mute">{error?.message ?? "Try refreshing the page."}</p>
-      </div>
+      <AuthShell step={1} title="Couldn't start two-step sign-in" subtitle={error?.message ?? "Try refreshing the page."}>
+        <a href="/account/mfa" className="font-semibold text-ink underline underline-offset-2">Try again</a>
+      </AuthShell>
     );
   }
 
   return (
-    <div className="mx-auto max-w-sm py-16 text-center">
-      <div className="flex justify-center">
-        <Lockup />
-      </div>
-      <h1 className="mt-4 text-[20px] font-bold tracking-tight text-ink">
-        Set up two-factor authentication
-      </h1>
-      <p className="mt-2 text-mute">
-        Walkup requires an authenticator app for every sign-in. Scan this code
-        with one — Apple&rsquo;s Passwords app, Google Authenticator,
-        1Password, etc. — then enter the 6-digit code it shows.
-      </p>
-
-      <div className="mt-6 rounded-xl border border-line bg-paper p-6 text-left shadow-sm">
-        <MfaSetupForm
-          factorId={enrolled.id}
-          qrCode={enrolled.totp.qr_code}
-          secret={enrolled.totp.secret}
-        />
-      </div>
-    </div>
+    <AuthShell
+      step={1}
+      title="Secure your account"
+      subtitle={
+        <>
+          Walkup holds your association&rsquo;s financial records, so every account uses two-step sign-in. Scan this
+          code with an authenticator app — Apple Passwords, Google Authenticator, 1Password or Authy — then enter the
+          6-digit code it shows.
+        </>
+      }
+      aside={{
+        heading: "One extra step keeps the books safe.",
+        body: "From now on, signing in is your password plus a code from your phone. It takes seconds, and it means a leaked password alone can't open your association's records.",
+      }}
+    >
+      <MfaSetupForm factorId={enrolled.id} qrCode={enrolled.totp.qr_code} secret={enrolled.totp.secret} />
+    </AuthShell>
   );
 }

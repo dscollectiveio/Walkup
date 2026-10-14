@@ -1,24 +1,33 @@
 "use client";
 
+import { authButton, authError, authInput, authLabel } from "@/components/auth/auth-shell";
 import Link from "next/link";
 import { useActionState } from "react";
 import { signUp } from "../login/actions";
+import { ResendLink } from "@/components/auth/resend-link";
 
 export function SignupForm() {
   const [state, action, pending] = useActionState(signUp, null);
 
   if (state?.checkEmail) {
     return (
-      <p className="mt-8 border-l-[3px] border-good bg-good-tint px-3 py-2 text-[13px] text-good-text">
-        Check your email for a confirmation link, then come back and sign in.
-      </p>
+      <div className="rounded-xl border border-good-line bg-good-tint px-5 py-5 text-good-text">
+        <p className="text-[16px] font-semibold">Check your email</p>
+        <p className="mt-1.5 text-[14px] leading-relaxed">
+          We sent a confirmation link to <strong>{state.email}</strong>. Open it on this device and you&rsquo;ll come
+          straight back here to finish setting up.
+        </p>
+        <p className="mt-3 text-[13px] text-good-text/90">
+          Nothing after a few minutes? Check spam, or <ResendLink email={state.email} />
+        </p>
+      </div>
     );
   }
 
   return (
-    <form action={action} className="mt-8 space-y-4">
+    <form action={action} className="space-y-5">
       <div>
-        <label htmlFor="email" className="block text-[12px] font-medium text-ink">
+        <label htmlFor="email" className={authLabel}>
           Email
         </label>
         <input
@@ -27,12 +36,12 @@ export function SignupForm() {
           type="email"
           autoComplete="email"
           required
-          className="mt-1 w-full rounded-lg border border-line-strong bg-paper px-3 py-2 text-[13px] text-ink"
+          className={authInput}
         />
       </div>
 
       <div>
-        <label htmlFor="password" className="block text-[12px] font-medium text-ink">
+        <label htmlFor="password" className={authLabel}>
           Password
         </label>
         <input
@@ -42,12 +51,13 @@ export function SignupForm() {
           autoComplete="new-password"
           required
           minLength={8}
-          className="mt-1 w-full rounded-lg border border-line-strong bg-paper px-3 py-2 text-[13px] text-ink"
+          className={authInput}
         />
+        <p className="mt-1.5 text-[12px] text-mute">At least 8 characters.</p>
       </div>
 
       <div>
-        <label htmlFor="confirm_password" className="block text-[12px] font-medium text-ink">
+        <label htmlFor="confirm_password" className={authLabel}>
           Confirm password
         </label>
         <input
@@ -57,7 +67,7 @@ export function SignupForm() {
           autoComplete="new-password"
           required
           minLength={8}
-          className="mt-1 w-full rounded-lg border border-line-strong bg-paper px-3 py-2 text-[13px] text-ink"
+          className={authInput}
         />
       </div>
 
@@ -67,9 +77,9 @@ export function SignupForm() {
           name="privacy_consent"
           type="checkbox"
           required
-          className="mt-0.5 rounded border-line-strong"
+          className="mt-0.5 h-4 w-4 rounded border-line-strong accent-[#14213d]"
         />
-        <label htmlFor="privacy_consent" className="text-[12px] text-mute">
+        <label htmlFor="privacy_consent" className="text-[13px] text-mute">
           I agree to the{" "}
           <Link href="/privacy" target="_blank" className="text-ink underline-offset-2 hover:underline">
             Privacy Policy
@@ -79,7 +89,7 @@ export function SignupForm() {
       </div>
 
       {state?.error ? (
-        <p className="border-l-[3px] border-bad bg-bad-tint px-3 py-2 text-[13px] text-bad-text">
+        <p className={authError}>
           {state.error}
         </p>
       ) : null}
@@ -87,9 +97,9 @@ export function SignupForm() {
       <button
         type="submit"
         disabled={pending}
-        className="w-full rounded-md bg-ink px-3 py-2 text-[13px] font-medium text-paper transition hover:bg-ink-mid disabled:opacity-50"
+        className={authButton}
       >
-        {pending ? "Creating account…" : "Create account"}
+        {pending ? "Creating your account…" : "Create account"}
       </button>
     </form>
   );

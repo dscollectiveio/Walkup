@@ -1,5 +1,6 @@
 "use client";
 
+import { authButton, authError, authInput, authLabel } from "@/components/auth/auth-shell";
 import { useActionState } from "react";
 import { verifyEnrollment } from "./actions";
 
@@ -15,7 +16,7 @@ export function MfaSetupForm({
   const [state, action, pending] = useActionState(verifyEnrollment, null);
 
   return (
-    <div className="mt-8 space-y-6">
+    <div className="space-y-6">
       <div className="flex justify-center">
         <div className="rounded-2xl border border-line bg-paper p-4 shadow-sm">
           {/* eslint-disable-next-line @next/next/no-img-element -- qrCode is a data: URI, not a route-able asset */}
@@ -30,7 +31,7 @@ export function MfaSetupForm({
       <form action={action} className="space-y-4">
         <input type="hidden" name="factorId" value={factorId} />
         <div>
-          <label htmlFor="code" className="block text-[12px] font-medium text-ink">
+          <label htmlFor="code" className={authLabel}>
             6-digit code
           </label>
           <input
@@ -39,12 +40,15 @@ export function MfaSetupForm({
             inputMode="numeric"
             autoComplete="one-time-code"
             required
-            className="mt-1 w-full rounded-lg border border-line-strong bg-paper px-3 py-2 text-center text-[16px] tracking-[0.3em] text-ink"
+            className={`${authInput} text-center text-[20px] tracking-[0.4em]`}
+            placeholder="123456"
+            maxLength={6}
+            autoFocus
           />
         </div>
 
         {state?.error ? (
-          <p className="border-l-[3px] border-bad bg-bad-tint px-3 py-2 text-[13px] text-bad-text">
+          <p className={authError}>
             {state.error}
           </p>
         ) : null}
@@ -52,9 +56,9 @@ export function MfaSetupForm({
         <button
           type="submit"
           disabled={pending}
-          className="w-full rounded-md bg-ink px-3 py-2 text-[13px] font-medium text-paper transition hover:bg-ink-mid disabled:opacity-50"
+          className={authButton}
         >
-          {pending ? "Verifying…" : "Verify and finish"}
+          {pending ? "Verifying…" : "Verify and continue"}
         </button>
       </form>
     </div>

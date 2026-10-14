@@ -1,6 +1,6 @@
 import { redirect } from "next/navigation";
 import { createClient, getUser } from "@/lib/supabase/server";
-import { Lockup } from "@/components/mark";
+import { AuthShell } from "@/components/auth/auth-shell";
 import { CreateBuildingForm } from "./create-building-form";
 
 export const dynamic = "force-dynamic";
@@ -24,17 +24,16 @@ export default async function OnboardingPage() {
   if (existing && existing.length > 0) redirect("/");
 
   return (
-    <div className="mx-auto max-w-sm py-16">
-      <Lockup />
-      <h1 className="mt-4 text-[20px] font-bold tracking-tight text-ink">
-        Set up your building
-      </h1>
-      <p className="mt-2 text-mute">
-        You&rsquo;ll be the board admin — you can add everyone else once
-        you&rsquo;re in.
-      </p>
-
+    <AuthShell
+      step={2}
+      title="Set up your building"
+      subtitle="You'll be the board admin — you can add units, owners and the rest of the board once you're in."
+      aside={{
+        heading: "Last step — then you're in.",
+        body: "Walkup sets up your fiscal year, operating and reserve funds, and a chart of accounts for you. Your Dashboard will walk you through the rest, one step at a time.",
+      }}
+    >
       <CreateBuildingForm />
-    </div>
+    </AuthShell>
   );
 }

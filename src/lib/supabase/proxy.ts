@@ -14,7 +14,7 @@ const MEMBER_COOKIE = "walkup.member";
 // prospective board reads them before deciding to sign up at all, and
 // /privacy specifically must be reachable pre-signup since signup requires
 // agreeing to it.
-const PUBLIC_PATHS = ["/login", "/signup", "/auth", "/invite", "/security", "/privacy", "/policies"];
+const PUBLIC_PATHS = ["/login", "/signup", "/forgot-password", "/auth", "/invite", "/security", "/privacy", "/policies"];
 
 // Reachable while signed in but not yet at AAL2, so a user can actually
 // complete enrollment or the challenge instead of being redirected in place.
@@ -41,6 +41,8 @@ const ONBOARDING_EXEMPT_PATHS = ["/onboarding", "/invite"];
  * saves them from landing on that message instead of somewhere useful.
  */
 export async function updateSession(request: NextRequest) {
+  // The root layout reads this to give the landing page the whole width.
+  request.headers.set("x-walkup-path", request.nextUrl.pathname);
   let response = NextResponse.next({ request });
 
   const supabase = createServerClient(
@@ -73,7 +75,9 @@ export async function updateSession(request: NextRequest) {
   const user = claimsData?.claims?.sub ? { id: claimsData.claims.sub } : null;
 
   const path = request.nextUrl.pathname;
-  const isPublic = PUBLIC_PATHS.some((p) => path.startsWith(p));
+  // "/" is the landing page for signed-out visitors (and the Dashboard for
+  // everyone else), so it is public on its own — never as a prefix.
+  const isPublic = path === "/" || PUBLIC_PATHS.some((p) => path.startsWith(p));
 
   if (!user) {
     if (isPublic) return response;
@@ -121,7 +125,7 @@ export async function updateSession(request: NextRequest) {
   const pendingInvite = request.cookies.get(PENDING_INVITE_COOKIE)?.value;
   const onboardingTarget = pendingInvite ? `/invite/${pendingInvite}` : "/onboarding";
 
-  if (path === "/login" || path === "/signup") {
+  if (path === "/login" || path === "/signup" || path === "/forgot-password") {
     const url = request.nextUrl.clone();
     url.pathname = mfaTarget ?? (needsOnboarding ? onboardingTarget : "/");
     return NextResponse.redirect(url);
@@ -130,6 +134,9 @@ export async function updateSession(request: NextRequest) {
   if (mfaTarget && !MFA_EXEMPT_PATHS.includes(path)) {
     const url = request.nextUrl.clone();
     url.pathname = mfaTarget;
+    url.search = "";
+    // A password reset needs the two-step code first; come back afterwards.
+    if (mfaTarget === "/login/mfa-challenge" && path === "/reset-password") url.searchParams.set("next", path);
     return NextResponse.redirect(url);
   }
 

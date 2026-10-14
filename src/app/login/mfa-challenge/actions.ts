@@ -30,5 +30,6 @@ export async function verifyChallenge(_prev: unknown, formData: FormData) {
     return { error: "That code wasn't accepted." };
   }
 
-  redirect("/");
+  const next = String(formData.get("next") ?? "");
+  redirect(next.startsWith("/") && !next.startsWith("//") ? next : "/");
 }

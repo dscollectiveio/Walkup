@@ -1,6 +1,6 @@
 import { redirect } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
-import { Lockup } from "@/components/mark";
+import { AuthShell } from "@/components/auth/auth-shell";
 import { MfaChallengeForm } from "./mfa-challenge-form";
 
 export const dynamic = "force-dynamic";
@@ -10,7 +10,8 @@ export const dynamic = "force-dynamic";
  * password-verified (AAL1) session here whenever a verified TOTP factor
  * exists but this session hasn't cleared a challenge yet.
  */
-export default async function MfaChallengePage() {
+export default async function MfaChallengePage({ searchParams }: { searchParams: Promise<{ next?: string }> }) {
+  const { next } = await searchParams;
   const supabase = await createClient();
   const { data: factorsData } = await supabase.auth.mfa.listFactors();
   const factor = factorsData?.all.find(
@@ -22,16 +23,15 @@ export default async function MfaChallengePage() {
   }
 
   return (
-    <div className="mx-auto max-w-sm py-16">
-      <Lockup />
-      <h1 className="mt-4 text-[20px] font-bold tracking-tight text-ink">
-        Enter your authentication code
-      </h1>
-      <p className="mt-2 text-mute">
-        Open your authenticator app and enter the current 6-digit code for
-        Walkup.
-      </p>
-      <MfaChallengeForm factorId={factor.id} />
-    </div>
+    <AuthShell
+      title="Enter your code"
+      subtitle="Open your authenticator app and enter the current 6-digit code for Walkup."
+      aside={{
+        heading: "Almost there.",
+        body: "Two-step sign-in keeps your association's records safe, even if a password gets out.",
+      }}
+    >
+      <MfaChallengeForm factorId={factor.id} next={next} />
+    </AuthShell>
   );
 }
