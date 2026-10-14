@@ -12,42 +12,42 @@
       variable at runtime and flip with the theme. Token NAMES are unchanged
       (ink, paper, bone, fill, line, mute, …) so no consumer churns.
 
-   Fonts come from next/font (layout.tsx) as --font-hanken / --font-jetbrains.
+   Font: Outfit, the brand typeface, from next/font (layout.tsx) as --font-outfit.
    ========================================================================== */
 
 :root {
   color-scheme: light;
 
   /* Structure */
-  --w-ink: #14213d;        /* primary text; the navy band on card headers and primary buttons */
-  --w-ink-mid: #1e2e52;    /* hover on the navy band */
-  --w-ink-deep: #0d172b;
+  --w-ink: #1b2a41;        /* Walkup navy: primary text; the band on card headers and primary buttons */
+  --w-ink-mid: #283b5a;    /* hover on the navy band */
+  --w-ink-deep: #111b2c;
   --w-slate: #2d4a7c;
-  --w-brass: #c08a3e;
+  --w-brass: #d9a441;      /* Walkup gold */
   --w-moss: #2f7a5c;
-  --w-rust: #b3402f;
+  --w-rust: #a3432f;      /* Walkup brick */
 
   /* Ground and neutrals */
-  --w-bone: #f4f2ed;       /* page */
+  --w-bone: #f5efe3;       /* Walkup cream: the page */
   --w-paper: #ffffff;      /* card */
-  --w-fill: #edeae3;       /* nested panel, track */
-  --w-line: #dcd8cf;       /* hairline border */
-  --w-line-strong: #c9c4b8;/* ghost buttons, checkboxes */
-  --w-mute: #62677a;       /* 4.9:1 on paper, 4.1:1 on fill — darkened one step from #6e7385 */
+  --w-fill: #ece5d6;       /* nested panel, track */
+  --w-line: #e3ded3;       /* warm border: hairlines and dividers */
+  --w-line-strong: #cdc6b6;/* ghost buttons, checkboxes */
+  --w-mute: #5b6475;       /* Walkup slate: secondary text, 6.1:1 on paper, 5.1:1 on cream */
   --w-mute-soft: #8e93a3;
-  --w-ondark-mute: #9aa6bf;/* muted text on the navy band */
+  --w-ondark-mute: #a9b3c7;/* muted text on the navy band */
   --w-section-label: #5e6c8c;
 
   /* Sidebar: white, with the selected tab on the navy. Its own tokens, so
      the navy band's dark inversion never touches it. */
   --w-nav: #ffffff;
-  --w-nav-hover: #edeae3;
-  --w-nav-text: #14213d;
-  --w-nav-muted: #62677a;     /* 5.8:1 on white */
-  --w-nav-divider: #dcd8cf;
-  --w-nav-active-bg: #14213d;
+  --w-nav-hover: #f5efe3;
+  --w-nav-text: #1b2a41;
+  --w-nav-muted: #5b6475;     /* 6.1:1 on white */
+  --w-nav-divider: #e3ded3;
+  --w-nav-active-bg: #1b2a41;
   --w-nav-active-text: #ffffff; /* 16:1 */
-  --w-sidebar-divider: #dcd8cf;
+  --w-sidebar-divider: #e3ded3;
 
   /* Status: good */
   --w-good: #2f7a5c;
@@ -55,13 +55,13 @@
   --w-good-line: #c3ddd0;
   --w-good-text: #1e5540;
   /* Status: warning */
-  --w-warning: #c08a3e;
-  --w-warning-tint: #f6edde;
+  --w-warning: #d9a441;
+  --w-warning-tint: #f8efdb;
   --w-warning-line: #e4cea6;
   --w-warning-text: #8a5f22;
   /* Status: bad */
-  --w-bad: #b3402f;
-  --w-bad-tint: #f8ede9;
+  --w-bad: #a3432f;
+  --w-bad-tint: #f7ebe6;
   --w-bad-line: #e4c4bc;
   --w-bad-text: #7a2519;
   /* Status: info */
@@ -70,17 +70,17 @@
   --w-info-line: #c6d3e8;
   --w-info-text: #1d3560;
   /* Status: neutral */
-  --w-neutral: #62677a;
-  --w-neutral-tint: #edeae3;
-  --w-neutral-line: #dcd8cf;
-  --w-neutral-text: #14213d;
+  --w-neutral: #5b6475;
+  --w-neutral-tint: #ece5d6;
+  --w-neutral-line: #e3ded3;
+  --w-neutral-text: #1b2a41;
 
   /* Data series, in order */
   --w-series-1: #2d4a7c;
-  --w-series-2: #c08a3e;
+  --w-series-2: #d9a441;
   --w-series-3: #2f7a5c;
-  --w-series-4: #b3402f;
-  --w-series-5: #62677a;
+  --w-series-4: #a3432f;
+  --w-series-5: #5b6475;
   --w-series-6: #8fa3c4;
   --w-series-7: #7a5c99;
   --w-series-8: #3f8fa3;
@@ -93,39 +93,39 @@
   color-scheme: dark;
 
   /* The navy band inverts: cream fill, navy text — same as the primary button. */
-  --w-ink: #f4f2ed;
-  --w-ink-mid: #e3dfd6;
+  --w-ink: #f5efe3;
+  --w-ink-mid: #e6dfd0;
   --w-ink-deep: #ffffff;
   --w-slate: #8c9bb7;      /* 5.7:1 on surface */
-  --w-brass: #c08a3e;      /* 5.3:1 on surface — unchanged */
+  --w-brass: #d9a441;      /* 6.9:1 on surface */
   --w-moss: #86b2a0;       /* 6.8:1 */
   --w-rust: #d0897e;       /* 5.8:1 */
 
-  --w-bone: #0b1222;       /* navy two steps darker */
-  --w-paper: #14213d;      /* the navy itself */
-  --w-fill: #27334d;       /* one step lighter */
-  --w-line: #354058;
-  --w-line-strong: #565f73;
-  --w-mute: #9fa3aa;       /* 6.3:1 on surface, 5.0:1 on fill */
-  --w-mute-soft: #8a8f99;
+  --w-bone: #111b2c;       /* navy two steps darker */
+  --w-paper: #1b2a41;      /* the navy itself */
+  --w-fill: #2a3a54;       /* one step lighter */
+  --w-line: #36465f;
+  --w-line-strong: #566680;
+  --w-mute: #a3acbd;       /* 6.5:1 on surface */
+  --w-mute-soft: #8a93a4;
   --w-ondark-mute: #4b5878;/* muted text on the (now cream) band */
   --w-section-label: #9fb0d4;
 
   /* Dark: the sidebar is the card surface; the selected tab inverts to cream. */
-  --w-nav: #14213d;
-  --w-nav-hover: #27334d;
-  --w-nav-text: #f4f2ed;
-  --w-nav-muted: #9fa3aa;     /* 6.3:1 */
-  --w-nav-divider: #354058;
-  --w-nav-active-bg: #f4f2ed;
-  --w-nav-active-text: #14213d; /* 14:1 */
-  --w-sidebar-divider: #354058;
+  --w-nav: #1b2a41;
+  --w-nav-hover: #2a3a54;
+  --w-nav-text: #f5efe3;
+  --w-nav-muted: #a3acbd;     /* 6.5:1 */
+  --w-nav-divider: #36465f;
+  --w-nav-active-bg: #f5efe3;
+  --w-nav-active-text: #1b2a41; /* 12:1 */
+  --w-sidebar-divider: #36465f;
 
   --w-good: #86b2a0;
   --w-good-tint: #193143;
   --w-good-line: #2c4a4d;
   --w-good-text: #c1d7ce;  /* 8.9:1 on its tint */
-  --w-warning: #d3ad78;
+  --w-warning: #d9a441;
   --w-warning-tint: #33343d;
   --w-warning-line: #4f4a47;
   --w-warning-text: #ecdcc5;
@@ -137,16 +137,16 @@
   --w-info-tint: #1a2b4d;
   --w-info-line: #2f4166;
   --w-info-text: #c4ccda;
-  --w-neutral: #9fa3aa;
-  --w-neutral-tint: #27334d;
-  --w-neutral-line: #354058;
-  --w-neutral-text: #f4f2ed;
+  --w-neutral: #a3acbd;
+  --w-neutral-tint: #2a3a54;
+  --w-neutral-line: #36465f;
+  --w-neutral-text: #f5efe3;
 
   --w-series-1: #96a5be;
-  --w-series-2: #c08a3e;
+  --w-series-2: #d9a441;
   --w-series-3: #86b2a0;
   --w-series-4: #d0897e;
-  --w-series-5: #9fa3aa;
+  --w-series-5: #a3acbd;
   --w-series-6: #b7c3da;
   --w-series-7: #b9a3d6;
   --w-series-8: #8fc0cc;
@@ -155,9 +155,9 @@
 }
 
 @theme inline {
-  --font-sans: var(--font-montserrat), "Montserrat", system-ui, sans-serif;
+  --font-sans: var(--font-outfit), "Outfit", system-ui, sans-serif;
   --font-serif: var(--font-sans);
-  --font-mono: var(--font-montserrat), "Montserrat", system-ui, sans-serif;
+  --font-mono: var(--font-outfit), "Outfit", system-ui, sans-serif;
 
   --color-ink: var(--w-ink);
   --color-ink-mid: var(--w-ink-mid);
@@ -235,7 +235,7 @@ body {
   font-family: var(--font-sans);
 }
 
-/* Headings: Montserrat, tight. Weight stays bold (Doug's call) rather
+/* Headings: Outfit, tight. Weight stays bold (Doug's call) rather
    than Signal's 600. */
 h1, h2, h3 {
   letter-spacing: -0.01em;
@@ -247,7 +247,7 @@ h1, h2, h3 {
 }
 
 /* Every number someone will eventually defend to an accountant or a buyer's
-   attorney reads as record, not interface: Montserrat with tabular
+   attorney reads as record, not interface: Outfit with tabular
    figures, so columns of money line up. */
 .figures {
   font-family: var(--font-mono);
@@ -331,3 +331,17 @@ html[data-sidebar="rail"] {
     transition: none;
   }
 }
+
+/* The Walkup wordmark: Outfit Medium, −3% tracking, Title case — the same
+   everywhere, whatever the app theme (Brand Logo Package, "Typography"). */
+.wordmark {
+  font-family: var(--font-outfit), "Outfit", system-ui, sans-serif;
+  font-weight: 500;
+  letter-spacing: -0.03em;
+  line-height: 1;
+}
+
+/* Lockup: tile + navy wordmark on light, bare mark + cream wordmark on dark. */
+.brand-on-dark { display: none; }
+[data-theme="dark"] .brand-on-light { display: none; }
+[data-theme="dark"] .brand-on-dark { display: inline-flex; }

@@ -201,10 +201,10 @@ export function Sidebar({
         <div className="relative -mr-px h-[56px] shrink-0 bg-ink text-paper">
         <div className={`flex h-full items-center ${expanded ? "gap-3 px-4" : "justify-center"} ${fade}`}>
           <Link href="/" aria-label="Walkup home" className="flex min-w-0 items-center gap-3">
-            <Mark variant="dark" size={30} className="shrink-0" />
+            <Mark variant="icon" size={32} className="shrink-0" />
             {expanded ? (
               <span className="flex min-w-0 flex-col leading-none">
-                <span className="text-[15px] font-semibold tracking-[-0.014em] text-paper">Walkup</span>
+                <span className="wordmark text-[20px] text-bone">Walkup</span>
                 {associationName ? <span className="mt-1 truncate text-[11px] font-normal text-ondark-mute">{associationName}</span> : null}
               </span>
             ) : null}

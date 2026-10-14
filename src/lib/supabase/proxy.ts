@@ -14,7 +14,7 @@ const MEMBER_COOKIE = "walkup.member";
 // prospective board reads them before deciding to sign up at all, and
 // /privacy specifically must be reachable pre-signup since signup requires
 // agreeing to it.
-const PUBLIC_PATHS = ["/login", "/signup", "/forgot-password", "/auth", "/invite", "/security", "/privacy", "/policies"];
+const PUBLIC_PATHS = ["/sitemap.xml", "/login", "/signup", "/forgot-password", "/auth", "/invite", "/security", "/privacy", "/policies"];
 
 // Reachable while signed in but not yet at AAL2, so a user can actually
 // complete enrollment or the challenge instead of being redirected in place.

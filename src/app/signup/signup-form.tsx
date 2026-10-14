@@ -77,7 +77,7 @@ export function SignupForm() {
           name="privacy_consent"
           type="checkbox"
           required
-          className="mt-0.5 h-4 w-4 rounded border-line-strong accent-[#14213d]"
+          className="mt-0.5 h-4 w-4 rounded border-line-strong accent-[#1B2A41]"
         />
         <label htmlFor="privacy_consent" className="text-[13px] text-mute">
           I agree to the{" "}

@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { Mark } from "@/components/mark";
+import { Lockup } from "@/components/mark";
 
 /**
  * The frame every step between "Get started" and the Dashboard shares:
@@ -16,10 +16,10 @@ import { Mark } from "@/components/mark";
 export const FIRST_RUN_STEPS = ["Create your account", "Secure it", "Set up your building"] as const;
 
 export const authInput =
-  "mt-1.5 w-full rounded-lg border border-line-strong bg-paper px-3.5 py-2.5 text-[15px] text-ink placeholder:text-mute-soft focus:border-[#14213d] focus:outline-none focus:ring-2 focus:ring-[#c08a3e]/40";
+  "mt-1.5 w-full rounded-lg border border-line-strong bg-paper px-3.5 py-2.5 text-[15px] text-ink placeholder:text-mute-soft focus:border-[#1B2A41] focus:outline-none focus:ring-2 focus:ring-[#D9A441]/40";
 export const authLabel = "block text-[13px] font-semibold text-ink";
 export const authButton =
-  "inline-flex min-h-[48px] w-full items-center justify-center rounded-lg bg-[#14213d] px-4 text-[15px] font-semibold text-white transition-colors hover:bg-[#1e2e52] focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#c08a3e] disabled:opacity-60";
+  "inline-flex min-h-[48px] w-full items-center justify-center rounded-lg bg-[#1B2A41] px-4 text-[15px] font-semibold text-white transition-colors hover:bg-[#283B5A] focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#D9A441] disabled:opacity-60";
 export const authError = "rounded-lg border border-bad-line bg-bad-tint px-3.5 py-2.5 text-[13px] text-bad-text";
 
 const POINTS = [
@@ -31,9 +31,8 @@ const POINTS = [
 
 function Brand() {
   return (
-    <Link href="/" className="inline-flex items-center gap-2.5 text-white" aria-label="Walkup home">
-      <Mark variant="dark" size={30} />
-      <span className="text-[17px] font-semibold tracking-tight">Walkup</span>
+    <Link href="/" aria-label="Walkup home">
+      <Lockup onDark size={34} />
     </Link>
   );
 }
@@ -47,7 +46,7 @@ function Steps({ current }: { current: number }) {
           <li key={label} className="flex min-w-0 flex-1 flex-col gap-1.5" aria-current={state === "now" ? "step" : undefined}>
             <span
               className={`h-1.5 rounded-full ${
-                state === "later" ? "bg-line" : "bg-[#c08a3e]"
+                state === "later" ? "bg-line" : "bg-[#D9A441]"
               }`}
             />
             <span className={`truncate text-[11px] font-medium ${state === "later" ? "text-mute-soft" : "text-ink"}`}>
@@ -80,7 +79,7 @@ export function AuthShell({
   return (
     <div className="min-h-screen bg-bone lg:grid lg:grid-cols-[minmax(0,5fr)_minmax(0,7fr)]">
       {/* Brand panel (desktop) */}
-      <aside className="relative hidden overflow-hidden bg-[#14213d] px-12 py-10 text-white lg:flex lg:flex-col lg:justify-between">
+      <aside className="relative hidden overflow-hidden bg-[#1B2A41] px-12 py-10 text-white lg:flex lg:flex-col lg:justify-between">
         <Brand />
         <div className="max-w-md">
           <h2 className="text-[34px] font-bold leading-[1.1] tracking-tight">
@@ -93,7 +92,7 @@ export function AuthShell({
           <ul className="mt-8 space-y-3 text-[14px] text-white/85">
             {POINTS.map((p) => (
               <li key={p} className="flex gap-3">
-                <svg viewBox="0 0 16 16" aria-hidden="true" className="mt-[3px] h-4 w-4 shrink-0 text-[#c08a3e]">
+                <svg viewBox="0 0 16 16" aria-hidden="true" className="mt-[3px] h-4 w-4 shrink-0 text-[#D9A441]">
                   <path d="M3 8.5l3 3 7-7" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
                 </svg>
                 {p}
@@ -108,14 +107,16 @@ export function AuthShell({
           <span className="mx-2">·</span>
           <a href="mailto:doug.smart6@gmail.com" className="hover:text-white">Help</a>
         </p>
-        {/* the stair motif, large and quiet */}
-        <svg viewBox="0 0 32 32" aria-hidden="true" className="pointer-events-none absolute -bottom-16 -right-16 h-80 w-80 text-white/[0.04]">
-          <path d="M5 27V21.5H11.5V16H18V10.5H27V27Z" fill="currentColor" />
+        {/* the mark, large and quiet */}
+        <svg viewBox="10 9 44 44" aria-hidden="true" className="pointer-events-none absolute -bottom-20 -right-20 h-96 w-96 text-white/[0.05]">
+          <circle cx="24" cy="39" r="12" fill="currentColor" />
+          <circle cx="40" cy="39" r="12" fill="currentColor" />
+          <circle cx="32" cy="24" r="13" fill="currentColor" />
         </svg>
       </aside>
 
       {/* Compact header (phones and tablets) */}
-      <header className="bg-[#14213d] px-6 py-4 lg:hidden">
+      <header className="bg-[#1B2A41] px-6 py-4 lg:hidden">
         <Brand />
       </header>
 

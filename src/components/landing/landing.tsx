@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { Mark } from "@/components/mark";
+import { Lockup } from "@/components/mark";
 
 /**
  * The public home page at "/" for anyone not signed in. Signed-in people get
@@ -13,11 +13,11 @@ import { Mark } from "@/components/mark";
  * which flips in dark mode) so the hero reads the same in both themes.
  */
 
-const NAVY = "bg-[#14213d]";
+const NAVY = "bg-[#1B2A41]";
 const CONTACT = "doug.smart6@gmail.com";
 
 const primaryBtn =
-  "inline-flex min-h-[48px] items-center justify-center rounded-md bg-[#c08a3e] px-6 text-[15px] font-semibold text-[#14213d] transition-colors hover:bg-[#d39b4c] focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-white";
+  "inline-flex min-h-[48px] items-center justify-center rounded-md bg-[#D9A441] px-6 text-[15px] font-semibold text-[#1B2A41] transition-colors hover:bg-[#E4B75B] focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-white";
 const ghostBtn =
   "inline-flex min-h-[48px] items-center justify-center rounded-md border border-white/40 px-6 text-[15px] font-semibold text-white transition-colors hover:bg-white/10";
 
@@ -100,7 +100,7 @@ const FAQ: { q: string; a: string }[] = [
 function SectionHeading({ eyebrow, title, intro }: { eyebrow: string; title: string; intro?: string }) {
   return (
     <div className="max-w-2xl">
-      <p className="text-[12px] font-semibold uppercase tracking-[0.12em] text-[#c08a3e]">{eyebrow}</p>
+      <p className="text-[12px] font-semibold uppercase tracking-[0.12em] text-[#D9A441]">{eyebrow}</p>
       <h2 className="mt-2 text-[28px] font-bold leading-tight tracking-tight text-ink sm:text-[32px]">{title}</h2>
       {intro ? <p className="mt-3 text-[16px] leading-relaxed text-mute">{intro}</p> : null}
     </div>
@@ -124,8 +124,8 @@ function ExampleDashboard() {
   ];
   return (
     <div className="relative">
-      <div className="overflow-hidden rounded-xl border border-white/15 bg-white text-[#14213d] shadow-2xl">
-        <div className="flex items-center justify-between bg-[#14213d] px-4 py-2.5 text-[12px] text-white/80">
+      <div className="overflow-hidden rounded-xl border border-white/15 bg-white text-[#1B2A41] shadow-2xl">
+        <div className="flex items-center justify-between bg-[#1B2A41] px-4 py-2.5 text-[12px] text-white/80">
           <span className="font-semibold text-white">Dashboard</span>
           <span>2158 N. Damen</span>
         </div>
@@ -173,16 +173,15 @@ export function Landing() {
       {/* ---------------------------------------------------------------- header */}
       <header className={`${NAVY} text-white`}>
         <div className="mx-auto flex max-w-[1100px] items-center justify-between px-6 py-4">
-          <Link href="/" className="inline-flex items-center gap-2.5" aria-label="Walkup home">
-            <Mark variant="dark" size={30} />
-            <span className="text-[17px] font-semibold tracking-tight">Walkup</span>
+          <Link href="/" aria-label="Walkup home">
+            <Lockup onDark size={34} />
           </Link>
           <nav aria-label="Site" className="flex items-center gap-1 text-[14px]">
             <a href="#features" className="hidden rounded-md px-3 py-2 text-white/80 hover:text-white sm:inline-block">Features</a>
             <a href="#pricing" className="hidden rounded-md px-3 py-2 text-white/80 hover:text-white sm:inline-block">Pricing</a>
             <a href="#faq" className="hidden rounded-md px-3 py-2 text-white/80 hover:text-white md:inline-block">FAQ</a>
             <Link href="/login" className="rounded-md px-3 py-2 font-medium text-white hover:bg-white/10">Sign in</Link>
-            <Link href="/signup" className="ml-1 hidden rounded-md bg-[#c08a3e] px-3.5 py-2 font-semibold text-[#14213d] hover:bg-[#d39b4c] sm:inline-block">
+            <Link href="/signup" className="ml-1 hidden rounded-md bg-[#D9A441] px-3.5 py-2 font-semibold text-[#1B2A41] hover:bg-[#E4B75B] sm:inline-block">
               Get started
             </Link>
           </nav>
@@ -276,14 +275,14 @@ export function Landing() {
             ["Post, and you're running", "Set the budget and each unit's dues. From then on, Walkup tells you what needs you each month."],
           ].map(([t, b], i) => (
             <li key={t} className="rounded-xl border border-line bg-paper p-6">
-              <span className="flex h-8 w-8 items-center justify-center rounded-full bg-[#14213d] text-[14px] font-bold text-white">{i + 1}</span>
+              <span className="flex h-8 w-8 items-center justify-center rounded-full bg-[#1B2A41] text-[14px] font-bold text-white">{i + 1}</span>
               <h3 className="mt-4 text-[16px] font-bold text-ink">{t}</h3>
               <p className="mt-2 text-[14px] leading-relaxed text-mute">{b}</p>
             </li>
           ))}
         </ol>
         <div className="mt-8">
-          <Link href="/signup" className="inline-flex min-h-[48px] items-center rounded-md bg-[#14213d] px-6 text-[15px] font-semibold text-white hover:bg-[#1e2e52]">
+          <Link href="/signup" className="inline-flex min-h-[48px] items-center rounded-md bg-[#1B2A41] px-6 text-[15px] font-semibold text-white hover:bg-[#283B5A]">
             Create your building — free
           </Link>
         </div>
@@ -292,7 +291,7 @@ export function Landing() {
       {/* ---------------------------------------------------------------- trust */}
       <section className={`${NAVY} text-white`}>
         <div className="mx-auto max-w-[1100px] px-6 py-20">
-          <p className="text-[12px] font-semibold uppercase tracking-[0.12em] text-[#c08a3e]">Built to be trusted with money</p>
+          <p className="text-[12px] font-semibold uppercase tracking-[0.12em] text-[#D9A441]">Built to be trusted with money</p>
           <h2 className="mt-2 max-w-2xl text-[28px] font-bold leading-tight tracking-tight sm:text-[32px]">
             Walkup records and reminds. You stay in control.
           </h2>
@@ -312,7 +311,7 @@ export function Landing() {
             ))}
           </div>
           <p className="mt-10 text-[14px]">
-            <Link href="/security" className="font-medium text-white underline underline-offset-4 hover:text-[#e8c48f]">
+            <Link href="/security" className="font-medium text-white underline underline-offset-4 hover:text-[#EBC878]">
               Read how Walkup protects your data →
             </Link>
           </p>
@@ -366,7 +365,7 @@ export function Landing() {
             intro="Pick the plan that matches your unit count. No per-owner fees, no add-ons, no sales call."
           />
 
-          <div className="mt-8 rounded-xl border border-[#c08a3e]/50 bg-[#c08a3e]/10 px-5 py-4 text-[14px] text-ink">
+          <div className="mt-8 rounded-xl border border-[#D9A441]/50 bg-[#D9A441]/10 px-5 py-4 text-[14px] text-ink">
             <strong>Early access is free.</strong> Create your building today and use everything at no cost. We&rsquo;ll
             give you plenty of notice before paid plans begin — nothing is ever charged without you choosing a plan.
           </div>
@@ -376,10 +375,10 @@ export function Landing() {
             {PLANS.map((p) => (
               <div
                 key={p.name}
-                className={`relative rounded-xl border bg-paper p-6 ${p.featured ? "border-[#c08a3e] shadow-lg" : "border-line"}`}
+                className={`relative rounded-xl border bg-paper p-6 ${p.featured ? "border-[#D9A441] shadow-lg" : "border-line"}`}
               >
                 {p.featured ? (
-                  <span className="absolute -top-3 left-6 rounded-full bg-[#c08a3e] px-3 py-0.5 text-[11px] font-semibold uppercase tracking-[0.08em] text-[#14213d]">
+                  <span className="absolute -top-3 left-6 rounded-full bg-[#D9A441] px-3 py-0.5 text-[11px] font-semibold uppercase tracking-[0.08em] text-[#1B2A41]">
                     Most buildings
                   </span>
                 ) : null}
@@ -489,9 +488,9 @@ export function Landing() {
       <footer className="mx-auto max-w-[1100px] px-6 py-10 text-[13px] text-mute">
         <div className="flex flex-col gap-6 md:flex-row md:items-start md:justify-between">
           <div className="max-w-md">
-            <span className="inline-flex items-center gap-2 font-semibold text-ink">
-              <Mark size={22} /> Walkup
-            </span>
+            <Link href="/" aria-label="Walkup home">
+              <Lockup size={28} />
+            </Link>
             <p className="mt-2 leading-relaxed">
               Software for self-managed condominium associations. Walkup never holds association funds and is not a
               tax adviser or a lawyer.

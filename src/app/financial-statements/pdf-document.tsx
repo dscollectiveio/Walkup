@@ -3,7 +3,7 @@ import { money } from "@/components/ui";
 import type { MergedRow } from "./summary";
 import type { Report } from "./report";
 
-const NAVY = "#14284B";
+const NAVY = "#1B2A41";
 const NAVY_SOFT = "#E8EDF6";
 const INK = "#1B2437";
 const MUTE = "#6A7488";
@@ -17,9 +17,9 @@ const BAD_TINT = "#FBEAE7";
 const styles = StyleSheet.create({
   page: { paddingTop: 0, paddingBottom: 48, paddingHorizontal: 0, fontSize: 9.5, fontFamily: "Helvetica", color: INK },
   banner: { backgroundColor: NAVY, paddingHorizontal: 40, paddingTop: 30, paddingBottom: 22, marginBottom: 22 },
-  kicker: { fontSize: 8, letterSpacing: 1.2, color: "#9FB0D4", textTransform: "uppercase", marginBottom: 6 },
+  kicker: { fontSize: 8, letterSpacing: 1.2, color: "#C9D1E0", textTransform: "uppercase", marginBottom: 6 },
   title: { fontSize: 20, fontFamily: "Helvetica-Bold", color: "#FFFFFF" },
-  subtitle: { fontSize: 11, color: "#C9D4EC", marginTop: 4 },
+  subtitle: { fontSize: 11, color: "#D8DEEA", marginTop: 4 },
   body: { paddingHorizontal: 40 },
   headerRow: { flexDirection: "row", backgroundColor: NAVY_SOFT, paddingVertical: 6, paddingHorizontal: 8, borderRadius: 3 },
   headerCell: { fontFamily: "Helvetica-Bold", color: NAVY, fontSize: 8.5 },

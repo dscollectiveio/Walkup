@@ -48,6 +48,7 @@ export async function generateMetadata(): Promise<Metadata> {
   const user = await getUser();
   if (user) return { title: "Dashboard — Walkup" };
   return {
+    alternates: { canonical: "/" },
     title: "Walkup — books, dues and taxes for self-managed condo associations",
     description:
       "Bookkeeping, dues, budget, financial statements and 1120-H taxes for Illinois condominium associations of 2 to 20 units. Free during early access.",

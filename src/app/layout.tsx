@@ -1,5 +1,5 @@
 import type { Metadata } from "next";
-import { Montserrat } from "next/font/google";
+import { Outfit } from "next/font/google";
 import "./globals.css";
 import { createClient } from "@/lib/supabase/server";
 import { signOut } from "./login/actions";
@@ -8,10 +8,12 @@ import { Sidebar } from "@/components/sidebar/sidebar";
 import { TopBar } from "@/components/sidebar/top-bar";
 import { cookies, headers } from "next/headers";
 
-const montserrat = Montserrat({
+// The brand typeface (Brand Logo Package, "Typography"): used for the
+// wordmark and, per Doug, the whole product.
+const outfit = Outfit({
   subsets: ["latin"],
   weight: ["400", "500", "600", "700"],
-  variable: "--font-montserrat",
+  variable: "--font-outfit",
   display: "swap",
 });
 
@@ -24,6 +26,8 @@ const THEME_SCRIPT = `(function(){try{var t=localStorage.getItem("walkup.theme")
 const BARE_PATHS = ["/login", "/signup", "/forgot-password", "/reset-password", "/account/mfa", "/onboarding"];
 
 export const metadata: Metadata = {
+  // Makes relative share-image and canonical URLs resolve to the real domain.
+  metadataBase: new URL("https://walkuphoa.com"),
   title: "Walkup",
   description:
     "Accounting and compliance for self-managed condominium associations",
@@ -87,7 +91,7 @@ export default async function RootLayout({
     <html
       lang="en"
       data-sidebar={sidebarMode}
-      className={montserrat.variable}
+      className={outfit.variable}
       suppressHydrationWarning
     >
       <head>
