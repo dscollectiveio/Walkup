@@ -32,7 +32,9 @@ import {
 import { ComingUp } from "@/components/home/coming-up";
 import { Building, type BuildingUnit } from "@/components/home/building";
 import { Landing } from "@/components/landing/landing";
+import { SHARE_DESCRIPTION, SHARE_TITLE, SITE_DESCRIPTION, SITE_TITLE, SITE_URL } from "@/lib/site-config";
 import type { Metadata } from "next";
+import { headers } from "next/headers";
 
 export const dynamic = "force-dynamic";
 
@@ -46,24 +48,30 @@ const looseCents = (v: string | number | null) => Math.round(Number(v ?? 0) * 10
 // signed-in people their Dashboard. Search engines only ever see the former.
 export async function generateMetadata(): Promise<Metadata> {
   const user = await getUser();
-  if (user) return { title: "Dashboard — Walkup" };
+  if (user) return { title: "Dashboard | Walkup" };
+  // Search results use the keyword title; link previews use the shorter hook. The share image is src/app/opengraph-image.tsx.
   return {
     alternates: { canonical: "/" },
-    title: "Walkup — books, dues and taxes for self-managed condo associations",
-    description:
-      "Bookkeeping, dues, budget, financial statements and 1120-H taxes for Illinois condominium associations of 2 to 20 units. Free during early access.",
+    title: SITE_TITLE,
+    description: SITE_DESCRIPTION,
     openGraph: {
-      title: "Walkup — run your building's books in 15 minutes a month",
-      description:
-        "Bookkeeping, dues, budget and taxes for small self-managed Illinois condo associations. Free during early access.",
+      title: SHARE_TITLE,
+      description: SHARE_DESCRIPTION,
+      url: SITE_URL,
+      siteName: "Walkup",
       type: "website",
+    },
+    twitter: {
+      card: "summary_large_image",
+      title: SHARE_TITLE,
+      description: SHARE_DESCRIPTION,
     },
   };
 }
 
 export default async function HomePage() {
   const user = await getUser();
-  if (!user) return <Landing />;
+  if (!user) return <Landing nonce={(await headers()).get("x-nonce") ?? undefined} />;
   const supabase = await createClient();
   const todayIso = new Date().toISOString().slice(0, 10);
   // 1099s are prepared in January and February for the year just ended; the

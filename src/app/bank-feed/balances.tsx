@@ -1,3 +1,4 @@
+import { readBankToken } from "@/lib/plaid/token";
 import { createClient } from "@/lib/supabase/server";
 import { money } from "@/components/ui";
 import { syncedAgo } from "@/lib/dates";
@@ -48,10 +49,7 @@ export async function getConnectionBalance(
   supabase: Awaited<ReturnType<typeof createClient>>,
   connectionId: string,
 ): Promise<ConnectionBalance> {
-  const { data: accessToken, error: tokenError } = await supabase.rpc(
-    "get_bank_access_token",
-    { p_connection_id: connectionId },
-  );
+  const { token: accessToken, error: tokenError } = await readBankToken(supabase, connectionId);
   if (tokenError || !accessToken) {
     return { connectionId, accounts: [], error: tokenError?.message ?? "No access token on file." };
   }

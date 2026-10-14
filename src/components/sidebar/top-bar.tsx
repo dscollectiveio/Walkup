@@ -5,6 +5,7 @@ import { usePathname } from "next/navigation";
 import { CircleHelp, LogOut, Menu, X } from "lucide-react";
 import { pageTitleFor } from "./config";
 import { setDrawerOpen, useSidebarState } from "./sidebar-state";
+import { START_TOUR_EVENT } from "@/components/tour/app-tour";
 
 const HELP: { title: string; body: string }[] = [
   {
@@ -83,6 +84,7 @@ export function TopBar({
         <button
           type="button"
           onClick={() => helpRef.current?.showModal()}
+          data-tour="help"
           className="inline-flex h-9 items-center gap-1.5 rounded-md border border-ondark-mute/60 px-3 text-[13px] font-medium text-paper hover:bg-ink-mid"
         >
           <CircleHelp size={15} strokeWidth={1.6} aria-hidden="true" />
@@ -141,13 +143,25 @@ export function TopBar({
           >
             Download the full walkthrough
           </a>
-          <button
-            type="button"
-            onClick={() => helpRef.current?.close()}
-            className="rounded-md bg-ink px-3 py-1.5 text-[12px] font-medium text-paper hover:bg-ink-mid"
-          >
-            Got it
-          </button>
+          <div className="flex gap-2">
+            <button
+              type="button"
+              onClick={() => {
+                helpRef.current?.close();
+                window.dispatchEvent(new Event(START_TOUR_EVENT));
+              }}
+              className="rounded-md border border-line-strong px-3 py-1.5 text-[12px] font-medium text-ink hover:bg-fill"
+            >
+              Take the tour
+            </button>
+            <button
+              type="button"
+              onClick={() => helpRef.current?.close()}
+              className="rounded-md bg-ink px-3 py-1.5 text-[12px] font-medium text-paper hover:bg-ink-mid"
+            >
+              Got it
+            </button>
+          </div>
         </div>
       </dialog>
     </header>

@@ -141,7 +141,7 @@ export function SetupGuidePanel({
 
   return (
     <>
-    <section className="flex max-h-[34rem] flex-col rounded-xl border border-line bg-paper lg:max-h-none">
+    <section id="setup-guide" className="flex max-h-[34rem] scroll-mt-20 flex-col rounded-xl border border-line bg-paper lg:max-h-none">
       <header className="flex min-h-[4.75rem] flex-col justify-center rounded-t-[7px] bg-ink px-5 py-4 text-paper">
         <h2 className="eyebrow text-paper">Set up your building</h2>
         <p className="mt-0.5 text-[12px] text-ondark-mute">In order — each section builds on the last.</p>

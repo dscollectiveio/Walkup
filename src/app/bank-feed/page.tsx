@@ -1,3 +1,4 @@
+import { readBankToken } from "@/lib/plaid/token";
 import Link from "next/link";
 import { Suspense } from "react";
 import { after } from "next/server";
@@ -362,7 +363,7 @@ export default async function BankFeedPage({
     after(async () => {
       for (const c of checking) {
         try {
-          const { data: token } = await supabase.rpc("get_bank_access_token", { p_connection_id: c.id });
+          const { token } = await readBankToken(supabase, c.id);
           if (!token) continue;
           const result = await syncOneConnection(supabase, c, token, { autoPost: false });
           if ("error" in result) console.warn(`Auto-sync of ${c.institution_name} failed: ${result.error}`);

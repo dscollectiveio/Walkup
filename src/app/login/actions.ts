@@ -5,6 +5,8 @@ import { revalidatePath } from "next/cache";
 import { headers, cookies } from "next/headers";
 import { createClient } from "@/lib/supabase/server";
 import { PENDING_INVITE_COOKIE } from "@/lib/invite-cookie";
+import { CONTACT_EMAIL } from "@/lib/site-config";
+import { MIN_PASSWORD } from "@/lib/security/password";
 
 export async function signIn(_prev: unknown, formData: FormData) {
   const email = String(formData.get("email") ?? "").trim();
@@ -62,8 +64,11 @@ export async function signUp(_prev: unknown, formData: FormData) {
   if (!privacyConsent) {
     return { error: "You need to agree to the Privacy Policy to create an account." };
   }
-  if (password.length < 8) {
-    return { error: "Password must be at least 8 characters." };
+  if (password.length < MIN_PASSWORD) {
+    return { error: `Password must be at least ${MIN_PASSWORD} characters. A few random words works well.` };
+  }
+  if (password.toLowerCase().includes(email.split("@")[0].toLowerCase()) && email.split("@")[0].length >= 4) {
+    return { error: "Don't use your email address in your password." };
   }
   if (password !== confirmPassword) {
     return { error: "Those passwords don't match." };
@@ -84,7 +89,15 @@ export async function signUp(_prev: unknown, formData: FormData) {
     options: emailRedirectTo ? { emailRedirectTo } : undefined,
   });
 
-  if (error) return { error: error.message };
+  if (error) {
+    // Answer exactly as for a new address, so this form can't be used to find
+    // out which emails already have an account. (With "Confirm email" on,
+    // Supabase itself does this; this covers the setting being off.)
+    if (error.code === "user_already_exists" || /already registered/i.test(error.message ?? "")) {
+      return { ok: true as const, checkEmail: true as const, email };
+    }
+    return { error: describeAuthError(error) };
+  }
 
   if (inviteToken) {
     const jar = await cookies();
@@ -125,11 +138,7 @@ export async function resendConfirmation(email: string) {
     email: address,
     options: emailRedirectTo ? { emailRedirectTo } : undefined,
   });
-  if (error) {
-    return {
-      error: error.status === 429 ? "Please wait a minute before asking for another email." : error.message,
-    };
-  }
+  if (error) return { error: describeAuthError(error) };
   return { ok: true as const };
 }
 
@@ -143,7 +152,9 @@ export async function requestPasswordReset(_prev: unknown, formData: FormData) {
   const supabase = await createClient();
   const redirectTo = await confirmUrl("/reset-password");
   const { error } = await supabase.auth.resetPasswordForEmail(email, redirectTo ? { redirectTo } : undefined);
-  if (error?.status === 429) return { error: "Please wait a minute before asking for another email." };
+  // Rate limits and send failures are the only errors worth showing; anything
+  // else answers the same either way so this can't reveal who has an account.
+  if (error && (error.status === 429 || (error.status ?? 0) >= 500)) return { error: describeAuthError(error) };
   return { ok: true as const, email };
 }
 
@@ -151,7 +162,7 @@ export async function requestPasswordReset(_prev: unknown, formData: FormData) {
 export async function updatePassword(_prev: unknown, formData: FormData) {
   const password = String(formData.get("password") ?? "");
   const confirm = String(formData.get("confirm_password") ?? "");
-  if (password.length < 8) return { error: "Password must be at least 8 characters." };
+  if (password.length < MIN_PASSWORD) return { error: `Password must be at least ${MIN_PASSWORD} characters. A few random words works well.` };
   if (password !== confirm) return { error: "Those passwords don't match." };
   const supabase = await createClient();
   const { error } = await supabase.auth.updateUser({ password });
@@ -167,6 +178,36 @@ export async function updatePassword(_prev: unknown, formData: FormData) {
   }
   revalidatePath("/", "layout");
   redirect("/");
+}
+
+/**
+ * Turns an auth error into words a person can act on. Supabase passes some
+ * failures through as an empty or JSON-ish message (a rejected SMTP login
+ * arrives as "{}" with status 500), which is useless on screen — so we name
+ * the likely cause and keep the technical code at the end for support.
+ */
+function describeAuthError(error: { message?: string; status?: number; code?: string; name?: string }): string {
+  const raw = (error.message ?? "").trim();
+  const meaningless = raw === "" || raw === "{}" || raw.startsWith("{");
+  const code = error.code ?? error.name ?? "unknown";
+  const ref = `(${error.status ?? "?"} ${code})`;
+
+  if (error.code === "over_email_send_rate_limit" || error.status === 429) {
+    return "Too many sign-up emails were requested just now. Wait a few minutes and try again.";
+  }
+  if (error.code === "email_address_invalid" || error.code === "validate_failed") {
+    return "That email address doesn't look valid. Check it for typos and try again.";
+  }
+  if (error.code === "weak_password") {
+    return "That password is too easy to guess. Use at least 8 characters, ideally a mix of words, numbers and symbols.";
+  }
+  if (error.code === "signup_disabled") {
+    return `New sign-ups are switched off right now. Email ${CONTACT_EMAIL} and we'll get you set up.`;
+  }
+  if (meaningless || (error.status ?? 0) >= 500) {
+    return `We couldn't send your confirmation email, so the account wasn't created. This is a problem on our side, not yours — try again in a few minutes, and if it keeps happening email ${CONTACT_EMAIL} ${ref}.`;
+  }
+  return `${raw} ${ref}`;
 }
 
 export async function signOut() {

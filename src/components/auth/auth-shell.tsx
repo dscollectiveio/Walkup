@@ -1,5 +1,6 @@
 import Link from "next/link";
 import { Lockup } from "@/components/mark";
+import { CONTACT_EMAIL } from "@/lib/site-config";
 
 /**
  * The frame every step between "Get started" and the Dashboard shares:
@@ -105,7 +106,7 @@ export function AuthShell({
           <span className="mx-2">·</span>
           <Link href="/security" className="hover:text-white">Security</Link>
           <span className="mx-2">·</span>
-          <a href="mailto:doug.smart6@gmail.com" className="hover:text-white">Help</a>
+          <a href={`mailto:${CONTACT_EMAIL}`} className="hover:text-white">Help</a>
         </p>
         {/* the mark, large and quiet */}
         <svg viewBox="10 9 44 44" aria-hidden="true" className="pointer-events-none absolute -bottom-20 -right-20 h-96 w-96 text-white/[0.05]">

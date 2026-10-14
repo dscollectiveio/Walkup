@@ -4,7 +4,7 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { useEffect, useState } from "react";
 import { PanelLeftClose, PanelLeftOpen, X } from "lucide-react";
-import { Mark } from "@/components/mark";
+import { WalkupMark } from "@/components/mark";
 import { ThemeToggle } from "./theme-toggle";
 import { NAV_GROUPS, TRAILING_NAV, UNGROUPED_NAV, type NavItemConfig } from "./config";
 import { primeServerMode, setDrawerOpen, setSidebarMode, useSidebarState, type SidebarMode } from "./sidebar-state";
@@ -47,6 +47,7 @@ function NavItemLink({
       <Link
         href={item.href}
         aria-current={active ? "page" : undefined}
+        data-tour={item.tourId}
         className={`relative flex min-h-[40px] items-center gap-2.5 rounded-md border-l-[3px] px-2.5 text-[13px] font-bold transition-colors ${
           active
             ? "border-brass bg-nav-active text-nav-active-text"
@@ -77,6 +78,7 @@ function NavItemLink({
       <Link
         href={item.href}
         aria-current={active ? "page" : undefined}
+        data-tour={item.tourId}
         className={`relative mx-auto flex h-11 w-11 items-center justify-center rounded-lg transition-colors ${
           active
             ? "bg-nav-active text-nav-active-text"
@@ -201,7 +203,7 @@ export function Sidebar({
         <div className="relative -mr-px h-[56px] shrink-0 bg-ink text-paper">
         <div className={`flex h-full items-center ${expanded ? "gap-3 px-4" : "justify-center"} ${fade}`}>
           <Link href="/" aria-label="Walkup home" className="flex min-w-0 items-center gap-3">
-            <Mark variant="icon" size={32} className="shrink-0" />
+            <WalkupMark variant="tile" size={32} className="shrink-0" title={expanded ? "" : "Walkup"} />
             {expanded ? (
               <span className="flex min-w-0 flex-col leading-none">
                 <span className="wordmark text-[20px] text-bone">Walkup</span>

@@ -1,11 +1,14 @@
 import type { Metadata } from "next";
 import { Outfit } from "next/font/google";
+import { SITE_URL } from "@/lib/site-config";
 import "./globals.css";
 import { createClient } from "@/lib/supabase/server";
 import { signOut } from "./login/actions";
 import Link from "next/link";
 import { Sidebar } from "@/components/sidebar/sidebar";
 import { TopBar } from "@/components/sidebar/top-bar";
+import { AppTour } from "@/components/tour/app-tour";
+import { tourRoleFrom, type TourRole } from "@/lib/tour/steps";
 import { cookies, headers } from "next/headers";
 
 // The brand typeface (Brand Logo Package, "Typography"): used for the
@@ -27,7 +30,8 @@ const BARE_PATHS = ["/login", "/signup", "/forgot-password", "/reset-password", 
 
 export const metadata: Metadata = {
   // Makes relative share-image and canonical URLs resolve to the real domain.
-  metadataBase: new URL("https://walkuphoa.com"),
+  // www is the canonical host: Vercel 308-redirects the bare domain to it.
+  metadataBase: new URL(SITE_URL),
   title: "Walkup",
   description:
     "Accounting and compliance for self-managed condominium associations",
@@ -56,15 +60,27 @@ export default async function RootLayout({
   } = await supabase.auth.getSession();
   const user = session?.user ?? null;
 
+  // The landing page ("/" signed out) brings its own full-width header and
+  // footer; everything else gets the app's column and footer.
+  const hdrs = await headers();
+  const path = hdrs.get("x-walkup-path") ?? "";
+  const nonce = hdrs.get("x-nonce") ?? undefined;
+  const onBarePath = BARE_PATHS.some((p) => path === p || path.startsWith(`${p}/`));
+  const bare = (!user && path === "/") || onBarePath;
+  // Signed in but still on sign-up, two-step or building setup: no sidebar,
+  // no header — the person isn't "in the app" yet.
+  const showChrome = Boolean(user) && !onBarePath;
+
   let associationName: string | null = null;
   let userName: string | null = null;
   let uncategorizedCount = 0;
+  let tourRole: TourRole | null = null;
 
-  if (user) {
+  if (showChrome && user) {
     // Lightweight queries the sidebar needs on every page: the association
     // name for the lockup, and how many bank transactions still need a
     // category (RLS hides these from owners, so their count is simply 0).
-    const [{ data: associations }, { count: needsCount }, { data: me }] = await Promise.all([
+    const [{ data: associations }, { count: needsCount }, { data: me }, { data: myGrants }] = await Promise.all([
       supabase.from("associations").select("display_name").limit(1),
       supabase
         .from("bank_transactions")
@@ -76,16 +92,22 @@ export default async function RootLayout({
         .eq("pending", false),
       // The signed-in person's own name for the header.
       supabase.from("persons").select("full_name").eq("auth_user_id", user.id).limit(1),
+      // The person's own active roles, to pick which first-login tour they get.
+      supabase
+        .from("role_grants")
+        .select("role, expires_on, persons!inner(auth_user_id)")
+        .eq("persons.auth_user_id", user.id)
+        .is("revoked_at", null),
     ]);
     associationName = associations?.[0]?.display_name ?? null;
     userName = me?.[0]?.full_name ?? null;
     uncategorizedCount = needsCount ?? 0;
+    const today = new Date().toISOString().slice(0, 10);
+    tourRole = tourRoleFrom(
+      (myGrants ?? []).filter((g) => !g.expires_on || g.expires_on >= today).map((g) => g.role as string),
+    );
   }
 
-  // The landing page ("/" signed out) brings its own full-width header and
-  // footer; everything else gets the app's column and footer.
-  const path = (await headers()).get("x-walkup-path") ?? "";
-  const bare = (!user && path === "/") || BARE_PATHS.some((p) => path === p || path.startsWith(`${p}/`));
 
   return (
     <html
@@ -95,16 +117,19 @@ export default async function RootLayout({
       suppressHydrationWarning
     >
       <head>
-        <script dangerouslySetInnerHTML={{ __html: THEME_SCRIPT }} />
+        <script nonce={nonce} dangerouslySetInnerHTML={{ __html: THEME_SCRIPT }} />
       </head>
       <body className="min-h-screen bg-bone text-ink antialiased">
-        {user ? (
+        {showChrome && user ? (
           <Sidebar
             associationName={associationName}
             uncategorizedCount={uncategorizedCount}
             userEmail={user.email ?? ""}
             initialMode={sidebarMode}
           />
+        ) : null}
+        {showChrome && user ? (
+          <AppTour role={tourRole} autoStart={!user.user_metadata?.tour_completed_at} />
         ) : null}
 
         {bare ? children : (

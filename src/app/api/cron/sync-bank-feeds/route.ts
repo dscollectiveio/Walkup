@@ -1,3 +1,4 @@
+import { isSealed, openSecret, sealSecret, sealingEnabled } from "@/lib/security/secret-box";
 import "server-only";
 import { NextResponse, type NextRequest } from "next/server";
 import { createClient as createServiceClient } from "@supabase/supabase-js";
@@ -69,7 +70,21 @@ export async function GET(request: NextRequest) {
     // autoPost: false, always. This runs with no human behind it; it may
     // fetch and pre-categorize, but writing to the ledger waits for a board
     // member's own sync or "post all ready" click — DECISIONS #29.
-    const result = await syncOneConnection(supabase, connection, secretRow.plaid_access_token, {
+    let accessToken: string;
+    try {
+      accessToken = openSecret(secretRow.plaid_access_token);
+    } catch (cause) {
+      results.push({ connectionId: connection.id, error: (cause as Error).message });
+      continue;
+    }
+    // Seal tokens stored before BANK_TOKEN_KEY was set (service role, so a direct update).
+    if (!isSealed(secretRow.plaid_access_token) && sealingEnabled()) {
+      await supabase
+        .from("bank_connection_secrets")
+        .update({ plaid_access_token: sealSecret(accessToken) })
+        .eq("bank_connection_id", connection.id);
+    }
+    const result = await syncOneConnection(supabase, connection, accessToken, {
       autoPost: false,
     });
     results.push({

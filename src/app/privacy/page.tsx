@@ -1,3 +1,4 @@
+import { CONTACT_EMAIL } from "@/lib/site-config";
 import Link from "next/link";
 import { Lockup } from "@/components/mark";
 
@@ -40,7 +41,7 @@ export default function PrivacyPage() {
         Privacy Policy
       </h1>
       <p className="mt-2 text-[13px] text-mute-soft">
-        Last updated 2026-09-30.
+        Last updated 2026-10-14.
       </p>
 
       <p className="mt-6 text-[13px] leading-relaxed text-mute">
@@ -72,6 +73,14 @@ export default function PrivacyPage() {
           your bank login credentials &mdash; only a read-only token issued by
           Plaid.
         </p>
+        <p>
+          If you join the waitlist for a state Walkup doesn&rsquo;t support yet:
+          your email address, the state you chose, and a one-way scrambled
+          version of your IP address combined with the date (used only to slow
+          down repeated sign-ups, never the address itself). We use it only to
+          tell you when Walkup reaches your state. Email us and we&rsquo;ll
+          remove it.
+        </p>
       </Section>
 
       <Section title="Why we collect it">
@@ -96,6 +105,12 @@ export default function PrivacyPage() {
           the building&rsquo;s street address (to place it on a map, once) and
           the kind of work being searched for. Nothing else about your
           association, its owners, or its finances is sent to Google.
+        </p>
+        <p>
+          When you set up your building and type its address, what you type is
+          sent to an address-lookup service (Google, or Photon, which uses
+          OpenStreetMap data) to suggest matching addresses. Confirmation and
+          password-reset emails are sent through Resend.
         </p>
       </Section>
 
@@ -153,8 +168,8 @@ export default function PrivacyPage() {
       <Section title="Contact">
         <p>
           Questions, corrections, or a request about your data: email{" "}
-          <a href="mailto:doug.smart6@gmail.com" className="text-ink underline-offset-2 hover:underline">
-            doug.smart6@gmail.com
+          <a href={`mailto:${CONTACT_EMAIL}`} className="text-ink underline-offset-2 hover:underline">
+            {CONTACT_EMAIL}
           </a>
           .
         </p>

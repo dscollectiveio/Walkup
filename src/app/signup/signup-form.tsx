@@ -14,8 +14,9 @@ export function SignupForm() {
       <div className="rounded-xl border border-good-line bg-good-tint px-5 py-5 text-good-text">
         <p className="text-[16px] font-semibold">Check your email</p>
         <p className="mt-1.5 text-[14px] leading-relaxed">
-          We sent a confirmation link to <strong>{state.email}</strong>. Open it on this device and you&rsquo;ll come
-          straight back here to finish setting up.
+          If <strong>{state.email}</strong> isn&rsquo;t already registered, a confirmation link is on its way. Open it on
+          this device and you&rsquo;ll come straight back here to finish setting up. Already have an account?{" "}
+          <Link href="/login" className="font-semibold underline underline-offset-2">Sign in</Link>.
         </p>
         <p className="mt-3 text-[13px] text-good-text/90">
           Nothing after a few minutes? Check spam, or <ResendLink email={state.email} />
@@ -50,10 +51,10 @@ export function SignupForm() {
           type="password"
           autoComplete="new-password"
           required
-          minLength={8}
+          minLength={12}
           className={authInput}
         />
-        <p className="mt-1.5 text-[12px] text-mute">At least 8 characters.</p>
+        <p className="mt-1.5 text-[12px] text-mute">At least 12 characters. A few random words works well.</p>
       </div>
 
       <div>
@@ -66,7 +67,7 @@ export function SignupForm() {
           type="password"
           autoComplete="new-password"
           required
-          minLength={8}
+          minLength={12}
           className={authInput}
         />
       </div>

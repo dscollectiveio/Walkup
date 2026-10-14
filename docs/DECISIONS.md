@@ -1425,3 +1425,39 @@ and tested against PGlite but not yet applied to any Supabase project.
   instructions heading (only headings that exist — none invented), list
   the deliberately blank boxes in `notes`, and let `applySuggestedTemplate`
   refuse any file that doesn't match byte for byte.
+
+---
+
+## 34. The landing page: a signed-out waitlist, and one place for site facts
+
+**Decided 2026-10-14 by Doug** (approving Claude's recommendations on the landing-page pass).
+
+- **Other-states waitlist (0049).** Visitors outside Illinois can leave an
+  email and their state. `state_waitlist` is global (no association), RLS on
+  with no policies. The only way in is `join_state_waitlist()`, the single
+  SECURITY DEFINER function callable by `anon`: it validates, ignores repeats
+  of the same email + state (so it can't reveal who signed up), and caps
+  sign-ups at 5 an hour per hashed IP and 200 an hour in total. The IP is
+  never stored, only SHA-256(IP + date). Both lint tests in
+  `tests/db/migrations.test.ts` list it as their one exception.
+- **Why not stricter.** There is no service role outside the cron (#28), so
+  a signed-out write has to go through a function `anon` can call, and anyone
+  holding the public key can call it directly with any hash. The per-IP cap
+  only slows the site's own form; the hourly total is the real ceiling.
+  Per-visitor limits that can't be bypassed belong in a Vercel Firewall rule.
+- **Site facts live in `src/lib/site-config.ts`**: contact email, booking
+  link, legal entity, founder photo, testimonial, plan prices, the FAQ (which
+  also feeds the FAQPage structured data), and `DUES_PAYMENTS_ENABLED`
+  (false: Walkup never touches money, #22/#24).
+- **Canonical host is `https://www.walkuphoa.com`**, matching Vercel's 308
+  from the bare domain.
+- **No testimonials or founder photo until real ones exist**; placeholders
+  never render (`TODO(doug)` in the config).
+
+**How to apply:**
+
+- A new signed-out write needs the same shape (one narrow function, a hard
+  hourly ceiling, a lint exception with a reason, a privacy-policy line) and a
+  new decision.
+- Reading the waitlist is by SQL as a platform admin; removal on request is a
+  hand delete.

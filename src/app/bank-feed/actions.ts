@@ -1,5 +1,7 @@
 "use server";
 
+import { readBankToken } from "@/lib/plaid/token";
+import { sealSecret } from "@/lib/security/secret-box";
 import { revalidatePath } from "next/cache";
 import { createClient } from "@/lib/supabase/server";
 import { plaidClient, describePlaidError } from "@/lib/plaid";
@@ -65,9 +67,7 @@ export async function createUpdateLinkToken(
   if (!associationId) return { error: "No association is visible to you." };
 
   const supabase = await createClient();
-  const { data: accessToken, error: tokenError } = await supabase.rpc("get_bank_access_token", {
-    p_connection_id: connectionId,
-  });
+  const { token: accessToken, error: tokenError } = await readBankToken(supabase, connectionId);
   if (tokenError || !accessToken) return { error: tokenError?.message ?? "No access token on file." };
 
   try {
@@ -137,7 +137,7 @@ export async function connectBank(
     p_association_id: associationId,
     p_institution_name: institutionName,
     p_plaid_item_id: itemId,
-    p_access_token: accessToken,
+    p_access_token: sealSecret(accessToken),
   });
 
   if (error) return { error: error.message };
@@ -194,10 +194,7 @@ export async function disconnectBank(
 ): Promise<{ ok?: true; warning?: string; error?: string }> {
   const supabase = await createClient();
 
-  const { data: accessToken, error: tokenError } = await supabase.rpc(
-    "get_bank_access_token",
-    { p_connection_id: connectionId },
-  );
+  const { token: accessToken, error: tokenError } = await readBankToken(supabase, connectionId);
 
   let warning: string | undefined;
 
@@ -327,11 +324,8 @@ export async function syncBankTransactions(
   const connection = connectionRows?.[0];
   if (!connection) return { error: "Bank connection not found." };
 
-  const { data: accessToken, error: tokenError } = await supabase.rpc(
-    "get_bank_access_token",
-    { p_connection_id: connectionId },
-  );
-  if (tokenError) return { error: tokenError.message };
+  const { token: accessToken, error: tokenError } = await readBankToken(supabase, connectionId);
+  if (tokenError || !accessToken) return { error: tokenError?.message ?? "No access token on file." };
 
   const result = await syncOneConnection(supabase, connection, accessToken, { autoPost: true });
   // The person asked for fresh numbers, so the bank card re-asks Plaid too.

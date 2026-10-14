@@ -1,6 +1,7 @@
 import type { MetadataRoute } from "next";
+import { SITE_URL } from "@/lib/site-config";
 
-const SITE = "https://walkuphoa.com";
+const SITE = SITE_URL;
 
 /** The pages anyone can read without an account. Everything else is behind sign-in. */
 export default function sitemap(): MetadataRoute.Sitemap {

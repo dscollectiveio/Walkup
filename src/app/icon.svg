@@ -1,10 +1,8 @@
-<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64" role="img" aria-label="Walkup">
+<svg viewBox="0 0 64 64" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="Walkup">
   <rect width="64" height="64" rx="14" fill="#1B2A41"/>
-  <circle cx="24" cy="39" r="12" fill="#F5EFE3"/>
-  <circle cx="40" cy="39" r="14" fill="#1B2A41"/>
-  <circle cx="40" cy="39" r="12" fill="#A3432F"/>
-  <circle cx="32" cy="24" r="15" fill="#1B2A41"/>
-  <circle cx="32" cy="24" r="13" fill="#D9A441"/>
-  <circle cx="32" cy="20.9" r="3.5" fill="#1B2A41"/>
-  <path d="M30.5 22 L28.6 32 H35.4 L33.5 22 Z" fill="#1B2A41"/>
+  <circle cx="24" cy="39" r="13" fill="#F5EFE3" stroke="#1B2A41" stroke-width="2"/>
+  <circle cx="40" cy="39" r="13" fill="#A3432F" stroke="#1B2A41" stroke-width="2"/>
+  <circle cx="32" cy="24" r="14" fill="#D9A441" stroke="#1B2A41" stroke-width="2"/>
+  <circle cx="32" cy="21" r="3.6" fill="#1B2A41"/>
+  <path d="M30.1 23.5H33.9L35.4 32H28.6Z" fill="#1B2A41"/>
 </svg>

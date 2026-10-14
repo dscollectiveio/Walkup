@@ -1,6 +1,7 @@
 "use client";
 
 import { authButton, authError, authInput, authLabel } from "@/components/auth/auth-shell";
+import { AddressField } from "@/components/auth/address-field";
 import { useActionState } from "react";
 import { createBuilding } from "./actions";
 
@@ -35,6 +36,17 @@ export function CreateBuildingForm() {
         />
       </div>
 
+      <AddressField
+        onPick={(a) => {
+          // The short name is usually the street address: offer it, never overwrite.
+          const el = document.getElementById("display_name") as HTMLInputElement | null;
+          if (el && el.value.trim() === "") {
+            el.value = a.street.replace(/^(\d+)\s+/, "$1 ");
+            el.dispatchEvent(new Event("input", { bubbles: true }));
+          }
+        }}
+      />
+
       <div>
         <label htmlFor="display_name" className={authLabel}>
           Short name
@@ -47,21 +59,6 @@ export function CreateBuildingForm() {
           required
           className={authInput}
         />
-      </div>
-
-      <div>
-        <label htmlFor="state_code" className={authLabel}>
-          State
-        </label>
-        <input
-          id="state_code"
-          name="state_code"
-          defaultValue="IL"
-          maxLength={2}
-          required
-          className={`${authInput} w-24 uppercase`}
-        />
-        <p className="mt-1.5 text-[12px] text-mute">Walkup supports Illinois associations today.</p>
       </div>
 
       {state?.error ? (

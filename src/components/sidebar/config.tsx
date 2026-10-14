@@ -20,6 +20,8 @@ export interface NavItemConfig {
   badgeKey?: string;
   /** The one item that should stand out from the rest (the Dashboard). */
   featured?: boolean;
+  /** Rendered as data-tour, so the first-login tour can point at it (src/lib/tour/steps.ts). */
+  tourId?: string;
 }
 
 export interface NavGroupConfig {
@@ -30,31 +32,31 @@ export interface NavGroupConfig {
 // Presentation only — labels and grouping change here, not the routes
 // themselves. See DECISIONS.md and the nav audit that produced this grouping.
 export const UNGROUPED_NAV: NavItemConfig[] = [
-  { href: "/", label: "Dashboard", icon: Home, featured: true },
+  { href: "/", label: "Dashboard", icon: Home, featured: true, tourId: "dashboard" },
 ];
 
 export const NAV_GROUPS: NavGroupConfig[] = [
   {
     label: "Finances & Dues",
     items: [
-      { href: "/bank-feed", label: "Bank Feed & Transactions", icon: Landmark, badgeKey: "uncategorized" },
-      { href: "/financial-statements", label: "Financial Statements", icon: FileBarChart },
-      { href: "/budget", label: "Budget & spending", icon: BarChart3, badgeKey: "uncategorized" },
-      { href: "/dues", label: "HOA Dues", icon: HandCoins },
+      { href: "/bank-feed", label: "Bank Feed & Transactions", icon: Landmark, badgeKey: "uncategorized", tourId: "bank-feed" },
+      { href: "/financial-statements", label: "Financial Statements", icon: FileBarChart, tourId: "financial-statements" },
+      { href: "/budget", label: "Budget & spending", icon: BarChart3, badgeKey: "uncategorized", tourId: "budget" },
+      { href: "/dues", label: "HOA Dues", icon: HandCoins, tourId: "dues" },
     ],
   },
   {
     label: "Taxes & Insurance",
     items: [
-      { href: "/tax", label: "Taxes", icon: FileText },
-      { href: "/insurance", label: "Insurance Marketplace", icon: Shield },
+      { href: "/tax", label: "Taxes", icon: FileText, tourId: "taxes" },
+      { href: "/insurance", label: "Insurance Marketplace", icon: Shield, tourId: "insurance" },
     ],
   },
   {
     label: "Building",
     items: [
-      { href: "/building", label: "Building Info", icon: Building2 },
-      { href: "/repairs", label: "Repairs & Upkeep", icon: Hammer },
+      { href: "/building", label: "Building Info", icon: Building2, tourId: "building" },
+      { href: "/repairs", label: "Repairs & Upkeep", icon: Hammer, tourId: "repairs" },
     ],
   },
 ];
@@ -62,7 +64,7 @@ export const NAV_GROUPS: NavGroupConfig[] = [
 // Rendered after every group, not inside one — Document Hub sits outside the
 // Money/Taxes/Building groupings by design.
 export const TRAILING_NAV: NavItemConfig[] = [
-  { href: "/documents", label: "Document Hub", icon: Folder },
+  { href: "/documents", label: "Document Hub", icon: Folder, tourId: "documents" },
 ];
 
 /** Pages reachable outside the nav, so the top bar can still name them. */

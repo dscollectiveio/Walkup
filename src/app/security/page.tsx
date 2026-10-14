@@ -1,3 +1,4 @@
+import { CONTACT_EMAIL } from "@/lib/site-config";
 import Link from "next/link";
 import { Lockup } from "@/components/mark";
 
@@ -170,12 +171,29 @@ export default function SecurityPage() {
         </p>
       </Section>
 
+      <Section title="Reporting a vulnerability">
+        <div id="reporting" />
+        <p>
+          If you find a security problem in Walkup, please tell us privately before sharing it: email{" "}
+          <a href={`mailto:${CONTACT_EMAIL}?subject=${encodeURIComponent("Security report")}`} className="text-ink underline-offset-2 hover:underline">
+            {CONTACT_EMAIL}
+          </a>{" "}
+          with what you found and how to reproduce it. We&rsquo;ll acknowledge it within three business days and keep
+          you updated until it&rsquo;s fixed.
+        </p>
+        <p>
+          Please test only with accounts you created, don&rsquo;t read or change anyone else&rsquo;s data, don&rsquo;t
+          disrupt the service, and leave Supabase, Vercel and Plaid&rsquo;s own systems alone. Research that follows these
+          rules is welcome, and we won&rsquo;t take action against you for it.
+        </p>
+      </Section>
+
       <Section title="Questions">
         <p>
           For anything not covered here &mdash; including a request to see the full
           internal security policy &mdash; email{" "}
-          <a href="mailto:doug.smart6@gmail.com" className="text-ink underline-offset-2 hover:underline">
-            doug.smart6@gmail.com
+          <a href={`mailto:${CONTACT_EMAIL}`} className="text-ink underline-offset-2 hover:underline">
+            {CONTACT_EMAIL}
           </a>
           .
         </p>

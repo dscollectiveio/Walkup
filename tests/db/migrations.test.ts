@@ -64,7 +64,7 @@ describe("migrations", () => {
          from information_schema.tables t
         where t.table_schema = 'public'
           and t.table_type = 'BASE TABLE'
-          and t.table_name not in ('associations', 'tax_parameters', 'platform_admins', 'insurance_partners', 'tax_form_templates', 'tax_form_links')
+          and t.table_name not in ('associations', 'tax_parameters', 'platform_admins', 'insurance_partners', 'tax_form_templates', 'tax_form_links', 'state_waitlist')
           and not exists (
             select 1 from information_schema.columns c
              where c.table_schema = 'public'
@@ -127,7 +127,10 @@ describe("migrations", () => {
           and has_function_privilege('anon', p.oid, 'execute')
         order by 1`,
     );
-    expect(rows.map((r) => r.fn)).toEqual([]);
+    // The one deliberate exception (0049, DECISIONS #34): the landing page's
+    // other-states waitlist, written by signed-out visitors through a single
+    // narrow function. Anything else here is a forgotten revoke.
+    expect(rows.map((r) => r.fn)).toEqual(["join_state_waitlist(text,text,text)"]);
     await db.close();
   });
 
