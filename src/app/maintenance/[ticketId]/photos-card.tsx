@@ -18,7 +18,7 @@ import type { PhotoView } from "./types";
  */
 export function PhotosCard(props: { ticketId: string; photos: PhotoView[]; canAdd: boolean; sharedTicket: boolean }) {
   return (
-    <Card title="Photos">
+    <Card navy title="Photos">
       <div className="space-y-4">
         {props.photos.length === 0 ? (
           <p className="text-[13px] text-mute">No photos yet. Photos help a contractor quote without a visit.</p>
@@ -59,7 +59,7 @@ function Photo({ photo, ticketId }: { photo: PhotoView; ticketId: string }) {
       {photo.canRemove ? (
         confirming ? (
           <div className="space-y-1 rounded-md border border-line p-2">
-            <p className="text-[12px] text-ink">Remove this photo from the problem? It stays in the Document Hub.</p>
+            <p className="text-[12px] text-ink">Remove this photo from the problem? It stays in Documents.</p>
             <div className="flex flex-col gap-1">
               <button
                 type="button"

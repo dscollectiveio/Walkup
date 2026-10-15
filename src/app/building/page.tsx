@@ -1,19 +1,20 @@
 import { createClient } from "@/lib/supabase/server";
 import { Card, Empty, Restricted } from "@/components/ui";
 import { BoardOnly, viewerIsOwnerOnly } from "@/components/board-only";
-import { AssociationProfileForm, type AssociationProfile } from "./association-profile-form";
-import { AddUnitForm } from "./add-unit-form";
-import { UnitRow, type UnitRecord } from "./unit-row";
-import { AddPersonForm } from "./add-person-form";
+import type { AssociationProfile } from "./association-profile-form";
+import { AssociationSummary } from "./association-summary";
+import { UnitsCard, AddOtherPerson } from "./add-bar";
+import { DetailsPanel } from "./details-panel";
+import type { Resident } from "./unit-card";
+import type { UnitRecord } from "./unit-fields";
 import { PersonRow } from "./person-row";
-import { OwnershipRow, type CurrentOwner } from "./ownership-row";
 import { OwnershipAmendmentForm } from "./ownership-amendment-form";
 import { AmendmentHistory, type AmendmentHistoryEntry } from "./amendment-history";
 import { GenerateInviteForm } from "./generate-invite-form";
 import { InviteRow, type InviteRecord } from "./invite-row";
 import { AccessReviewCard, type AccessReviewRecord } from "./access-review-card";
 import Link from "next/link";
-import { formatMoney, longDate } from "@/lib/insurance/format";
+import { aiConfigured } from "@/lib/ai/client";
 import { inForce } from "@/lib/insurance/status";
 import { todayIso as localTodayIso } from "@/lib/dates";
 
@@ -25,7 +26,7 @@ export default async function BuildingPage() {
   const { data: associations } = await supabase
     .from("associations")
     .select(
-      "id, legal_name, display_name, state_code, county, city, street_address, postal_code, year_built, construction_type, stories, roof_replaced_year, ein, incorporated_on, fiscal_year_end_month, capitalization_threshold, capitalization_threshold_source, board_contact_name, board_contact_email, board_contact_phone",
+      "id, legal_name, display_name, state_code, county, city, street_address, postal_code, year_built, construction_type, stories, roof_replaced_year, ein, incorporated_on, fiscal_year_end_month, capitalization_threshold, capitalization_threshold_source, board_contact_name, board_contact_email, board_contact_phone, accountant_person_id, accountant_firm, il_sos_file_number, information_returns_filing",
     );
   const association = associations?.[0];
   if (!association) return <Restricted what="building settings" />;
@@ -50,7 +51,7 @@ export default async function BuildingPage() {
     return (
       <div className="space-y-6">
         <Restricted what="building settings" />
-        <Card title="About the building">
+        <Card navy title="About the building">
           <ul className="space-y-1 text-[13px]">
             <li>
               <Link href="/insurance" className="inline-flex min-h-[40px] items-center text-ink underline underline-offset-2">
@@ -90,9 +91,10 @@ export default async function BuildingPage() {
     supabase
       .from("units")
       .select(
-        "id, label, sort_order, square_footage, bedroom_count, full_bathrooms, half_bathrooms",
+        "id, label, unit_type, floor, notes, sort_order, square_footage, bedroom_count, full_bathrooms, half_bathrooms",
       )
-      .order("sort_order"),
+      .order("sort_order")
+      .order("label"),
     supabase
       .from("persons")
       .select("id, full_name, email, phone, mailing_address, auth_user_id")
@@ -125,11 +127,11 @@ export default async function BuildingPage() {
     // The facts the insurance coverage check reads (insurance-spec §12 I-6).
     supabase
       .from("insurance_building_facts")
-      .select("replacement_cost_estimate::text, replacement_cost_as_of, flood_zone, has_boiler, has_elevator, manager_handles_funds")
+      .select("replacement_cost_estimate::text, replacement_cost_as_of, replacement_cost_source, flood_zone, has_boiler, has_elevator, has_sprinklers, manager_handles_funds, management_company")
       .limit(1),
     supabase
       .from("insurance_policies")
-      .select("id, coverage, carrier_name, effective_from, effective_to, renewal_reminder_days, archived_at, replaced_by_policy_id, replaced_at")
+      .select("id, coverage, carrier_name, policy_number, building_limit::text, valuation, annual_premium::text, effective_from, effective_to, renewal_reminder_days, archived_at, replaced_by_policy_id, replaced_at")
       .is("archived_at", null),
   ]);
 
@@ -188,7 +190,7 @@ export default async function BuildingPage() {
     : null;
   const activeGrantCount = [...rolesByPerson.values()].reduce((n, roles) => n + roles.length, 0);
 
-  const ownersByUnit = new Map<string, CurrentOwner[]>();
+  const ownersByUnit = new Map<string, { rowId: string; personId: string; personName: string; effectiveFrom: string }[]>();
   for (const row of unitOwnerRows ?? []) {
     const person = row.persons as unknown as { full_name: string } | null;
     const list = ownersByUnit.get(row.unit_id) ?? [];
@@ -222,7 +224,31 @@ export default async function BuildingPage() {
     };
   });
 
-  const insuranceFacts = buildingInsuranceFacts(factRows?.[0] ?? null);
+  // The account owner: the signed-in person, with their highest HOA title.
+  const TITLES: [string, string][] = [
+    ["board_admin", "Board admin"],
+    ["board_member", "Board member"],
+    ["accountant", "Accountant"],
+    ["owner", "Owner"],
+  ];
+  const { data: authData } = await supabase.auth.getUser();
+  const me = (persons ?? []).find((p) => p.auth_user_id && p.auth_user_id === authData.user?.id);
+  const myRoles = me ? (rolesByPerson.get(me.id) ?? []) : [];
+  const accountOwner = me
+    ? { name: me.full_name, title: TITLES.find(([r]) => myRoles.includes(r))?.[1] ?? "Member" }
+    : null;
+  const accountantPerson = (persons ?? []).find((p) => p.id === association.accountant_person_id);
+  const taxSummary = {
+    accountantName: accountantPerson?.full_name ?? null,
+    accountantFirm: (association.accountant_firm as string | null) ?? null,
+    accountantEmail: accountantPerson?.email ?? null,
+    filingMethod:
+      association.information_returns_filing === "paper" || association.information_returns_filing === "electronic"
+        ? (association.information_returns_filing as "paper" | "electronic")
+        : null,
+    sosFileNumber: (association.il_sos_file_number as string | null) ?? null,
+  };
+  const factRow = factRows?.[0] as Record<string, unknown> | undefined;
   const master = inForce(
     (policyRows ?? []).map((p) => ({
       id: p.id as string,
@@ -239,6 +265,7 @@ export default async function BuildingPage() {
   )
     .filter((p) => p.coverage === "property")
     .sort((a, b) => a.effective_to.localeCompare(b.effective_to))[0];
+  const masterRow = master ? (policyRows ?? []).find((p) => p.id === master.id) : undefined;
 
   const invites: InviteRecord[] = (inviteRows ?? []).map((i) => ({
     id: i.id,
@@ -249,14 +276,72 @@ export default async function BuildingPage() {
     redeemedAt: i.redeemed_at,
   }));
 
+  const pendingInvites = invites.filter((i) => !i.redeemedAt && i.expiresAt.slice(0, 10) >= todayIso).length;
+  const personById = new Map(personRecords.map((p) => [p.id, p]));
+  const otherPeople = personRecords.filter((p) => !currentOwnerIds.has(p.id));
+  const renderPerson = (p: (typeof personRecords)[number], key: string) => (
+    <PersonRow
+      key={key}
+      person={p}
+      roles={rolesByPerson.get(p.id) ?? []}
+      canEdit={isBoard}
+      canEditRoles={isBoardAdmin}
+      invite={
+        isBoard && !p.auth_user_id && ((rolesByPerson.get(p.id) ?? []).includes("owner") || currentOwnerIds.has(p.id))
+          ? { associationName: association.display_name, boardContactName: association.board_contact_name ?? null }
+          : null
+      }
+      canRedact={
+        isBoardAdmin &&
+        (rolesByPerson.get(p.id) ?? []).length === 0 &&
+        !currentOwnerIds.has(p.id) &&
+        !(p.full_name === "Former member" && !p.email)
+      }
+    />
+  );
+
+  const rosterUnits = unitList.map((u) => {
+    const residents: Resident[] = (ownersByUnit.get(u.id) ?? []).flatMap((o) => {
+                  const p = personById.get(o.personId);
+                  if (!p) return [];
+                  const roles = rolesByPerson.get(p.id) ?? [];
+                  return [
+                    {
+                      personId: p.id,
+                      ownerRowId: o.rowId,
+                      fullName: p.full_name,
+                      email: p.email,
+                      phone: p.phone,
+                      mailingAddress: p.mailing_address,
+                      roles,
+                      invite:
+                        isBoard && !p.auth_user_id
+                          ? { associationName: association.display_name, boardContactName: association.board_contact_name ?? null }
+                          : null,
+                    },
+                  ];
+                });
+    return { unit: u, residents, share: currentPercentages[u.id] ?? null };
+  });
+
   return (
     <div className="space-y-6">
-      <div>
-        <h1 className="text-[20px] font-bold tracking-tight text-ink">Building</h1>
-        <p className="mt-1 text-mute">
-          The association&rsquo;s own profile, the unit roster, who lives where, and who has
-          access to the books.
-        </p>
+      <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
+        <div>
+          <h1 className="text-[20px] font-bold tracking-tight text-ink">Building</h1>
+          <p className="mt-1 text-mute">
+            The association&rsquo;s own profile, the units and the people in them, and who has
+            access to the books.
+          </p>
+        </div>
+        {isBoard ? (
+          <Link
+            href="/documents"
+            className="inline-flex min-h-[44px] w-full shrink-0 items-center justify-center rounded-md bg-ink px-4 py-2 text-[13px] font-medium text-paper hover:bg-ink-mid sm:w-auto"
+          >
+            Add Documents
+          </Link>
+        ) : null}
       </div>
 
       {isBoardAdmin ? (
@@ -269,60 +354,49 @@ export default async function BuildingPage() {
         </p>
       ) : null}
 
-      <Card
-        title="Association profile"
-        hint="Legal name, filing details, and the capitalization threshold used for the 1120-H."
+        <AssociationSummary
+          profile={profile}
+          facts={{
+            replacement_cost_estimate: (factRow?.replacement_cost_estimate as string | null) ?? null,
+            replacement_cost_as_of: (factRow?.replacement_cost_as_of as string | null) ?? null,
+            replacement_cost_source: (factRow?.replacement_cost_source as string | null) ?? null,
+            flood_zone: (factRow?.flood_zone as string | null) ?? null,
+            has_boiler: (factRow?.has_boiler as boolean | null) ?? null,
+            has_elevator: (factRow?.has_elevator as boolean | null) ?? null,
+            has_sprinklers: (factRow?.has_sprinklers as boolean | null) ?? null,
+            manager_handles_funds: (factRow?.manager_handles_funds as boolean | null) ?? null,
+            management_company: (factRow?.management_company as string | null) ?? null,
+          }}
+          master={
+            master
+              ? {
+                  id: master.id,
+                  carrier: master.carrier_name,
+                  policyNumber: masterRow?.policy_number ?? null,
+                  starts: master.effective_from,
+                  renews: master.effective_to,
+                  buildingLimit: masterRow?.building_limit ?? null,
+                  valuation: masterRow?.valuation ?? null,
+                  annualPremium: masterRow?.annual_premium ?? null,
+                }
+              : null
+          }
+          aiOn={aiConfigured()}
+          unitCount={unitList.length}
+          owner={accountOwner}
+          tax={taxSummary}
+          canEditProfile={isBoardAdmin}
+          canEditFacts={isBoard}
+        />
+
+      <UnitsCard
+        canAdd={isBoard}
+        people={personOptions}
+        canEditRoles={isBoardAdmin}
+        canDelete={isBoardAdmin}
+        roster={rosterUnits}
       >
-        <div className="space-y-1 text-[13px]">
-          <p className="font-medium text-ink">{profile.display_name}</p>
-          <p className="text-mute">{profile.legal_name}</p>
-          <p className="text-mute">
-            {[profile.city, profile.county, profile.state_code].filter(Boolean).join(", ")}
-          </p>
-          {profile.ein ? <p className="text-mute">EIN {profile.ein}</p> : null}
-          <p className="text-mute">
-            Owners write to:{" "}
-            {profile.board_contact_name || profile.board_contact_email
-              ? [profile.board_contact_name, profile.board_contact_email].filter(Boolean).join(", ")
-              : "not set yet"}
-          </p>
-        </div>
-        {isBoardAdmin ? (
-          <div className="mt-4">
-            <AssociationProfileForm profile={profile} />
-          </div>
-        ) : null}
-      </Card>
-
-      <Card title="Insurance facts" hint="What the insurance coverage check knows about the building.">
-        <dl className="grid gap-x-6 gap-y-3 text-[13px] sm:grid-cols-2">
-          {insuranceFacts.map((f) => (
-            <div key={f.label}>
-              <dt className="text-[12px] text-mute">{f.label}</dt>
-              <dd className={f.value ? "text-ink" : "text-mute-soft"}>{f.value ?? "Not answered yet"}</dd>
-            </div>
-          ))}
-        </dl>
-        <p className="mt-4 text-[13px] text-ink">
-          <Link href="/insurance" className="underline underline-offset-2">
-            {master
-              ? `Master policy: ${master.carrier_name}, renews ${longDate(master.effective_to)}`
-              : "No master policy recorded yet"}
-          </Link>
-        </p>
-        <div className="mt-3 flex flex-wrap gap-x-5 gap-y-1 text-[13px]">
-          <Link href="/insurance/facts" className="inline-flex min-h-[40px] items-center font-medium text-ink underline underline-offset-2">
-            Edit on Insurance
-          </Link>
-          <Link href="/repairs/emergency-info" className="inline-flex min-h-[40px] items-center text-ink underline underline-offset-2">
-            Emergency information
-          </Link>
-        </div>
-      </Card>
-
-      <Card title="Units" hint="The roster of units and their specs.">
-        <div className="space-y-4">
-          <AddUnitForm />
+        <div className="space-y-5">
           {unitList.length === 0 ? (
             <Empty>
               No units yet. Add them one at a time, or{" "}
@@ -331,90 +405,65 @@ export default async function BuildingPage() {
               </Link>
               .
             </Empty>
-          ) : (
-            <ul className="divide-y divide-line">
-              {unitList.map((u) => (
-                <UnitRow key={u.id} unit={u} canEdit={isBoard} canDelete={isBoardAdmin} />
-              ))}
-            </ul>
-          )}
-        </div>
-      </Card>
-
-      <Card
-        title="People"
-        hint="Owners, board members, and anyone else on file — with who has access to the books and what they can do with it."
-      >
-        <div className="space-y-4">
-          <AddPersonForm />
-          {personRecords.length === 0 ? (
-            <Empty>No one on file yet.</Empty>
-          ) : (
-            <ul className="divide-y divide-line">
-              {personRecords.map((p) => (
-                <PersonRow
-                  key={p.id}
-                  person={p}
-                  roles={rolesByPerson.get(p.id) ?? []}
-                  canEdit={isBoard}
-                  canEditRoles={isBoardAdmin}
-                  invite={
-                    isBoard && !p.auth_user_id && ((rolesByPerson.get(p.id) ?? []).includes("owner") || currentOwnerIds.has(p.id))
-                      ? { associationName: association.display_name, boardContactName: association.board_contact_name ?? null }
-                      : null
-                  }
-                  canRedact={
-                    isBoardAdmin &&
-                    (rolesByPerson.get(p.id) ?? []).length === 0 &&
-                    !currentOwnerIds.has(p.id) &&
-                    !(p.full_name === "Former member" && !p.email)
-                  }
-                />
-              ))}
-            </ul>
-          )}
-        </div>
-      </Card>
-
-      <Card
-        title="Ownership"
-        hint="Who owns each unit today, and the percentage history behind the 1120-H."
-      >
-        <div className="space-y-4">
-          {unitList.length === 0 ? (
-            <Empty>Add units before recording ownership.</Empty>
-          ) : (
-            <ul className="divide-y divide-line">
-              {unitList.map((u) => (
-                <OwnershipRow
-                  key={u.id}
-                  unitId={u.id}
-                  unitLabel={u.label}
-                  owners={ownersByUnit.get(u.id) ?? []}
-                  persons={personOptions}
-                  canEdit={isBoard}
-                  canDelete={isBoardAdmin}
-                />
-              ))}
-            </ul>
-          )}
-          {unitList.length > 0 ? (
-            <OwnershipAmendmentForm
-              units={unitList.map((u) => ({ id: u.id, label: u.label }))}
-              currentPercentages={currentPercentages}
-            />
           ) : null}
-          <div className="border-t border-line pt-3">
-            <h3 className="text-[12px] font-medium text-mute">Amendment history</h3>
-            <div className="mt-2">
-              <AmendmentHistory amendments={amendments} />
+
+          {otherPeople.length > 0 || isBoard ? (
+            <div className="space-y-2 border-t border-line pt-5">
+              <div>
+                <h3 className="text-[13px] font-bold text-ink">Others on file</h3>
+                <p className="mt-0.5 text-[12px] text-mute">Board members, accountants and anyone else who is not in a unit.</p>
+              </div>
+              <ul className="divide-y divide-line">{otherPeople.map((p) => renderPerson(p, p.id))}</ul>
+              {isBoard ? <AddOtherPerson canEditRoles={isBoardAdmin} /> : null}
             </div>
+          ) : null}
+
+          <div className="space-y-3 border-t border-line pt-5">
+            {unitList.length > 0 ? (
+              <DetailsPanel
+                title="Ownership shares and history"
+                summary="The percentage each unit owns, and every change, behind the 1120-H."
+                badge={amendments.length > 0 ? `${amendments.length} on record` : null}
+              >
+                {isBoard ? (
+                  <OwnershipAmendmentForm
+                    units={unitList.map((u) => ({ id: u.id, label: u.label }))}
+                    currentPercentages={currentPercentages}
+                  />
+                ) : null}
+                <div>
+                  <h4 className="text-[12px] font-medium text-mute">History</h4>
+                  <div className="mt-2">
+                    <AmendmentHistory amendments={amendments} />
+                  </div>
+                </div>
+              </DetailsPanel>
+            ) : null}
+
+            {isBoard ? (
+              <DetailsPanel
+                title="Sign-in invites"
+                summary="Send a link; the person sets their own password and joins at the role you pick."
+                badge={pendingInvites > 0 ? `${pendingInvites} waiting` : null}
+              >
+                <GenerateInviteForm people={(persons ?? []).filter((p) => !p.auth_user_id).map((p) => ({ id: p.id, full_name: p.full_name }))} />
+                {invites.length === 0 ? (
+                  <Empty>No invites yet.</Empty>
+                ) : (
+                  <ul className="divide-y divide-line">
+                    {invites.map((i) => (
+                      <InviteRow key={i.id} invite={i} />
+                    ))}
+                  </ul>
+                )}
+              </DetailsPanel>
+            ) : null}
           </div>
         </div>
-      </Card>
+      </UnitsCard>
 
       {isBoardAdmin ? (
-        <Card
+        <Card navy
           title="Access review"
           hint="Every 90 days, confirm everyone who can see the books still should."
         >
@@ -426,72 +475,6 @@ export default async function BuildingPage() {
         </Card>
       ) : null}
 
-      {isBoard ? (
-        <Card
-          title="Invites"
-          hint="Send a link instead of granting a role by hand — the person sets their own password and joins at the role you pick."
-        >
-          <div className="space-y-4">
-            <GenerateInviteForm people={(persons ?? []).filter((p) => !p.auth_user_id).map((p) => ({ id: p.id, full_name: p.full_name }))} />
-            {invites.length === 0 ? (
-              <Empty>No invites yet.</Empty>
-            ) : (
-              <ul className="divide-y divide-line">
-                {invites.map((i) => (
-                  <InviteRow key={i.id} invite={i} />
-                ))}
-              </ul>
-            )}
-          </div>
-        </Card>
-      ) : null}
     </div>
   );
-}
-
-/**
- * Four facts from insurance_building_facts for the Building Info card
- * (insurance-spec §12 I-6); null value = not answered yet.
- */
-function buildingInsuranceFacts(
-  row: {
-    replacement_cost_estimate: string | null;
-    replacement_cost_as_of: string | null;
-    flood_zone: string | null;
-    has_boiler: boolean | null;
-    has_elevator: boolean | null;
-    manager_handles_funds: boolean | null;
-  } | null,
-): { label: string; value: string | null }[] {
-  const cost = formatMoney(row?.replacement_cost_estimate ?? null);
-  const equipment =
-    row?.has_boiler === true && row?.has_elevator === true
-      ? "A boiler and an elevator"
-      : row?.has_boiler === true
-        ? "A boiler"
-        : row?.has_elevator === true
-          ? "An elevator"
-          : row?.has_boiler === false && row?.has_elevator === false
-            ? "Neither"
-            : null;
-  return [
-    {
-      label: "Replacement cost estimate",
-      value: cost ? (row?.replacement_cost_as_of ? `${cost} as of ${longDate(row.replacement_cost_as_of)}` : cost) : null,
-    },
-    {
-      label: "Flood zone",
-      value: !row?.flood_zone ? null : row.flood_zone === "unknown" ? "Not sure" : `Zone ${row.flood_zone}`,
-    },
-    { label: "Boiler or elevator", value: equipment },
-    {
-      label: "Who handles the association's money",
-      value:
-        row?.manager_handles_funds === true
-          ? "A management company"
-          : row?.manager_handles_funds === false
-            ? "The board"
-            : null,
-    },
-  ];
 }

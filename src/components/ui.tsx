@@ -49,6 +49,10 @@ const STATUS = {
   neutral: { rule: "border-neutral", bg: "bg-neutral-tint", text: "text-neutral-text" },
 } as const;
 
+/** Buttons on a navy Card header: the same high-contrast light button as Sign out in the top bar. */
+export const HEADER_BUTTON =
+  "inline-flex shrink-0 items-center gap-1.5 rounded-md bg-paper px-3 py-1.5 text-[13px] font-medium text-ink transition-colors hover:bg-fill focus-visible:outline focus-visible:outline-2 focus-visible:outline-brass";
+
 export function Card({
   title,
   hint,

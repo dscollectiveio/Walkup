@@ -35,7 +35,7 @@ import {
 } from "@/lib/google/places";
 import { revalidateRepairs } from "@/lib/repairs/revalidate";
 import { currentAssociationId, isBoard, isUuid, type Supabase } from "@/lib/repairs/server";
-import { vocabPhrase } from "@/lib/repairs/vocabulary";
+import { searchPhraseFor } from "@/lib/repairs/vocabulary";
 
 /**
  * Finding contractors for a job (repairs-spec §9). What leaves Walkup is
@@ -73,8 +73,9 @@ async function googleCallsToday(supabase: Supabase, associationId: string): Prom
 export async function searchPlaces(input: { trade: string; phrase: string; refresh?: boolean; cacheOnly?: boolean }): Promise<{ source: SourceState; candidates: FoundCandidate[] }> {
   if (!googleKey()) return { source: { state: "off" }, candidates: [] };
   const trade = isTradeSlug(String(input?.trade ?? "")) ? tradeBySlug(input.trade) : null;
-  if (!trade?.googleQuery) return { source: { state: "error", message: "Choose a kind of work to search for." }, candidates: [] };
-  const phrase = vocabPhrase(String(input?.phrase ?? ""));
+  if (!trade || (!trade.googleQuery && trade.slug !== "other")) return { source: { state: "error", message: "Choose a kind of work to search for." }, candidates: [] };
+  const phrase = searchPhraseFor(trade.slug, String(input?.phrase ?? ""));
+  if (!trade.googleQuery && !phrase) return { source: { state: "error", message: "Describe the work you need done." }, candidates: [] };
 
   const supabase = await createClient();
   const { data: assocRows } = await supabase
@@ -107,7 +108,7 @@ export async function searchPlaces(input: { trade: string; phrase: string; refre
     }
 
     // 2. The cache, 24 hours (brief decision 10).
-    const textQuery = phrase || trade.googleQuery;
+    const textQuery = phrase || (trade.googleQuery as string);
     const key = googleCacheKey(textQuery, location.latitude, location.longitude);
     const { data: cacheRows } = await supabase
       .from("contractor_search_cache")
@@ -179,8 +180,9 @@ export async function startWebSearch(input: { trade: string; phrase: string; wan
 > {
   if (!aiConfigured()) return { error: aiFailure("not_configured", "contractor_search").reason, off: true };
   const trade = isTradeSlug(String(input?.trade ?? "")) ? tradeBySlug(input.trade) : null;
-  if (!trade || trade.slug === "other") return { error: "Choose a kind of work to search for." };
-  const phrase = vocabPhrase(String(input?.phrase ?? ""));
+  if (!trade) return { error: "Choose a kind of work to search for." };
+  const phrase = searchPhraseFor(trade.slug, String(input?.phrase ?? ""));
+  if (trade.slug === "other" && !phrase) return { error: "Describe the work you need done." };
   const wants = cleanWants(input?.wants);
 
   const supabase = await createClient();

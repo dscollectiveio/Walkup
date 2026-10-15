@@ -114,7 +114,7 @@ export async function ProblemsView({ supabase, viewer, params }: { supabase: Sup
       </Card>
 
       {showRecent && recent.length > 0 ? (
-        <Card title="Recently fixed">
+        <Card navy title="Recently fixed">
           <ul className="divide-y divide-line">
             {recent.map((t) => (
               <li key={t.id} className="flex flex-col gap-1 py-2.5 sm:flex-row sm:items-center sm:justify-between">
@@ -158,8 +158,8 @@ export function ProblemListRow({ t, viewer }: { t: ProblemRow; viewer: RepairsVi
   const visit = t.scheduledFor && !isDone(t.status) ? ` · visit ${humanDate(t.scheduledFor, today)}` : "";
   const money = viewer.canReadFinancials ? (t.actualCost ? moneyText(t.actualCost) : t.estimatedCost ? `~${moneyText(t.estimatedCost)}` : null) : null;
   return (
-    <li className="py-3">
-      <Link href={`/maintenance/${t.id}`} className="group flex flex-col gap-2 sm:flex-row sm:items-start sm:justify-between">
+    <li className="flex flex-col gap-2 py-3 sm:flex-row sm:items-center sm:justify-between sm:gap-4">
+      <Link href={`/maintenance/${t.id}`} className="group min-w-0 flex-1">
         <div className="min-w-0">
           <div className="flex flex-wrap items-center gap-1.5">
             <span className="font-medium text-ink group-hover:underline">{t.title}</span>
@@ -173,8 +173,13 @@ export function ProblemListRow({ t, viewer }: { t: ProblemRow; viewer: RepairsVi
             {visit}
           </div>
         </div>
-        {money ? <span className="figures shrink-0 text-[13px] text-mute">{money}</span> : null}
       </Link>
+      <div className="flex shrink-0 items-center gap-3">
+        {money ? <span className="figures text-[13px] text-mute">{money}</span> : null}
+        <Link href={`/maintenance/${t.id}`} aria-label={`Open problem #${t.reference}: ${t.title}`} className="inline-flex min-h-[40px] items-center rounded-md border border-line-strong bg-paper px-4 text-[13px] font-medium text-ink hover:bg-fill">
+          Open
+        </Link>
+      </div>
     </li>
   );
 }

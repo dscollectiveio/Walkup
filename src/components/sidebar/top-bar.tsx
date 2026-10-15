@@ -69,7 +69,11 @@ export function TopBar({
       ) : null}
 
       <div className="flex min-w-0 items-baseline gap-2">
-        <span className="truncate text-[15px] font-semibold text-paper">{associationName ?? "Walkup"}</span>
+        <span className="truncate text-[15px] font-semibold text-paper" title={userEmail}>
+          {associationName ?? "Walkup"}
+          <span className="font-normal text-ondark-mute"> - </span>
+          <span className="font-normal">{shownName}</span>
+        </span>
         {page ? (
           <>
             <span aria-hidden="true" className="text-ondark-mute">
@@ -81,9 +85,6 @@ export function TopBar({
       </div>
 
       <div className="ml-auto flex shrink-0 items-center gap-1.5">
-        <span className="mr-2 hidden max-w-[16rem] truncate text-[13px] font-medium text-paper sm:inline" title={userEmail}>
-          {shownName}
-        </span>
         <button
           type="button"
           onClick={() => helpRef.current?.showModal()}

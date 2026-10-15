@@ -13,7 +13,18 @@
  * inline style attributes, which can't carry a nonce; style injection can't
  * run code.
  */
-export function buildCsp({ nonce, supabaseUrl, dev }: { nonce: string; supabaseUrl: string | undefined; dev: boolean }): string {
+export function buildCsp({
+  nonce,
+  supabaseUrl,
+  dev,
+  framedBySelf = false,
+}: {
+  nonce: string;
+  supabaseUrl: string | undefined;
+  dev: boolean;
+  /** Only the document preview route, which the Documents page frames from its own origin. */
+  framedBySelf?: boolean;
+}): string {
   let supabase: string[] = [];
   try {
     if (supabaseUrl) {
@@ -32,8 +43,8 @@ export function buildCsp({ nonce, supabaseUrl, dev }: { nonce: string; supabaseU
     "img-src": ["'self'", "data:", "blob:", ...(supabase.length ? [supabase[0]] : [])],
     "font-src": ["'self'"],
     "connect-src": ["'self'", ...supabase, "https://*.plaid.com", ...(dev ? ["ws://localhost:*", "http://localhost:*"] : [])],
-    "frame-src": ["https://cdn.plaid.com"],
-    "frame-ancestors": ["'none'"],
+    "frame-src": ["'self'", "https://cdn.plaid.com"],
+    "frame-ancestors": [framedBySelf ? "'self'" : "'none'"],
     "base-uri": ["'self'"],
     "form-action": ["'self'"],
     "object-src": ["'none'"],

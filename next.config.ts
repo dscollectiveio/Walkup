@@ -24,7 +24,11 @@ const nextConfig: NextConfig = {
   // Don't advertise the framework.
   poweredByHeader: false,
   async headers() {
-    return [{ source: "/:path*", headers: SECURITY_HEADERS }];
+    return [
+      { source: "/:path*", headers: SECURITY_HEADERS },
+      // The one page the Documents tab frames from its own origin (the Viewing section).
+      { source: "/documents/:documentId/preview", headers: [{ key: "X-Frame-Options", value: "SAMEORIGIN" }] },
+    ];
   },
   experimental: {
     // Keep a visited page in the browser's router cache for 30 seconds, so

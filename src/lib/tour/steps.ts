@@ -115,6 +115,12 @@ const STEPS: Record<string, TourStep> = {
     title: "Repairs & Upkeep",
     body: "Something broken? Report it here with a photo. Walkup doesn't alert the board, so call them if it can't wait. You'll see who's fixing it and when they're coming.",
   },
+  findContractor: {
+    id: "find-contractor",
+    target: "find-contractor",
+    title: "Find a Contractor",
+    body: "Search for a plumber, electrician or any trade near the building, with ratings and the reasons each one ranks where it does.",
+  },
   insuranceBoard: {
     id: "insurance",
     target: "insurance",
@@ -136,7 +142,7 @@ const STEPS: Record<string, TourStep> = {
   documents: {
     id: "documents",
     target: "documents",
-    title: "Document Hub",
+    title: "Documents",
     body: "Every document in one place: the declaration, insurance, statements and receipts.",
   },
 };
@@ -173,6 +179,7 @@ export function tourStepsFor(role: TourRole, opts: { stateCode?: string | null }
       return [
         WELCOME,
         s.dashboard,
+        s.announcements,
         s.myUnit,
         s.bankFeed,
         s.statements,
@@ -181,8 +188,8 @@ export function tourStepsFor(role: TourRole, opts: { stateCode?: string | null }
         s.taxes,
         insuranceBoardFor(opts.stateCode),
         s.building,
-        s.announcements,
         s.repairsBoard,
+        s.findContractor,
         s.documents,
         role === "board_admin" ? FINISH_ADMIN : FINISH,
       ];

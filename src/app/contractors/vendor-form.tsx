@@ -1,6 +1,6 @@
 "use client";
 
-import { useActionState, useState } from "react";
+import { useActionState, useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { PhoneInput } from "@/components/phone-input";
 import { TRADE_GROUP_LABEL, TRADES, type TradeGroup } from "@/lib/contractors/trades";
@@ -83,16 +83,16 @@ export function VendorForm({
   const selectedTrades = new Set(vendor?.trades ?? (initialTrade ? [initialTrade] : []));
   const tags = new Set(vendor?.job_tags ?? []);
 
-  const [prevState, setPrevState] = useState(state);
-  if (state !== prevState) {
-    setPrevState(state);
-    if (state?.ok) {
-      onClose();
-      const newId = (state as { vendorId?: string }).vendorId;
-      if (!vendor && newId) router.push(`/contractors/${newId}`);
-      else router.refresh();
-    }
-  }
+  // Close and navigate after a successful save. These touch the parent and the
+  // router, so they run in an effect, not while this component renders.
+  useEffect(() => {
+    if (!state?.ok) return;
+    onClose();
+    const newId = (state as { vendorId?: string }).vendorId;
+    if (!vendor && newId) router.push(`/contractors/${newId}`);
+    else router.refresh();
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- fire once per new result
+  }, [state]);
 
   return (
     <form action={action} className="space-y-4 rounded-xl border border-line bg-paper p-4 sm:p-5">
@@ -346,7 +346,7 @@ export function VendorForm({
                     defaultValue={vendor?.tin_last4 ?? ""}
                     className={`figures ${inputClass}`}
                   />
-                  <p className="mt-1 text-[11px] text-mute-soft">Never the full number. File the W-9 itself in the Document Hub.</p>
+                  <p className="mt-1 text-[11px] text-mute-soft">Never the full number. File the W-9 itself in Documents.</p>
                 </div>
               </div>
             ) : null}

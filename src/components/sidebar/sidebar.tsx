@@ -254,7 +254,7 @@ export function Sidebar({
             <div key={group.label}>
               {divider}
               {expanded ? (
-                <div className="px-3 pb-1 text-[10px] font-medium uppercase tracking-[0.07em] text-section-label">{group.label}</div>
+                <div className="px-3 pb-1 text-[11px] font-semibold uppercase tracking-[0.07em] text-section-label">{group.label}</div>
               ) : null}
               <div className="space-y-0.5">
                 {group.items.map((item) => (
@@ -264,12 +264,14 @@ export function Sidebar({
             </div>
           ))}
 
-          <div className="space-y-0.5">
-            {divider}
-            {nav.trailing.map((item) => (
-              <NavItemLink key={item.href} item={item} active={isNavItemActive(pathname, item)} badgeCount={badgeFor(item)} expanded={expanded} />
-            ))}
-          </div>
+          {nav.trailing.length > 0 ? (
+            <div className="space-y-0.5">
+              {divider}
+              {nav.trailing.map((item) => (
+                <NavItemLink key={item.href} item={item} active={isNavItemActive(pathname, item)} badgeCount={badgeFor(item)} expanded={expanded} />
+              ))}
+            </div>
+          ) : null}
         </div>
 
         {!narrow ? (

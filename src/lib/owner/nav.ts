@@ -49,7 +49,7 @@ export const OWNER_NAV: OwnerNavGroup[] = [
 /** The one extra item a board member or accountant gets when they also own a unit. */
 export const STAFF_MY_UNIT: OwnerNavItem = { href: "/owner", label: "My unit", tourId: "my-unit" };
 
-/** Announcements sit under Building for staff too (after Building Info). */
+/** Announcements sit right under the Dashboard for staff. */
 export const STAFF_ANNOUNCEMENTS: OwnerNavItem = {
   href: "/announcements",
   label: "Announcements",

@@ -21,7 +21,7 @@ export function RemoveAndRetry({ documentId, kind }: { documentId: string; kind:
           start(async () => {
             const r = await removeUnfinishedUpload(documentId);
             if ("error" in r) {
-              // A file that was already in the Document Hub is not ours to remove.
+              // A file that was already in Documents is not ours to remove.
               setError(r.error);
               return;
             }

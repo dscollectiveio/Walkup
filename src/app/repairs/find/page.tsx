@@ -3,14 +3,13 @@ import { createClient } from "@/lib/supabase/server";
 import { Card, Restricted } from "@/components/ui";
 import { Pill, type PillTone } from "@/components/repairs/pills";
 import { telHref } from "@/components/repairs/emergency-banner";
-import { btnLink, btnPrimary, btnSecondary, inputClass, labelClass, linkClass } from "@/components/repairs/styles";
+import { btnLink, btnPrimary, btnSecondary, linkClass } from "@/components/repairs/styles";
 import { aiConfigured, placesConfigured } from "@/lib/ai/client";
 import { aiUsageToday } from "@/lib/ai/usage";
 import { loadWebSearch, NEEDS_CITY } from "@/lib/contractors/found";
 import { findHref, type FindParams } from "@/lib/contractors/find-params";
 import { rankSaved, type RankContext, type Why } from "@/lib/contractors/ranking";
 import { loadSavedCandidates, resolveJob, type JobContext } from "@/lib/contractors/recommend";
-import { SEARCHABLE_TRADES } from "@/lib/contractors/trades";
 import { monthYear, moneyText } from "@/lib/repairs/format";
 import { loadViewer } from "@/lib/repairs/page-data";
 import type { Supabase } from "@/lib/repairs/server";
@@ -21,6 +20,8 @@ import { AssignButton } from "./assign-button";
 import { FindProvider, SavedSelect, type FindTicket } from "./find-context";
 import { FindResults } from "./find-results";
 import { WantsBar } from "./wants-bar";
+import { CollapsibleCard } from "@/components/collapsible-card";
+import { TradeFields } from "./trade-fields";
 import { mailtoLink } from "@/lib/email/mailto";
 
 export const dynamic = "force-dynamic";
@@ -52,14 +53,19 @@ export default async function FindPage({ searchParams }: { searchParams: Promise
       : source.kind === "task"
         ? { href: `/repairs/upkeep/${source.id}`, label: source.name }
         : { href: "/repairs?view=contractors", label: "Contractors" };
-  const subject = source.kind === "ticket" ? source.title : source.kind === "task" ? source.name : job.trade?.label ?? "a job";
+  const subject =
+    source.kind === "ticket" ? source.title : source.kind === "task" ? source.name : job.trade?.slug === "other" && job.phrase ? job.phrase : job.trade?.label ?? "a job";
 
   const header = (
     <div>
-      <Link href={back.href} className="inline-flex min-h-[44px] items-center text-[13px] text-mute hover:underline">
-        ← {back.label}
-      </Link>
-      <h1 className="text-[20px] font-bold tracking-tight text-ink">Contractors for {subject}</h1>
+      {source.kind === "ticket" || source.kind === "task" ? (
+        <Link href={back.href} className="inline-flex min-h-[44px] items-center text-[13px] text-mute hover:underline">
+          ← {back.label}
+        </Link>
+      ) : null}
+      <h1 className="text-[20px] font-bold tracking-tight text-ink">
+        {!job.trade && source.kind !== "ticket" && source.kind !== "task" ? "Find a contractor" : `Contractors for ${subject}`}
+      </h1>
     </div>
   );
 
@@ -67,7 +73,7 @@ export default async function FindPage({ searchParams }: { searchParams: Promise
     return (
       <div className="space-y-6">
         {header}
-        <Card title="What kind of work is it?">
+        <Card navy title="What kind of work is it?">
           <TradePicker ticketId={ticketId} taskId={taskId} current={null} submitLabel="Show contractors" />
         </Card>
       </div>
@@ -100,7 +106,7 @@ export default async function FindPage({ searchParams }: { searchParams: Promise
               <span className="font-medium text-ink underline underline-offset-2">Change</span>
             </summary>
             <div className="mt-2 max-w-md">
-              <TradePicker ticketId={ticketId} taskId={taskId} current={trade.slug} wants={job.wants} submitLabel="Change" />
+              <TradePicker ticketId={ticketId} taskId={taskId} current={trade.slug} phrase={job.phrase} wants={job.wants} submitLabel="Change" />
             </div>
           </details>
         </div>
@@ -127,7 +133,7 @@ export default async function FindPage({ searchParams }: { searchParams: Promise
           </p>
         </div>
 
-        <Card title="Your contractors who do this">
+        <CollapsibleCard title="Your contractors who do this">
           {ranked.length === 0 ? (
             <p className="text-[13px] text-mute">None of your saved contractors do {trade.label.toLowerCase()} yet.</p>
           ) : (
@@ -175,9 +181,9 @@ export default async function FindPage({ searchParams }: { searchParams: Promise
               ))}
             </ul>
           )}
-        </Card>
+        </CollapsibleCard>
 
-        <Card title="Found nearby">
+        <CollapsibleCard title="Found nearby">
           <FindResults
             trade={trade.slug}
             tradeLabel={trade.label}
@@ -193,7 +199,7 @@ export default async function FindPage({ searchParams }: { searchParams: Promise
             webRetry={!(web.source.state === "error" && web.source.message === NEEDS_CITY)}
             webUsage={webUsage}
           />
-        </Card>
+        </CollapsibleCard>
 
         <AskBar />
       </div>
@@ -212,7 +218,7 @@ function ratesLine(r: { hourly: string | null; tripFee: string | null; afterHour
 }
 
 /** The trade select: a GET form that keeps the problem or upkeep job (and the wants) and drops the old phrase. */
-function TradePicker(props: { ticketId: string | null; taskId: string | null; current: string | null; wants?: JobContext["wants"]; submitLabel: string }) {
+function TradePicker(props: { ticketId: string | null; taskId: string | null; current: string | null; phrase?: string; wants?: JobContext["wants"]; submitLabel: string }) {
   return (
     <form method="get" action="/repairs/find" className="flex flex-col gap-3 sm:flex-row sm:items-end">
       {props.ticketId ? <input type="hidden" name="ticket" value={props.ticketId} /> : null}
@@ -220,21 +226,7 @@ function TradePicker(props: { ticketId: string | null; taskId: string | null; cu
       {(props.wants ?? []).map((w) => (
         <input key={w} type="hidden" name="want" value={w} />
       ))}
-      <div className="flex-1">
-        <label htmlFor="find-trade" className={labelClass}>
-          Kind of work
-        </label>
-        <select id="find-trade" name="trade" defaultValue={props.current ?? ""} required className={inputClass}>
-          <option value="" disabled>
-            Choose…
-          </option>
-          {SEARCHABLE_TRADES.map((t) => (
-            <option key={t.slug} value={t.slug}>
-              {t.label}
-            </option>
-          ))}
-        </select>
-      </div>
+      <TradeFields current={props.current} phrase={props.phrase ?? ""} />
       <button type="submit" className={props.current ? btnSecondary : btnPrimary}>
         {props.submitLabel}
       </button>

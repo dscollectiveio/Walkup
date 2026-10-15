@@ -54,7 +54,7 @@ export async function startInsuranceRead(input: {
   const cat = (doc as { document_categories: { slug: string } | { slug: string }[] | null }).document_categories;
   const slug = Array.isArray(cat) ? cat[0]?.slug : cat?.slug;
   if (slug !== "insurance") {
-    return { error: "Walkup only reads files filed as Insurance. File this one as Insurance in the Document Hub first." };
+    return { error: "Walkup only reads files filed as Insurance. File this one as Insurance in Documents first." };
   }
 
   // Reuse any read of this file and mode from the last 30 days, in any state,

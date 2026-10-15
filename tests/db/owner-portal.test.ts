@@ -371,7 +371,7 @@ describe("announcements", () => {
     expect((await pgError(save(f.cyUser, { doc: unit2Doc }))).hint).toBe("attachment_not_shared");
     expect((await pgError(save(f.cyUser, { doc: hoyneDoc }))).hint).toBe("attachment_missing");
     expect((await pgError(save(f.cyUser, { doc: gone }))).hint).toBe("attachment_missing");
-    // The owner who can see the post can open its file (the Document Hub's own rule).
+    // The owner who can see the post can open its file (Documents's own rule).
     const visibleDocs = await rows<{ id: string }>(f.boUser, `select id from public.documents`);
     expect(visibleDocs.map((d) => d.id).sort()).toEqual([shared, unit2Doc].sort());
   });

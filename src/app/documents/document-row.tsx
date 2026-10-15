@@ -4,6 +4,7 @@ import Link from "next/link";
 import { useActionState, useState, useTransition } from "react";
 import { binDocument, getDownloadUrl, restoreDocument, retagDocument } from "./actions";
 import { TagChip, UnfiledChip } from "./tag-chip";
+import { ReadingBar } from "./[documentId]/reading-bar";
 import { readableSize, SOURCE_LABEL } from "@/lib/documents/format";
 import type { DocumentCategory, DocumentRow } from "@/lib/documents/access";
 
@@ -82,7 +83,7 @@ export function DocumentListRow({
           <div className="flex flex-wrap items-center gap-2">
             <Link
               href={`/documents/${doc.id}`}
-              className="font-medium text-ink underline-offset-2 hover:underline"
+              className="font-medium text-ink underline-offset-2 [overflow-wrap:anywhere] hover:underline"
             >
               {doc.title}
             </Link>
@@ -101,6 +102,11 @@ export function DocumentListRow({
             ) : null}
           </div>
           <div className="mt-1 text-[12px] text-mute">{meta}</div>
+          {doc.extraction_state === "pending" || doc.extraction_state === "running" ? (
+            <div className="mt-2 max-w-sm">
+              <ReadingBar label={doc.extraction_state === "running" ? "Reading this file" : "Waiting to read this file"} />
+            </div>
+          ) : null}
         </div>
 
         {canWrite ? (

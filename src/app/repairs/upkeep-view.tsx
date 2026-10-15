@@ -103,7 +103,7 @@ export async function UpkeepView({ supabase, viewer, show: showRaw, archived }: 
   if (list.length === 0) {
     return (
       <div className="space-y-6">
-        <Card title={isBoard ? "Upkeep schedule" : "Building care calendar"}>
+        <Card navy title={isBoard ? "Upkeep schedule" : "Building care calendar"}>
           {isBoard ? (
             <div className="space-y-4 py-2">
               <p className="text-[13px] text-mute">
@@ -150,7 +150,7 @@ export async function UpkeepView({ supabase, viewer, show: showRaw, archived }: 
         ))}
       </nav>
 
-      <Card
+      <Card navy
         title={isBoard ? "Upkeep schedule" : "Building care calendar"}
         hint={
           isBoard
@@ -166,7 +166,7 @@ export async function UpkeepView({ supabase, viewer, show: showRaw, archived }: 
       </Card>
 
       {(recentLog ?? []).length > 0 ? (
-        <Card title="Recently done">
+        <Card navy title="Recently done">
           <ul className="divide-y divide-line text-[13px]">
             {(recentLog ?? []).map((l) => {
               const task = one(l.upkeep_tasks as { name: string } | { name: string }[] | null);
@@ -227,7 +227,7 @@ async function ArchivedJobs({ supabase, isBoard }: { supabase: Supabase; isBoard
       <Link href="/repairs?view=upkeep" className="inline-flex min-h-[44px] items-center text-[13px] text-mute hover:underline">
         ← Upkeep schedule
       </Link>
-      <Card title="Archived jobs" hint="Off the schedule, with their history kept.">
+      <Card navy title="Archived jobs" hint="Off the schedule, with their history kept.">
         {rows.length === 0 ? (
           <p className="text-[13px] text-mute">No archived jobs.</p>
         ) : (

@@ -184,7 +184,7 @@ describe("taxes (0042)", () => {
     for (const r of rows) expect(Number.isInteger(r.calendar_year)).toBe(true);
   });
 
-  it("lets a filled packet link to its form in the Document Hub", async () => {
+  it("lets a filled packet link to its form in Documents", async () => {
     const { rows } = await db.query<{ def: string }>(
       `select pg_get_constraintdef(oid) as def from pg_constraint where conname = 'document_links_target_table_known'`,
     );

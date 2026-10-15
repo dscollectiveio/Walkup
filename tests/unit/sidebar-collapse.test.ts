@@ -22,7 +22,8 @@ const render = (initialMode: "expanded" | "rail", extra: Record<string, unknown>
     }),
   );
 
-const items = [...UNGROUPED_NAV, ...NAV_GROUPS.flatMap((g) => g.items), ...TRAILING_NAV];
+// Find a Contractor is board-only, so the role-less renders below do not show it.
+const items = [...UNGROUPED_NAV, ...NAV_GROUPS.flatMap((g) => g.items), ...TRAILING_NAV].filter((i) => i.href !== "/repairs/find");
 
 describe("Sidebar: expanded and rail", () => {
   it("expanded: 288px, labels and group headings visible, numbered badge", () => {
@@ -110,11 +111,23 @@ describe("Sidebar: expanded and rail", () => {
     expect(render("expanded", { role: "accountant" })).toContain(">Insurance<");
   });
 
+  it("shows Find a Contractor to the board only", () => {
+    const labels = (role: Parameters<typeof navFor>[0]) => navFor(role).groups.flatMap((g) => g.items).map((i) => i.label);
+    expect(labels("board_admin")).toContain("Find a Contractor");
+    expect(labels("board_member")).toContain("Find a Contractor");
+    expect(labels("accountant")).not.toContain("Find a Contractor");
+  });
+
   it("keeps Repairs & Upkeep highlighted on problem, contractor and bill pages", () => {
     const repairs = NAV_GROUPS.flatMap((g) => g.items).find((i) => i.href === "/repairs")!;
-    for (const path of ["/repairs", "/repairs/find", "/maintenance/abc", "/contractors/abc", "/bills"]) {
+    for (const path of ["/repairs", "/maintenance/abc", "/contractors/abc", "/bills"]) {
       expect(isNavItemActive(path, repairs), path).toBe(true);
     }
+    // Find a Contractor has its own tab, so it lights instead of Repairs & Upkeep.
+    const find = NAV_GROUPS.flatMap((g) => g.items).find((i) => i.href === "/repairs/find")!;
+    expect(isNavItemActive("/repairs/find", repairs)).toBe(false);
+    expect(isNavItemActive("/repairs/find", find)).toBe(true);
+    expect(isNavItemActive("/repairs", find)).toBe(false);
     expect(isNavItemActive("/budget", repairs)).toBe(false);
     expect(isNavItemActive("/", { href: "/" })).toBe(true);
     expect(isNavItemActive("/budget", { href: "/" })).toBe(false);
@@ -132,18 +145,18 @@ describe("Sidebar: expanded and rail", () => {
     for (const label of ["Home", "Statement", "How to pay", "Announcements", "Repairs", "Budget", "Your building", "Documents", "My profile"]) {
       expect(html, label).toContain(`>${label}<`);
     }
-    for (const never of ["Dashboard", "Bank Feed", "Financial Statements", "HOA Dues", "Taxes", "Building Info", "Document Hub"]) {
+    for (const never of ["Dashboard", "Bank Feed", "Financial Statements", "HOA Dues", "Taxes", "Building Info", "Find a Contractor"]) {
       expect(html, never).not.toContain(never.replace("&", "&amp;"));
     }
     expect(html).toContain('href="/owner"');
     expect(html).toContain('data-tour="owner-statement"');
   });
 
-  it("gives board and accountant Announcements after Building Info, and My unit only when they own a unit", () => {
+  it("gives board and accountant Announcements right under the Dashboard, and My unit only when they own a unit", () => {
     const building = navFor("board_admin").groups.find((g) => g.label === "Building")!;
-    expect(building.items.map((i) => i.href).slice(0, 2)).toEqual(["/building", "/announcements"]);
-    expect(navFor("board_member", { ownsUnit: false }).ungrouped.map((i) => i.label)).toEqual(["Dashboard"]);
-    expect(navFor("board_member", { ownsUnit: true }).ungrouped.map((i) => i.label)).toEqual(["Dashboard", "My unit"]);
+    expect(building.items.map((i) => i.href)).not.toContain("/announcements");
+    expect(navFor("board_member", { ownsUnit: false }).ungrouped.map((i) => i.label)).toEqual(["Dashboard", "Announcements"]);
+    expect(navFor("board_member", { ownsUnit: true }).ungrouped.map((i) => i.label)).toEqual(["Dashboard", "Announcements", "My unit"]);
     expect(render("expanded", { role: "board_admin", ownsUnit: true })).toContain('data-tour="my-unit"');
     expect(render("expanded", { role: "board_admin" })).not.toContain('data-tour="my-unit"');
   });

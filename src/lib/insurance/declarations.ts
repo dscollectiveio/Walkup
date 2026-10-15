@@ -36,7 +36,7 @@ export const GROUP_LABEL: Record<FieldGroup, string> = {
   ...(Object.fromEntries(SECTION_KEYS.map((s) => [s, SECTION_LABEL[s]])) as Record<(typeof SECTION_KEYS)[number], string>),
 };
 
-/** The same bar the Document Hub uses for filing (classify.ts). */
+/** The same bar Documents uses for filing (classify.ts). */
 export const AUTO_FILL_CONFIDENCE = 0.85;
 
 export interface Candidate {

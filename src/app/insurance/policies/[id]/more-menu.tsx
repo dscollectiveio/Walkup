@@ -89,7 +89,7 @@ export function MoreMenu({ policyId, isAdmin, archived }: { policyId: string; is
       <ConfirmDialog
         open={confirm === "delete"}
         title="Delete this policy permanently?"
-        body="Its details and where they came from are removed. Documents stay in the Document Hub."
+        body="Its details and where they came from are removed. Documents stay in Documents."
         confirmLabel="Delete"
         pendingLabel="Deleting…"
         danger

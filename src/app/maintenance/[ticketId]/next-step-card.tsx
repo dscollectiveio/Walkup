@@ -229,10 +229,13 @@ export function NextStepCard(props: NextStepProps) {
   }
 
   return (
-    <section aria-labelledby="next-step-title" className="rounded-xl border border-line bg-paper px-5 py-4">
-      <h2 id="next-step-title" className="eyebrow text-mute">
-        What happens next
-      </h2>
+    <section aria-labelledby="next-step-title" className="rounded-xl border border-line bg-paper">
+      <header className="rounded-t-[7px] bg-ink px-5 py-4">
+        <h2 id="next-step-title" className="eyebrow text-paper">
+          What happens next
+        </h2>
+      </header>
+      <div className="px-5 py-4">
 
       {props.possibleEmergency && props.canWrite ? (
         <div className="mt-3 border-l-[3px] border-warning bg-warning-tint px-3 py-2 text-[13px] text-warning-text">
@@ -299,6 +302,7 @@ export function NextStepCard(props: NextStepProps) {
 
       {ownersFix ? <OwnersFixDialog ticketId={props.ticketId} onClose={() => setOwnersFix(false)} /> : null}
       {reopen ? <ReopenDialog ticketId={props.ticketId} onClose={() => setReopen(false)} /> : null}
+      </div>
     </section>
   );
 }

@@ -69,7 +69,7 @@ export function PlanCard(props: {
   if (!props.canWrite) {
     // The accountant reads the plan; nothing here is a control.
     return (
-      <Card title="Who's handling it">
+      <Card navy title="Who's handling it">
         <dl className="grid gap-3 text-[14px] sm:grid-cols-2">
           <Row label="Contractor">{current?.name ?? "No contractor yet"}</Row>
           <Row label="Board member following this">{person?.name ?? "Nobody"}</Row>
@@ -114,7 +114,7 @@ export function PlanCard(props: {
   const needsCoi = current?.compliance.some((c) => c.action === "request_coi") ?? false;
 
   return (
-    <Card title="Who's handling it">
+    <Card navy title="Who's handling it">
       <form
         onSubmit={(e) => {
           e.preventDefault();

@@ -75,3 +75,30 @@ export function vocabPhrase(raw: string | null): string {
   }
   return kept.join(" ");
 }
+
+const MAX_SCOPE_WORDS = 8;
+const MAX_SCOPE_CHARS = 60;
+
+/**
+ * The work scope a board member types for "Other": free words, but still
+ * lowercase letters and hyphens only (no digits, so no addresses, unit numbers
+ * or phone numbers), at most eight words and 60 characters. Unlike vocabPhrase
+ * the words are not limited to the vocabulary, because the person typing is
+ * choosing what to search for. The page says so next to the box.
+ */
+export function scopePhrase(raw: string | null): string {
+  if (!raw) return "";
+  const kept: string[] = [];
+  for (const w of words(raw)) {
+    if (kept.length >= MAX_SCOPE_WORDS) break;
+    if (!kept.includes(w)) kept.push(w);
+  }
+  let out = kept.join(" ");
+  if (out.length > MAX_SCOPE_CHARS) out = out.slice(0, MAX_SCOPE_CHARS).replace(/\s+\S*$/, "");
+  return out;
+}
+
+/** The phrase to search with: typed scope for "Other", the repair vocabulary for every other trade. */
+export function searchPhraseFor(tradeSlug: string | null | undefined, raw: string | null): string {
+  return tradeSlug === "other" ? scopePhrase(raw) : vocabPhrase(raw);
+}

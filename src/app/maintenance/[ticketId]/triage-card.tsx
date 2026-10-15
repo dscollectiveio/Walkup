@@ -170,7 +170,7 @@ export function TriageCard(props: {
   }
 
   return (
-    <Card title="Walkup's suggestion">
+    <Card navy title="Walkup's suggestion">
       <div className="space-y-3">
         {body}
         {error ? <p className={errorClass}>{error}</p> : null}

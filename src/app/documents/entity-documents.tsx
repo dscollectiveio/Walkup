@@ -77,7 +77,7 @@ export function EntityDocuments({
                 onBusyChange={setBusy}
                 onUploaded={(docs) => {
                   // Keep the panel open when the link failed, so its row's
-                  // "attach it from the Document Hub" stays readable.
+                  // "attach it from Documents" stays readable.
                   if (docs.some((d) => !d.linkFailed)) setOpen(false);
                   router.refresh();
                 }}

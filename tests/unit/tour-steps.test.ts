@@ -52,10 +52,10 @@ describe("first-login tour", () => {
     }
   });
 
-  it("gives the board My unit after the dashboard and Announcements after Building Info", () => {
+  it("gives the board Announcements right after the dashboard, then My unit", () => {
     const ids = tourStepsFor("board_admin").map((s) => s.id);
-    expect(ids[ids.indexOf("dashboard") + 1]).toBe("my-unit");
-    expect(ids[ids.indexOf("building") + 1]).toBe("announcements");
+    expect(ids[ids.indexOf("dashboard") + 1]).toBe("announcements");
+    expect(ids[ids.indexOf("announcements") + 1]).toBe("my-unit");
     expect(tourStepsFor("accountant").map((s) => s.id)).not.toContain("my-unit");
   });
 

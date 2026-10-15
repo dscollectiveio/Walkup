@@ -10,7 +10,7 @@ async function checksum(bytes: Uint8Array): Promise<string> {
 
 /**
  * Files Walkup generates (a filled tax packet, a worksheet) go into the
- * association's Document Hub like any upload: same bucket, same tenancy path,
+ * association's Documents like any upload: same bucket, same tenancy path,
  * same row, filed under a category and linked to what they're about. An
  * identical file already stored is reused rather than duplicated. Runs as the
  * signed-in board member — RLS decides, not this function.

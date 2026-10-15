@@ -101,7 +101,7 @@ export async function OwnerProblemsView({ supabase, viewer, since }: { supabase:
       />
 
       {updates.length > 0 ? (
-        <Card title="Updates since you last looked">
+        <Card navy title="Updates since you last looked">
           <ul className="space-y-2">
             {updates.map((u, i) => (
               <li key={`${u.ticket.id}-${i}`} className="text-[14px]">
@@ -121,22 +121,22 @@ export async function OwnerProblemsView({ supabase, viewer, since }: { supabase:
       ) : null}
 
       {mine.length > 0 ? (
-        <Card title="Your reports">
+        <Card navy title="Your reports">
           <OwnerList rows={mine} viewer={viewer} />
         </Card>
       ) : null}
       {inUnit.length > 0 ? (
-        <Card title="In your unit">
+        <Card navy title="In your unit">
           <OwnerList rows={inUnit} viewer={viewer} />
         </Card>
       ) : null}
       {shared.length > 0 ? (
-        <Card title="Shared areas">
+        <Card navy title="Shared areas">
           <OwnerList rows={shared} viewer={viewer} meToo={meToo} />
         </Card>
       ) : null}
       {recentlyFixed.length > 0 ? (
-        <Card title="Recently fixed">
+        <Card navy title="Recently fixed">
           <OwnerList rows={recentlyFixed} viewer={viewer} />
         </Card>
       ) : null}

@@ -111,7 +111,7 @@ export default async function UpkeepTaskPage({ params }: { params: Promise<{ tas
         ) : null}
       </div>
 
-      <Card title="Next time">
+      <Card navy title="Next time">
         <div className="space-y-3 text-[13px]">
           {active ? (
             <p className="text-[15px] text-ink">
@@ -160,12 +160,12 @@ export default async function UpkeepTaskPage({ params }: { params: Promise<{ tas
         </div>
       </Card>
 
-      <Card title="History" hint={totals ?? undefined}>
+      <Card navy title="History" hint={totals ?? undefined}>
         <TaskHistory rows={history} seesMoney={seesMoney} isBoard={isBoard} isAdmin={viewer.isAdmin} vendors={vendorOptions} todayIso={today} />
       </Card>
 
       {isBoard ? (
-        <Card title="Problems from this job">
+        <Card navy title="Problems from this job">
           {(tickets ?? []).length === 0 ? (
             <p className="text-[13px] text-mute">None yet. Turn it into a problem when it needs someone to come out.</p>
           ) : (

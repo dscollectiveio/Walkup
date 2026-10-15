@@ -42,7 +42,7 @@ function attachment(filename: string): string {
  * ?kind=signable  — the official PDF filled and flattened, behind the cover
  *                   sheet that says what to sign and where to send it. For a
  *                   1099-NEC this is the contractor's copies only.
- * Each is also filed in the Document Hub against the form. Everything reads
+ * Each is also filed in Documents against the form. Everything reads
  * the context for the form's own year. Walkup never files anything itself.
  * The filenames are also spelled in the form page (packetNames) — the email
  * draft names them — so change both together.

@@ -78,7 +78,7 @@ describe("pages render without throwing", () => {
   });
 
   it("upload and mapping steps", () => {
-    expect(html(h(UploadStep, { kind: "transactions" }))).toContain("Keep a copy of this file in the Document Hub (board only)");
+    expect(html(h(UploadStep, { kind: "transactions" }))).toContain("Keep a copy of this file in Documents (board only)");
     expect(html(h(RemoveAndRetry, { documentId: "d", kind: "transactions" }))).toContain("Remove this file and upload another");
     const headers = ["Date", "Description", "Amount", "SSN", "Category"];
     const rows = [["3/14/2026", "Boiler", "-450.00", "123-45-6789", "Repairs"]];

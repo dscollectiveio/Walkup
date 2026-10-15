@@ -19,10 +19,10 @@ export function MoreAbout({ children, defaultOpen = false }: { children: React.R
         aria-expanded={open}
         aria-controls={id}
         onClick={() => setOpen((o) => !o)}
-        className="flex min-h-[52px] w-full items-center justify-between gap-3 px-5 py-3 text-left"
+        className={`flex min-h-[52px] w-full items-center justify-between gap-3 bg-ink px-5 py-3 text-left ${open ? "rounded-t-[7px]" : "rounded-[7px]"}`}
       >
-        <span className="eyebrow text-mute">More about this problem</span>
-        <ChevronDown size={18} aria-hidden="true" className={`text-mute transition-transform motion-reduce:transition-none ${open ? "rotate-180" : ""}`} />
+        <span className="eyebrow text-paper">More about this problem</span>
+        <ChevronDown size={18} aria-hidden="true" className={`text-paper transition-transform motion-reduce:transition-none ${open ? "rotate-180" : ""}`} />
       </button>
       <div id={id} hidden={!open} className="space-y-4 border-t border-line px-3 py-4 sm:px-4">
         {children}

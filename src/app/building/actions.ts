@@ -4,6 +4,10 @@ import { revalidatePath } from "next/cache";
 import { createClient, getUser } from "@/lib/supabase/server";
 import { geocode } from "@/lib/google/places";
 import { validateBoardContact } from "@/lib/owner/board-contact";
+import { buildingTodayIso } from "@/lib/dates";
+import { parsePeople, type PersonEntry } from "@/lib/building/unit-people";
+import { parseUnitType } from "@/lib/building/unit-types";
+import { saveBuildingFacts } from "@/app/insurance/facts-actions";
 
 const ROLES = ["board_admin", "board_member", "accountant", "owner"] as const;
 
@@ -144,6 +148,34 @@ export async function updateAssociationProfile(_prev: unknown, formData: FormDat
   return { ok: true };
 }
 
+/**
+ * The Association profile card's single Save: the profile fields (board
+ * admin only, sent when `_profile` is set) and the insurance facts it shows
+ * (any board member, named in `_keys`). Profile first, so a refused profile
+ * never leaves half the card saved.
+ */
+export async function saveAssociationSummary(
+  _prev: unknown,
+  formData: FormData,
+): Promise<{ ok: true } | { error: string }> {
+  if (formData.get("_profile") === "1") {
+    const profile = await updateAssociationProfile(null, formData);
+    if ("error" in profile && profile.error) return { error: profile.error };
+  }
+  if (String(formData.get("_keys") ?? "").trim()) {
+    const facts = await saveBuildingFacts(null, formData);
+    if ("error" in facts) {
+      return {
+        error: formData.get("_profile") === "1"
+          ? `The profile was saved, but the insurance details were not: ${facts.error}`
+          : facts.error,
+      };
+    }
+  }
+  revalidateBuilding();
+  return { ok: true };
+}
+
 // ============================================================================
 // UNITS
 // ============================================================================
@@ -153,9 +185,15 @@ function unitFields(formData: FormData) {
     const raw = String(formData.get(key) ?? "").trim();
     return raw === "" ? null : Number(raw);
   };
+  const rawFloor = int("floor");
+  const floor = rawFloor !== null && Number.isInteger(rawFloor) && rawFloor >= -5 && rawFloor <= 200 ? rawFloor : null;
   return {
     label: String(formData.get("label") ?? "").trim(),
-    sort_order: int("sort_order") ?? 0,
+    unit_type: parseUnitType(formData.get("unit_type")),
+    floor,
+    notes: String(formData.get("notes") ?? "").trim().slice(0, 1000) || null,
+    // The roster's order follows the floor; a unit with no floor keeps the order it has.
+    ...(floor !== null ? { sort_order: floor } : {}),
     square_footage: int("square_footage"),
     bedroom_count: int("bedroom_count"),
     full_bathrooms: int("full_bathrooms"),
@@ -184,6 +222,167 @@ export async function addUnit(_prev: unknown, formData: FormData) {
 
   revalidateBuilding();
   revalidatePath("/repairs");
+  return { ok: true };
+}
+
+type Db = Awaited<ReturnType<typeof createClient>>;
+
+function revalidateUnit(unitId: string) {
+  revalidateBuilding();
+  revalidatePath("/repairs");
+  revalidatePath("/delinquency");
+  revalidatePath(`/units/${unitId}`);
+}
+
+/**
+ * Adds the people from a unit form who are new to the unit: someone entirely
+ * new (a person, their roles, optionally the ownership) or someone already on
+ * file (just the ownership). Returns a sentence for the first thing that
+ * failed, or null. Earlier steps stay saved, so the sentence says what the
+ * board still has to do.
+ */
+async function addPeopleToUnit(
+  supabase: Db,
+  associationId: string,
+  unitId: string,
+  entries: Extract<PersonEntry, { kind: "new" | "link" }>[],
+): Promise<string | null> {
+  for (const e of entries) {
+    let personId: string;
+    let name: string;
+    if (e.kind === "new") {
+      name = e.fields.full_name;
+      const { data: created, error } = await supabase
+        .from("persons")
+        .insert({ association_id: associationId, ...e.fields })
+        .select("id")
+        .single();
+      if (error || !created) {
+        return error?.code === "23505"
+          ? `${name} couldn't be saved: someone with that email is already on file. Choose them from the list instead.`
+          : `${name} couldn't be saved: ${error?.message ?? "try again."}`;
+      }
+      personId = created.id;
+      if (e.rolesSubmitted) {
+        const roleError = await syncPersonRoles(supabase, personId, e.roles);
+        if (roleError) return `${name}'s role couldn't be saved: ${roleError} You can set it on their row.`;
+      }
+    } else {
+      personId = e.personId;
+      name = "That person";
+    }
+    if (e.owns) {
+      const { error } = await supabase.from("unit_owners").insert({
+        association_id: associationId,
+        unit_id: unitId,
+        person_id: personId,
+        effective_from: e.since,
+      });
+      if (error) return `${name} couldn't be recorded as an owner: ${error.message} Use Edit on the unit to add them.`;
+    }
+  }
+  return null;
+}
+
+/**
+ * Adds a unit and, in the same step, everyone who is in it: any number of new
+ * people (name, contact details, role in the HOA) or people already on file,
+ * or no one yet. The writes happen in order and each is its own request, so if
+ * a later one fails the earlier ones stay. The message then says exactly what
+ * was saved and what was not, rather than pretending the whole thing failed;
+ * the unit shows up in the list either way.
+ */
+export async function addUnitWithPerson(_prev: unknown, formData: FormData) {
+  const fields = unitFields(formData);
+  if (!fields.label) return { error: "Give the unit a label, like “Unit 4”." };
+
+  const parsed = parsePeople(formData, buildingTodayIso());
+  if (!parsed.ok) return { error: parsed.error };
+  const additions = parsed.entries.filter((e): e is Extract<PersonEntry, { kind: "new" | "link" }> => e.kind !== "resident");
+
+  const supabase = await createClient();
+  const associationId = await currentAssociationId(supabase);
+  if (!associationId) return { error: "No association is visible to you." };
+
+  const { data: unit, error: unitError } = await supabase
+    .from("units")
+    .insert({ association_id: associationId, ...fields })
+    .select("id")
+    .single();
+  if (unitError || !unit) {
+    if (unitError?.code === "23505") return { error: `A unit named “${fields.label}” already exists.` };
+    return { error: unitError?.message ?? "Couldn't add the unit." };
+  }
+
+  const problem = await addPeopleToUnit(supabase, associationId, unit.id, additions);
+  revalidateUnit(unit.id);
+  if (problem) return { error: `${fields.label} was added, but ${problem}` };
+  return { ok: true };
+}
+
+/**
+ * The single Edit on a unit: saves the unit's details, every resident's
+ * details and roles, removes anyone marked as no longer there, and adds anyone
+ * new, all from one form. Steps run in that order; if one fails the earlier
+ * ones stay saved and the message says which.
+ */
+export async function saveUnitAndPeople(_prev: unknown, formData: FormData) {
+  const unitId = String(formData.get("unit_id") ?? "");
+  const fields = unitFields(formData);
+  if (!unitId) return { error: "Missing unit." };
+  if (!fields.label) return { error: "Give the unit a label, like “Unit 4”." };
+
+  const today = buildingTodayIso();
+  const parsed = parsePeople(formData, today);
+  if (!parsed.ok) return { error: parsed.error };
+
+  const supabase = await createClient();
+  const associationId = await currentAssociationId(supabase);
+  if (!associationId) return { error: "No association is visible to you." };
+
+  const { data: updated, error: unitError } = await supabase.from("units").update(fields).eq("id", unitId).select("id");
+  if (unitError) {
+    if (unitError.code === "23505") return { error: `A unit named “${fields.label}” already exists.` };
+    return { error: unitError.message };
+  }
+  if (!updated || updated.length === 0) return { error: "Only the board can edit units." };
+
+  const stop = (what: string) => {
+    revalidateUnit(unitId);
+    return { error: `The unit's details were saved, but ${what}` };
+  };
+
+  for (const e of parsed.entries) {
+    if (e.kind !== "resident") continue;
+    if (e.remove) {
+      const { data: row } = await supabase.from("unit_owners").select("effective_from").eq("id", e.ownerRowId).single();
+      if (row && row.effective_from < e.endDate) {
+        const { data, error } = await supabase.from("unit_owners").update({ effective_to: e.endDate }).eq("id", e.ownerRowId).select("id");
+        if (error || !data || data.length === 0) return stop(`${e.fields.full_name || "a person"} couldn't be removed from the unit: ${error?.message ?? "only the board can change ownership."}`);
+      } else {
+        // They were only recorded from that date on (or later), so there is nothing to end-date: the record has to be deleted, which only a board admin may do.
+        const { data, error } = await supabase.from("unit_owners").delete().eq("id", e.ownerRowId).select("id");
+        if (error || !data || data.length === 0) return stop(`that person's ownership starts on or after that date, so only a board admin can remove it${error ? `: ${error.message}` : "."}`);
+      }
+      continue;
+    }
+    const { data, error } = await supabase.from("persons").update(e.fields).eq("id", e.personId).select("id");
+    if (error) {
+      return stop(
+        error.code === "23505" ? `${e.fields.full_name}'s email is already used by someone else on file.` : `${e.fields.full_name} couldn't be saved: ${error.message}`,
+      );
+    }
+    if (!data || data.length === 0) return stop(`${e.fields.full_name} couldn't be saved: only the board can edit contact details.`);
+    if (e.rolesSubmitted) {
+      const roleError = await syncPersonRoles(supabase, e.personId, e.roles);
+      if (roleError) return stop(`${e.fields.full_name}'s role couldn't be saved: ${roleError}`);
+    }
+  }
+
+  const additions = parsed.entries.filter((e): e is Extract<PersonEntry, { kind: "new" | "link" }> => e.kind !== "resident");
+  const problem = await addPeopleToUnit(supabase, associationId, unitId, additions);
+  revalidateUnit(unitId);
+  if (problem) return { error: `The unit and the other changes were saved, but ${problem}` };
   return { ok: true };
 }
 
@@ -248,22 +447,49 @@ export async function addPerson(_prev: unknown, formData: FormData) {
   const fields = personFields(formData);
   if (!fields.full_name) return { error: "Give this person a name." };
 
+  const roles = formData.getAll("roles").map(String);
+  for (const r of roles) if (!ROLES.includes(r as (typeof ROLES)[number])) return { error: "Unrecognized role." };
+  const rolesSubmitted = formData.get("roles_submitted") === "1";
+  const unitId = String(formData.get("unit_id") ?? "").trim();
+  const since = String(formData.get("effective_from") ?? "").trim() || buildingTodayIso();
+  if (unitId && !/^\d{4}-\d{2}-\d{2}$/.test(since)) return { error: "Enter the date they became the owner." };
+
   const supabase = await createClient();
   const associationId = await currentAssociationId(supabase);
   if (!associationId) return { error: "No association is visible to you." };
 
-  const { error } = await supabase
+  const { data: created, error } = await supabase
     .from("persons")
-    .insert({ association_id: associationId, ...fields });
+    .insert({ association_id: associationId, ...fields })
+    .select("id")
+    .single();
 
-  if (error) {
-    if (error.code === "23505") {
+  if (error || !created) {
+    if (error?.code === "23505") {
       return { error: "Someone with that email is already on file." };
     }
-    return { error: error.message };
+    return { error: error?.message ?? "Couldn't add the person." };
+  }
+
+  // The person is saved from here on; a later step failing says so rather than implying nothing happened.
+  let problem: string | null = null;
+  if (rolesSubmitted) {
+    const roleError = await syncPersonRoles(supabase, created.id, roles);
+    if (roleError) problem = `their role couldn't be saved: ${roleError} You can set it on their row.`;
+  }
+  if (!problem && unitId) {
+    const { error: ownerError } = await supabase.from("unit_owners").insert({
+      association_id: associationId,
+      unit_id: unitId,
+      person_id: created.id,
+      effective_from: since,
+    });
+    if (ownerError) problem = `they couldn't be put in the unit: ${ownerError.message} Use Edit on the unit to add them.`;
   }
 
   revalidateBuilding();
+  if (unitId) revalidateUnit(unitId);
+  if (problem) return { error: `${fields.full_name} was added, but ${problem}` };
   return { ok: true };
 }
 
@@ -310,7 +536,7 @@ export async function updatePerson(_prev: unknown, formData: FormData) {
 
 /**
  * Reconciles a person's role_grants against the checked roles from the
- * building page's People section (merged with role granting/revoking per
+ * building page's Units and people section (merged with role granting/revoking per
  * Doug's request — previously a separate "Role grants" card). Only the
  * roles that actually changed are touched, so an unchanged role keeps its
  * original granted_on/expires_on rather than resetting on every save.

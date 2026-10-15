@@ -352,7 +352,7 @@ export default async function ContractorPage({ params }: { params: Promise<{ ven
         />
       </div>
 
-      <Card title="Paperwork">
+      <Card navy title="Paperwork">
         <div className="space-y-4">
           {compliance.length > 0 ? (
             <ul className="flex flex-wrap gap-2">
@@ -431,7 +431,7 @@ export default async function ContractorPage({ params }: { params: Promise<{ ven
         </div>
       </Card>
 
-      <Card title="Rates and terms">
+      <Card navy title="Rates and terms">
         <RatesCard
           vendorId={vendorId}
           hourly={(v.rate_hourly as string | null) ?? null}
@@ -443,7 +443,7 @@ export default async function ContractorPage({ params }: { params: Promise<{ ven
         />
       </Card>
 
-      <Card title="Ratings">
+      <Card navy title="Ratings">
         <div className="grid gap-6 sm:grid-cols-2">
           <div className="space-y-2 text-[13px]">
             <h3 className="font-medium text-ink">Your board</h3>
@@ -534,24 +534,24 @@ export default async function ContractorPage({ params }: { params: Promise<{ ven
         </div>
       </Card>
 
-      <Card title="Work with you">
+      <Card navy title="Work with you">
         {historyRes ? <History h={historyRes} todayIso={today} /> : <p className="text-[13px] text-bad-text">Walkup couldn&rsquo;t load their history. Reload the page to try again.</p>}
       </Card>
 
       {viewer.isBoard ? (
-        <Card title="Reviews from the board">
+        <Card navy title="Reviews from the board">
           <ReviewsCard vendorId={vendorId} reviews={reviews} canEdit={canEdit} isAdmin={viewer.isAdmin} tickets={ticketChoices} todayIso={today} />
         </Card>
       ) : null}
 
       {viewer.isBoard ? (
-        <Card title="Notes" hint="Internal to the board.">
+        <Card navy title="Notes" hint="Internal to the board.">
           <NotesLog vendorId={vendorId} summary={str(v.notes)} notes={notes} canEdit={canEdit} isAdmin={viewer.isAdmin} todayIso={today} />
         </Card>
       ) : null}
 
       {canEdit ? (
-        <Card title="Emails">
+        <Card navy title="Emails">
           <div className="space-y-4">
             {drafts.length > 0 ? <DraftList drafts={drafts} /> : <p className="text-[13px] text-mute">No drafts waiting.</p>}
             {sent.length > 0 ? (

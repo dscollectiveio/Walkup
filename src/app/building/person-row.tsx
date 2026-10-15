@@ -20,7 +20,7 @@ const ROLE_LABEL: Record<string, string> = {
   owner: "Owner",
 };
 
-const ROLE_OPTIONS: { value: string; label: string; hint: string }[] = [
+export const ROLE_OPTIONS: { value: string; label: string; hint: string }[] = [
   { value: "board_admin", label: "Board admin", hint: "full read/write" },
   { value: "board_member", label: "Board member", hint: "full read, limited write" },
   { value: "accountant", label: "Accountant", hint: "financials, expires after 90 days" },

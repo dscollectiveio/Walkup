@@ -1,7 +1,8 @@
 import "server-only";
 import { isUuid, type Supabase } from "@/lib/repairs/server";
 import { parseStoredTriage } from "@/lib/repairs/validate";
-import { vocabPhrase } from "@/lib/repairs/vocabulary";
+import { searchPhraseFor, vocabPhrase } from "@/lib/repairs/vocabulary";
+import { isSearchableTrade } from "@/lib/contractors/trades";
 import { templateForName } from "@/lib/upkeep/schedule";
 import { firstParam, parseWants, type FindParams } from "./find-params";
 import type { JobWant, SavedCandidate } from "./ranking";
@@ -38,7 +39,7 @@ export async function resolveJob(supabase: Supabase, sp: FindParams): Promise<Jo
   const taskId = firstParam(sp.task);
   const tradeParam = firstParam(sp.trade);
   const urlTrade = tradeParam && isTradeSlug(tradeParam) ? tradeBySlug(tradeParam) : null;
-  const confirmed = vocabPhrase(firstParam(sp.phrase) ?? null);
+  const confirmed = searchPhraseFor(urlTrade?.slug, firstParam(sp.phrase) ?? null);
 
   if (ticketId) {
     if (!isUuid(ticketId)) return null;
@@ -56,7 +57,7 @@ export async function resolveJob(supabase: Supabase, sp: FindParams): Promise<Jo
     const suggested = triage?.state === "done" ? vocabPhrase(triage.search_phrase ?? null) : "";
     const urgent = t.priority === "urgent" || t.emergency_kind !== null;
     return {
-      trade: trade && trade.googleQuery ? trade : null,
+      trade: isSearchableTrade(trade) ? trade : null,
       phrase: confirmed,
       suggestedPhrase: suggested && suggested !== confirmed ? suggested : "",
       urgent,
@@ -83,7 +84,7 @@ export async function resolveJob(supabase: Supabase, sp: FindParams): Promise<Jo
     // The template's words describe the template's trade; after "Change" to another trade they would mislead.
     const templatePhrase = template && trade && template.trade === trade.slug ? template.searchPhrase : "";
     return {
-      trade: trade && trade.googleQuery ? trade : null,
+      trade: isSearchableTrade(trade) ? trade : null,
       phrase: confirmed || vocabPhrase(templatePhrase),
       suggestedPhrase: "",
       urgent: false,
@@ -93,7 +94,7 @@ export async function resolveJob(supabase: Supabase, sp: FindParams): Promise<Jo
   }
 
   return {
-    trade: urlTrade && urlTrade.googleQuery ? urlTrade : null,
+    trade: isSearchableTrade(urlTrade) ? urlTrade : null,
     phrase: confirmed,
     suggestedPhrase: "",
     urgent: false,

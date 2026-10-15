@@ -20,7 +20,7 @@ const isUuid = (v: string) => /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-
 
 /**
  * /insurance/review/[documentId], the legacy route (insurance-spec §8.1).
- * Old links (the Document Hub, bookmarks) still land somewhere useful, and a
+ * Old links (Documents, bookmarks) still land somewhere useful, and a
  * GET never starts work: the latest read of the document from the last 30
  * days opens if there is one; otherwise the board chooses to read it.
  */
@@ -72,7 +72,7 @@ export default async function LegacyReviewShim({
           <div className="space-y-2 text-[13px]">
             <p className="text-ink">Walkup only reads files filed as Insurance.</p>
             <Link href={`/documents/${doc.id}`} className={linkClass}>
-              Open {doc.filename} in the Document Hub
+              Open {doc.filename} in Documents
             </Link>
           </div>
         )}

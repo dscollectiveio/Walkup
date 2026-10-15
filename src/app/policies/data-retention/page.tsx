@@ -51,7 +51,7 @@ export default function DataRetentionPolicyPage() {
             [
               "Spreadsheets a board imports",
               "Removed once the rows are read, unless the board chooses to keep a copy",
-              "A kept copy sits in the Document Hub, where the board can delete it once the import is no longer needed.",
+              "A kept copy sits in Documents, where the board can delete it once the import is no longer needed.",
             ],
             [
               "Invitations",

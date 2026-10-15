@@ -65,7 +65,7 @@ export function EmergencyInfoForm(props: { building: BuildingEmergencyInfo | nul
 
   return (
     <div id={ANCHOR} className="scroll-mt-4 space-y-6">
-      <Card title="Edit the building's information">
+      <Card navy title="Edit the building's information">
         {!open ? (
           <button type="button" className={btnSecondary} onClick={() => setOpen(true)}>
             Edit
@@ -155,7 +155,7 @@ function ContactsEditor({ contacts, canDelete }: { contacts: ContactRow[]; canDe
   }
 
   return (
-    <Card title="Board contacts for emergencies" hint="The board types these numbers; Walkup doesn't take them from anyone's profile.">
+    <Card navy title="Board contacts for emergencies" hint="The board types these numbers; Walkup doesn't take them from anyone's profile.">
       <div className="space-y-4">
         {contacts.length === 0 ? <p className="text-[13px] text-mute">No contacts yet.</p> : null}
         <ul className="space-y-3">

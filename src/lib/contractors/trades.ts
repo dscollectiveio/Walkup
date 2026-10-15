@@ -81,6 +81,11 @@ export function tradeBySlug(slug: string | null | undefined): Trade | null {
 
 export const SEARCHABLE_TRADES = TRADES.filter((t) => t.googleQuery !== null);
 
+/** A trade a contractor search can run for: one with a Google query, or "Other" with a typed scope. */
+export function isSearchableTrade(t: Trade | null): t is Trade {
+  return t !== null && (t.googleQuery !== null || t.slug === "other");
+}
+
 export function isTradeSlug(slug: string): boolean {
   return BY_SLUG.has(slug);
 }

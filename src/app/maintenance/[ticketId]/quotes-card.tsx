@@ -180,7 +180,7 @@ export function QuotesCard(props: {
 
   return (
     <div id="quotes" className="scroll-mt-4">
-      <Card title="Quotes" hint="What each contractor offered. Walkup records quotes; it doesn't place the work.">
+      <Card navy title="Quotes" hint="What each contractor offered. Walkup records quotes; it doesn't place the work.">
         <div className="space-y-4">
           <p className="text-[14px] text-ink">{quoteSummary(props.bids)}</p>
 

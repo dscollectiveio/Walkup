@@ -31,11 +31,14 @@ export type ReadMethod =
   | { method: "image"; mediaType: "image/jpeg" | "image/png" }
   | { method: "unreadable"; reason: string };
 
+export const DOCX_MIME = "application/vnd.openxmlformats-officedocument.wordprocessingml.document";
+
 export const UNREADABLE = {
+  emptyWord: "Walkup couldn't find any text in this Word document. Save it as a PDF and upload that.",
   tooLargePdf: "This file is too large for Walkup to read as images (over 100 pages or 20 MB). Upload just the declarations pages.",
   tooLargePhoto: "This photo is too large for Walkup to read. Take a screenshot of it and upload that.",
   heic: "Walkup couldn't convert this HEIC photo. On an iPhone, take a screenshot of the photo, or set the camera to Most Compatible, and upload that.",
-  otherType: "Walkup reads PDFs and photos of insurance documents. Save this file as a PDF and upload that.",
+  otherType: "Walkup reads PDFs, Word documents (.docx) and photos of insurance documents. Save this file as a PDF and upload that.",
 } as const;
 
 export const PARTIAL_TEXT_NOTE = "Walkup read only the pages with text.";
@@ -56,6 +59,11 @@ export function chooseReadMethod(input: { mime: string | null; byteSize: number;
     if (count <= READ_LIMITS.maxNativePages && input.byteSize <= READ_LIMITS.maxNativePdfBytes) return { method: "native_pdf" };
     if (pages.some(usable)) return { method: "text", pages: pages.map((p) => (usable(p) ? p : "")), partial: true };
     return { method: "unreadable", reason: UNREADABLE.tooLargePdf };
+  }
+  if (mime === DOCX_MIME) {
+    const pages = input.pages ?? [];
+    if (pages.some(usable)) return { method: "text", pages: pages.map((p) => (usable(p) ? p : "")), partial: false };
+    return { method: "unreadable", reason: UNREADABLE.emptyWord };
   }
   if (mime === "image/jpeg" || mime === "image/png") {
     return input.byteSize <= READ_LIMITS.maxNativeImageBytes

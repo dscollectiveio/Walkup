@@ -82,7 +82,7 @@ describe("rowText", () => {
     [{ state: "added" }, "Added"],
     [
       { state: "added", linkFailed: true },
-      "Added, but it couldn't be attached here. Attach it from the Document Hub.",
+      "Added, but it couldn't be attached here. Attach it from Documents.",
     ],
     [{ state: "duplicate", purpose: "document" }, "Already in your documents, so nothing new was added."],
     [{ state: "duplicate", purpose: "ticket_photo", onThisProblem: true }, "This photo is already on this problem."],

@@ -69,7 +69,7 @@ export function InsurancePrompt(props: {
 
   if (props.claims.length > 0) {
     return (
-      <Card title="Insurance claims">
+      <Card navy title="Insurance claims">
         <ul className="divide-y divide-line">
           {props.claims.map((c) => {
             const st = CLAIM_STATUS[c.status] ?? { label: c.status, tone: "neutral" as PillTone };
@@ -121,14 +121,14 @@ export function InsurancePrompt(props: {
   if (!line) {
     if (!start) return null;
     return (
-      <Card title="Insurance">
+      <Card navy title="Insurance">
         <p className="text-[13px] text-mute">No insurance claim for this problem.</p>
         <div className="mt-3">{start}</div>
       </Card>
     );
   }
   return (
-    <Card title="Insurance">
+    <Card navy title="Insurance">
       <p className="text-[14px] text-ink">{line}</p>
       {props.canWrite ? (
         <div className="mt-3 flex flex-wrap gap-2">

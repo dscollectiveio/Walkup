@@ -170,7 +170,7 @@ export default async function OwnerHomePage() {
           )}
           <p className="mt-2 border-t border-line pt-3">
             <Link href="/documents" className="inline-flex min-h-[44px] items-center text-[13px] font-medium text-ink underline underline-offset-2">
-              Open the Document Hub
+              Open Documents
             </Link>
           </p>
         </Card>

@@ -13,6 +13,7 @@ import {
   UserRound,
   Receipt,
   LifeBuoy,
+  UserSearch,
   type LucideIcon,
 } from "lucide-react";
 import { OWNER_NAV, STAFF_ANNOUNCEMENTS, STAFF_MY_UNIT, type OwnerNavItem } from "@/lib/owner/nav";
@@ -25,6 +26,8 @@ export interface NavItemConfig {
   badgeKey?: string;
   /** Other routes that belong to this item, so it stays highlighted there (defaults to its own href). */
   activePrefixes?: string[];
+  /** Routes under those prefixes that belong to another item instead (Find a Contractor sits under /repairs). */
+  excludePrefixes?: string[];
   /** The one item that should stand out from the rest (the Dashboard). */
   featured?: boolean;
   /** Rendered as data-tour, so the first-login tour can point at it (src/lib/tour/steps.ts). */
@@ -62,6 +65,7 @@ function toNavItem(i: OwnerNavItem): NavItemConfig {
 // themselves. See DECISIONS.md and the nav audit that produced this grouping.
 export const UNGROUPED_NAV: NavItemConfig[] = [
   { href: "/", label: "Dashboard", icon: Home, featured: true, tourId: "dashboard" },
+  toNavItem(STAFF_ANNOUNCEMENTS),
 ];
 
 export const NAV_GROUPS: NavGroupConfig[] = [
@@ -85,7 +89,6 @@ export const NAV_GROUPS: NavGroupConfig[] = [
     label: "Building",
     items: [
       { href: "/building", label: "Building Info", icon: Building2, tourId: "building" },
-      toNavItem(STAFF_ANNOUNCEMENTS),
       {
         href: "/repairs",
         label: "Repairs & Upkeep",
@@ -94,18 +97,19 @@ export const NAV_GROUPS: NavGroupConfig[] = [
         tourId: "repairs",
         // The problem, contractor and bill pages live under their old routes.
         activePrefixes: ["/repairs", "/maintenance", "/contractors", "/bills"],
+        excludePrefixes: ["/repairs/find"],
       },
+      { href: "/repairs/find", label: "Find a Contractor", icon: UserSearch, tourId: "find-contractor" },
+      { href: "/documents", label: "Documents", icon: Folder, tourId: "documents" },
     ],
   },
 ];
 
-// Rendered after every group, not inside one — Document Hub sits outside the
-// Money/Taxes/Building groupings by design.
-export const TRAILING_NAV: NavItemConfig[] = [
-  { href: "/documents", label: "Document Hub", icon: Folder, tourId: "documents" },
-];
+// Nothing trails the groups for staff now that Documents sits under Building;
+// owners still get their own trailing run (OWNER_TRAILING_NAV).
+export const TRAILING_NAV: NavItemConfig[] = [];
 
-/** Staff who also own a unit get this one extra item, after the Dashboard. */
+/** Staff who also own a unit get this one extra item, after the Dashboard and Announcements. */
 export const MY_UNIT_NAV: NavItemConfig[] = [toNavItem(STAFF_MY_UNIT)];
 
 /** What an owner-only person sees (owner-portal-spec 7.1), built from src/lib/owner/nav.ts. */
@@ -130,9 +134,10 @@ export function insuranceNavLabel(role: NavRole | null | undefined): string {
 
 /** NAV_GROUPS with the role-dependent labels applied. The routes and tour ids never change. */
 export function navGroupsFor(role: NavRole | null | undefined): NavGroupConfig[] {
+  const boardRole = role === "board_admin" || role === "board_member";
   return NAV_GROUPS.map((g) => ({
     ...g,
-    items: g.items.map((i) => (i.href === "/insurance" ? { ...i, label: insuranceNavLabel(role) } : i)),
+    items: g.items.filter((i) => boardRole || i.href !== "/repairs/find").map((i) => (i.href === "/insurance" ? { ...i, label: insuranceNavLabel(role) } : i)),
   }));
 }
 
@@ -155,9 +160,11 @@ export function navFor(
 }
 
 /** Whether the item is the current page, by its href or any of its activePrefixes. */
-export function isNavItemActive(pathname: string, item: Pick<NavItemConfig, "href" | "activePrefixes">): boolean {
+export function isNavItemActive(pathname: string, item: Pick<NavItemConfig, "href" | "activePrefixes" | "excludePrefixes">): boolean {
   // Home pages match exactly, so /owner/pay does not light "Home" or "My unit".
   if (item.href === "/" || item.href === "/owner") return pathname === item.href;
+  const within = (p: string) => pathname === p || pathname.startsWith(`${p}/`) || pathname.startsWith(`${p}?`);
+  if (item.excludePrefixes?.some(within)) return false;
   const prefixes = item.activePrefixes ?? [item.href];
   return prefixes.some((p) => pathname === p || pathname.startsWith(`${p}/`) || pathname.startsWith(`${p}?`));
 }

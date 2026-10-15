@@ -163,7 +163,7 @@ export async function BillsView({ supabase, viewer, show: showRaw }: { supabase:
         </nav>
       ) : null}
 
-      <Card title="Regular bills" hint="What the building pays, how often, and whether autopay is set up at the provider. Walkup never pays anything.">
+      <Card navy title="Regular bills" hint="What the building pays, how often, and whether autopay is set up at the provider. Walkup never pays anything.">
         {all.length === 0 ? (
           <p className="text-[13px] text-mute">
             No regular bills recorded yet: a utility, the insurance premium, a cleaning contract. Once they&rsquo;re here, Home reminds you before each one is due.
@@ -175,7 +175,7 @@ export async function BillsView({ supabase, viewer, show: showRaw }: { supabase:
         )}
       </Card>
 
-      <Card title="What Walkup does and doesn't do here">
+      <Card navy title="What Walkup does and doesn't do here">
         <p className="text-[13px] leading-relaxed text-mute">
           Walkup keeps track of what&rsquo;s due and reminds you. It <strong className="text-ink">does not hold your bank details and never pays anything</strong>.
           Autopay is set up directly with the utility or your bank, and recorded here so the next board knows what&rsquo;s already arranged and

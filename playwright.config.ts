@@ -22,6 +22,8 @@ export default defineConfig({
   projects: [
     { name: "setup", testMatch: /auth\.setup\.ts/ },
     { name: "public", testMatch: /public\.spec\.ts/ },
+    // Signs in through the real form in a fresh browser, so it needs no saved state.
+    { name: "signin", testMatch: /signin-frame\.spec\.ts/ },
     {
       name: "app",
       testMatch: /app\.spec\.ts/,

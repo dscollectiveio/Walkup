@@ -20,7 +20,7 @@ export const MESSAGE_KIND_LABEL: Record<string, string> = {
 
 export function MessagesCard({ messages, todayIso, canWrite }: { messages: MessageView[]; todayIso: string; canWrite: boolean }) {
   return (
-    <Card title="Emails to contractors">
+    <Card navy title="Emails to contractors">
       {messages.length === 0 ? (
         <p className="text-[13px] text-mute">No emails for this problem yet.</p>
       ) : (

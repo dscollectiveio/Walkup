@@ -55,7 +55,7 @@ export function UploadStep({ kind }: { kind: ImportKind }) {
             className="mt-0.5 h-5 w-5 shrink-0 accent-[var(--color-ink,#1f2a44)]"
           />
           <span>
-            Keep a copy of this file in the Document Hub (board only)
+            Keep a copy of this file in Documents (board only)
             <span className={`${HELP} block`}>The copy would include columns Walkup doesn&rsquo;t import.</span>
           </span>
         </label>

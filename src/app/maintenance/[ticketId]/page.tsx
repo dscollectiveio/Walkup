@@ -113,7 +113,7 @@ function Reported(props: { data: TicketPageData; failed: number }) {
 function WhatWasReported({ data }: { data: TicketPageData }) {
   const t = data.ticket;
   return (
-    <Card title="What was reported">
+    <Card navy title="What was reported">
       <div className="space-y-3 text-[14px]">
         {t.description ? <p className="whitespace-pre-wrap leading-relaxed text-ink">{t.description}</p> : <p className="text-mute">No details were given.</p>}
         {t.locationDetail ? (
@@ -140,7 +140,7 @@ function WhatWasDone({ data, todayIso }: { data: TicketPageData; todayIso: strin
   const t = data.ticket;
   if (!isDone(t.status) || !t.resolutionNote) return null;
   return (
-    <Card title="What was done">
+    <Card navy title="What was done">
       <p className="whitespace-pre-wrap text-[14px] leading-relaxed text-ink">{t.resolutionNote}</p>
       {t.resolvedAt ? (
         <p className="mt-2 text-[12px] text-mute">
@@ -343,7 +343,7 @@ function BoardView(props: {
             policy={data.policy}
           />
           <MessagesCard messages={data.messages} todayIso={today} canWrite={canWrite} />
-          <Card title="Documents" hint="Quotes and other files for this problem. Photos are in their own card.">
+          <Card navy title="Documents" hint="Quotes and other files for this problem. Photos are in their own card.">
             <EntityDocuments targetTable="tickets" targetId={t.id} documents={data.documents} canWrite={canWrite} />
           </Card>
           {canWrite ? (
@@ -406,7 +406,7 @@ function OwnerView(props: { data: TicketPageData; viewer: RepairsViewer; reporte
       <WhatWasReported data={data} />
       <PhotosCard ticketId={t.id} photos={data.photos} canAdd={viewer.canReport && !done} sharedTicket={t.unitId === null} />
       {handling ? (
-        <Card title="Who's handling it">
+        <Card navy title="Who's handling it">
           <p className="text-[14px] text-ink">{handling}</p>
         </Card>
       ) : null}

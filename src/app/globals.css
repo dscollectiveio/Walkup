@@ -258,10 +258,10 @@ h1, h2, h3 {
 
 /* Card titles as eyebrow labels. On the navy band the color is set inline. */
 .eyebrow {
-  font-size: 11px;
-  line-height: 1.2;
-  font-weight: 600;
-  letter-spacing: 0.12em;
+  font-size: 13px;
+  line-height: 1.25;
+  font-weight: 900;
+  letter-spacing: 0.07em;
   text-transform: uppercase;
 }
 

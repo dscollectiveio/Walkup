@@ -205,12 +205,12 @@ export async function TodayView({ supabase, viewer, since }: { supabase: Supabas
         TODAY_SECTIONS.filter((s) => sections[s].length > 0).map((s) =>
           s === "emergencies" ? (
             <section key={s} className="border-l-[3px] border-bad">
-              <Card title={TODAY_SECTION_TITLE[s]}>
+              <Card navy title={TODAY_SECTION_TITLE[s]}>
                 <TodayList items={sections[s]} />
               </Card>
             </section>
           ) : (
-            <Card key={s} title={TODAY_SECTION_TITLE[s]}>
+            <Card navy key={s} title={TODAY_SECTION_TITLE[s]}>
               <TodayList items={sections[s]} />
             </Card>
           ),

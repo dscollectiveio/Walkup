@@ -247,7 +247,7 @@ export function MappingStep(props: MappingStepProps) {
       <label className="flex items-start gap-3 text-[13px] text-ink">
         <input type="checkbox" checked={keepCopy} onChange={(e) => setKeepCopy(e.target.checked)} className="mt-0.5 h-5 w-5 shrink-0" />
         <span>
-          Keep a copy of this file in the Document Hub (board only)
+          Keep a copy of this file in Documents (board only)
           <span className={`${HELP} block`}>The copy would include columns Walkup doesn&rsquo;t import. Without it, the file is removed once your rows are loaded.</span>
         </span>
       </label>

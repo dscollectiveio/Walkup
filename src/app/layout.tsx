@@ -6,6 +6,7 @@ import { createClient } from "@/lib/supabase/server";
 import { signOut } from "./login/actions";
 import Link from "next/link";
 import { Sidebar } from "@/components/sidebar/sidebar";
+import { AppFrame } from "@/components/app-frame";
 import { TopBar } from "@/components/sidebar/top-bar";
 import { AppTour } from "@/components/tour/app-tour";
 import { tourRoleFrom, type TourRole } from "@/lib/tour/steps";
@@ -18,7 +19,7 @@ import { cookies, headers } from "next/headers";
 // wordmark and, per Doug, the whole product.
 const outfit = Outfit({
   subsets: ["latin"],
-  weight: ["400", "500", "600", "700"],
+  weight: ["400", "500", "600", "700", "900"],
   variable: "--font-outfit",
   display: "swap",
 });
@@ -29,7 +30,6 @@ const THEME_SCRIPT = `(function(){try{var t=localStorage.getItem("walkup.theme")
 
 // The sign-up → Dashboard steps draw their own full-page frame (AuthShell),
 // with no sidebar or header even once a session exists.
-const BARE_PATHS = ["/login", "/signup", "/forgot-password", "/reset-password", "/account/mfa", "/onboarding", "/unsubscribe"];
 
 export const metadata: Metadata = {
   // Makes relative share-image and canonical URLs resolve to the real domain.
@@ -63,16 +63,10 @@ export default async function RootLayout({
   } = await supabase.auth.getSession();
   const user = session?.user ?? null;
 
-  // The landing page ("/" signed out) brings its own full-width header and
-  // footer; everything else gets the app's column and footer.
-  const hdrs = await headers();
-  const path = hdrs.get("x-walkup-path") ?? "";
-  const nonce = hdrs.get("x-nonce") ?? undefined;
-  const onBarePath = BARE_PATHS.some((p) => path === p || path.startsWith(`${p}/`));
-  const bare = (!user && path === "/") || onBarePath;
-  // Signed in but still on sign-up, two-step or building setup: no sidebar,
-  // no header — the person isn't "in the app" yet.
-  const showChrome = Boolean(user) && !onBarePath;
+  // Whether this page gets the frame is decided in the browser (AppFrame), not
+  // here: a server redirect after sign-in renders this layout with the old path.
+  const nonce = (await headers()).get("x-nonce") ?? undefined;
+  const showChrome = Boolean(user);
 
   let associationName: string | null = null;
   let userName: string | null = null;
@@ -138,8 +132,11 @@ export default async function RootLayout({
         <script nonce={nonce} dangerouslySetInnerHTML={{ __html: THEME_SCRIPT }} />
       </head>
       <body className="min-h-screen bg-bone text-ink antialiased">
-        {showChrome && user ? (
-          <Sidebar
+        <AppFrame
+          signedIn={Boolean(user)}
+          sidebar={
+            user ? (
+              <Sidebar
             associationName={associationName}
             uncategorizedCount={uncategorizedCount}
             repairsCount={repairsCount}
@@ -149,27 +146,22 @@ export default async function RootLayout({
             userEmail={user.email ?? ""}
             initialMode={sidebarMode}
           />
-        ) : null}
-        {showChrome && user ? (
-          <AppTour role={tourRole} stateCode={stateCode} autoStart={!user.user_metadata?.tour_completed_at} />
-        ) : null}
-
-        {bare ? children : (
-        <div className={user ? "app-shell min-h-screen" : "min-h-screen"}>
-          {user ? (
-            <TopBar
+            ) : null
+          }
+          tour={user ? (<AppTour role={tourRole} stateCode={stateCode} autoStart={!user.user_metadata?.tour_completed_at} />) : null}
+          topBar={
+            user ? (
+              <TopBar
               associationName={associationName}
               userName={userName}
               userEmail={user.email ?? ""}
               signOutAction={signOut}
               role={tourRole}
             />
-          ) : null}
-          <main className="mx-auto max-w-[1100px] px-6 py-8 min-[900px]:px-8">
-            {children}
-          </main>
-
-          <footer className="mx-auto max-w-[1100px] px-6 pb-12 text-[11px] leading-relaxed text-mute-soft min-[900px]:px-8">
+            ) : null
+          }
+          footer={
+            <footer className="mx-auto max-w-[1100px] px-6 pb-12 text-[11px] leading-relaxed text-mute-soft min-[900px]:px-8">
             <p className="max-w-3xl">
               Walkup is not a tax adviser or a lawyer. The tax numbers here are
               worked out from your own records, but nobody has checked them
@@ -188,8 +180,10 @@ export default async function RootLayout({
               </Link>
             </p>
           </footer>
-        </div>
-        )}
+          }
+        >
+          {children}
+        </AppFrame>
       </body>
     </html>
   );

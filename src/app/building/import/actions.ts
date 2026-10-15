@@ -166,7 +166,7 @@ export async function startImport(
 
     if (!keepCopy && purgeable) {
       const removed = await purgeImportUpload(supabase, documentId);
-      if (!removed) notes.push("We couldn't remove the uploaded file. Remove it from the Document Hub.");
+      if (!removed) notes.push("We couldn't remove the uploaded file. Remove it from Documents.");
     }
 
     const validated = await validateBatch(supabase, batchId);
@@ -449,7 +449,7 @@ export async function cancelImport(batchId: string): Promise<{ ok: true } | Fail
   if (!ctx.ok) return { error: ctx.error };
   const { error } = await ctx.supabase.rpc("import_cancel", { p_batch_id: batchId });
   if (error) return { error: importErrorMessage(error).message };
-  // A copy the board chose to keep stays in the Document Hub, where they can delete it.
+  // A copy the board chose to keep stays in Documents, where they can delete it.
   revalidatePath("/building/import");
   return { ok: true };
 }
@@ -461,7 +461,7 @@ export async function cancelImport(batchId: string): Promise<{ ok: true } | Fail
 /**
  * Called right after DirectUpload finishes. Titles the new document "Import:
  * <file>" so the wizard (and only the wizard) may remove it later. A document
- * that was already in the Document Hub, or is old, is left exactly as it is
+ * that was already in Documents, or is old, is left exactly as it is
  * and is never removed by the wizard.
  */
 export async function markImportUpload(documentId: string): Promise<{ ok: true; marked: boolean } | Fail> {
@@ -496,7 +496,7 @@ export async function removeUnfinishedUpload(documentId: string): Promise<{ ok: 
   const ctx = await boardAdminContext();
   if (!ctx.ok) return { error: ctx.error };
   const removed = await purgeImportUpload(ctx.supabase, documentId);
-  if (!removed) return { error: "We couldn't remove that file. Remove it from the Document Hub." };
+  if (!removed) return { error: "We couldn't remove that file. Remove it from Documents." };
   revalidatePath("/building/import");
   return { ok: true };
 }

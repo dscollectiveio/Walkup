@@ -53,3 +53,6 @@ next-env.d.ts
 
 # e2e signed-in session (contains auth cookies)
 /tests/e2e/.auth/
+
+# one-off production release helpers (not part of the app)
+/scripts/release/

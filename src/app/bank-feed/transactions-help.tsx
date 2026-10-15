@@ -2,6 +2,7 @@
 
 import { useRef } from "react";
 import { CircleHelp, X } from "lucide-react";
+import { HEADER_BUTTON } from "@/components/ui";
 
 const STEPS: { title: string; body: string }[] = [
   {
@@ -39,7 +40,7 @@ export function TransactionsHelp() {
         onClick={() => dialogRef.current?.showModal()}
         aria-label="How to categorize transactions"
         title="How this works"
-        className="inline-flex items-center gap-1.5 rounded-md px-2 py-1 text-[12px] text-ondark-mute transition-colors hover:bg-ink-mid hover:text-paper focus-visible:outline focus-visible:outline-2 focus-visible:outline-brass"
+        className={HEADER_BUTTON}
       >
         <CircleHelp size={16} strokeWidth={1.6} aria-hidden="true" />
         <span className="hidden sm:inline">How this works</span>

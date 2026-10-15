@@ -38,7 +38,7 @@ const TIPS: { title: string; body: string }[] = [
   },
   {
     title: "Files you upload are searchable",
-    body: "In the Document Hub, Walkup files each upload and reads its text, so a search for a name or amount finds it.",
+    body: "In Documents, Walkup files each upload and reads its text, so a search for a name or amount finds it.",
   },
   {
     title: "Anyone in the building can report a problem",

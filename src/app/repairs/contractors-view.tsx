@@ -190,7 +190,7 @@ export async function ContractorsView({ supabase, viewer, params }: { supabase: 
 
   if (all.length === 0 && !params.archived) {
     return (
-      <Card title="Your contractors">
+      <Card navy title="Your contractors">
         <div className="space-y-3 py-2">
           <p className="text-[13px] text-mute">No contractors saved yet. Add the ones you already use, or find someone for a job.</p>
           {isBoard ? (
@@ -315,7 +315,7 @@ export async function ContractorsView({ supabase, viewer, params }: { supabase: 
         </details>
       </form>
 
-      <Card title={params.archived ? "Your contractors, including archived" : "Your contractors"} hint="Who you call, their paperwork, and how they've done.">
+      <Card navy title={params.archived ? "Your contractors, including archived" : "Your contractors"} hint="Who you call, their paperwork, and how they've done.">
         {shown.length === 0 ? (
           <p className="text-[13px] text-mute">
             No contractors match.{" "}
@@ -334,7 +334,7 @@ export async function ContractorsView({ supabase, viewer, params }: { supabase: 
 
       {isBoard ? (
         <section id="emails" className="scroll-mt-4">
-          <Card title="Emails waiting to be sent" hint="Drafts Walkup wrote for you. Open each in your email app, send it, then mark it sent.">
+          <Card navy title="Emails waiting to be sent" hint="Drafts Walkup wrote for you. Open each in your email app, send it, then mark it sent.">
             {drafts.length > 0 ? <DraftList drafts={drafts} /> : <p className="text-[13px] text-mute">Nothing waiting.</p>}
             <div className="mt-4">
               <WriteToContractor contractors={writeContractors} tickets={openTickets} />

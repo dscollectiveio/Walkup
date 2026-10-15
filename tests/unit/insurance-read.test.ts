@@ -52,10 +52,15 @@ describe("chooseReadMethod", () => {
     expect(chooseReadMethod({ mime: "image/png", byteSize: MB, pages: null, pageCount: null })).toEqual({ method: "image", mediaType: "image/png" });
   });
 
-  it("HEIC, DOCX and webp → unreadable with their own copy", () => {
+  it("a Word document with text is read as text; one with none says so", () => {
+    const docx = "application/vnd.openxmlformats-officedocument.wordprocessingml.document";
+    const page = "Declarations page, building limit and renewal date. ".repeat(3);
+    expect(chooseReadMethod({ mime: docx, byteSize: MB, pages: [page], pageCount: null })).toMatchObject({ method: "text", partial: false });
+    expect(chooseReadMethod({ mime: docx, byteSize: MB, pages: null, pageCount: null })).toEqual({ method: "unreadable", reason: UNREADABLE.emptyWord });
+  });
+
+  it("HEIC and webp → unreadable with their own copy", () => {
     expect(chooseReadMethod({ mime: "image/heic", byteSize: MB, pages: null, pageCount: null })).toEqual({ method: "unreadable", reason: UNREADABLE.heic });
-    expect(chooseReadMethod({ mime: "application/vnd.openxmlformats-officedocument.wordprocessingml.document", byteSize: MB, pages: null, pageCount: null }))
-      .toEqual({ method: "unreadable", reason: UNREADABLE.otherType });
     expect(chooseReadMethod({ mime: "image/webp", byteSize: MB, pages: null, pageCount: null }).method).toBe("unreadable");
     expect(UNREADABLE.otherType).toContain("Save this file as a PDF");
   });

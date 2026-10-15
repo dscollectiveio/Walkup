@@ -3,11 +3,12 @@ import type Anthropic from "@anthropic-ai/sdk";
 import { aiConfigured } from "@/lib/ai/client";
 import type { AiErrorCode, AiFailure } from "@/lib/ai/errors";
 import { runStructured } from "@/lib/ai/structured";
+import { extractDocxPages } from "@/lib/documents/docx-text";
 import { extractPdfPages } from "@/lib/documents/extract-text";
 import { isCoverageType } from "./coverage";
 import { fieldsFor } from "./fields";
 import {
-  IMAGE_NOTE, NATIVE_NOTE, OUTLINE_PROMPT, OutlineSchema, PolicyDetailSchema, READ_DEADLINE_MS, READ_LIMITS, READ_SYSTEM,
+  DOCX_MIME, IMAGE_NOTE, NATIVE_NOTE, OUTLINE_PROMPT, OutlineSchema, PolicyDetailSchema, READ_DEADLINE_MS, READ_LIMITS, READ_SYSTEM,
   buildDetailPrompt, chooseReadMethod, joinTextPages, postProcessRead,
   type DetailError, type DetailOutcome, type Outline, type ReadMode, type StoredRead,
 } from "./read-schema";
@@ -42,7 +43,7 @@ interface ClaimedRead {
 
 export const READ_COPY = {
   notInsurance:
-    "This file is no longer filed as Insurance, so Walkup won't read it. File it as Insurance in the Document Hub and try again.",
+    "This file is no longer filed as Insurance, so Walkup won't read it. File it as Insurance in Documents and try again.",
   noFile: "Walkup couldn't open the stored file. Try uploading it again.",
   notConfigured: "Reading isn't set up on this Walkup.",
   quota: "Walkup has read as many documents as it can for your building today. Try again tomorrow, or enter the details by hand.",
@@ -159,7 +160,11 @@ export async function runInsuranceRead(supabase: Supabase, readId: string): Prom
     // 3. Method.
     const mime = (d.mime_type ?? "").toLowerCase();
     const isPdf = mime === "application/pdf";
-    const pages = isPdf ? await extractPdfPages(mime, bytes.slice()) : null;
+    const pages = isPdf
+      ? await extractPdfPages(mime, bytes.slice())
+      : mime === DOCX_MIME
+        ? await extractDocxPages(bytes.slice())
+        : null;
     const pageCount = isPdf ? await pdfPageCount(bytes) : null;
     const choice = chooseReadMethod({ mime: d.mime_type, byteSize: d.byte_size ?? bytes.byteLength, pages, pageCount });
     if (choice.method === "unreadable") return end("unreadable", choice.reason);

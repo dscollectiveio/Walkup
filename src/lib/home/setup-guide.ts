@@ -237,7 +237,7 @@ export function buildSetupGuide(input: SetupInputs): SetupSection[] {
           done: unitsDone,
           doneOn: null,
           instructions: [
-            "On Building Info, use “Add a unit” once per unit. Label them the way owners say them (“Unit 2”, “Garden”).",
+            "On Building Info, use “Add a unit” once per unit, and add the owner in the same step. Label units the way owners say them (“Unit 2”, “Garden”).",
             "Get the count right now; adding one later is easy, but every dues charge is per unit.",
           ],
         },
@@ -249,7 +249,7 @@ export function buildSetupGuide(input: SetupInputs): SetupSection[] {
           done: ownersDone,
           doneOn: ownersDone ? latestOwnerFrom : null,
           instructions: [
-            "Add each owner under People first, then assign them to their unit under Ownership.",
+            "When you add a unit, choose “Someone new” and tick “They own this unit”. For a unit already added, use its Edit button to add the owner.",
             "Owners don't need a login. A name and email is enough to keep the records straight.",
           ],
         },
@@ -261,7 +261,7 @@ export function buildSetupGuide(input: SetupInputs): SetupSection[] {
           done: peopleDone,
           doneOn: peopleDone ? latestGrant : null,
           instructions: [
-            "Add board members under People and tick their role. Board member sees everything, Board admin can also edit.",
+            "Add board members under “Others on file” in Units and people, and tick their role. Board member sees everything, Board admin can also edit.",
             "An accountant's access expires on its own after 90 days.",
           ],
         },
@@ -273,7 +273,7 @@ export function buildSetupGuide(input: SetupInputs): SetupSection[] {
           done: invitesDone,
           doneOn: null,
           instructions: [
-            "On Building Info, press “Invite to sign in” next to a person, or generate a link under Invites. Send it yourself: Walkup does not email invites.",
+            "On Building Info, press “Invite to sign in” next to a person, or generate a link under Sign-in invites in Units and people. Send it yourself: Walkup does not email invites.",
             "Everyone who signs in must set up two-factor authentication on first login.",
           ],
         },
@@ -536,7 +536,7 @@ export function buildSetupGuide(input: SetupInputs): SetupSection[] {
           doneOn: w9Done ? (lastW9 ?? null) : null,
           instructions: [
             "Ask each contractor for a signed W-9 and tick “W-9 on file” on their row. Corporations can be marked 1099-exempt.",
-            "Only the last four digits of their tax ID are stored. File the form itself in the Document Hub.",
+            "Only the last four digits of their tax ID are stored. File the form itself in Documents.",
           ],
         },
         {
@@ -547,7 +547,7 @@ export function buildSetupGuide(input: SetupInputs): SetupSection[] {
           done: docsDone,
           doneOn: docsDone ? isoDay([governingDoc!.uploaded_at, insuranceDoc!.uploaded_at].sort().at(-1)) : null,
           instructions: [
-            "In Document Hub, upload the declaration and file it under Governing document; upload the insurance certificate under Insurance.",
+            "In Documents, upload the declaration and file it under Governing document; upload the insurance certificate under Insurance.",
             "Governing documents are visible to every owner; insurance stays board-only.",
           ],
         },

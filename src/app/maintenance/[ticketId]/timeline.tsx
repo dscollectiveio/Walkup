@@ -41,7 +41,7 @@ export function Timeline(props: {
   contractor: { id: string; name: string } | null;
 }) {
   return (
-    <Card title={props.title}>
+    <Card navy title={props.title}>
       <div className="space-y-5">
         {props.entries.length === 0 ? (
           <p className="text-[13px] text-mute">Nothing yet.</p>

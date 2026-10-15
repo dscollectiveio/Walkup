@@ -289,7 +289,7 @@ export function Composer({
           {docs.length > 0 ? (
             <div>
               <label htmlFor="an-doc" className="block text-[13px] text-mute">
-                Or pick from the Document Hub
+                Or pick from Documents
               </label>
               <select
                 id="an-doc"

@@ -88,7 +88,7 @@ export default async function EmergencyInfoPage() {
         <p className="px-5 pb-4 text-[11px] text-mute">General safety steps, the same for every building.</p>
       </section>
 
-      <Card title="In this building">
+      <Card navy title="In this building">
         {shown.length === 0 ? (
           <p className="text-[14px] text-mute">Your board hasn&rsquo;t added this building&rsquo;s emergency information yet.</p>
         ) : (
@@ -120,7 +120,7 @@ export default async function EmergencyInfoPage() {
         )}
       </Card>
 
-      <Card title="Who to call on the board">
+      <Card navy title="Who to call on the board">
         {info.contacts.length === 0 ? (
           <p className="text-[14px] text-mute">No board contacts listed yet.</p>
         ) : (

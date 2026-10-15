@@ -65,7 +65,7 @@ export default async function RepairsPage({ searchParams }: { searchParams: Prom
         ) : null}
       </div>
 
-      <nav aria-label="Repairs and upkeep" className="-mx-1 overflow-x-auto px-1">
+      <nav aria-label="Repairs and upkeep" className="relative -mx-1 overflow-x-auto px-1">
         <div className="inline-flex rounded-full border border-line bg-paper p-0.5">
           {views.map((v) => {
             const b = badges[v];

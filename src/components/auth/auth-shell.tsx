@@ -2,6 +2,7 @@ import Link from "next/link";
 import { Lockup } from "@/components/mark";
 import { SUPPORT_EMAIL } from "@/lib/site-config";
 import { UsageTip } from "./usage-tip";
+import { BareMarker } from "@/components/app-frame";
 
 /**
  * The frame every step between "Get started" and the Dashboard shares:
@@ -10,8 +11,8 @@ import { UsageTip } from "./usage-tip";
  * where a compact navy header takes its place) and the form on a card to the
  * right, with a progress strip for the three first-run steps.
  *
- * The root layout renders these routes without the app chrome (see
- * BARE_PATHS in src/app/layout.tsx). Brand navy is a fixed colour here, not
+ * AppFrame renders these routes without the app chrome (BARE_PATHS in
+ * src/lib/bare-paths.ts, and the BareMarker below for when the address lags). Brand navy is a fixed colour here, not
  * the `ink` token, which flips in dark mode.
  */
 
@@ -80,6 +81,7 @@ export function AuthShell({
 }) {
   return (
     <div className="min-h-screen bg-bone lg:grid lg:grid-cols-[minmax(0,5fr)_minmax(0,7fr)]">
+      <BareMarker />
       {/* Brand panel (desktop) */}
       <aside className="relative hidden overflow-hidden bg-[#1B2A41] px-12 py-10 text-white lg:flex lg:flex-col lg:justify-between">
         <Brand />
@@ -124,7 +126,7 @@ export function AuthShell({
       </header>
 
       {/* Form */}
-      <main className="flex items-start justify-center px-5 py-10 sm:px-8 lg:items-center lg:py-16">
+      <div className="flex items-start justify-center px-5 py-10 sm:px-8 lg:items-center lg:py-16">
         <div className="w-full max-w-[440px]">
           {step !== undefined ? <Steps current={step} /> : null}
           <div className="rounded-2xl border border-line bg-paper p-7 shadow-[0_1px_2px_rgba(20,33,61,0.04),0_12px_32px_-12px_rgba(20,33,61,0.18)] sm:p-9">
@@ -134,7 +136,7 @@ export function AuthShell({
           </div>
           {footer ? <div className="mt-6 text-center text-[14px] text-mute">{footer}</div> : null}
         </div>
-      </main>
+      </div>
     </div>
   );
 }

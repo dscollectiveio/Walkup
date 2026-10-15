@@ -12,7 +12,6 @@ import { readableSize, visibilitySentence } from "@/lib/documents/format";
 import { TagChip, UnfiledChip } from "../tag-chip";
 import {
   PurgeButton,
-  RenameForm,
   RerunButton,
   RestoreButton,
   VisibilityForm,
@@ -20,6 +19,9 @@ import {
 import { aiConfigured } from "@/lib/ai/client";
 import { coverageShort } from "@/lib/insurance/coverage";
 import { ReadButtons } from "@/app/insurance/review/[documentId]/read-buttons";
+import { previewKind, summaryBullets } from "@/lib/documents/preview";
+import { ReadingBar } from "./reading-bar";
+import { Viewing } from "./viewing";
 
 export const dynamic = "force-dynamic";
 // Uploads and re-reads run the document reader in after(); give it the
@@ -74,7 +76,7 @@ export default async function DocumentDetailPage({
           href="/documents"
           className="text-[12px] text-mute underline-offset-2 hover:underline"
         >
-          ← Document Hub
+          ← Documents
         </Link>
         <div className="mt-2 flex flex-wrap items-center gap-2">
           <h1 className="text-[20px] font-bold tracking-tight text-ink">{doc.title}</h1>
@@ -98,11 +100,6 @@ export default async function DocumentDetailPage({
             .filter(Boolean)
             .join(" · ")}
         </p>
-        {canWrite && !binned ? (
-          <div className="mt-2">
-            <RenameForm doc={doc} />
-          </div>
-        ) : null}
       </div>
 
       {binned ? (
@@ -122,7 +119,7 @@ export default async function DocumentDetailPage({
       ) : null}
 
       <div className="grid items-start gap-4 lg:grid-cols-[3fr_2fr]">
-        <Card title="The file">
+        <Card navy title="The file">
           <div className="space-y-3">
             <DownloadButton
               id={doc.id}
@@ -131,25 +128,10 @@ export default async function DocumentDetailPage({
               Download
             </DownloadButton>
 
-            {summary ? (
-              <div className="border-l-[3px] border-info bg-info-tint px-4 py-3">
-                <p className="text-[11px] font-medium text-info-text">
-                  Summary written by Walkup, not by a person
-                </p>
-                <p className="mt-1 text-[13px] leading-relaxed text-info-text opacity-90">
-                  {summary}
-                </p>
-              </div>
-            ) : null}
-
             {/* Say what is actually true about the reading attempt rather than
                 leaving an empty space that could mean anything. */}
             {doc.extraction_state === "pending" || doc.extraction_state === "running" ? (
-              <p className="text-[12px] text-mute">
-                {doc.extraction_state === "running"
-                  ? "Reading this file now."
-                  : "Nothing has been read out of this file yet."}
-              </p>
+              <ReadingBar label={doc.extraction_state === "running" ? `Reading ${doc.filename}` : `Waiting to read ${doc.filename}`} />
             ) : doc.extraction_state === "skipped" ? (
               <div className="text-[12px] text-mute">
                 <p>{doc.extraction_error ?? "There was nothing to read in this file."}</p>
@@ -202,7 +184,7 @@ export default async function DocumentDetailPage({
         </Card>
 
         {isInsurance && canWrite && !binned ? (
-          <Card title="Use it on Insurance">
+          <Card navy title="Use it on Insurance">
             {aiConfigured() ? (
               <>
                 <p className="mb-3 text-[13px] text-mute">
@@ -230,7 +212,7 @@ export default async function DocumentDetailPage({
         ) : null}
 
         {linkedTo.length > 0 ? (
-          <Card title="Linked to">
+          <Card navy title="Linked to">
             <ul className="space-y-1 text-[13px]">
               {linkedTo.map((l) => (
                 <li key={l.key}>
@@ -243,7 +225,7 @@ export default async function DocumentDetailPage({
           </Card>
         ) : null}
 
-        <Card title="Who can see it">
+        <Card navy title="Who can see it">
           <p className="text-[13px] text-ink">
             {visibilitySentence(doc.visibility, unitLabel)}
           </p>
@@ -254,6 +236,19 @@ export default async function DocumentDetailPage({
           ) : null}
         </Card>
       </div>
+
+      <Card navy title="Viewing" hint="Scroll through the whole document here.">
+        <Viewing
+          documentId={doc.id}
+          title={doc.title}
+          categoryId={doc.category_id}
+          categories={categories}
+          canWrite={canWrite && !binned}
+          kind={previewKind(doc.mime_type)}
+          bullets={summary ? summaryBullets(summary) : []}
+          filename={doc.filename}
+        />
+      </Card>
     </div>
   );
 }

@@ -73,7 +73,7 @@ export default function PrivacyPage() {
         <p>A phone number and mailing address you add to your own profile.</p>
         <p>
           Spreadsheets your board imports are read to create records and then
-          removed, unless the board keeps a copy in the Document Hub.
+          removed, unless the board keeps a copy in Documents.
         </p>
         <p>
           A record of each email Walkup sends for your board: who it went to,

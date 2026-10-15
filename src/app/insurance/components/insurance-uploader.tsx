@@ -16,7 +16,8 @@ import { errorBlock, linkClass } from "./styles";
  * always filed as Insurance, so the reader may read them.
  */
 
-const ACCEPT = "application/pdf,image/jpeg,image/png";
+const ACCEPT =
+  "application/pdf,image/jpeg,image/png,application/vnd.openxmlformats-officedocument.wordprocessingml.document,.docx";
 
 function isImage(f: File): boolean {
   return f.type.startsWith("image/") || /\.(jpe?g|png|heic|heif)$/i.test(f.name);

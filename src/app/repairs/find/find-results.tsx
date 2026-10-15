@@ -4,6 +4,7 @@ import Link from "next/link";
 import { useEffect, useMemo, useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
 import { PollWhileRunning } from "@/components/ai/poll-while-running";
+import { IndeterminateBar } from "@/components/ai/indeterminate-bar";
 import { FoundOnWeb } from "@/components/ai/found-on-web";
 import { Pill, type PillTone } from "@/components/repairs/pills";
 import { telHref } from "@/components/repairs/emergency-banner";
@@ -74,7 +75,9 @@ export function FindResults(props: {
   useEffect(() => {
     if (!props.googleOn) return;
     let live = true;
+    // Saved results first; when there are none, search Google now, so the list fills in on its own.
     searchPlaces({ trade: props.trade, phrase: props.phrase, cacheOnly: true })
+      .then((cached) => (cached.source.state === "idle" ? searchPlaces({ trade: props.trade, phrase: props.phrase }) : cached))
       .then((result) => {
         if (live) setGoogle({ key: searchKey, result });
       })
@@ -123,7 +126,11 @@ export function FindResults(props: {
     [props.trade, props.relatedTrades, props.urgent, props.wants, props.todayIso],
   );
   const googleCandidates = useMemo(() => googleResult?.candidates ?? [], [googleResult]);
-  const ranked = useMemo(() => rankFound(mergeFound(googleCandidates, props.web.candidates), ctx), [googleCandidates, props.web.candidates, ctx]);
+  // Anyone already saved as a contractor is left out: this list is for finding new people.
+  const ranked = useMemo(
+    () => rankFound(mergeFound(googleCandidates, props.web.candidates), ctx).filter((c) => !c.alreadySaved),
+    [googleCandidates, props.web.candidates, ctx],
+  );
 
   const web = props.web.source;
   const webRunning = web.state === "running";
@@ -154,10 +161,7 @@ export function FindResults(props: {
       {props.googleOn ? (
         <div className="space-y-2 text-[13px]">
           {googleSearching ? (
-            <div role="status" className="space-y-2">
-              <p className="text-mute">Looking on Google near your building…</p>
-              <div className="h-20 animate-pulse rounded-lg border border-line bg-fill motion-reduce:animate-none" aria-hidden="true" />
-            </div>
+            <IndeterminateBar label={`Searching Google for ${props.phrase || tradeWords} near ${props.city ?? "your building"}`} />
           ) : googleResult?.source.state === "idle" ? (
             <p className="text-mute">
               <button type="button" onClick={searchGoogleNow} className="font-medium text-ink underline underline-offset-2">

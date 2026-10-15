@@ -48,7 +48,7 @@ export function MoneyCard(props: {
   }
 
   return (
-    <Card title="Money">
+    <Card navy title="Money">
       <dl className="space-y-2 text-[14px]">
         <div className="flex flex-wrap justify-between gap-2">
           <dt className="text-mute">Estimate</dt>

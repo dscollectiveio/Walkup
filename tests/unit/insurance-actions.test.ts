@@ -249,7 +249,7 @@ describe("startInsuranceRead", () => {
   it("refuses a file not filed as Insurance (decision 7)", async () => {
     state.db.tables.documents = [{ id: DOC, filename: "1120-H.pdf", document_categories: { slug: "tax_forms" } }];
     expect(await startInsuranceRead({ documentId: DOC, mode: "policy" }))
-      .toEqual({ error: "Walkup only reads files filed as Insurance. File this one as Insurance in the Document Hub first." });
+      .toEqual({ error: "Walkup only reads files filed as Insurance. File this one as Insurance in Documents first." });
     expect(state.db.tables.insurance_document_reads ?? []).toHaveLength(0);
   });
 

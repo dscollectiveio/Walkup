@@ -131,7 +131,7 @@ export function rowText(row: RowState): string {
       return "Saving…";
     case "added":
       return row.linkFailed
-        ? "Added, but it couldn't be attached here. Attach it from the Document Hub."
+        ? "Added, but it couldn't be attached here. Attach it from Documents."
         : "Added";
     case "duplicate":
       if (row.purpose === "document") return "Already in your documents, so nothing new was added.";

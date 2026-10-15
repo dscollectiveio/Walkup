@@ -43,7 +43,7 @@ export default async function ImportPage({ searchParams }: { searchParams: Promi
       <BackLink href="/insurance">Insurance</BackLink>
       <div>
         <h1 className="text-[20px] font-bold tracking-tight text-ink">Import insurance documents</h1>
-        <p className="mt-1 text-mute">Declarations pages, renewal packages or quotes. PDFs and photos both work.</p>
+        <p className="mt-1 text-mute">Declarations pages, renewal packages or quotes. PDFs, Word documents (.docx) and photos all work.</p>
       </div>
 
       <Card title="Upload">

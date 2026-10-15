@@ -54,7 +54,7 @@ export function AccessReviewCard({
       </div>
 
       <p className="text-[13px] leading-relaxed text-mute">
-        Look over everyone in People above who has access ({activeGrantCount} active{" "}
+        Look over everyone in Units and people above who has access ({activeGrantCount} active{" "}
         {activeGrantCount === 1 ? "grant" : "grants"}) and remove anything that shouldn&rsquo;t be
         there. Recording the review also revokes access that has lapsed on its own — expired
         accountant grants and owners whose sale has closed — and keeps a snapshot of who had

@@ -15,6 +15,8 @@ export async function proxy(request: NextRequest) {
     nonce,
     supabaseUrl: process.env.NEXT_PUBLIC_SUPABASE_URL,
     dev: process.env.NODE_ENV !== "production",
+    // The Documents page frames its own preview route; nothing else may be framed.
+    framedBySelf: /^\/documents\/[^/]+\/preview$/.test(request.nextUrl.pathname),
   });
   // Next reads the nonce from the request's CSP header and stamps it on its
   // own scripts; the layout reads x-nonce for the two inline ones.

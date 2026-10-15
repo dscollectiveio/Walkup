@@ -151,7 +151,7 @@ export function ReadProgress({
       );
       break;
     case "not_configured":
-      title = "Reading isn't set up on this Walkup. Enter the details by hand; the file is saved in the Document Hub.";
+      title = "Reading isn't set up on this Walkup. Enter the details by hand; the file is saved in Documents.";
       buttons = manual;
       break;
     case "quota":

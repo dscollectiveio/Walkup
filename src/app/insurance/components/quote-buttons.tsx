@@ -131,7 +131,7 @@ export function DeleteQuoteButton({ quoteId }: { quoteId: string }) {
       <ConfirmDialog
         open={open}
         title="Delete this quote?"
-        body="Its figures and where they came from are removed. The file stays in the Document Hub."
+        body="Its figures and where they came from are removed. The file stays in Documents."
         confirmLabel="Delete"
         pendingLabel="Deleting…"
         danger
