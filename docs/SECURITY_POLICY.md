@@ -3,9 +3,10 @@
 **Organization:** dscollectiveio (Doug Smart, sole operator of Walkup)
 **Scope:** The Walkup application, its infrastructure, and the credentials
 that control both.
-**Effective:** 2026-08-05. **Last reviewed:** 2026-09-26 (remediation of
-Plaid's security review findings, due 2027-03-27 — see §4, §5, §9, §10,
-§11). **Review cadence:** every 6 months, or
+**Effective:** 2026-08-05. **Last reviewed:** 2026-10-14 (outbound email,
+the owner portal, spreadsheet import and the Plaid webhook added; see §3, §5,
+§6, §7, §8, §9, §10), after 2026-09-26 (remediation of Plaid's security
+review findings, due 2027-03-27 — see §4, §5, §9, §10, §11). **Review cadence:** every 6 months, or
 immediately after any incident, new vendor integration, or change in who
 has access to production systems.
 
@@ -25,7 +26,7 @@ goes wrong.
 ## 2. Roles and responsibilities
 
 Doug Smart is the sole person with access to source code, infrastructure
-dashboards (Supabase, Vercel, Plaid, GitHub), and all credentials. There is
+dashboards (Supabase, Vercel, Plaid, Resend, Anthropic, GitHub), and all credentials. There is
 no other staff, contractor, or shared account. One person holds all
 responsibilities below:
 
@@ -38,15 +39,15 @@ responsibilities below:
 
 | Data | Sensitivity | Where it lives |
 |---|---|---|
-| Plaid access tokens | Critical — a live credential that can read a real bank account | `bank_connection_secrets` table, RLS enabled with zero policies; reachable only through `SECURITY DEFINER` functions (`store_bank_connection`, `get_bank_access_token`). See `docs/DECISIONS.md` #24, #27. |
-| Supabase service role key, Anthropic API key, Plaid client secret | Critical — full backend or paid-API access | Server-only env vars (`.env.local` locally, Vercel project settings in production). Never sent to the browser, never committed — `.env.local` is gitignored. |
+| Plaid access tokens | Critical — a live credential that can read a real bank account | `bank_connection_secrets` table, RLS enabled with zero policies; reachable only through `SECURITY DEFINER` functions (`store_bank_connection`, `get_bank_access_token`). The token is also sealed by the application (AES-256-GCM, key `BANK_TOKEN_KEY`, held only in the server environment) before it is stored, so even a board admin calling the function receives only ciphertext. See `docs/DECISIONS.md` #24, #27. |
+| Supabase service role key, Anthropic API key, Plaid client secret, Resend API key (`RESEND_API_KEY`, scoped to sending for walkuphoa.com), Resend webhook signing secret (`RESEND_WEBHOOK_SECRET`), `CRON_SECRET`, `BANK_TOKEN_KEY` | Critical — full backend, paid-API or outbound-email access | Server-only env vars (`.env.local` locally, Vercel project settings in production). Never sent to the browser, never committed — `.env.local` is gitignored. |
 | Association financial records (ledger, tax figures, bank transactions) | Sensitive — financial/PII-adjacent | Postgres, protected by row-level security scoped to `association_id` on every table. |
 | Application source code | Low — no secrets committed | GitHub, `dscollectiveio/Walkup`, private repo. |
 
 ## 4. Access control
 
 - All infrastructure accounts (GitHub, Vercel, Supabase, Plaid dashboard,
-  Anthropic console) are single-owner, no shared logins.
+  Anthropic console, Resend) are single-owner, no shared logins.
 - **Required baseline (tracked as open items — see §8):** unique passwords
   via a password manager, and two-factor authentication enabled on every
   account listed above.
@@ -132,6 +133,47 @@ Ongoing, not one-time:
   only through narrow `SECURITY DEFINER` functions, and those functions
   pin `search_path` to prevent privilege-escalation (`CLAUDE.md` invariant
   #11).
+- **Outbound email** (`docs/DECISIONS.md` #36, migration 0055). Walkup sends
+  no email unless a board administrator approved it: a batch they reviewed
+  and sent, or a standing rule they switched on (MFA-gated like every other
+  board action). The limits are enforced in SQL, not in the app: one email
+  per person per week per kind; 20 a day for the first week after sending is
+  switched on, then the board's daily limit (default 60, never above 200);
+  300 an hour platform-wide; never to an address that bounced or reported
+  spam, nor to someone who opted out; a reminder is skipped, not sent, when
+  the balance in it is no longer what the ledger shows. Content is a template
+  plus ledger facts plus an optional 500-character note with no links or
+  addresses; no model writes any email; no account number, routing number or
+  Zelle handle is ever in one. Every message carries a one-click unsubscribe
+  link and header. A platform admin can suspend an association's sending. The
+  history (who, which kind, when, delivery result) is kept 24 months, and the
+  address is blanked by "Remove personal data" (`redact_person`, 0055). With no
+  `RESEND_API_KEY` the app still works: drafts are prepared and opened with
+  `mailto:`.
+- **Entry points without a signed-in person.** There are four, each small and
+  each proving who it is on every request: the bank-sync cron (#28), the
+  email-reminder cron (`CRON_SECRET`), the Resend webhook (Svix signature) and
+  the Plaid webhook (Plaid's signed JWT, #37). The two email entry points use
+  the service key only through `serviceRpc()`
+  (`src/lib/email-outbox/service-rpc.ts`), an allowlist wrapper that can call
+  six named functions that are granted to `service_role` and nobody else; it
+  cannot read or write a table, and a unit test fails if any other file imports
+  it or reads `SUPABASE_SERVICE_ROLE_KEY`. The Plaid webhook calls one
+  function (`flag_bank_item_for_attention`, 0058). The only functions callable
+  by `anon` are `join_state_waitlist` (#34) and the two unsubscribe functions
+  (`email_preference_for_token`, `email_unsubscribe`, behind a 48-byte token);
+  the lint test in `tests/db/migrations.test.ts` lists all three.
+- **Spreadsheet import** (#39, migration 0056). A board admin's upload is read
+  server-side with caps (5 MB, 5,000 rows, 40 columns, 2,000 characters a
+  cell, and a zip central-directory check before unpacking), formulas are never
+  evaluated. Only the columns the board maps are kept. If the board
+  asks for help matching columns, the model sees only column names and a
+  character mask of a few sample cells, never the values. The file is removed
+  once its rows are staged unless the board keeps a copy.
+- **Owner portal** (#38, migration 0054). Everything an owner reads that is not
+  already under row-level security comes through a `SECURITY DEFINER` function
+  that returns nothing to anyone but the unit's owner or a financial reader;
+  announcement read receipts are counts for the board only.
 
 ### Vulnerability and patch management
 
@@ -172,6 +214,19 @@ First application: on 2026-09-26 a critical Next.js advisory
 (GHSA-2xp9-vwfh-vxw4) and three high-severity advisories were patched the
 same day they were found (commit `0e3001d`).
 
+**Accepted risk: braces (GHSA-vfj7-8cjw-p6xm), development tooling only.**
+`braces <= 3.0.3` is reachable only through eslint-config-next, then
+@next/eslint-plugin-next, fast-glob and micromatch: the lint toolchain on
+developer machines and in CI. It is not installed in production
+(`npm audit --omit=dev` reports 0). The flaw is a denial of service from
+pathologically nested glob patterns; our lint globs are fixed in the
+repository and no untrusted input reaches them. No patched braces release
+exists as of 2026-10-14, and the only remedy npm offers is a downgrade to an
+older eslint-config-next, which we reject. The CI gate audits production
+dependencies at high severity (`npm audit --omit=dev --audit-level=high`);
+development dependencies are reported weekly but do not fail the run. Remove
+this exception when braces publishes a fix.
+
 **End-of-life software.** A runtime within 90 days of end of support fails
 the weekly check; the upgrade is planned then and completed before the
 end-of-support date. Nothing in use may run past end of support.
@@ -183,6 +238,7 @@ is observed:
 
 1. **Contain:** rotate the affected credential immediately (Plaid
    client secret/access tokens, Supabase service role key, Anthropic key,
+   `RESEND_API_KEY`, `RESEND_WEBHOOK_SECRET`, `CRON_SECRET`, `BANK_TOKEN_KEY`,
    or account password) at the source dashboard. **Rotating the Plaid
    client secret does not invalidate existing access tokens** — those are
    per-Item and independent of the secret used to obtain them. If a token
@@ -197,7 +253,12 @@ is observed:
    activity, Vercel deployment logs).
 3. **Notify:** if association financial data was actually exposed to
    someone unauthorized, the affected association's board is told what
-   happened and what data was involved.
+   happened and what data was involved, **within 72 hours of confirming the
+   exposure** (a target set by the operator; it is not a Plaid requirement).
+   Plaid is told if a Plaid credential or an access token may have been
+   exposed, and any other affected vendor (Supabase, Vercel, Resend,
+   Anthropic) is told through its own security contact so it can help look
+   at its side.
 4. **Remediate:** fix the root cause (revoked credential, patched
    dependency, corrected RLS policy) and add a migration or policy update
    so the same class of issue can't recur silently.
@@ -205,17 +266,78 @@ is observed:
    `docs/` so there's a durable history — this policy is not considered
    "operationalized" if incidents go undocumented.
 
+**Backup contact.** Walkup has one operator, so there is a single point of
+failure in responding to an incident. A named backup person who can rotate
+credentials and reach the vendor dashboards if the operator is unreachable is
+an open item (§8); until one is named, this policy does not claim there is one.
+
+**Exercised or not.** This plan has not been exercised. It has not been used
+for a real incident and has not been rehearsed. The first rehearsal (a
+credential rotation of the Resend key and the cron secret, end to end) is an
+open item in §8; the result will be recorded here.
+
 ## 7. Vendor risk
 
 Walkup depends on Supabase (database/auth/storage), Vercel (hosting),
-Plaid (bank data, read-only), and Anthropic (AI features, not yet in this
-slice). Each is a mainstream provider with its own security/compliance
-program (Supabase and Vercel are SOC 2 Type II; Plaid maintains SOC 2 and
-is itself running this same kind of vendor review). Walkup does not
-attempt to duplicate their infrastructure security — it relies on them for
-that layer and focuses this policy on what Walkup controls: how
-credentials for those services are handled, and what each integration is
-scoped to do.
+Plaid (bank data, read-only), Anthropic (AI features), and Resend
+(outbound email). Each is a
+mainstream provider with its own security/compliance program (Supabase and
+Vercel are SOC 2 Type II; Plaid maintains SOC 2 and is itself running this
+same kind of vendor review). Walkup does not attempt to duplicate their
+infrastructure security — it relies on them for that layer and focuses this
+policy on what Walkup controls: how credentials for those services are
+handled, and what each integration is scoped to do.
+
+**Anthropic (subprocessor, added 2026-10-14).** Anthropic's Claude models
+are called server-side only, with a key held in the server environment,
+for four uses (`docs/DECISIONS.md` #35, foundation-spec §9):
+
+1. **Reading documents** — text from uploaded documents, with SSN- and
+   tax-ID-shaped numbers removed before sending; an insurance declarations
+   page or quote with no text layer is sent as the file itself, and tax
+   IDs are removed from what comes back before storage (#35, brief
+   decision 7). Contractor quotes and insurance certificates are read the
+   same way when the board asks.
+2. **Reported problems** — a problem's title, description and location
+   detail, with email addresses, phone numbers, unit numbers and dollar
+   amounts removed, to suggest the kind of work and flag a possible
+   emergency (a suggestion the board accepts or dismisses; safety guidance
+   never depends on it).
+3. **Drafts and summaries** — a saved policy's figures and insurer for its
+   plain-English summary (never the policy number, named insured, address or
+   agent's details); insurance email drafts receive only the kind of email
+   and coverage types, with names and numbers filled in afterwards.
+   No model writes an email that Walkup sends (#36); drafts to contractors
+   and agents open in the board's own mail app (#22).
+4. **Web research** — Anthropic's server-side web search for insurers,
+   agencies and contractors, given only city, state, ZIP code, unit count,
+   stories, year built, construction type, coverage types, the kind of work
+   and a phrase from Walkup's fixed repair vocabulary. Results are kept only
+   when verified against the sources the search returned.
+
+A fifth, narrower use is the spreadsheet import's optional column matching
+(#39): only the column names and a character mask of a few sample cells
+(letters shown as x, digits as 9) are sent, never the values. It runs as the
+existing `document_classify` kind.
+
+Every call is claimed and logged in `ai_calls` (no prompt or answer
+content) against a per-association daily limit enforced in the database
+before the call is made. Under Anthropic's commercial terms, inputs are not
+used to train models. The Anthropic Console sits behind Google sign-in with
+2-Step Verification (§8), and the API key is rotated on the same terms as
+the other critical secrets in §3.
+
+**Resend (subprocessor for outbound email, added 2026-10-14).** Resend
+delivers the account emails and the reminders, statements and notices a
+board administrator approves (#36). It receives the recipient's name and
+address and the message text, including a statement PDF when attached, and
+reports delivery, bounces and spam complaints back through a webhook whose
+Svix signature is verified before anything is read
+(`/api/email/webhook`, secret `RESEND_WEBHOOK_SECRET`). The API key is scoped
+to sending for walkuphoa.com only and is held in the server environment;
+without it nothing is sent and the app falls back to drafts. A hard bounce or
+spam complaint puts the address on a per-association block list. Messages
+never contain bank account details or links other than to Walkup.
 
 ## 8. Open items (as of 2026-08-05)
 
@@ -248,9 +370,21 @@ what's actually in place:
       before revoking locally, and OAuth institutions are supported via a
       dedicated redirect route. `docs/DECISIONS.md` #27,
       `supabase/migrations/0026_bank_connection_item_removal.sql`.
-- [ ] No Plaid webhook, so a stale connection (`ITEM_LOGIN_REQUIRED`)
-      surfaces only as a sync error, not a proactive notice — a manual
-      check, not automated monitoring. Tracked, not yet built.
+- [x] Plaid webhooks: Walkup receives Plaid's item webhooks at
+      `/api/plaid/webhook` (Production only). Each is verified against
+      Plaid's published signing key (ES256, five-minute freshness, body
+      hash) before anything is read; unverified requests are rejected and
+      logged without their content. Only four item events act, and they only
+      mark a bank connection as needing attention so the board sees
+      "Reconnect"; the webhook never reads a token, never syncs, never
+      touches the ledger. Transactions are still fetched by the daily sync
+      and the board's own Sync now. The receiver uses the service role
+      through a single function (`docs/DECISIONS.md` #37). A sync that finds
+      a revoked or deleted connection stops retrying it and tells the board
+      to disconnect and reconnect; syncs are capped at 20 pages per run and
+      resume from a saved cursor. (Replaces the earlier "no Plaid webhook"
+      gap, 2026-10-14; live once migration 0058 and `PLAID_WEBHOOK_URL` are
+      in production.)
 - [ ] Live deployment (Vercel project, production Supabase project, Plaid
       production credentials actually in use) — this policy's controls
       apply to the code as written; §2's "review immediately after any...
@@ -266,8 +400,24 @@ what's actually in place:
       workstation (found 2026-09-26: auto-install is on, but both are
       waiting on a restart).
 - [ ] Confirm `CRON_SECRET` and `SUPABASE_SERVICE_ROLE_KEY` are set in
-      Vercel so the daily job — bank sync and automated deprovisioning
-      (§4b) — actually runs.
+      Vercel so the daily jobs — bank sync and automated deprovisioning
+      (§4b), and the email-reminder run — actually run.
+- [ ] Outbound email go-live (2026-10-14): verify walkuphoa.com in Resend
+      (DKIM and the return-path domain, checked against the ImprovMX
+      records), publish a DMARC record (`_dmarc`, `p=none` to start), create
+      the sending-only API key and set `RESEND_API_KEY`, create the webhook
+      endpoint `https://www.walkuphoa.com/api/email/webhook` and set
+      `RESEND_WEBHOOK_SECRET`, and replace the `LEGAL_ADDRESS` placeholder in
+      `src/lib/site-config.ts` with DS Collective LLC's postal address. Until
+      then every email stays a draft.
+- [ ] Set `PLAID_WEBHOOK_URL` in Production and register the webhook on the
+      existing bank connection (`registerBankWebhook`), after migration 0058 is
+      applied to production.
+- [ ] Create the Resend account with a unique password in the password
+      manager and two-factor authentication, before the sending key is made
+      (§4 lists it as an infrastructure account).
+- [ ] Name a backup contact for incident response and rehearse §6 once (see
+      §6, "Backup contact" and "Exercised or not").
 
 ## 9. Data retention and deletion
 
@@ -280,6 +430,9 @@ What is kept, for how long, and how it is removed:
 | A person's name, email, phone, mailing address | While they hold access or own a unit | Removed on request, or by a board admin once the person has no access and no current ownership — "Remove personal data" (`redact_person()`, 0037). The name becomes "Former member"; payment and ownership history stays attached. The same fields are scrubbed from the audit log (DECISIONS #30). |
 | Audit log | Same as the financial records it describes | Personal fields scrubbed as above; the events themselves are kept. |
 | Pending invites | Until redeemed or expired | An invite's email is cleared when that person's data is removed. |
+| Email history (who, which kind, when, delivery result) | 24 months, then removed by the daily job | Addresses are blanked by "Remove personal data" (`redact_person`, 0055). |
+| A spreadsheet a board imports | Removed once its rows are staged, unless the board keeps a copy in the Document Hub | The staged rows stay with the import so it can be undone; a kept copy is deleted by the board in the Document Hub. |
+| Announcement read receipts | Life of the announcement | Hold only a person id and a time; the board sees counts, never names. The person's name is cleared by "Remove personal data". |
 
 **Requests.** Anyone can ask for their data to be removed or corrected by
 emailing the address on `/privacy`. The operator handles it within 30
@@ -298,7 +451,7 @@ network, VPN, or "inside" — every request, from the app's own pages or
 directly against the API, is authenticated and then authorized row by row
 by the database (row-level security), with MFA required at the database
 level (0025). Service-to-service calls use scoped credentials over TLS,
-and the only elevated credential is confined to one scheduled job (#28).
+and the elevated credential is confined to four small server entry points: the daily bank sync (#28), the email-reminder run and the Resend webhook (#36, through a six-function allowlist), and the Plaid webhook (#37, one function). Each authenticates itself on every request.
 
 That is the substance of a zero-trust approach, and it is what Walkup
 claims. It is not a formally certified zero-trust architecture — there is

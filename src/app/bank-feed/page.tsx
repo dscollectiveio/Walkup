@@ -5,6 +5,7 @@ import { after } from "next/server";
 import { ChevronDown } from "lucide-react";
 import { createClient } from "@/lib/supabase/server";
 import { Card, Empty, Restricted } from "@/components/ui";
+import { BoardOnly, viewerIsOwnerOnly } from "@/components/board-only";
 import { ConnectBankButton } from "./connect-bank-button";
 import { TransactionsHelp } from "./transactions-help";
 import { type Pickers, type TransactionRecord } from "./transaction-row";
@@ -29,7 +30,9 @@ import {
   type PayeeHistoryRow,
   type Recommendation,
 } from "@/lib/plaid/recommend";
+import { claimAutoSync, releaseAutoSync } from "@/lib/plaid/auto-sync-claim";
 import { syncOneConnection } from "@/lib/plaid/sync";
+import { plaidErrorLog } from "@/lib/plaid";
 
 export const dynamic = "force-dynamic";
 
@@ -194,6 +197,17 @@ export default async function BankFeedPage({
     account: accountParam,
     limit: limitParam,
   } = await searchParams;
+  // An owner has no business here, and RLS would show them a bank-less page
+  // that reads as "nothing connected" (owner-portal-spec 2.4).
+  if (await viewerIsOwnerOnly()) {
+    return (
+      <BoardOnly
+        what="The bank feed"
+        why="It shows the association's bank transactions, which only the board and the accountant can see."
+        alternative={{ label: "See your statement", href: "/owner" }}
+      />
+    );
+  }
   // From the Budget page: "see the transactions behind this category".
   const account = accountParam?.trim() || undefined;
   const range: Range =
@@ -349,7 +363,7 @@ export default async function BankFeedPage({
   // Only on the landing render, and not again within the cooldown, so a
   // search or a filter never starts a second sync of the same cursor. Banks
   // marked 'error' are skipped: they want a sign-in, not a retry.
-  const checking =
+  const candidates =
     canEdit && plainOpen
       ? active.filter(
           (c) =>
@@ -358,17 +372,30 @@ export default async function BankFeedPage({
             now.getTime() - (autoSyncStartedAt.get(c.id) ?? 0) > AUTO_SYNC_COOLDOWN_MS,
         )
       : [];
+  // The in-memory cooldown above is only a cheap first filter; the claim is what stops two instances (REVIEW-2 #28).
+  const claimedAtIso = now.toISOString();
+  const checking: typeof candidates = [];
+  for (const c of candidates) {
+    autoSyncStartedAt.set(c.id, now.getTime());
+    if (await claimAutoSync(supabase, c, claimedAtIso)) checking.push(c);
+  }
   if (checking.length > 0) {
-    for (const c of checking) autoSyncStartedAt.set(c.id, now.getTime());
     after(async () => {
       for (const c of checking) {
         try {
           const { token } = await readBankToken(supabase, c.id);
-          if (!token) continue;
+          if (!token) {
+            await releaseAutoSync(supabase, c, claimedAtIso);
+            continue;
+          }
           const result = await syncOneConnection(supabase, c, token, { autoPost: false });
-          if ("error" in result) console.warn(`Auto-sync of ${c.institution_name} failed: ${result.error}`);
+          if ("error" in result) {
+            await releaseAutoSync(supabase, c, claimedAtIso);
+            console.warn(`Auto-sync of ${c.institution_name} failed: ${result.error}`);
+          }
         } catch (cause) {
-          console.warn(`Auto-sync of ${c.institution_name} failed`, cause);
+          await releaseAutoSync(supabase, c, claimedAtIso);
+          console.warn(`Auto-sync of ${c.institution_name} failed`, plaidErrorLog(cause));
         }
       }
     });
@@ -489,11 +516,34 @@ export default async function BankFeedPage({
           title="Connect a bank account"
           hint="Transactions flow in automatically; you categorize them and they post to the books."
         >
-          <p className="mb-4 text-[13px] leading-relaxed text-mute">
-            Walkup uses Plaid to connect securely. Your bank password is never seen or stored by
-            Walkup — only a read-only token that can show transactions. Nothing here can move
-            money.
-          </p>
+          <div className="mb-4 space-y-2 text-[13px] leading-relaxed text-mute">
+            <p>
+              Walkup uses Plaid to connect to your bank. You sign in at your bank, through Plaid.
+              Walkup never sees or stores your bank password.
+            </p>
+            <p>
+              Once connected, Walkup reads your account names, the last four digits, balances, and up
+              to two years of transactions, only to keep the association&rsquo;s books. It cannot
+              move money. A board admin can disconnect at any time, which closes the connection at
+              Plaid. Transactions already imported stay in the association&rsquo;s books.
+            </p>
+            <p>
+              See our{" "}
+              <Link href="/privacy" className="text-ink underline underline-offset-2">
+                Privacy Policy
+              </Link>{" "}
+              and{" "}
+              <a
+                href="https://plaid.com/legal/#end-user-privacy-policy"
+                target="_blank"
+                rel="noopener noreferrer"
+                className="text-ink underline underline-offset-2"
+              >
+                Plaid&rsquo;s End User Privacy Policy
+              </a>
+              .
+            </p>
+          </div>
           <ConnectBankButton />
         </Card>
       ) : null}

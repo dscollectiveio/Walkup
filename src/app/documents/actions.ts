@@ -1,157 +1,14 @@
 "use server";
 
 import { revalidatePath } from "next/cache";
-import { after } from "next/server";
 import { createClient } from "@/lib/supabase/server";
-import { checksum, verifyFile } from "@/lib/documents/file-type";
-import { currentAssociationId, signedUrlFor } from "@/lib/documents/access";
+import { signedUrlFor } from "@/lib/documents/access";
 import { runExtraction } from "@/lib/documents/pipeline";
-
-const MAX_BYTES = 25 * 1024 * 1024;
-
-export type UploadOutcome =
-  | { filename: string; status: "added"; id: string }
-  | { filename: string; status: "duplicate"; existingId: string }
-  | { filename: string; status: "rejected"; reason: string };
+import { documentError } from "@/lib/documents/errors";
 
 function revalidateDocuments() {
   revalidatePath("/documents");
   revalidatePath("/");
-}
-
-/**
- * Store one or more files.
- *
- * Every file is judged on its own: one rejection does not abandon the rest,
- * and the caller gets a per-file verdict rather than a single error for the
- * batch. Uploading five things and being told only that "something failed" is
- * the behaviour this exists to avoid.
- *
- * Storage path stays `<association_id>/<timestamp>-<filename>`, which is what
- * makes the first path segment the tenancy boundary (0019).
- */
-export async function uploadDocuments(_prev: unknown, formData: FormData) {
-  const files = formData.getAll("files").filter((f): f is File => f instanceof File && f.size > 0);
-  const categoryId = String(formData.get("category_id") ?? "").trim() || null;
-
-  if (files.length === 0) return { error: "Choose a file first." };
-
-  const supabase = await createClient();
-  const associationId = await currentAssociationId(supabase);
-  if (!associationId) return { error: "No association is visible to you." };
-
-  // A category carries the visibility a board already agreed on, so filing
-  // something as a governing document opens it to owners without anyone
-  // having to remember a second setting.
-  let visibility = "board_only";
-  if (categoryId) {
-    const { data } = await supabase
-      .from("document_categories")
-      .select("default_visibility")
-      .eq("id", categoryId)
-      .limit(1);
-    visibility = data?.[0]?.default_visibility ?? "board_only";
-  }
-
-  const results: UploadOutcome[] = [];
-
-  for (const file of files) {
-    if (file.size > MAX_BYTES) {
-      results.push({
-        filename: file.name,
-        status: "rejected",
-        reason: "is larger than 25 MB. Try a smaller scan, or split it.",
-      });
-      continue;
-    }
-
-    const bytes = new Uint8Array(await file.arrayBuffer());
-
-    // The bytes decide the type, not the browser's guess and not the
-    // extension — see lib/documents/file-type.ts.
-    const verdict = verifyFile(file.type, bytes);
-    if (!verdict.ok) {
-      results.push({ filename: file.name, status: "rejected", reason: verdict.reason });
-      continue;
-    }
-
-    const digest = await checksum(bytes);
-    const { data: existing } = await supabase
-      .from("documents")
-      .select("id")
-      .eq("checksum", digest)
-      .is("deleted_at", null)
-      .limit(1);
-
-    if (existing?.[0]) {
-      results.push({ filename: file.name, status: "duplicate", existingId: existing[0].id });
-      continue;
-    }
-
-    const safeName = file.name.replace(/[^\w.\-]+/g, "_").slice(-120);
-    const path = `${associationId}/${Date.now()}-${safeName}`;
-
-    const { error: uploadError } = await supabase.storage
-      .from("documents")
-      .upload(path, file, { contentType: verdict.mime });
-
-    if (uploadError) {
-      results.push({ filename: file.name, status: "rejected", reason: uploadError.message });
-      continue;
-    }
-
-    const { data: doc, error: rowError } = await supabase
-      .from("documents")
-      .insert({
-        association_id: associationId,
-        storage_path: path,
-        filename: file.name,
-        mime_type: verdict.mime,
-        byte_size: file.size,
-        checksum: digest,
-        category_id: categoryId,
-        visibility,
-        tag_source: categoryId ? "manual" : null,
-      })
-      .select("id")
-      .single();
-
-    if (rowError || !doc) {
-      // Never leave a file behind a row that failed to save.
-      await supabase.storage.from("documents").remove([path]);
-      results.push({
-        filename: file.name,
-        status: "rejected",
-        reason: rowError?.message ?? "could not be saved.",
-      });
-      continue;
-    }
-
-    results.push({ filename: file.name, status: "added", id: doc.id });
-  }
-
-  // Read the files after the response is sent. The uploader sees them in the
-  // list straight away; the slow part happens behind them. Each document's
-  // progress is written to its own row, so a run that dies here is visible in
-  // the hub as "failed" and can be re-run — not silently lost.
-  const stored = results.filter((r) => r.status === "added").map((r) => r.id);
-  if (stored.length > 0) {
-    after(async () => {
-      const bg = await createClient();
-      for (const id of stored) {
-        try {
-          await runExtraction(bg, id);
-        } catch {
-          // runExtraction records its own failures; this only stops one bad
-          // document from abandoning the rest of the batch.
-        }
-      }
-      revalidatePath("/documents");
-    });
-  }
-
-  revalidateDocuments();
-  return { ok: true as const, results };
 }
 
 /**
@@ -166,8 +23,17 @@ export async function rerunExtraction(
 
   // The update inside runExtraction is RLS-gated, but checking first gives a
   // plain-language refusal instead of a silent no-op.
-  const { data } = await supabase.from("documents").select("id").eq("id", documentId).limit(1);
+  const { data } = await supabase
+    .from("documents")
+    .select("id, association_id")
+    .eq("id", documentId)
+    .limit(1);
   if (!data?.length) return { error: "That document isn't visible to you." };
+
+  // An owner can see an all-owners document but must not spend the paid read
+  // (REVIEW-2 #1). Board only, decided by the database.
+  const { data: boardOk } = await supabase.rpc("is_board", { assoc: data[0].association_id });
+  if (boardOk !== true) return { error: "Only a board member can have a document read again." };
 
   const result = await runExtraction(supabase, documentId);
   revalidateDocuments();
@@ -202,7 +68,7 @@ export async function retagDocument(_prev: unknown, formData: FormData) {
     .eq("id", id)
     .select("id");
 
-  if (error) return { error: error.message };
+  if (error) return { error: documentError(error) };
   if (!data?.length) return { error: "Only the board can refile a document." };
 
   revalidateDocuments();
@@ -227,7 +93,7 @@ export async function confirmDocumentTag(
     .eq("id", documentId)
     .select("id");
 
-  if (error) return { error: error.message };
+  if (error) return { error: documentError(error) };
   if (!data?.length) return { error: "Only the board can confirm a document's category." };
 
   revalidateDocuments();
@@ -248,7 +114,7 @@ export async function renameDocument(_prev: unknown, formData: FormData) {
     .eq("id", id)
     .select("id");
 
-  if (error) return { error: error.message };
+  if (error) return { error: documentError(error) };
   if (!data?.length) return { error: "Only the board can rename a document." };
 
   revalidateDocuments();
@@ -276,7 +142,7 @@ export async function setDocumentVisibility(_prev: unknown, formData: FormData) 
     .eq("id", id)
     .select("id");
 
-  if (error) return { error: error.message };
+  if (error) return { error: documentError(error) };
   if (!data?.length) return { error: "Only the board can change who sees a document." };
 
   revalidateDocuments();
@@ -292,7 +158,7 @@ export async function binDocument(documentId: string): Promise<{ ok?: true; erro
     .eq("id", documentId)
     .select("id");
 
-  if (error) return { error: error.message };
+  if (error) return { error: documentError(error) };
   if (!data?.length) return { error: "Only the board can bin a document." };
 
   revalidateDocuments();
@@ -307,7 +173,7 @@ export async function restoreDocument(documentId: string): Promise<{ ok?: true; 
     .eq("id", documentId)
     .select("id");
 
-  if (error) return { error: error.message };
+  if (error) return { error: documentError(error) };
   if (!data?.length) return { error: "Only the board can restore a document." };
 
   revalidateDocuments();
@@ -343,7 +209,7 @@ export async function purgeDocument(documentId: string): Promise<{ ok?: true; er
         error: "This document is cited by a posted transaction and can't be destroyed.",
       };
     }
-    return { error: error.message };
+    return { error: documentError(error) };
   }
   if (!data?.length) return { error: "Only a board admin can destroy a document." };
 

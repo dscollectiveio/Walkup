@@ -37,7 +37,7 @@ export function Greeting({
               : "border-bad-line bg-bad-tint text-bad-text"
           }`}
         >
-          {books.balanced ? "Books balance · checked just now" : "Books don't match — check the ledger"}
+          {books.balanced ? "Books balance · checked just now" : "Books don't match. Check the ledger"}
         </span>
         </TopBarSlot>
       ) : null}

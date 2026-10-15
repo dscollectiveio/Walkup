@@ -10,17 +10,31 @@
 
 export const SITE_URL = "https://www.walkuphoa.com";
 
-// TODO(doug): make sure this inbox actually receives mail (e.g. ImprovMX forwarding in Vercel DNS).
+// Mail to walkuphoa.com is forwarded by ImprovMX (set up Oct 2026) to Doug's inbox.
+// The catch-all (*) means any address works; these are the ones the app uses,
+// each for one purpose so mail can be sorted and, later, split between people.
+/** General questions: the landing page, footer, privacy and the public listing. */
 export const CONTACT_EMAIL = "hello@walkuphoa.com";
+/** Help with an account or a problem using Walkup. */
+export const SUPPORT_EMAIL = "support@walkuphoa.com";
+/** Pricing, fit, walkthrough requests and associations over 20 units. */
+export const SALES_EMAIL = "sales@walkuphoa.com";
+/** Vulnerability reports (security.txt and the Security page). */
+export const SECURITY_EMAIL = "security@walkuphoa.com";
 
-// TODO(doug): the booking page for walkthroughs (Calendly or similar).
-export const BOOKING_URL = "TODO_BOOKING_URL";
+/** The booking page for the 15-minute walkthrough. */
+export const BOOKING_URL = "https://calendly.com/dscollective/walkup-app-walkthrough";
 
-// TODO(doug): the legal entity that operates Walkup, for the footer copyright line.
-export const LEGAL_ENTITY = "TODO_LEGAL_ENTITY";
+/** The legal entity that operates Walkup: the footer copyright, the Terms and the Privacy Policy. */
+export const LEGAL_ENTITY = "DS Collective LLC";
 
-// TODO(doug): a small square photo for the founder section, e.g. "/founder.jpg" in public/. Null shows text only.
-export const FOUNDER_PHOTO: string | null = null;
+/**
+ * DS Collective LLC's postal address. Every email Walkup sends on behalf of an
+ * association carries it in the footer (CAN-SPAM, DECISIONS #36), so sending
+ * refuses to start while this is a placeholder. Do not invent one.
+ */
+// TODO(doug): DS Collective LLC's real postal address.
+export const LEGAL_ADDRESS = "TODO(doug): DS Collective LLC postal address";
 
 // TODO(doug): a real quote from a real board member. Null renders nothing; never write a placeholder quote.
 export const TESTIMONIAL: { quote: string; name: string; role: string } | null = null;
@@ -36,13 +50,19 @@ export const SECURITY_TXT_EXPIRES = "2027-10-14T00:00:00.000Z";
 
 const isPlaceholder = (v: string) => v.startsWith("TODO");
 
+/** True once LEGAL_ADDRESS is a real address. Outbound email stays "not set up" until then. */
+export const legalAddressIsSet = !isPlaceholder(LEGAL_ADDRESS);
+
 /** Where "Book a walkthrough" goes: the booking page once set, an email until then. */
 export const bookingHref = isPlaceholder(BOOKING_URL)
-  ? `mailto:${CONTACT_EMAIL}?subject=${encodeURIComponent("Walkup walkthrough")}`
+  ? `mailto:${SALES_EMAIL}?subject=${encodeURIComponent("Walkup walkthrough")}`
   : BOOKING_URL;
 
 /** The copyright holder in the footer: the legal entity once set, the product name until then. */
 export const copyrightHolder = isPlaceholder(LEGAL_ENTITY) ? "Walkup" : LEGAL_ENTITY;
+
+/** Who runs Walkup, as the Terms name it: the legal entity once set, the founder until then. */
+export const operatorName = isPlaceholder(LEGAL_ENTITY) ? "Walkup, operated by Doug Smart" : `${LEGAL_ENTITY}, which operates Walkup`;
 
 // ---- Pricing (Doug's pricing one-pager, Oct 2026) ------------------------------
 
@@ -66,13 +86,13 @@ export type FaqGroup = "For treasurers" | "About Walkup" | "Data and security";
 export const FAQ: { group: FaqGroup; q: string; a: string }[] = [
   {
     group: "For treasurers",
-    q: "What is the best software for a small self-managed condo association?",
+    q: "What should a small self-managed condo association look for in software?",
     a: "Look for software built for small, volunteer-run buildings rather than large managed communities. Walkup is built for Illinois condo associations of 2 to 20 units and covers bookkeeping, dues, budgets, financial statements and Form 1120-H prep for a flat $19 to $55 a month.",
   },
   {
     group: "For treasurers",
     q: "How do I keep track of HOA dues without a spreadsheet?",
-    a: "Connect the association's bank account to software that matches each deposit to a unit. Walkup does this automatically, shows who's paid and who's behind, and drafts reminders for you to send.",
+    a: "Connect the association's bank account to software that matches each deposit to a unit. Walkup does this automatically, shows who's paid and who's behind, and prepares reminders for a board admin to approve and send.",
   },
   {
     group: "For treasurers",
@@ -124,7 +144,7 @@ export const FAQ: { group: FaqGroup; q: string; a: string }[] = [
   {
     group: "About Walkup",
     q: "We have more than 20 units. Can we use Walkup?",
-    a: "Walkup is built for 2 to 20 units today. Email us and we'll talk through whether it fits.",
+    a: `Walkup is built for 2 to 20 units today. Email ${SALES_EMAIL} and we'll talk through whether it fits.`,
   },
   {
     group: "Data and security",
@@ -134,7 +154,7 @@ export const FAQ: { group: FaqGroup; q: string; a: string }[] = [
   {
     group: "Data and security",
     q: "What happens to our data if we leave?",
-    a: "It's yours. Export the ledger, documents and owner list any time. There's no contract.",
+    a: "It's yours. Download your financial statements, budget, tax forms and documents any time, and email us for a copy of the rest. There's no contract.",
   },
 ];
 

@@ -2,6 +2,7 @@
 
 import { redirect } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
+import { safeNext } from "@/lib/security/safe-next";
 
 export async function verifyChallenge(_prev: unknown, formData: FormData) {
   const factorId = String(formData.get("factorId") ?? "");
@@ -30,6 +31,5 @@ export async function verifyChallenge(_prev: unknown, formData: FormData) {
     return { error: "That code wasn't accepted." };
   }
 
-  const next = String(formData.get("next") ?? "");
-  redirect(next.startsWith("/") && !next.startsWith("//") ? next : "/");
+  redirect(safeNext(String(formData.get("next") ?? "")));
 }

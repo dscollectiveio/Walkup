@@ -35,7 +35,7 @@ function revalidateTax(formId?: string) {
 }
 
 async function currentAssociationId(supabase: Supabase) {
-  const { data: associations } = await supabase.from("associations").select("id").limit(1);
+  const { data: associations } = await supabase.from("associations").select("id").order("created_at").order("id").limit(1);
   return (associations?.[0]?.id as string | undefined) ?? null;
 }
 

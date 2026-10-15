@@ -17,8 +17,14 @@ import {
   RestoreButton,
   VisibilityForm,
 } from "./detail-actions";
+import { aiConfigured } from "@/lib/ai/client";
+import { coverageShort } from "@/lib/insurance/coverage";
+import { ReadButtons } from "@/app/insurance/review/[documentId]/read-buttons";
 
 export const dynamic = "force-dynamic";
+// Uploads and re-reads run the document reader in after(); give it the
+// full Vercel budget (foundation-spec 5.2).
+export const maxDuration = 300;
 
 export default async function DocumentDetailPage({
   params,
@@ -53,6 +59,8 @@ export default async function DocumentDetailPage({
   const unitLabel =
     (units ?? []).find((u) => u.id === doc.restricted_to_unit_id)?.label ?? null;
   const binned = doc.deleted_at !== null;
+  const isInsurance = category?.slug === "insurance";
+  const linkedTo = await insuranceLinks(supabase, doc.id);
 
   const summary =
     doc.extraction && typeof doc.extraction === "object"
@@ -193,6 +201,48 @@ export default async function DocumentDetailPage({
           </div>
         </Card>
 
+        {isInsurance && canWrite && !binned ? (
+          <Card title="Use it on Insurance">
+            {aiConfigured() ? (
+              <>
+                <p className="mb-3 text-[13px] text-mute">
+                  Walkup reads the figures and you check each one before anything is saved.
+                </p>
+                <ReadButtons documentId={doc.id} />
+              </>
+            ) : (
+              <div className="flex flex-col gap-2 sm:flex-row">
+                <Link
+                  href={`/insurance/policies/new?document=${doc.id}`}
+                  className="inline-flex min-h-[44px] items-center justify-center rounded-md bg-ink px-4 text-[13px] font-medium text-paper hover:bg-ink-mid"
+                >
+                  Enter it as a policy
+                </Link>
+                <Link
+                  href={`/insurance/quotes/new?document=${doc.id}`}
+                  className="inline-flex min-h-[44px] items-center justify-center rounded-md border border-line-strong bg-paper px-4 text-[13px] font-medium text-ink hover:bg-fill"
+                >
+                  Enter it as a quote
+                </Link>
+              </div>
+            )}
+          </Card>
+        ) : null}
+
+        {linkedTo.length > 0 ? (
+          <Card title="Linked to">
+            <ul className="space-y-1 text-[13px]">
+              {linkedTo.map((l) => (
+                <li key={l.key}>
+                  <Link href={l.href} className="inline-flex min-h-[36px] items-center text-ink underline underline-offset-2">
+                    {l.label}
+                  </Link>
+                </li>
+              ))}
+            </ul>
+          </Card>
+        ) : null}
+
         <Card title="Who can see it">
           <p className="text-[13px] text-ink">
             {visibilitySentence(doc.visibility, unitLabel)}
@@ -206,4 +256,55 @@ export default async function DocumentDetailPage({
       </div>
     </div>
   );
+}
+
+type Supabase = Awaited<ReturnType<typeof createClient>>;
+
+/**
+ * The policies, quotes and claims this document is attached to
+ * (insurance-spec §12 I-8), labelled "{coverage short} · {carrier}". Read
+ * under the caller's RLS, so anyone who can't read insurance sees none.
+ */
+async function insuranceLinks(supabase: Supabase, documentId: string): Promise<{ key: string; label: string; href: string }[]> {
+  const { data: links } = await supabase
+    .from("document_links")
+    .select("target_table, target_id")
+    .eq("document_id", documentId)
+    .in("target_table", ["insurance_policies", "insurance_quotes", "insurance_claims"]);
+  const ids = (table: string) => [...new Set((links ?? []).filter((l) => l.target_table === table).map((l) => l.target_id as string))];
+  const policyIds = ids("insurance_policies");
+  const quoteIds = ids("insurance_quotes");
+  const claimIds = ids("insurance_claims");
+  if (policyIds.length + quoteIds.length + claimIds.length === 0) return [];
+
+  const none = Promise.resolve({ data: [] as Record<string, unknown>[] });
+  const [{ data: policies }, { data: quotes }, { data: claims }] = await Promise.all([
+    policyIds.length ? supabase.from("insurance_policies").select("id, coverage, carrier_name").in("id", policyIds) : none,
+    quoteIds.length ? supabase.from("insurance_quotes").select("id, coverage, carrier_name").in("id", quoteIds) : none,
+    claimIds.length
+      ? supabase.from("insurance_claims").select("id, policy_id, claim_number, insurance_policies(coverage, carrier_name)").in("id", claimIds)
+      : none,
+  ]);
+  const label = (coverage: unknown, carrier: unknown) =>
+    [typeof coverage === "string" ? coverageShort(coverage) : null, typeof carrier === "string" ? carrier : null].filter(Boolean).join(" · ");
+  const out: { key: string; label: string; href: string }[] = [];
+  for (const p of policies ?? []) {
+    out.push({ key: `p:${p.id}`, label: label(p.coverage, p.carrier_name) || "A policy", href: `/insurance/policies/${p.id}` });
+  }
+  for (const q of quotes ?? []) {
+    out.push({ key: `q:${q.id}`, label: `Quote: ${label(q.coverage, q.carrier_name) || "a quote"}`, href: `/insurance/quotes/${q.id}` });
+  }
+  for (const c of claims ?? []) {
+    const pol = (Array.isArray(c.insurance_policies) ? c.insurance_policies[0] : c.insurance_policies) as
+      | { coverage?: unknown; carrier_name?: unknown }
+      | null
+      | undefined;
+    const number = typeof c.claim_number === "string" && c.claim_number.trim() ? ` ${c.claim_number.trim()}` : "";
+    out.push({
+      key: `c:${c.id}`,
+      label: `Claim${number}: ${label(pol?.coverage, pol?.carrier_name) || "a policy"}`,
+      href: `/insurance/policies/${c.policy_id}`,
+    });
+  }
+  return out;
 }

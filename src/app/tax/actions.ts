@@ -4,7 +4,7 @@ import { revalidatePath } from "next/cache";
 import { createClient } from "@/lib/supabase/server";
 
 async function currentAssociationId(supabase: Awaited<ReturnType<typeof createClient>>) {
-  const { data: associations } = await supabase.from("associations").select("id").limit(1);
+  const { data: associations } = await supabase.from("associations").select("id").order("created_at").order("id").limit(1);
   return associations?.[0]?.id ?? null;
 }
 

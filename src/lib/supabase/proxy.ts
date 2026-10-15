@@ -21,7 +21,24 @@ const PUBLIC_PATHS = [
   "/twitter-image",
   "/manifest.webmanifest",
   "/.well-known/security.txt",
-  "/login", "/signup", "/forgot-password", "/auth", "/invite", "/security", "/privacy", "/policies"];
+  // Scheduled jobs call with a shared secret, never a login. Each route
+  // checks `Authorization: Bearer $CRON_SECRET` itself and refuses without it
+  // (see src/app/api/cron/*/route.ts). Without this entry the redirect below
+  // sent the daily bank sync to /login and it never ran.
+  "/api/cron",
+  // Plaid posts webhooks with no session. The route verifies Plaid's ES256
+  // signature over the raw body itself and 401s on anything else
+  // (src/app/api/plaid/webhook/route.ts); exact path, not /api/plaid.
+  "/api/plaid/webhook",
+  // Resend posts delivery events (bounces, complaints) with no session. The
+  // route verifies the Svix signature over the raw body itself and 400s on
+  // anything else (src/app/api/email/webhook/route.ts); exact path.
+  "/api/email/webhook",
+  // An owner's unsubscribe link works signed out: the 48-byte token in it is the
+  // whole credential, and the page only ever changes that person's email
+  // preferences (src/app/unsubscribe, DECISIONS #36).
+  "/unsubscribe",
+  "/login", "/signup", "/forgot-password", "/auth", "/invite", "/security", "/privacy", "/terms", "/policies"];
 
 // Reachable while signed in but not yet at AAL2, so a user can actually
 // complete enrollment or the challenge instead of being redirected in place.
@@ -30,6 +47,12 @@ const MFA_EXEMPT_PATHS = ["/account/mfa", "/login/mfa-challenge"];
 // Reachable once AAL2 is satisfied but before the caller has a persons row
 // anywhere — creating a building, or redeeming an invite into one.
 const ONBOARDING_EXEMPT_PATHS = ["/onboarding", "/invite", "/api/address"];
+
+// An unsubscribe link must work for anyone who opens it, including a person who
+// happens to be signed in at the first step of two-step sign-in, or signed in
+// with no building yet. The page reads and changes only the token holder's own
+// email preferences (0055), so it needs neither check.
+const ALWAYS_REACHABLE_PREFIXES = ["/unsubscribe/"];
 
 /**
  * Refreshes the auth token on every request and redirects unauthenticated
@@ -137,6 +160,8 @@ export async function updateSession(request: NextRequest) {
     url.pathname = mfaTarget ?? (needsOnboarding ? onboardingTarget : "/");
     return NextResponse.redirect(url);
   }
+
+  if (ALWAYS_REACHABLE_PREFIXES.some((p) => path.startsWith(p))) return response;
 
   if (mfaTarget && !MFA_EXEMPT_PATHS.includes(path)) {
     const url = request.nextUrl.clone();

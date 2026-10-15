@@ -3,6 +3,7 @@
 import { useActionState, useState, useTransition } from "react";
 import { redactPerson, updatePerson } from "./actions";
 import { PhoneInput } from "@/components/phone-input";
+import { InviteToSignIn } from "./invite-to-sign-in";
 
 export interface PersonRecord {
   id: string;
@@ -32,6 +33,7 @@ export function PersonRow({
   canEdit,
   canEditRoles,
   canRedact = false,
+  invite = null,
 }: {
   person: PersonRecord;
   roles: string[];
@@ -39,6 +41,11 @@ export function PersonRow({
   canEditRoles: boolean;
   /** Board admin viewing someone with no access and no current unit. */
   canRedact?: boolean;
+  /**
+   * Set for a person with no login who has an owner role or a unit: the row
+   * offers "Invite to sign in" (owner-portal-spec 5.3).
+   */
+  invite?: { associationName: string; boardContactName: string | null } | null;
 }) {
   const [editing, setEditing] = useState(false);
   const [confirmingRedact, setConfirmingRedact] = useState(false);
@@ -168,6 +175,15 @@ export function PersonRow({
         </div>
         {person.mailing_address ? (
           <div className="text-[11px] text-mute-soft">{person.mailing_address}</div>
+        ) : null}
+        {invite ? (
+          <div className="mt-2">
+            <InviteToSignIn
+              personId={person.id}
+              associationName={invite.associationName}
+              boardContactName={invite.boardContactName}
+            />
+          </div>
         ) : null}
       </div>
       <div className="flex shrink-0 flex-col items-end gap-1">

@@ -1,6 +1,7 @@
 import { redirect } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
 import { AuthShell } from "@/components/auth/auth-shell";
+import { BackToSignIn } from "@/components/auth/back-to-sign-in";
 import { MfaSetupForm } from "./mfa-setup-form";
 
 export const dynamic = "force-dynamic";
@@ -37,7 +38,7 @@ export default async function MfaSetupPage() {
 
   if (error || !enrolled) {
     return (
-      <AuthShell step={1} title="Couldn't start two-step sign-in" subtitle={error?.message ?? "Try refreshing the page."}>
+      <AuthShell step={1} title="Couldn't start two-step sign-in" subtitle={error?.message ?? "Try refreshing the page."} footer={<BackToSignIn />}>
         <a href="/account/mfa" className="font-semibold text-ink underline underline-offset-2">Try again</a>
       </AuthShell>
     );
@@ -47,15 +48,16 @@ export default async function MfaSetupPage() {
     <AuthShell
       step={1}
       title="Secure your account"
+      footer={<BackToSignIn />}
       subtitle={
         <>
           Walkup holds your association&rsquo;s financial records, so every account uses two-step sign-in. Scan this
-          code with an authenticator app — Apple Passwords, Google Authenticator, 1Password or Authy — then enter the
+          code with an authenticator app (Apple Passwords, Google Authenticator, 1Password or Authy), then enter the
           6-digit code it shows.
         </>
       }
       aside={{
-        heading: "One extra step keeps the books safe.",
+        heading: "Two-step sign-in protects the books if a password is stolen.",
         body: "From now on, signing in is your password plus a code from your phone. It takes seconds, and it means a leaked password alone can't open your association's records.",
       }}
     >

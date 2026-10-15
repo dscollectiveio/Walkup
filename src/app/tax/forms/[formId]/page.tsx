@@ -81,7 +81,7 @@ function sourceLine(source: string, ref: Record<string, unknown>, lineByName: Ma
     }
     case "contractors": {
       const n = Array.isArray(ref.expense_ids) ? (ref.expense_ids as unknown[]).length : null;
-      return { line: `From contractor payments${n !== null ? `: ${n} payment${n === 1 ? "" : "s"}` : ""}`, href: "/contractors" };
+      return { line: `From contractor payments${n !== null ? `: ${n} payment${n === 1 ? "" : "s"}` : ""}`, href: "/repairs?view=contractors" };
     }
     case "calculated":
       return { line: `Calculated: ${formulaWords(String(ref.formula ?? ""), lineByName)}`, href: null };

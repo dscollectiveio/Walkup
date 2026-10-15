@@ -1,7 +1,7 @@
 "use client";
 
 import { useActionState, useState } from "react";
-import { savePartner } from "@/app/insurance/actions";
+import { savePartner } from "./actions";
 
 const inputClass = "mt-1 w-full rounded-lg border border-line-strong bg-paper px-3 py-2 text-[13px] text-ink";
 
@@ -67,7 +67,7 @@ export function PartnerForm({
       </div>
       <label className="flex items-center gap-2 text-[12px] text-ink">
         <input type="checkbox" name="active" defaultChecked={partner?.active ?? true} className="rounded border-line-strong" />
-        Active — boards can send requests to them
+        Active: boards can send requests to them
       </label>
       {state?.error ? <p className="text-[12px] text-bad-text">{state.error}</p> : null}
       <div className="flex gap-2">

@@ -1,10 +1,20 @@
-import { isSealed, openSecret, sealSecret, sealingEnabled } from "@/lib/security/secret-box";
 import "server-only";
+import { createHash, timingSafeEqual } from "node:crypto";
+import { isSealed, openSecret, sealSecret, sealingEnabled } from "@/lib/security/secret-box";
 import { NextResponse, type NextRequest } from "next/server";
 import { createClient as createServiceClient } from "@supabase/supabase-js";
 import { syncOneConnection } from "@/lib/plaid/sync";
+import { plaidErrorLog } from "@/lib/plaid";
 
 export const dynamic = "force-dynamic";
+// Syncing every connection plus deprovisioning can outlast the default limit.
+export const maxDuration = 300;
+
+/** Constant-time check of the bearer secret; hashing first keeps the length from leaking. */
+function bearerMatches(header: string | null, secret: string): boolean {
+  const digest = (v: string) => createHash("sha256").update(v).digest();
+  return timingSafeEqual(digest(header ?? ""), digest(`Bearer ${secret}`));
+}
 
 /**
  * Daily unattended bank sync — Vercel Cron hits this once a day (see
@@ -27,7 +37,7 @@ export async function GET(request: NextRequest) {
   if (!cronSecret) {
     return NextResponse.json({ error: "CRON_SECRET is not configured." }, { status: 500 });
   }
-  if (request.headers.get("authorization") !== `Bearer ${cronSecret}`) {
+  if (!bearerMatches(request.headers.get("authorization"), cronSecret)) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
 
@@ -52,47 +62,53 @@ export async function GET(request: NextRequest) {
 
   const results = [];
   for (const connection of connections ?? []) {
-    const { data: secretRow, error: secretError } = await supabase
-      .from("bank_connection_secrets")
-      .select("plaid_access_token")
-      .eq("bank_connection_id", connection.id)
-      .limit(1)
-      .maybeSingle();
+    try {
+      const { data: secretRow, error: secretError } = await supabase
+        .from("bank_connection_secrets")
+        .select("plaid_access_token")
+        .eq("bank_connection_id", connection.id)
+        .limit(1)
+        .maybeSingle();
 
-    if (secretError || !secretRow) {
+      if (secretError || !secretRow) {
+        results.push({
+          connectionId: connection.id,
+          error: secretError?.message ?? "No stored access token.",
+        });
+        continue;
+      }
+
+      // autoPost: false, always. This runs with no human behind it; it may
+      // fetch and pre-categorize, but writing to the ledger waits for a board
+      // member's own sync or "post all ready" click — DECISIONS #29.
+      let accessToken: string;
+      try {
+        accessToken = openSecret(secretRow.plaid_access_token);
+      } catch (cause) {
+        results.push({ connectionId: connection.id, error: (cause as Error).message });
+        continue;
+      }
+      // Seal tokens stored before BANK_TOKEN_KEY was set (service role, so a direct update).
+      if (!isSealed(secretRow.plaid_access_token) && sealingEnabled()) {
+        await supabase
+          .from("bank_connection_secrets")
+          .update({ plaid_access_token: sealSecret(accessToken) })
+          .eq("bank_connection_id", connection.id);
+      }
+      const result = await syncOneConnection(supabase, connection, accessToken, {
+        autoPost: false,
+      });
       results.push({
         connectionId: connection.id,
-        error: secretError?.message ?? "No stored access token.",
+        ...("error" in result
+          ? { error: result.error }
+          : { count: result.count, categorized: result.categorized }),
       });
-      continue;
-    }
-
-    // autoPost: false, always. This runs with no human behind it; it may
-    // fetch and pre-categorize, but writing to the ledger waits for a board
-    // member's own sync or "post all ready" click — DECISIONS #29.
-    let accessToken: string;
-    try {
-      accessToken = openSecret(secretRow.plaid_access_token);
     } catch (cause) {
-      results.push({ connectionId: connection.id, error: (cause as Error).message });
-      continue;
+      // One connection failing must not stop the others, or the deprovisioning below.
+      console.error("Bank sync failed for a connection", plaidErrorLog(cause));
+      results.push({ connectionId: connection.id, error: "Sync failed unexpectedly." });
     }
-    // Seal tokens stored before BANK_TOKEN_KEY was set (service role, so a direct update).
-    if (!isSealed(secretRow.plaid_access_token) && sealingEnabled()) {
-      await supabase
-        .from("bank_connection_secrets")
-        .update({ plaid_access_token: sealSecret(accessToken) })
-        .eq("bank_connection_id", connection.id);
-    }
-    const result = await syncOneConnection(supabase, connection, accessToken, {
-      autoPost: false,
-    });
-    results.push({
-      connectionId: connection.id,
-      ...("error" in result
-        ? { error: result.error }
-        : { count: result.count, categorized: result.categorized }),
-    });
   }
 
   // Automated deprovisioning (0037, DECISIONS #30): revoke owner access once

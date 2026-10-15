@@ -80,10 +80,28 @@ describe("operations layer", () => {
       expect(rows.map((r) => r.reference)).toEqual([1, 2, 3]);
     });
 
-    it("keeps resolved_at and status in agreement", async () => {
-      await expect(
-        db.query(`update tickets set status = 'resolved' where id = $1`, [f.ticketCommon]),
-      ).rejects.toThrow(/violates check constraint/i);
+    it("resolved_at follows status", async () => {
+      // 0053: tg_tickets_before_update fills resolved_at from the status, so
+      // the 0013 check can no longer be tripped by forgetting it.
+      const at = async () =>
+        (await db.query<{ resolved_at: string | null }>(`select resolved_at from tickets where id = $1`, [f.ticketCommon]))
+          .rows[0].resolved_at;
+
+      await db.query(`update tickets set status = 'resolved' where id = $1`, [f.ticketCommon]);
+      expect(await at()).not.toBeNull();
+
+      await db.query(`update tickets set status = 'open' where id = $1`, [f.ticketCommon]);
+      expect(await at()).toBeNull();
+
+      // A client-supplied resolved_at is ignored either way.
+      await db.query(`update tickets set resolved_at = '2020-01-01' where id = $1`, [f.ticketCommon]);
+      expect(await at()).toBeNull();
+      await db.query(`update tickets set status = 'closed', resolved_at = '2020-01-01' where id = $1`, [f.ticketCommon]);
+      const { rows } = await db.query<{ recent: boolean }>(
+        `select resolved_at > now() - interval '1 minute' as recent from tickets where id = $1`,
+        [f.ticketCommon],
+      );
+      expect(rows[0].recent).toBe(true);
     });
   });
 

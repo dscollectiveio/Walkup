@@ -1,8 +1,11 @@
 "use client";
 
-import { useActionState, useState, useTransition } from "react";
-import { uploadAndLinkDocument, unlinkDocument } from "./link-actions";
+import { useState, useTransition } from "react";
+import { useRouter } from "next/navigation";
+import { unlinkDocument } from "./link-actions";
 import { DownloadButton } from "./document-row";
+import { DirectUpload } from "@/components/upload/direct-upload";
+import { isLinkableTable } from "./upload/link-targets";
 import { readableSize } from "@/lib/documents/format";
 import type { LinkedDocument } from "@/lib/documents/access";
 
@@ -10,6 +13,9 @@ import type { LinkedDocument } from "@/lib/documents/access";
  * The "Documents" section every entity page gets — a receipt attached to the
  * expense it justifies, a photo attached to the ticket it documents, in the
  * same short upload-and-attach path the hub itself uses.
+ *
+ * The file goes straight to Storage (DirectUpload), so a large scan isn't
+ * stopped by the Server Action body limit.
  *
  * Read-only when `canWrite` is false: an owner reading a unit page sees what's
  * attached (subject to the document's own visibility, decided in the hub —
@@ -26,14 +32,9 @@ export function EntityDocuments({
   documents: LinkedDocument[];
   canWrite: boolean;
 }) {
+  const router = useRouter();
   const [open, setOpen] = useState(false);
-  const [state, action, pending] = useActionState(uploadAndLinkDocument, null);
-
-  const [prev, setPrev] = useState(state);
-  if (state !== prev) {
-    setPrev(state);
-    if (state?.ok) setOpen(false);
-  }
+  const [busy, setBusy] = useState(false);
 
   return (
     <div className="space-y-3">
@@ -63,33 +64,36 @@ export function EntityDocuments({
             Attach a document
           </button>
         ) : (
-          <form action={action} className="space-y-2 rounded-lg border border-line bg-fill p-3">
-            <input type="hidden" name="target_table" value={targetTable} />
-            <input type="hidden" name="target_id" value={targetId} />
-            <input
-              name="file"
-              type="file"
-              required
-              className="block text-[12px] text-ink file:mr-3 file:rounded-md file:border-0 file:bg-ink file:px-2.5 file:py-1 file:text-[12px] file:text-paper hover:file:bg-ink-mid"
-            />
-            <div className="flex items-center gap-2">
-              <button
-                type="submit"
-                disabled={pending}
-                className="rounded-md bg-ink px-3 py-1.5 text-[12px] font-medium text-paper hover:bg-ink-mid disabled:opacity-50"
-              >
-                {pending ? "Attaching…" : "Attach"}
-              </button>
-              <button
-                type="button"
-                onClick={() => setOpen(false)}
-                className="text-[12px] text-mute underline-offset-2 hover:underline"
-              >
-                Cancel
-              </button>
-            </div>
-            {state?.error ? <p className="text-[11px] text-bad-text">{state.error}</p> : null}
-          </form>
+          <div className="space-y-2 rounded-lg border border-line bg-fill p-3">
+            {isLinkableTable(targetTable) ? (
+              <DirectUpload
+                purpose="document"
+                link={{ targetTable, targetId, relation: "source" }}
+                multiple={false}
+                maxFiles={1}
+                dropZone={false}
+                label="Choose a file"
+                help={null}
+                onBusyChange={setBusy}
+                onUploaded={(docs) => {
+                  // Keep the panel open when the link failed, so its row's
+                  // "attach it from the Document Hub" stays readable.
+                  if (docs.some((d) => !d.linkFailed)) setOpen(false);
+                  router.refresh();
+                }}
+              />
+            ) : (
+              <p className="text-[11px] text-bad-text">Don&rsquo;t know how to attach a document to that.</p>
+            )}
+            <button
+              type="button"
+              onClick={() => setOpen(false)}
+              disabled={busy}
+              className="text-[12px] text-mute underline-offset-2 hover:underline disabled:opacity-50"
+            >
+              Cancel
+            </button>
+          </div>
         )
       ) : null}
     </div>

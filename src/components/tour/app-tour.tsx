@@ -24,11 +24,20 @@ type Box = { top: number; left: number; width: number; height: number };
  * No third-party script, so the strict CSP stays as it is. On a phone the
  * nav is a hidden drawer, so every stop is a centered card instead.
  */
-export function AppTour({ role, autoStart }: { role: TourRole | null; autoStart: boolean }) {
+export function AppTour({
+  role,
+  autoStart,
+  stateCode = null,
+}: {
+  role: TourRole | null;
+  autoStart: boolean;
+  /** The association's state: the insurance stop names Illinois law only for Illinois. */
+  stateCode?: string | null;
+}) {
   const pathname = usePathname();
   const router = useRouter();
   const { phone } = useSidebarState();
-  const allSteps = useMemo(() => (role ? tourStepsFor(role) : []), [role]);
+  const allSteps = useMemo(() => (role ? tourStepsFor(role, { stateCode }) : []), [role, stateCode]);
 
   const [steps, setSteps] = useState<TourStep[] | null>(null);
   const [index, setIndex] = useState(0);
@@ -78,13 +87,14 @@ export function AppTour({ role, autoStart }: { role: TourRole | null; autoStart:
   }, [steps, index, finish, role]);
   const back = useCallback(() => setIndex((i) => Math.max(0, i - 1)), []);
 
-  // First visit to the Dashboard: start once it has painted.
+  // First visit to the Dashboard (an owner's Home is /owner): start once it has painted.
+  const onHome = pathname === "/" || (role === "owner" && pathname === "/owner");
   useEffect(() => {
-    if (!autoStart || autoTried.current || pathname !== "/" || allSteps.length === 0) return;
+    if (!autoStart || autoTried.current || !onHome || allSteps.length === 0) return;
     autoTried.current = true;
     const t = setTimeout(start, 700);
     return () => clearTimeout(t);
-  }, [autoStart, pathname, allSteps.length, start]);
+  }, [autoStart, onHome, allSteps.length, start]);
 
   // Replay from Help.
   useEffect(() => {

@@ -20,6 +20,7 @@ export function RedeemInviteForm({ token }: { token: string }) {
           required
           className="mt-1 w-full rounded-lg border border-line-strong bg-paper px-3 py-2 text-[13px] text-ink"
         />
+        <p className="mt-1 text-[12px] text-mute">If the board already entered you, your name comes from their records.</p>
       </div>
 
       {state?.error ? (

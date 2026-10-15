@@ -480,6 +480,14 @@ real problem, and the volunteer doing this at 10pm is exactly who would not
 notice. Sending from the board's own mailbox also means the contractor's reply
 reaches a human.
 
+**Addendum, 2026-10-14: #36 narrows "No automatic sending".** Walkup now sends
+its own email (dues reminders, statements, late-fee notices, announcements),
+but only after a board administrator has approved it, as a reviewed batch or a
+standing rule they switched on, within limits enforced in the database. The
+reasoning above still holds for everything else: messages to contractors,
+insurance agents and brokers remain drafts the board sends from its own
+mailbox, and no model writes an email. "No payment initiation" is untouched.
+
 **No brokering.** `insurance_quotes` records what carriers offered so renewals
 can be compared year on year, and flags when no alternative quotes were
 obtained. Advising on or placing insurance is a licensed activity. The page
@@ -723,6 +731,26 @@ the bank) than to send a URI that will never match.
   person — every board member of a building shares one Plaid-side identity.
   Not addressed here; flagged so it isn't mistaken for an oversight later.
 
+
+**Addendum, 2026-10-14 (the "Known, accepted gaps" above, as they stand
+now).** Update mode exists: a stale connection no longer surfaces only as a
+sync error. `isLoginRequired()` marks it `error`, the Bank feed shows
+Reconnect (`ReconnectButton`), and `createUpdateLinkToken()` opens Link in
+update mode against the same Item, so nothing is re-imported. Plaid's item
+webhooks now reach the app too (#37: a signed `ITEM_LOGIN_REQUIRED`,
+`PENDING_DISCONNECT`, `USER_PERMISSION_REVOKED` or `USER_ACCOUNT_REVOKED`
+flips the connection to `error` without waiting for the next sync). The sync
+loop is bounded: at most 20 pages a run, the cursor saved after each page, a
+restart from the starting cursor if Plaid reports a mutation during
+pagination, and a dead token (`ITEM_NOT_FOUND`, `INVALID_ACCESS_TOKEN`,
+`USER_PERMISSION_REVOKED`, `INVALID_PRODUCT`) is marked `error` so the cron
+stops retrying it. `client_user_id` is now `sha256("walkup:plaid-client-user:"
++ auth uid)`, one per signed-in person, not the association. Still open: a
+dead-token connection shows the same Reconnect button (a persisted reason
+column is needed to tell them apart), a failed `/item/remove` is not shown on
+the Bank feed page, and closing an association does not yet disconnect its
+banks. The text above is left as written; this records what changed.
+
 ---
 
 ## 28. One narrow, explicit exception to "no service-role client anywhere" — the daily bank sync cron
@@ -775,6 +803,9 @@ or computing the offset at request time and using it to decide whether to
 run — neither is implemented; the schedule was set to match "noon CST"
 literally, as asked, with this drift called out rather than silently
 accepted.
+
+*(2026-10-14: two further narrow entry points, the reminder cron and the
+Resend webhook, are covered by #36. #37 adds the Plaid webhook as another.)*
 
 ## 29. The bank feed is how entries reach the ledger (supersedes the "never posted" half of #24)
 
@@ -1461,3 +1492,422 @@ and tested against PGlite but not yet applied to any Supabase project.
   new decision.
 - Reading the waitlist is by SQL as a platform admin; removal on request is a
   hand delete.
+
+*(2026-10-14: two further anon functions, the unsubscribe pair, are covered
+by #36.)*
+
+---
+
+## 35. Insurance and Repairs overhaul: what Walkup may do with AI, the web and drafts
+
+**Decided 2026-10-14 by Claude on Doug's behalf** ("a complete overhaul of how
+the insurance marketplace and the repairs and upkeep sections work … bypass
+anything that requires my input but try to do everything"). Full brief:
+`docs/specs/insurance-repairs-overhaul.md`; detail in
+`docs/specs/foundation-spec.md`, `insurance-spec.md` and `repairs-spec.md`.
+**Status:** built, not yet applied to production (migrations 0051 to 0053 wait
+for "General Kenobi"). Doug to confirm, and one line below needs his decision.
+
+**The eleven decisions (brief §1):**
+
+1. **"Marketplace" is allowed; brokering is still not.** Doug asked for an
+   insurance marketplace by name, so the earlier ban on the word goes. #22's
+   "no brokering" holds in substance: Walkup informs, organises and drafts; it
+   never places a policy, never says "buy X", never quotes a price it wasn't
+   given, never presents an opinion as advice. Every insurer or agency shown
+   is *found*, with its sources linked, not endorsed. Copy says "found",
+   "worth asking about", "commonly carried"; never "best", "you should" or
+   "we recommend".
+2. **The coverage check reports cited findings, not advice.** Each finding
+   has a basis: `statute` (the Illinois Condominium Property Act, quoted and
+   linked to ilga.gov, with a `verified_on` date in code), `your_documents`
+   (the declaration's insurance article as the board recorded it),
+   `common_practice` (labelled as such, phrased as a question for the agent)
+   or `your_data` (for example a limit below the board's own replacement-cost
+   estimate). No statute text from memory: what couldn't be verified on the
+   web ships as `common_practice` wording.
+3. **Prices are never invented.** "Less expensive" is served by the
+   building's own premium history, a comparison of quotes the board actually
+   received, and prompts to get more. A published fact (such as an AM Best
+   rating) shows only when the cited source text contains it.
+4. **Web research goes through Anthropic's web search, server-side only.**
+   What leaves Walkup: city, state, ZIP code, unit count, stories, year built,
+   construction type, coverage types, and the kind of work (with a phrase
+   from Walkup's fixed repair vocabulary, (h) below). Never owner names,
+   emails, phone numbers, unit numbers, financial figures or policy numbers.
+   The privacy page and the security page list Anthropic.
+5. **Anti-fabrication is enforced in code, not just in prompts.** A web-found
+   provider or contractor is kept only if its website or source URL is among
+   the URLs the search tool actually returned in that response. A phone,
+   email or rating is kept only if it appears (normalised) in the cited text;
+   otherwise it is dropped and the UI says "see their website". Results keep
+   their source URLs and `fetched_at`.
+6. **Contractor recommendations are allowed and ranked transparently**, with
+   the reasons shown (trade, distance, rating with review count, the board's
+   history, insured or licensed on file). Ratings are review-count weighted
+   (Bayesian), so 5.0 from one review doesn't outrank 4.8 from 900. Google
+   Places when `GOOGLE_PLACES_KEY` is set; web research otherwise and as well.
+7. **Insurance documents may be read natively (PDF or image) when they have
+   no text layer.** A narrow exception to #25, only for documents filed as
+   insurance declarations or quotes (a declarations page carries no personal
+   tax IDs). Everything the model returns passes through `redactTaxIds()`
+   before storage, so #4 and #25's invariant holds in the database.
+   Text-layer PDFs keep the redact-before-prompt path.
+8. **Nothing is sent automatically (#22).** Every email (broker, agent,
+   contractor, owner notice) is a draft the board edits, opens in its own mail
+   app (`mailto:`, with copy-to-clipboard for long bodies) and marks as sent.
+   Model-written drafts use structured facts only and are always shown first.
+9. **Owners get a real view.** Their own and shared problems with photos,
+   history, the visit date and the contractor's name; and the board's
+   published "what the master policy means for you" summary. Owners still
+   never read `vendors` or `insurance_*` directly: narrow SECURITY DEFINER
+   functions return only the published fields.
+10. **AI usage is metered.** Every model call is claimed and logged in
+    `ai_calls` (no prompt or answer content) and daily per-association limits
+    are enforced in the database before the call. Results are cached (market
+    research 30 days, contractor web search 7 days, Google Places 24 hours).
+11. **Model:** new code calls `claude-opus-5-5` with adaptive thinking, an
+    explicit effort, and the server-side refusal fallback where the SDK
+    supports it. `classify.ts` stays as it was except where this build had to
+    touch it.
+
+**For Doug to decide:** whether Walkup states that it takes no referral fees
+from the brokers and agencies it lists. It is **not stated anywhere in the app**
+until you decide; the Marketplace says only that Walkup "isn't an insurance
+broker and doesn't rank companies".
+
+**Foundation (migration 0051):**
+
+- **Direct uploads.** Files go browser → Storage with a signed upload URL,
+  then a second action registers the `documents` row (type re-checked from the
+  stored bytes, checksum dedupe, size). Pending objects are readable and
+  deletable only by the person who uploaded them (`owner_id`), and a path that
+  is already registered can't be uploaded over. `serverActions.bodySizeLimit`
+  is 4 MB as a safety net.
+- **The AI quota lives in the database.** `claim_ai_call` (under an advisory
+  lock, in-flight rows counted) runs before every model call and
+  `finish_ai_call` after it, so concurrent requests can't exceed the limit;
+  non-board callers may claim only `ticket_triage`, capped per person per day.
+- **Owner ticket photos** go through `attach_ticket_photo`, which checks the
+  stored object's owner, size and type before inserting the `documents` and
+  `document_links` rows (audience pinned to the ticket's unit, or all owners
+  for a shared-area problem). Owners can remove their own photos from their
+  own open problems (`remove_ticket_photo`); dedupe never links a document the
+  caller can't see or whose audience differs.
+- **`document_links` has a same-association guard trigger**, so no link can
+  join rows from two associations.
+
+**Insurance v2 specifics (migration 0052):**
+
+- (a) Enum values added in 0052 can't be used inside that migration, so slug
+  lists there are `text[]`.
+- (b) `insurance_document_reads` holds model output already passed through
+  `redactTaxIds()`; 9-digit policy numbers are therefore removed and the UI
+  asks for them.
+- (c) Insurance emails are drafted with placeholders, so the model never sees
+  names, numbers or board-typed text.
+- (d) Statute citations live in `src/lib/insurance/statute.ts` with
+  `verifiedOn` (`STATUTE_VERIFIED_ON`); re-verify when the Act is amended. Amendments to Sections 18, 18.4, 18.12 and 22.1 take effect
+  2027-01-01 (`NEXT_REVERIFY` = 2027-01-02): re-read 18.4(f) and 22.1(a)(7).
+- (e) The Common Interest Community Association Act does not apply to
+  condominiums (765 ILCS 160/1-5); the check cites the Condominium Property
+  Act only.
+- (f) `replaced_at` no longer means "not current"; status is computed by
+  `policyStatus()` (a renewal recorded early keeps the old policy active until
+  the new one starts). Home, the setup guide and Building Info all read it.
+- (g) Archiving and deleting insurance policies is `board_admin` only; board
+  members import, edit, renew and record the agent's answers.
+- (h) Statute checks and Illinois copy run only when `state_code = 'IL'`.
+- (i) Provenance for read values is rebuilt by the save RPC from the stored,
+  redacted read; clients never send snippets or pages.
+- (j) Quote PDFs from outside agencies never auto-fill: every figure needs a
+  click (prompt-injection defence).
+- (k) Board members may set year built, construction, stories and roof year
+  through `update_insurance_building_basics`; the address stays admin-only.
+- (l) Insurance imports `toCents`/`fromCents` from `src/lib/tax/form1120h.ts`,
+  as `src/lib/money/*` does, until those move to `src/lib/money/cents.ts`.
+
+**Repairs and upkeep (migration 0053):**
+
+- (a) Ticket visibility requires membership and has one definition,
+  `ticket_visible_to_caller`, used by both `tickets_select` and
+  `can_see_ticket()` (fixes the cross-association ticket leak and comment
+  injection in `docs/security/ATTACK-REPORT-1.md` findings 1 to 3). Owners
+  read the timeline, roles, photos, the contractor's name and emergency info
+  through narrow functions.
+- (b) Reporter, note author and every creation timestamp come from the server
+  (`current_person_id`, `now()`); 0053 repaired legacy reporters and authors
+  from the audit log and deleted cross-association comments.
+- (c) Board-only ticket fields live in `ticket_board_details` (financial
+  readers only); owners never receive cost, assignee, target date, payment
+  link or AI output.
+- (d) Contractor recommendations are ranked with the formula in repairs-spec
+  4.11 and shown with reasons; web results are kept only when verified against
+  the search response, with contact details and ratings only from the
+  business's own site or a passage that names it.
+- (e) Emails to contractors and owners are deterministic templates, not
+  model-written.
+- (f) Seasonal upkeep is due at month end and follows the anchor rule in
+  repairs-spec 3.7.
+- (g) Triage never decides safety: emergency guidance is static, fires only
+  when the reporter confirms it is happening now, and a model-detected
+  emergency is a suggestion the board accepts or dismisses.
+- (h) **Amends #31.** Google may receive, besides the building's street
+  address and the trade query, a search phrase of at most five words drawn
+  only from Walkup's fixed repair vocabulary (`REPAIR_VOCABULARY`), and only
+  after a board member has seen it and chosen `Use it`. The same rule governs
+  what the web search receives.
+- (i) Deletes in Repairs are `board_admin` only, including contractor notes
+  and reviews (tightening 0040's author delete); board members edit their own.
+- (j) The accountant is read-only in Repairs: no tickets, notes or photos.
+- (k) Accepting a quote chooses a contractor; the problem is "being worked
+  on" only after the go-ahead is marked sent or the board says so.
+- (l) Walkup doesn't notify anyone about a report; the report confirmation
+  says so and shows the board contacts the board chose to list.
+- (m) Web contractor search runs in the background on the board's request
+  (Google runs on page load); caches follow decision 10 (Google 24 hours, web
+  7 days).
+
+**Integration choices (Home, sidebar, documents):**
+
+- Home's "Worth a minute today" now carries Repairs (emergencies, possible
+  emergencies, urgent, past target date, overdue upkeep, expired contractor
+  paperwork), Insurance's own to-dos (reads to review or that failed, owner
+  requests for proof, a stale owner summary) and searches that finished in
+  the background in the last 24 hours. The insurance renewal nudge follows
+  each policy's own `renewal_reminder_days`, and a policy whose renewal is
+  saved gets no "get quotes" nudge. Quote follow-ups and expiries are computed
+  on each render (no cron, #28).
+- The Repairs & Upkeep sidebar badge counts, for the board, urgent and
+  emergency problems, undismissed AI-suggested emergencies, someone else's
+  reports since the last Repairs visit, and overdue upkeep; for owners,
+  updates on their own problems since they last looked and fixes waiting for
+  them to confirm. Owners and the accountant see the nav item as "Insurance";
+  the board sees "Insurance Marketplace".
+- A document a person filed as Insurance is not sent to the classifier at all
+  (its text is kept; Insurance's own reader runs when the board asks), the old
+  second "declarations" read in the document pipeline is gone, and neither a
+  filing rule nor the model ever changes a category a person chose.
+
+**How to apply:**
+
+- New AI features: a new `AiKind` with a database limit, a claim before the
+  call, structured facts in, everything the model returns treated as a
+  suggestion a person confirms, and a line on the privacy page.
+- New web results: keep only what the search returned and the cited text
+  supports; show sources; never rank by anything but the reasons shown.
+- New outbound email: a draft the board sends itself, unless #36 covers it.
+
+---
+
+## 36. Walkup sends no email to anyone unless a board administrator has approved it
+
+**Decided by the lead engineer on Doug's behalf, 2026-10-14**, after Doug asked
+for reminders and statements by email ("every reminder is a manual step").
+This relaxes #22's "No automatic sending" (and the matching sentences in the
+Terms and the Privacy Policy). It does not relax #22's "No payment
+initiation". Built from `docs/specs/money-and-reminders-spec.md`;
+migration 0055.
+
+What "approved" means:
+
+- **A batch.** The board reviews drafted emails (who, why, the numbers, the
+  optional note) and a board administrator presses "Send these N emails from
+  Walkup". Approval is recorded (`email_batches.approved_by/at`).
+- **A standing rule.** A board administrator switches on a rule per reminder
+  type ("send a dues reminder when a unit is N days overdue"). Each rule is
+  visible, pausable, and has a send log. The administrator who switched it on
+  is the approver of everything it sends. Rules exist only for dues reminders;
+  statements, late-fee notices and announcements are always a batch.
+
+What is enforced in SQL, not in the app (0055): recipients are people in this
+association whose address still matches; **one email per person per week per
+kind; at most 20 a day for a week after sending is switched on, then the
+board's daily limit (default 60, never above 200); 300 an hour for the whole
+platform**; never to an address that hard-bounced or complained; never to
+someone who opted out (**opt-out** is per kind or for everything, honoured at
+send time); a reminder is skipped, not sent, if the balance in it is no longer
+what the ledger shows; a message sends once (claim token plus the provider's
+idempotency key); sending is off until a board administrator turns it on and a
+reply-to contact is set; a platform administrator can suspend an association.
+
+What an email may contain: text built from a template and facts read from the
+ledger (money formatted from stored text values), plus an optional note the
+board typed (500 characters, no links or addresses). **No model writes any
+email.** No account number, routing number or Zelle handle is ever in an email;
+the email links to the owner's page in Walkup (or, for an owner with no login,
+says to ask the board). Every email carries who it is from ("Walkup on behalf
+of {association}", from `notifications@walkuphoa.com`), the board's contact as
+reply-to, a one-click unsubscribe link and header (RFC 8058, https only), and a
+plain footer naming DS Collective LLC and the association (`LEGAL_ADDRESS`).
+
+**Delivery and the no-key fallback.** Delivery is through Resend's HTTP API.
+`RESEND_API_KEY` is optional: without it (or with `EMAIL_SENDING_DISABLED=1`,
+or while `LEGAL_ADDRESS` is still the placeholder) the app works fully with
+**drafts fallback**: drafts are prepared and reviewed, opened with `mailto:`,
+and "Mark as sent" records them. Nothing is sent and no approval is consumed.
+
+**Service role.** #28's single exception (the daily bank sync) becomes three
+narrow entry points in `src/app/api/**` (a fourth, the Plaid webhook, is #37):
+the bank-sync cron (unchanged), the reminder cron
+(`/api/cron/email-reminders`, daily, `CRON_SECRET`) and the Resend webhook
+(`/api/email/webhook`, Svix signature, secret `RESEND_WEBHOOK_SECRET`). The two
+new ones use the service key only through `serviceRpc()`, an allowlist wrapper
+that can call six named functions (`email_run_rules`, `email_claim`,
+`email_mark_sent`, `email_mark_failed`, `email_record_event`, `email_purge`)
+that the service role may call. `email_claim`, `email_mark_sent` and
+`email_mark_failed` are also executable by signed-in users, because the board's own
+"Send these emails" action calls them with the board member's session; each one
+re-checks that the caller is a board administrator of that association (or owns the
+claim) inside its body, and the second attack round confirmed nothing leaks. The
+other three are the service role's alone. They never read or write a
+table directly; a unit test fails if any other file imports the wrapper or
+reads the service key.
+
+**Signed-out writes.** #34's single `anon` function becomes three. The two
+added are `email_preference_for_token()` (reads) and `email_unsubscribe()` (sets
+an opt-out flag). The token is 48 bytes of randomness stored on the person's
+preference row; a wrong token returns nothing. The lint test lists all three.
+
+Two points beyond the spec, found while building:
+
+- **Redaction is the one exception to "an approved message cannot be
+  changed".** The outbox guard freezes `to_email` and `facts` after approval,
+  but "Remove personal data" must blank them. The guard honours a
+  transaction-local setting (`walkup.email_redaction`) that only
+  `email_redact_person` sets; no update policy exists for anyone else.
+- **The cron claims only plain kinds** (`dues_reminder`, `late_fee_notice`). It
+  has no session to read a statement PDF or an announcement body, so a
+  statement or announcement batch whose sender died waits for "Resume sending"
+  on the review page.
+
+History is kept 24 months, then removed by the daily job; "Remove personal
+data" blanks addresses sooner. Bounces and complaints put the address on a
+per-association block list a board administrator can clear.
+
+---
+
+## 37. A second narrow service-role path: the Plaid webhook receiver
+
+**Proposed 2026-10-14 (PL3); needs Doug's approval before merge.**
+
+#28 allowed exactly one service-role path (the daily bank sync cron). Plaid's
+webhooks have no signed-in user, so a second is needed to learn, without
+waiting for the next cron, that a bank needs attention (login required,
+pending disconnect, permission revoked). It is kept as small as #28's:
+
+- `src/app/api/plaid/webhook/route.ts` creates a service-role client inside the
+  route, in the same way the cron does, and uses it only to call
+  `flag_bank_item_for_attention(p_item_id)` (0058). The client is not exported
+  or shared.
+- The route trusts nothing until Plaid's `Plaid-Verification` signature
+  (ES256, key fetched from Plaid by `kid`, issued within 5 minutes, body hash
+  equal to the raw body) verifies. Anything else is a 401. Only four item
+  events are acted on; every other verified webhook is a 200 no-op, and
+  `SYNC_UPDATES_AVAILABLE` is ignored on purpose (the cron remains the only
+  unattended sync).
+- The function is SECURITY DEFINER with a pinned search_path, executable by
+  `service_role` only, and does exactly one thing: `active` to `error` on the
+  matching connection. It reads and writes no token and no ledger row, cannot
+  touch a disconnected connection, and is idempotent.
+- `PLAID_WEBHOOK_URL` is set in Production only. `/api/plaid/webhook` (exact
+  path) is in `PUBLIC_PATHS`.
+
+What it does not change: #18's rule everywhere else, #24's token handling,
+#29's rule that only a board member's action posts to the ledger.
+
+---
+
+## 38. The owner portal: what an owner can read, and the one thing that was missing for them to sign in as themselves
+
+**Decided by the lead engineer on Doug's behalf, 2026-10-14.** Built from
+`docs/specs/owner-portal-spec.md`; migration 0054.
+
+Owners get a home page (`/owner`), a unit statement with a running balance, the
+payment instructions, their reports, board announcements (to everyone or chosen
+units, pinned, optional attachment, no comments), the documents the board
+shared, building contacts and emergency facts, and a profile. Everything an
+owner reads that is not already under RLS comes through a SECURITY DEFINER
+function that returns nothing to anyone but the unit's owner or a financial
+reader. Announcements are written only through RPCs; read receipts are counts
+for the board only (no names). Invites can now point at an existing person
+(`invites.person_id`) so the owner who signs in IS the owner whose unit and
+history the board entered; before this an invited owner got a second, empty
+person ("claim your record"). Owners may edit their phone and mailing address
+but not their name or email. Board-only pages show owners a `BoardOnly` page
+that says so and links to the owner page that serves the same need; they never
+show an empty state. The statement rule is one rule: net = open charge balances
+minus unapplied payments, waivers and write-offs as adjustment lines.
+
+Three things beyond the spec, found while building:
+
+- **The pin cap is enforced on insert too.** The spec's lifecycle trigger
+  returned early on INSERT, so a fourth announcement posted already pinned
+  skipped the three-pinned cap.
+- **`shareDocumentWithOwners` never widens a file pinned to one unit.** It
+  clears `restricted_to_unit_id`, so it refuses such a file (and the composer
+  says to post to that unit only or pick another file).
+- **A viewer that cannot be resolved sees "We couldn't load this page"** (a
+  person with no record yet, a session that is not two-step, a failed lookup),
+  not "You don't have access", which would be false.
+
+---
+
+## 39. Imports: explicit category mapping, opening balances through an income account, undo by reversal
+
+**Decided by the lead engineer on Doug's behalf, 2026-10-14.** Built from
+`docs/specs/import-spec.md`; migration 0056.
+
+Units and owners, past transactions, opening balances and contractors can be
+imported from CSV or XLSX by a board administrator. Only the columns the board
+maps are kept; the rest of the file never reaches the database. **Every
+category must be mapped to an account by a person**, a fund named in a file
+must be matched to a fund, and a new category must be declared exempt or not
+exempt with **no default exempt flag**. Rows are staged, validated and
+committed by SECURITY DEFINER functions: expenses go through `record_expense`,
+other transactions through `post_journal_entry` with source `import`, and
+**opening balances for units go through `record_assessment_charge` crediting an
+income account the board chooses**, so the 1120-H, which traces a payment to
+the income account its charge credited, still counts the cash when the owner
+pays; ownership goes through `record_ownership_amendment`. A file imports once;
+rows are hash-matched so overlapping files add only what is new; one opening
+balance at a time. **Undo is by reversal** (#9): the entries are reversed, not
+deleted, only while their fiscal years are open, and it refuses if anything now
+depends on them. Since 0059 (#40) an undone import also stops counting toward
+the 60% and 90% tests and the Form 1120-H figures. The uploaded file is not kept
+in the Document Hub and is removed once its rows are staged, unless the board
+chooses to keep a copy. Optional AI mapping sees column names and character
+masks of sample values (letters as x, digits as 9), never the values, and runs
+as the existing `document_classify` kind.
+
+Walkup creates no logins and sends no invites from an import: people are
+created without logins, and the owner portal's "Invite to sign in" (#38) is the
+way in.
+
+---
+
+## 40. Two corrections to the books' integrity: reversed entries leave the tax views, and grants and ownership stay inside one association
+
+**Decided by the lead engineer, 2026-10-14.**
+
+**Tax views (0059).** `cash_basis_receipts` and `cash_basis_disbursements` (0006,
+redefined in 0022) counted an entry and never looked at whether it had been
+reversed. A reversal (same date, debits and credits swapped) matched neither
+branch, so the original kept counting: a 100.00 exempt deposit that was
+reversed still showed `exempt_income 100.00` in `form_1120h_figures`. Found by
+the import work (Undo), and equally true of the bank feed's unpost. Both views
+now skip an entry that has a posted reversal and skip reversal entries
+themselves, with the same columns, so everything built on them
+(`form_1120h_figures`, the tax summaries, provenance, 1099 totals) corrects
+itself. **Consequence: a reversed entry no longer counts toward the 60% and 90%
+tests or the Form 1120-H figures.** The ledger already netted correctly; only
+the tax views were wrong. Tested in `tests/db/tax-views-reversals.test.ts`.
+
+**Integrity guards (0057).** A security review (`docs/security/ATTACK-REPORT-1.md`,
+findings 4 and 5) found two rows that RLS alone did not tie together: a
+`role_grants` row could point at a person of another association, and a
+`unit_owners` row could pair a unit with a person or `association_id` from
+another. Each table now has a same-association guard trigger (SECURITY DEFINER,
+pinned search path, errcode 42501), in the same shape as the other
+same-association guards. Inserts and updates only; existing rows are not
+rewritten, and a notice names any that already break the rule.

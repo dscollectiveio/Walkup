@@ -15,6 +15,8 @@ import { BudgetRow } from "./budget-row";
 import { AddCategoryForm } from "./add-category-form";
 import { SuggestedBudget } from "./suggested-budget";
 import { PlannedAmount } from "./planned-amount";
+import { inForce } from "@/lib/insurance/status";
+import { toCents } from "@/lib/money/cents";
 
 export const dynamic = "force-dynamic";
 
@@ -118,6 +120,38 @@ export default async function BudgetPage({ searchParams }: { searchParams: Promi
   }
 
   const expenseAccounts = (accounts ?? []).filter((a) => a.type === "expense");
+
+  // Next to the Insurance category: what the policies in force cost a year
+  // (insurance-spec §12 I-11). Readers of the books only, like the policies.
+  let premiumsHint: { text: string; href: string } | null = null;
+  if (canSeeActuals && expenseAccounts.some((a) => /insurance/i.test(a.name))) {
+    const { data: policyRows } = await supabase
+      .from("insurance_policies")
+      .select("id, coverage, effective_from, effective_to, renewal_reminder_days, archived_at, replaced_by_policy_id, replaced_at, annual_premium::text")
+      .is("archived_at", null);
+    const active = inForce(
+      (policyRows ?? []).map((r) => ({
+        id: r.id as string,
+        coverage: r.coverage as string,
+        effective_from: r.effective_from as string,
+        effective_to: r.effective_to as string,
+        renewal_reminder_days: (r.renewal_reminder_days as number | null) ?? 60,
+        archived_at: (r.archived_at as string | null) ?? null,
+        replaced_by_policy_id: (r.replaced_by_policy_id as string | null) ?? null,
+        replaced_at: (r.replaced_at as string | null) ?? null,
+        annual_premium: (r.annual_premium as string | null) ?? null,
+      })),
+      todayIso,
+    );
+    const totalCents = active.reduce((sum, p) => {
+      try {
+        return sum + (p.annual_premium ? toCents(p.annual_premium) : 0);
+      } catch {
+        return sum;
+      }
+    }, 0);
+    if (active.length > 0) premiumsHint = { text: `Current premiums: ${dollars(totalCents)} a year`, href: "/insurance" };
+  }
   const reserveCashAccount = (accounts ?? []).find((a) => a.is_cash_account && /reserve/i.test(a.name)) ?? null;
   const accountName = new Map((accounts ?? []).map((a) => [a.id, a.name]));
   const p = resolvePeriod(period, fiscalYear, today);
@@ -226,6 +260,7 @@ export default async function BudgetPage({ searchParams }: { searchParams: Promi
                     variance={annual ? annual.variance : null}
                     canEdit={canEdit}
                     canSeeActuals={canSeeActuals}
+                    hint={/insurance/i.test(a.name) ? premiumsHint : null}
                   />
                 );
               })}
@@ -476,7 +511,7 @@ export default async function BudgetPage({ searchParams }: { searchParams: Promi
         </Card>
       ) : (
         <>
-          <Card navy title="Where the money went" hint="Biggest first. Hover a slice or a row; click one to see its transactions. Moves to the reserve aren't included — they're savings, not spending.">
+          <Card navy title="Where the money went" hint="Biggest first. Hover a slice or a row; click one to see its transactions. Moves to the reserve aren't included because they're savings, not spending.">
             {allSpend.length === 0 ? (
               <div className="py-6 text-center">
                 <p className="text-[13px] text-mute">Nothing posted for {p.label.toLowerCase()} yet.</p>
@@ -558,7 +593,7 @@ export default async function BudgetPage({ searchParams }: { searchParams: Promi
                         <span className="figures shrink-0 text-[12px] text-ink">{dollars(a.cents)}</span>
                       </div>
                       <PlanBar spent={a.cents} target={0} pace={pace} bar={STATUS_STYLE.none.bar} />
-                      <div className="mt-1 text-[11px] text-mute">Spent with no plan set — add one so it&rsquo;s tracked like the rest.</div>
+                      <div className="mt-1 text-[11px] text-mute">Spent with no plan set. Add one so it&rsquo;s tracked like the rest.</div>
                     </summary>
                     <div className="bg-fill/30 px-3 pb-3 pl-9 text-[12px]">
                       <p className="py-2 text-mute">
@@ -606,7 +641,7 @@ export default async function BudgetPage({ searchParams }: { searchParams: Promi
                         </span>
                       </div>
                       <PlanBar spent={savedCents} target={reservePlanCents ?? 0} pace={pace} bar={STATUS_STYLE.saved.bar} />
-                      <div className="mt-1 text-[11px] text-mute-soft">Savings, not spending — never counted as over budget.</div>
+                      <div className="mt-1 text-[11px] text-mute-soft">Savings, not spending, never counted as over budget.</div>
                     </summary>
                     <div className="bg-fill/30 px-3 pb-3 pl-9 text-[12px]">
                       <p className="py-2 text-mute">

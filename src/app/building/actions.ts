@@ -3,11 +3,12 @@
 import { revalidatePath } from "next/cache";
 import { createClient, getUser } from "@/lib/supabase/server";
 import { geocode } from "@/lib/google/places";
+import { validateBoardContact } from "@/lib/owner/board-contact";
 
 const ROLES = ["board_admin", "board_member", "accountant", "owner"] as const;
 
 async function currentAssociationId(supabase: Awaited<ReturnType<typeof createClient>>) {
-  const { data: associations } = await supabase.from("associations").select("id").limit(1);
+  const { data: associations } = await supabase.from("associations").select("id").order("created_at").order("id").limit(1);
   return associations?.[0]?.id ?? null;
 }
 
@@ -52,6 +53,12 @@ export async function updateAssociationProfile(_prev: unknown, formData: FormDat
   const ein = String(formData.get("ein") ?? "").trim() || null;
   const incorporatedOn = String(formData.get("incorporated_on") ?? "").trim() || null;
   const fyEndMonth = Number(formData.get("fiscal_year_end_month") ?? "");
+  // Who owners write to (owner-portal-spec 6.9). All optional; the email uses the same pattern as the database.
+  const contactName = String(formData.get("board_contact_name") ?? "").trim() || null;
+  const contactEmail = String(formData.get("board_contact_email") ?? "").trim() || null;
+  const contactPhone = String(formData.get("board_contact_phone") ?? "").trim() || null;
+  const contactError = validateBoardContact({ name: contactName, email: contactEmail, phone: contactPhone });
+  if (contactError) return { error: contactError };
   const capThresholdRaw = String(formData.get("capitalization_threshold") ?? "").trim();
   const capThresholdSource =
     String(formData.get("capitalization_threshold_source") ?? "").trim() || null;
@@ -121,6 +128,9 @@ export async function updateAssociationProfile(_prev: unknown, formData: FormDat
       fiscal_year_end_month: fyEndMonth,
       capitalization_threshold: capThreshold,
       capitalization_threshold_source: capThresholdSource,
+      board_contact_name: contactName,
+      board_contact_email: contactEmail,
+      board_contact_phone: contactPhone,
     })
     .eq("id", associationId)
     .select("id");
@@ -173,7 +183,7 @@ export async function addUnit(_prev: unknown, formData: FormData) {
   }
 
   revalidateBuilding();
-  revalidatePath("/maintenance");
+  revalidatePath("/repairs");
   return { ok: true };
 }
 
@@ -195,7 +205,7 @@ export async function updateUnit(_prev: unknown, formData: FormData) {
   if (!data || data.length === 0) return { error: "Only the board can edit units." };
 
   revalidateBuilding();
-  revalidatePath("/maintenance");
+  revalidatePath("/repairs");
   revalidatePath(`/units/${unitId}`);
   return { ok: true };
 }
@@ -217,7 +227,7 @@ export async function deleteUnit(unitId: string): Promise<{ ok?: true; error?: s
   }
 
   revalidateBuilding();
-  revalidatePath("/maintenance");
+  revalidatePath("/repairs");
   return { ok: true };
 }
 
@@ -514,7 +524,7 @@ export async function recordOwnershipAmendment(_prev: unknown, formData: FormDat
 
   const total = lines.reduce((s, l) => s + l.percentage, 0);
   if (Math.abs(total - 100) > 0.0001) {
-    return { error: `Percentages must add up to 100 — they currently total ${total.toFixed(4)}.` };
+    return { error: `Percentages must add up to 100. They currently total ${total.toFixed(4)}.` };
   }
 
   const { error } = await supabase.rpc("record_ownership_amendment", {
@@ -537,8 +547,14 @@ export async function recordOwnershipAmendment(_prev: unknown, formData: FormDat
 export async function createInvite(_prev: unknown, formData: FormData) {
   const role = String(formData.get("role") ?? "");
   const email = String(formData.get("email") ?? "").trim() || null;
+  // An owner invite may point at someone already in the list (claim your record, 0054).
+  const personRaw = String(formData.get("person_id") ?? "").trim();
+  const personId = role === "owner" && personRaw !== "" ? personRaw : null;
 
   if (!ROLES.includes(role as (typeof ROLES)[number])) return { error: "Choose a role." };
+  if (personId && !/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(personId)) {
+    return { error: "Choose someone from the list, or leave it blank." };
+  }
 
   const supabase = await createClient();
   const associationId = await currentAssociationId(supabase);
@@ -551,6 +567,7 @@ export async function createInvite(_prev: unknown, formData: FormData) {
     association_id: associationId,
     role,
     email,
+    ...(personId ? { person_id: personId } : {}),
     created_by: user.id,
   });
 

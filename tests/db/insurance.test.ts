@@ -161,6 +161,26 @@ describe("insurance (0041)", () => {
       expect(ok.affectedRows).toBe(1);
     });
 
+    it("goes to a partner or a saved contact, and needs one of them (0052)", async () => {
+      const ask = (partner: string | null, contact: string | null) =>
+        asUser(db, f.cyUser, () =>
+          db.query(
+            `insert into public.insurance_quote_requests (association_id, partner_id, contact_id, payload_json)
+             values ($1::uuid, $2::uuid, $3::uuid, '{}')`,
+            [f.damen, partner, contact],
+          ),
+        );
+      await expect(ask(null, null)).rejects.toThrow(/insurance_quote_requests_has_recipient/);
+      const { rows } = await asUser(db, f.cyUser, () =>
+        db.query<{ id: string }>(
+          `insert into public.insurance_contacts (association_id, name) values ($1::uuid, 'Lakeside Agency') returning id`,
+          [f.damen],
+        ),
+      );
+      expect((await ask(null, rows[0].id)).affectedRows).toBe(1);
+      expect((await ask(partnerId, null)).affectedRows).toBe(1);
+    });
+
     it("an owner can't see or create requests", async () => {
       await expect(
         asUser(db, f.adaUser, () =>

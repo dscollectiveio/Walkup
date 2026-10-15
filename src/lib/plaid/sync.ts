@@ -1,6 +1,13 @@
 import "server-only";
 import type { SupabaseClient } from "@supabase/supabase-js";
-import { plaidClient, describePlaidError, isLoginRequired } from "@/lib/plaid";
+import {
+  plaidClient,
+  plaidErrorLog,
+  describePlaidError,
+  isLoginRequired,
+  isSyncMutationDuringPagination,
+  deadConnectionReason,
+} from "@/lib/plaid";
 import {
   matchRule,
   planSyncWrites,
@@ -14,7 +21,21 @@ export interface SyncResult {
   categorized: number;
   posted: number;
   postErrors: string[];
+  /** True when the page cap stopped the run; the cursor is saved and the next run resumes. */
+  more?: boolean;
 }
+
+export type SyncFailure = {
+  error: string;
+  needsReconnect?: boolean;
+  /** The Item or its token is gone for good; reconnecting in update mode cannot help. */
+  deadConnection?: boolean;
+};
+
+/** Pages of /transactions/sync fetched per run. A resumed run continues from the saved cursor. */
+export const MAX_PAGES_PER_RUN = 20;
+/** Plaid's documented recovery for a mutation mid-pagination is to start the pagination again. */
+export const MAX_PAGINATION_RESTARTS = 3;
 
 /**
  * The actual Plaid-calling half of a sync — shared between the "Sync now"
@@ -38,41 +59,114 @@ export async function syncOneConnection(
   supabase: SupabaseClient,
   connection: { id: string; association_id: string; sync_cursor: string | null },
   accessToken: string,
-  options: { autoPost: boolean },
-): Promise<SyncResult | { error: string; needsReconnect?: boolean }> {
+  options: { autoPost: boolean; maxPages?: number },
+): Promise<SyncResult | SyncFailure> {
   const client = plaidClient();
-  let cursor = connection.sync_cursor ?? undefined;
-  const incoming: IncomingTransaction[] = [];
-  const removed: string[] = [];
-  let hasMore = true;
+  const maxPages = options.maxPages ?? MAX_PAGES_PER_RUN;
+  // The cursor this run began with: the restart point if Plaid reports the
+  // data changed while we were paging through it.
+  const startCursor = connection.sync_cursor ?? undefined;
+  let cursor = startCursor;
+  const seen = new Set<string>();
+  let categorized = 0;
+  let posted = 0;
+  const postErrors: string[] = [];
+  let pages = 0;
+  let restarts = 0;
+  let more = false;
 
-  try {
-    while (hasMore) {
-      const response = await client.transactionsSync({
-        access_token: accessToken,
-        cursor,
-      });
-      incoming.push(...response.data.added, ...response.data.modified);
-      removed.push(...response.data.removed.map((r) => r.transaction_id));
-      hasMore = response.data.has_more;
-      cursor = response.data.next_cursor;
+  for (;;) {
+    let page;
+    try {
+      page = await client.transactionsSync({ access_token: accessToken, cursor });
+    } catch (cause) {
+      if (isSyncMutationDuringPagination(cause) && restarts < MAX_PAGINATION_RESTARTS) {
+        // Batches already committed are idempotent (upserts keyed on the Plaid
+        // id, retraction only sets removed_at), so replaying from the start is safe.
+        restarts += 1;
+        cursor = startCursor;
+        pages = 0;
+        continue;
+      }
+      if (isLoginRequired(cause)) {
+        // The bank wants a person to sign in again. status 'error' is what
+        // the Home tile already reads as "needs reconnecting"; the cron only
+        // syncs 'active' rows, so it stops hammering a dead login. A
+        // successful sync (below) flips it back.
+        await markError(supabase, connection.id);
+        return { error: describePlaidError(cause), needsReconnect: true };
+      }
+      const dead = deadConnectionReason(cause);
+      if (dead) {
+        // The token or Item is gone at Plaid. Retrying daily cannot fix it and
+        // update mode needs a live token, so stop the cron ('error') and say
+        // what to do. The distinct code goes to the log, never the token.
+        console.error("Plaid connection is dead", plaidErrorLog(cause));
+        await markError(supabase, connection.id);
+        return { error: dead.message, deadConnection: true };
+      }
+      console.error("Plaid transactionsSync failed", plaidErrorLog(cause));
+      return { error: describePlaidError(cause) };
     }
-  } catch (cause) {
-    if (isLoginRequired(cause)) {
-      // The bank wants a person to sign in again. status 'error' is what
-      // the Home tile already reads as "needs reconnecting"; the cron only
-      // syncs 'active' rows, so it stops hammering a dead login. A
-      // successful sync (below) flips it back.
-      await supabase
-        .from("bank_connections")
-        .update({ status: "error" })
-        .eq("id", connection.id)
-        .neq("status", "disconnected");
-      return { error: describePlaidError(cause), needsReconnect: true };
+
+    const data = page.data;
+    const batch = await applyBatch(
+      supabase,
+      connection,
+      [...data.added, ...data.modified],
+      data.removed.map((r) => r.transaction_id),
+      options,
+    );
+    if ("error" in batch) return { error: batch.error };
+    for (const t of [...data.added, ...data.modified]) seen.add(t.transaction_id);
+    categorized += batch.categorized;
+    posted += batch.posted;
+    postErrors.push(...batch.postErrors);
+
+    // The batch is committed, so remember where it ended: if a later page or a
+    // timeout kills this run, the next one resumes here instead of from the start.
+    cursor = data.next_cursor;
+    const { error: cursorError } = await supabase
+      .from("bank_connections")
+      .update({ sync_cursor: cursor })
+      .eq("id", connection.id)
+      .neq("status", "disconnected");
+    if (cursorError) return { error: cursorError.message };
+
+    pages += 1;
+    if (!data.has_more) break;
+    if (pages >= maxPages) {
+      more = true;
+      break;
     }
-    return { error: describePlaidError(cause) };
   }
 
+  // A sync that got this far means the login works: clear a stale 'error'.
+  await supabase
+    .from("bank_connections")
+    .update({ last_synced_at: new Date().toISOString(), status: "active" })
+    .eq("id", connection.id)
+    .neq("status", "disconnected");
+
+  return { count: seen.size, categorized, posted, postErrors, ...(more ? { more } : {}) };
+}
+
+async function markError(supabase: SupabaseClient, connectionId: string) {
+  await supabase
+    .from("bank_connections")
+    .update({ status: "error" })
+    .eq("id", connectionId)
+    .neq("status", "disconnected");
+}
+
+/** One page of Plaid's changes, written and categorized. Safe to run twice on the same page. */
+async function applyBatch(
+  supabase: SupabaseClient,
+  connection: { id: string; association_id: string },
+  incoming: IncomingTransaction[],
+  removed: string[],
+  options: { autoPost: boolean },
+): Promise<{ categorized: number; posted: number; postErrors: string[] } | { error: string }> {
   if (removed.length > 0) {
     const { error } = await supabase
       .from("bank_transactions")
@@ -193,12 +287,5 @@ export async function syncOneConnection(
     }
   }
 
-  // A sync that got this far means the login works: clear a stale 'error'.
-  await supabase
-    .from("bank_connections")
-    .update({ sync_cursor: cursor, last_synced_at: new Date().toISOString(), status: "active" })
-    .eq("id", connection.id)
-    .neq("status", "disconnected");
-
-  return { count: incoming.length, categorized, posted, postErrors };
+  return { categorized, posted, postErrors };
 }

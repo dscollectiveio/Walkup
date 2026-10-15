@@ -4,13 +4,14 @@ import { useActionState, useState } from "react";
 import { createInvite } from "./actions";
 
 const ROLES = [
-  { value: "board_admin", label: "Board admin — full read/write" },
-  { value: "board_member", label: "Board member — full read, limited write" },
-  { value: "accountant", label: "Accountant — financials, time-boxed" },
-  { value: "owner", label: "Owner — read-only, own unit" },
+  { value: "board_admin", label: "Board admin: full read/write" },
+  { value: "board_member", label: "Board member: full read, limited write" },
+  { value: "accountant", label: "Accountant: financials, time-boxed" },
+  { value: "owner", label: "Owner: read-only, own unit" },
 ];
 
-export function GenerateInviteForm() {
+export function GenerateInviteForm({ people = [] }: { people?: { id: string; full_name: string }[] }) {
+  const [role, setRole] = useState("");
   const [open, setOpen] = useState(false);
   const [state, action, pending] = useActionState(createInvite, null);
 
@@ -43,7 +44,8 @@ export function GenerateInviteForm() {
             id="invite_role"
             name="role"
             required
-            defaultValue=""
+            value={role}
+            onChange={(e) => setRole(e.target.value)}
             className="mt-1 w-full rounded-lg border border-line-strong bg-paper px-3 py-2 text-[13px] text-ink"
           >
             <option value="" disabled>
@@ -68,6 +70,27 @@ export function GenerateInviteForm() {
             className="mt-1 w-full rounded-lg border border-line-strong bg-paper px-3 py-2 text-[13px] text-ink"
           />
         </div>
+        {role === "owner" && people.length > 0 ? (
+          <div className="sm:col-span-2">
+            <label htmlFor="invite_person" className="block text-[12px] font-medium text-ink">
+              Person
+              <span className="ml-1 font-normal text-mute-soft">link to someone already in your list, or leave blank to create a new person</span>
+            </label>
+            <select
+              id="invite_person"
+              name="person_id"
+              defaultValue=""
+              className="mt-1 w-full rounded-lg border border-line-strong bg-paper px-3 py-2 text-[13px] text-ink"
+            >
+              <option value="">Create a new person</option>
+              {people.map((p) => (
+                <option key={p.id} value={p.id}>
+                  {p.full_name}
+                </option>
+              ))}
+            </select>
+          </div>
+        ) : null}
       </div>
 
       {state?.error ? (

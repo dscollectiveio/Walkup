@@ -9,15 +9,16 @@ vi.mock("next/link", () => ({
 }));
 
 import { Sidebar } from "@/components/sidebar/sidebar";
-import { NAV_GROUPS, TRAILING_NAV, UNGROUPED_NAV, pageTitleFor } from "@/components/sidebar/config";
+import { NAV_GROUPS, TRAILING_NAV, UNGROUPED_NAV, insuranceNavLabel, isNavItemActive, navFor, pageTitleFor } from "@/components/sidebar/config";
 
-const render = (initialMode: "expanded" | "rail") =>
+const render = (initialMode: "expanded" | "rail", extra: Record<string, unknown> = {}) =>
   renderToStaticMarkup(
     createElement(Sidebar, {
       associationName: "Test HOA",
       uncategorizedCount: 3,
       userEmail: "a@b.co",
       initialMode,
+      ...extra,
     }),
   );
 
@@ -72,5 +73,109 @@ describe("Sidebar: expanded and rail", () => {
     expect(pageTitleFor("/repairs?view=upkeep")).toBe("Repairs & Upkeep");
     expect(pageTitleFor("/units/abc")).toBe("Unit statement");
     expect(pageTitleFor("/nowhere")).toBeNull();
+  });
+
+  it("names the insurance and repairs sub-pages before their section", () => {
+    expect(pageTitleFor("/insurance")).toBe("Insurance Marketplace");
+    expect(pageTitleFor("/insurance?view=check")).toBe("Insurance Marketplace");
+    expect(pageTitleFor("/insurance/policies/abc")).toBe("Policy");
+    expect(pageTitleFor("/insurance/policies/new")).toBe("Policy");
+    expect(pageTitleFor("/insurance/import/abc")).toBe("Import insurance");
+    expect(pageTitleFor("/insurance/compare")).toBe("Compare quotes");
+    expect(pageTitleFor("/insurance/facts")).toBe("Building facts");
+    expect(pageTitleFor("/insurance/owner-summary")).toBe("Owner summary");
+    expect(pageTitleFor("/insurance/emails/new")).toBe("Email");
+    expect(pageTitleFor("/insurance/claims/new")).toBe("Claim");
+    expect(pageTitleFor("/insurance/contacts/abc")).toBe("Contact");
+    expect(pageTitleFor("/insurance/quotes/abc")).toBe("Quote");
+    expect(pageTitleFor("/insurance/sheet")).toBe("Insurance facts sheet");
+    expect(pageTitleFor("/repairs/report")).toBe("Report a problem");
+    expect(pageTitleFor("/repairs/find?trade=plumbing")).toBe("Find a contractor");
+    expect(pageTitleFor("/repairs/emergency-info")).toBe("In an emergency");
+    expect(pageTitleFor("/repairs/upkeep/abc")).toBe("Upkeep job");
+    expect(pageTitleFor("/maintenance/abc")).toBe("Problem");
+    expect(pageTitleFor("/contractors/abc")).toBe("Contractor");
+  });
+
+  it("calls it Building insurance for owners, Insurance for the accountant, and the Marketplace for the board", () => {
+    expect(insuranceNavLabel("board_admin")).toBe("Insurance Marketplace");
+    expect(insuranceNavLabel("board_member")).toBe("Insurance Marketplace");
+    expect(insuranceNavLabel("accountant")).toBe("Insurance");
+    expect(insuranceNavLabel("owner")).toBe("Building insurance");
+    expect(pageTitleFor("/insurance", "owner")).toBe("Building insurance");
+    expect(pageTitleFor("/insurance", "accountant")).toBe("Insurance");
+    const item = navFor("owner").groups.flatMap((g) => g.items).find((i) => i.href === "/insurance")!;
+    expect(item).toMatchObject({ label: "Building insurance", tourId: "insurance" });
+    expect(render("expanded", { role: "owner" })).toContain(">Building insurance<");
+    expect(render("expanded", { role: "accountant" })).toContain(">Insurance<");
+  });
+
+  it("keeps Repairs & Upkeep highlighted on problem, contractor and bill pages", () => {
+    const repairs = NAV_GROUPS.flatMap((g) => g.items).find((i) => i.href === "/repairs")!;
+    for (const path of ["/repairs", "/repairs/find", "/maintenance/abc", "/contractors/abc", "/bills"]) {
+      expect(isNavItemActive(path, repairs), path).toBe(true);
+    }
+    expect(isNavItemActive("/budget", repairs)).toBe(false);
+    expect(isNavItemActive("/", { href: "/" })).toBe(true);
+    expect(isNavItemActive("/budget", { href: "/" })).toBe(false);
+  });
+
+  it("shows the repairs badge in gold, next to the rust bank badge", () => {
+    const html = render("expanded", { repairsCount: 4 });
+    expect(html).toContain(">4<");
+    expect(html).toContain("bg-brass text-ink");
+    expect(html).toContain("bg-rust text-paper");
+  });
+
+  it("gives owner-only people the owner navigation and none of the board's pages", () => {
+    const html = render("expanded", { role: "owner" });
+    for (const label of ["Home", "Statement", "How to pay", "Announcements", "Repairs", "Budget", "Your building", "Documents", "My profile"]) {
+      expect(html, label).toContain(`>${label}<`);
+    }
+    for (const never of ["Dashboard", "Bank Feed", "Financial Statements", "HOA Dues", "Taxes", "Building Info", "Document Hub"]) {
+      expect(html, never).not.toContain(never.replace("&", "&amp;"));
+    }
+    expect(html).toContain('href="/owner"');
+    expect(html).toContain('data-tour="owner-statement"');
+  });
+
+  it("gives board and accountant Announcements after Building Info, and My unit only when they own a unit", () => {
+    const building = navFor("board_admin").groups.find((g) => g.label === "Building")!;
+    expect(building.items.map((i) => i.href).slice(0, 2)).toEqual(["/building", "/announcements"]);
+    expect(navFor("board_member", { ownsUnit: false }).ungrouped.map((i) => i.label)).toEqual(["Dashboard"]);
+    expect(navFor("board_member", { ownsUnit: true }).ungrouped.map((i) => i.label)).toEqual(["Dashboard", "My unit"]);
+    expect(render("expanded", { role: "board_admin", ownsUnit: true })).toContain('data-tour="my-unit"');
+    expect(render("expanded", { role: "board_admin" })).not.toContain('data-tour="my-unit"');
+  });
+
+  it("shows the announcements count as a badge", () => {
+    const html = render("expanded", { role: "owner", announcementsCount: 2 });
+    expect(html).toContain(">2<");
+    expect(html).toContain("2 waiting");
+  });
+
+  it("lights /owner only on /owner itself, and Statement on a unit's statement", () => {
+    const home = navFor("owner").ungrouped[0];
+    expect(isNavItemActive("/owner", home)).toBe(true);
+    expect(isNavItemActive("/owner/pay", home)).toBe(false);
+    const statement = navFor("owner").groups.flatMap((g) => g.items).find((i) => i.href === "/owner/statement")!;
+    expect(isNavItemActive("/owner/statement/abc", statement)).toBe(true);
+  });
+
+  it("names the owner portal, money and import pages in the top bar", () => {
+    expect(pageTitleFor("/owner", "owner")).toBe("Home");
+    expect(pageTitleFor("/owner", "board_admin")).toBe("My unit");
+    expect(pageTitleFor("/owner/statement/abc", "owner")).toBe("Statement");
+    expect(pageTitleFor("/owner/pay", "owner")).toBe("How to pay");
+    expect(pageTitleFor("/announcements", "owner")).toBe("Announcements");
+    expect(pageTitleFor("/announcements/abc")).toBe("Announcement");
+    expect(pageTitleFor("/delinquency")).toBe("Collections");
+    expect(pageTitleFor("/dues/send/abc")).toBe("Review emails");
+    expect(pageTitleFor("/dues/statements")).toBe("Owner statements");
+    expect(pageTitleFor("/dues/email")).toBe("Email from Walkup");
+    expect(pageTitleFor("/dues")).toBe("HOA Dues");
+    expect(pageTitleFor("/building/import")).toBe("Import");
+    expect(pageTitleFor("/building/import/new")).toBe("Import");
+    expect(pageTitleFor("/building")).toBe("Building Info");
   });
 });

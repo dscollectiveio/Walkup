@@ -1,9 +1,9 @@
-import { CONTACT_EMAIL, SECURITY_TXT_EXPIRES, SITE_URL } from "@/lib/site-config";
+import { SECURITY_EMAIL, SECURITY_TXT_EXPIRES, SITE_URL } from "@/lib/site-config";
 
 /** RFC 9116: where a researcher reports a vulnerability. Public, plain text. */
 export function GET() {
   const body = [
-    `Contact: mailto:${CONTACT_EMAIL}`,
+    `Contact: mailto:${SECURITY_EMAIL}`,
     `Expires: ${SECURITY_TXT_EXPIRES}`,
     "Preferred-Languages: en",
     `Canonical: ${SITE_URL}/.well-known/security.txt`,

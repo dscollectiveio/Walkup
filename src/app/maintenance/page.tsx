@@ -1,6 +1,6 @@
 import { redirect } from "next/navigation";
 
-/** Folded into Repairs & Upkeep; ticket detail pages stay at /maintenance/[ticketId]. */
+/** Folded into Repairs & Upkeep (repairs-spec §2.3); ticket pages stay at /maintenance/[ticketId]. */
 export default function MaintenancePage() {
-  redirect("/repairs");
+  redirect("/repairs?view=problems");
 }

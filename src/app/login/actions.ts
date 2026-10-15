@@ -5,7 +5,7 @@ import { revalidatePath } from "next/cache";
 import { headers, cookies } from "next/headers";
 import { createClient } from "@/lib/supabase/server";
 import { PENDING_INVITE_COOKIE } from "@/lib/invite-cookie";
-import { CONTACT_EMAIL } from "@/lib/site-config";
+import { SUPPORT_EMAIL } from "@/lib/site-config";
 import { MIN_PASSWORD } from "@/lib/security/password";
 
 export async function signIn(_prev: unknown, formData: FormData) {
@@ -62,7 +62,7 @@ export async function signUp(_prev: unknown, formData: FormData) {
     return { error: "Email and password are both required." };
   }
   if (!privacyConsent) {
-    return { error: "You need to agree to the Privacy Policy to create an account." };
+    return { error: "You need to agree to the Terms of Service and Privacy Policy to create an account." };
   }
   if (password.length < MIN_PASSWORD) {
     return { error: `Password must be at least ${MIN_PASSWORD} characters. A few random words works well.` };
@@ -81,7 +81,7 @@ export async function signUp(_prev: unknown, formData: FormData) {
   // &next={{ .RedirectTo }} for this to reach /auth/confirm at all.
   // The link goes through Supabase's verify step and back to /auth/confirm,
   // which turns it into a session (PKCE code) and carries on to `next`.
-  const emailRedirectTo = await confirmUrl(inviteToken ? `/invite/${inviteToken}` : "/");
+  const emailRedirectTo = await confirmUrl(inviteToken ? `/invite/${encodeURIComponent(inviteToken)}` : "/");
 
   const { data, error } = await supabase.auth.signUp({
     email,
@@ -111,7 +111,7 @@ export async function signUp(_prev: unknown, formData: FormData) {
   if (data.session) {
     // Confirm-email is off in this environment — already signed in.
     revalidatePath("/", "layout");
-    redirect(inviteToken ? `/invite/${inviteToken}` : "/");
+    redirect(inviteToken ? `/invite/${encodeURIComponent(inviteToken)}` : "/");
   }
 
   // Confirm-email is on: no session yet. /auth/confirm picks up from the
@@ -170,7 +170,7 @@ export async function updatePassword(_prev: unknown, formData: FormData) {
     return {
       error:
         error.code === "same_password"
-          ? "That's your current password — choose a new one."
+          ? "That's your current password. Choose a new one."
           : error.code === "insufficient_aal"
             ? "Enter your two-step code first, then set your new password."
             : error.message,
@@ -202,10 +202,10 @@ function describeAuthError(error: { message?: string; status?: number; code?: st
     return "That password is too easy to guess. Use at least 8 characters, ideally a mix of words, numbers and symbols.";
   }
   if (error.code === "signup_disabled") {
-    return `New sign-ups are switched off right now. Email ${CONTACT_EMAIL} and we'll get you set up.`;
+    return `New sign-ups are switched off right now. Email ${SUPPORT_EMAIL} and we'll get you set up.`;
   }
   if (meaningless || (error.status ?? 0) >= 500) {
-    return `We couldn't send your confirmation email, so the account wasn't created. This is a problem on our side, not yours — try again in a few minutes, and if it keeps happening email ${CONTACT_EMAIL} ${ref}.`;
+    return `We couldn't send your confirmation email, so the account wasn't created. This is a problem on our side, not yours. Try again in a few minutes, and if it keeps happening email ${SUPPORT_EMAIL} ${ref}.`;
   }
   return `${raw} ${ref}`;
 }

@@ -20,6 +20,9 @@ export interface AssociationProfile {
   fiscal_year_end_month: number;
   capitalization_threshold: number;
   capitalization_threshold_source: string | null;
+  board_contact_name?: string | null;
+  board_contact_email?: string | null;
+  board_contact_phone?: string | null;
 }
 
 const MONTHS = [
@@ -43,13 +46,15 @@ export function AssociationProfileForm({ profile }: { profile: AssociationProfil
 
   if (!open) {
     return (
-      <button
-        type="button"
-        onClick={() => setOpen(true)}
-        className="rounded-md border border-line-strong bg-paper px-4 py-2 text-[13px] font-medium text-ink hover:bg-fill"
-      >
-        Edit details
-      </button>
+      <div id="contact">
+        <button
+          type="button"
+          onClick={() => setOpen(true)}
+          className="rounded-md border border-line-strong bg-paper px-4 py-2 text-[13px] font-medium text-ink hover:bg-fill"
+        >
+          Edit details
+        </button>
+      </div>
     );
   }
 
@@ -192,7 +197,7 @@ export function AssociationProfileForm({ profile }: { profile: AssociationProfil
         </div>
 
         <p className="text-[12px] font-medium text-ink sm:col-span-2">
-          The building <span className="font-normal text-mute-soft">— used to pre-fill insurance quote requests</span>
+          The building <span className="font-normal text-mute-soft">used for insurance quote requests and the coverage check</span>
         </p>
         <div>
           <label htmlFor="year_built" className="block text-[12px] font-medium text-ink">
@@ -251,6 +256,28 @@ export function AssociationProfileForm({ profile }: { profile: AssociationProfil
             defaultValue={profile.capitalization_threshold_source ?? ""}
             className="mt-1 w-full rounded-lg border border-line-strong px-3 py-2 text-[13px] text-ink"
           />
+        </div>
+
+        <p id="contact" className="scroll-mt-20 text-[12px] font-medium text-ink sm:col-span-2">
+          Who owners write to <span className="font-normal text-mute-soft">shown to owners, and replies to Walkup emails go here</span>
+        </p>
+        <div>
+          <label htmlFor="board_contact_name" className="block text-[12px] font-medium text-ink">
+            Board contact name <span className="ml-1 font-normal text-mute-soft">optional</span>
+          </label>
+          <input id="board_contact_name" name="board_contact_name" maxLength={120} defaultValue={profile.board_contact_name ?? ""} className="mt-1 w-full rounded-lg border border-line-strong px-3 py-2 text-[13px] text-ink" />
+        </div>
+        <div>
+          <label htmlFor="board_contact_email" className="block text-[12px] font-medium text-ink">
+            Board contact email <span className="ml-1 font-normal text-mute-soft">optional</span>
+          </label>
+          <input id="board_contact_email" name="board_contact_email" type="email" maxLength={254} defaultValue={profile.board_contact_email ?? ""} className="mt-1 w-full rounded-lg border border-line-strong px-3 py-2 text-[13px] text-ink" />
+        </div>
+        <div>
+          <label htmlFor="board_contact_phone" className="block text-[12px] font-medium text-ink">
+            Board contact phone <span className="ml-1 font-normal text-mute-soft">optional</span>
+          </label>
+          <input id="board_contact_phone" name="board_contact_phone" type="tel" maxLength={40} defaultValue={profile.board_contact_phone ?? ""} className="mt-1 w-full rounded-lg border border-line-strong px-3 py-2 text-[13px] text-ink" />
         </div>
       </div>
 

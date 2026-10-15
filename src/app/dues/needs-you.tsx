@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useTransition } from "react";
+import { mailtoHref } from "@/lib/email/mailto";
 import { addUnitCharge, chargeDueNow, chargeDuesPeriod, confirmDepositAsDues, dismissPaymentReport } from "./actions";
 
 const money = (cents: number) =>
@@ -167,7 +168,7 @@ export function NeedsYou({
                           amount: it.amountCents / 100,
                           kind: "late_fee",
                           periodStart: it.periodStart,
-                          memo: `Late fee — ${it.periodLabel} dues`,
+                          memo: `Late fee: ${it.periodLabel} dues`,
                         }),
                       )
                     }
@@ -234,7 +235,7 @@ function DepositLine({
         {suggested ? (
           <div className="text-[12px] text-mute">
             Looks like <span className="font-medium text-ink">{suggested.label}</span>
-            {suggested.ownerName ? ` (${suggested.ownerName})` : ""} — {item.reason}.
+            {suggested.ownerName ? ` (${suggested.ownerName})` : ""}, {item.reason}.
           </div>
         ) : (
           <div className="text-[12px] text-mute">Which unit is this from?</div>
@@ -339,20 +340,20 @@ function BehindLine({
   associationName: string;
 }) {
   const label = unit?.label ?? "A unit";
-  const subject = `${label} — dues balance of ${money(item.owedCents)}`;
+  const subject = `${label}: dues balance of ${money(item.owedCents)}`;
   const body =
     `Hi ${unit?.ownerName?.split(" ")[0] ?? "there"},\n\n` +
     `A quick reminder that ${label} has ${money(item.overdueCents)} in dues past due` +
     (item.owedCents > item.overdueCents ? ` (${money(item.owedCents)} owed in total)` : "") +
     `. Payment details are on the Dues page in Walkup.\n\nThanks,\nThe ${associationName} board`;
   const mailto = unit?.ownerEmail
-    ? `mailto:${encodeURIComponent(unit.ownerEmail)}?subject=${encodeURIComponent(subject)}&body=${encodeURIComponent(body)}`
+    ? mailtoHref(unit.ownerEmail, subject, body)
     : null;
   return (
     <>
       <div className="min-w-0 text-[13px]">
         <span className="font-medium text-ink">
-          {label} is behind — {money(item.overdueCents)} past due
+          {label} is behind: {money(item.overdueCents)} past due
         </span>
         <span className="ml-2 text-mute">
           {item.daysOverdue} day{item.daysOverdue === 1 ? "" : "s"}
@@ -361,12 +362,15 @@ function BehindLine({
       </div>
       <div className="flex items-center gap-3">
         {mailto ? (
-          <a href={mailto} className={btnGhost} title="Opens a draft in your own mail app — nothing is sent by Walkup">
+          <a href={mailto} className={btnGhost} title="Opens a draft in your own mail app. Nothing is sent by Walkup">
             Draft a reminder
           </a>
         ) : (
           <span className="text-[12px] text-warning-text">No email on file for the owner</span>
         )}
+        <a href={`/delinquency?select=${item.unitId}`} className={btnGhost} title="Review a reminder email on the Collections page before anything goes out">
+          Prepare reminder
+        </a>
         <a href={`/units/${item.unitId}`} className={link}>
           Statement
         </a>

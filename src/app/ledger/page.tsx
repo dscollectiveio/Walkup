@@ -1,5 +1,6 @@
 import { createClient } from "@/lib/supabase/server";
 import { Card, MoneyOrDash, Restricted, money } from "@/components/ui";
+import { BoardOnly, viewerIsOwnerOnly } from "@/components/board-only";
 
 export const dynamic = "force-dynamic";
 
@@ -15,6 +16,15 @@ export default async function LedgerPage() {
   // Owners have no SELECT policy on journal_lines, so this is empty for them
   // rather than partially populated.
   if (!rows || rows.length === 0) {
+    if (await viewerIsOwnerOnly()) {
+      return (
+        <BoardOnly
+          what="The general ledger"
+          why="It holds every transaction, including other owners' payments."
+          alternative={{ label: "See your statement", href: "/owner" }}
+        />
+      );
+    }
     return <Restricted what="the general ledger" />;
   }
 

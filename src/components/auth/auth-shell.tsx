@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { Lockup } from "@/components/mark";
-import { CONTACT_EMAIL } from "@/lib/site-config";
+import { SUPPORT_EMAIL } from "@/lib/site-config";
+import { UsageTip } from "./usage-tip";
 
 /**
  * The frame every step between "Get started" and the Dashboard shares:
@@ -24,15 +25,15 @@ export const authButton =
 export const authError = "rounded-lg border border-bad-line bg-bad-tint px-3.5 py-2.5 text-[13px] text-bad-text";
 
 const POINTS = [
-  "Read-only bank access — Walkup never moves money",
-  "Nothing is sent on your behalf without you",
+  "Read-only bank access. Walkup never moves money",
+  "Nothing goes out without a board admin's approval",
   "Two-step sign-in protects every account",
   "Free during early access",
 ];
 
 function Brand() {
   return (
-    <Link href="/" aria-label="Walkup home">
+    <Link href="/" aria-label="Walkup home" className="inline-flex min-h-[44px] items-center">
       <Lockup onDark size={34} />
     </Link>
   );
@@ -84,7 +85,7 @@ export function AuthShell({
         <Brand />
         <div className="max-w-md">
           <h2 className="text-[34px] font-bold leading-[1.1] tracking-tight">
-            {aside?.heading ?? "Your building's books, dues and taxes — in one calm place."}
+            {aside?.heading ?? "Your building's books, dues and taxes, in one calm place."}
           </h2>
           <p className="mt-4 text-[16px] leading-relaxed text-white/75">
             {aside?.body ??
@@ -100,13 +101,14 @@ export function AuthShell({
               </li>
             ))}
           </ul>
+          <UsageTip />
         </div>
         <p className="text-[12px] text-white/50">
           <Link href="/privacy" className="hover:text-white">Privacy</Link>
           <span className="mx-2">·</span>
           <Link href="/security" className="hover:text-white">Security</Link>
           <span className="mx-2">·</span>
-          <a href={`mailto:${CONTACT_EMAIL}`} className="hover:text-white">Help</a>
+          <a href={`mailto:${SUPPORT_EMAIL}`} className="hover:text-white">Help</a>
         </p>
         {/* the mark, large and quiet */}
         <svg viewBox="10 9 44 44" aria-hidden="true" className="pointer-events-none absolute -bottom-20 -right-20 h-96 w-96 text-white/[0.05]">

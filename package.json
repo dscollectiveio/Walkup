@@ -10,7 +10,9 @@
     "test": "vitest run",
     "test:watch": "vitest",
     "test:e2e": "playwright test",
-    "typecheck": "tsc --noEmit"
+    "typecheck": "tsc --noEmit",
+    "test:e2e:public": "playwright test --project=public",
+    "test:e2e:screens": "playwright test --project=app"
   },
   "dependencies": {
     "@anthropic-ai/sdk": "^0.115.0",
@@ -21,7 +23,7 @@
     "lucide-react": "^1.28.0",
     "next": "^16.4.1",
     "pdf-lib": "^1.17.1",
-    "plaid": "^45.0.0",
+    "plaid": "^48.0.0",
     "react": "19.2.4",
     "react-dom": "19.2.4",
     "react-plaid-link": "^5.0.0",
@@ -43,5 +45,8 @@
     "tailwindcss": "^4",
     "typescript": "^5",
     "vitest": "^4.1.10"
+  },
+  "overrides": {
+    "uuid": "^11.1.1"
   }
 }

@@ -1,54 +1,9 @@
 import "server-only";
 import type { createClient } from "@/lib/supabase/server";
-import { extractDocumentText, extractPdfPages } from "./extract-text";
-import { classifyDocument, CONFIDENCE_THRESHOLD, extractDeclarations } from "./classify";
-import { FIELD_DEFS } from "@/lib/insurance/declarations";
+import { extractDocumentText } from "./extract-text";
+import { classifyDocument, CONFIDENCE_THRESHOLD } from "./classify";
 
 type Supabase = Awaited<ReturnType<typeof createClient>>;
-
-export interface DeclarationsRead {
-  state: "done" | "unreadable" | "failed" | "skipped";
-  reason?: string;
-  pages?: number;
-  fields?: { name: string; candidates: { value: string; page: number | null; snippet: string }[]; confidence: number }[];
-  read_at: string;
-}
-
-/**
- * Documents filed as insurance get a second, field-by-field read of the
- * declarations (limits, deductibles, dates), page by page so each value can
- * say where it came from. Stored alongside the general extraction; nothing is
- * written to insurance_policies until a person reviews it and saves.
- */
-async function readDeclarationsIfInsurance(
-  supabase: Supabase,
-  doc: { mime_type: string | null },
-  categoryId: string | null,
-  bytes: Uint8Array,
-): Promise<DeclarationsRead | null> {
-  if (!categoryId) return null;
-  const { data: cat } = await supabase.from("document_categories").select("slug").eq("id", categoryId).limit(1);
-  if (cat?.[0]?.slug !== "insurance") return null;
-
-  let declarations: DeclarationsRead;
-  const pages = await extractPdfPages(doc.mime_type, bytes);
-  if (!pages) {
-    declarations = {
-      state: "unreadable",
-      reason: "This file has no readable text, so the details need entering by hand.",
-      read_at: new Date().toISOString(),
-    };
-  } else {
-    const result = await extractDeclarations({
-      pages,
-      fields: FIELD_DEFS.map((f) => ({ key: f.key, label: f.label })),
-    });
-    declarations = result.ok
-      ? { state: "done", pages: pages.length, fields: result.fields, read_at: new Date().toISOString() }
-      : { state: result.configured ? "failed" : "skipped", reason: result.reason, pages: pages.length, read_at: new Date().toISOString() };
-  }
-  return declarations;
-}
 
 /**
  * Read a stored document and file it.
@@ -59,8 +14,11 @@ async function readDeclarationsIfInsurance(
  * is work nobody notices has died, so every stage is written down and a stuck
  * document is visible and re-runnable rather than silently pending forever.
  *
- * Ordering is deliberate: a user's own filing rule wins over the model, and
- * the model never overwrites a category a person already chose.
+ * Ordering is deliberate: a category a person chose is never changed (not by
+ * a filing rule, not by the model); otherwise a board's own filing rule wins
+ * over the model. A document a person filed as Insurance isn't sent to the
+ * classifier at all: Insurance's own reader handles it when the board asks
+ * (insurance-spec §12 I-9), so the text is stored and that's the end of it.
  */
 export async function runExtraction(
   supabase: Supabase,
@@ -76,6 +34,15 @@ export async function runExtraction(
 
   const doc = rows?.[0];
   if (!doc) return { state: "failed", detail: "Document not visible." };
+
+  // Reading is a board job. An owner can see (and download) an all-owners
+  // document, but must never reach the paid steps below, and the updates would
+  // be silently filtered by RLS anyway (REVIEW-2 #1). Checked here as well as
+  // in the actions so no future caller can skip it.
+  const { data: boardOk } = await supabase.rpc("is_board", { assoc: doc.association_id });
+  if (boardOk !== true) {
+    return { state: "failed", detail: "Only a board member can have a document read again." };
+  }
 
   const fail = async (detail: string, state: "failed" | "skipped" = "failed") => {
     await supabase
@@ -104,10 +71,18 @@ export async function runExtraction(
     .download(doc.storage_path);
 
   if (downloadError || !blob) {
-    return fail(downloadError?.message ?? "The stored file could not be read.");
+    return fail("The stored file could not be read.");
   }
 
   const bytes = new Uint8Array(await blob.arrayBuffer());
+
+  // A category a person already chose is never overwritten, by a rule or a guess.
+  const alreadyFiled = doc.category_id !== null && doc.tag_source === "manual";
+  let filedSlug: string | null = null;
+  if (alreadyFiled) {
+    const { data: cat } = await supabase.from("document_categories").select("slug").eq("id", doc.category_id).limit(1);
+    filedSlug = (cat?.[0]?.slug as string | undefined) ?? null;
+  }
 
   // --- text (redacted at the boundary) -------------------------------------
   const extracted = await extractDocumentText(doc.mime_type, bytes);
@@ -117,11 +92,23 @@ export async function runExtraction(
     return fail(extracted.reason, "skipped");
   }
 
+  // --- filed as Insurance by a person: keep the text, skip the classifier ---
+  if (alreadyFiled && filedSlug === "insurance") {
+    await supabase
+      .from("documents")
+      .update({ extracted_text: extracted.text, extraction_state: "done", extraction_error: null })
+      .eq("id", documentId);
+    return { state: "done", detail: "Read; Insurance reads the figures when you ask it to." };
+  }
+
   // --- a board's own rule beats the model ----------------------------------
-  const { data: rules } = await supabase
-    .from("tag_rules")
-    .select("match_type, match_value, set_category_id, set_folder_id")
-    .eq("association_id", doc.association_id);
+  // Only for a document nobody has filed yet.
+  const { data: rules } = alreadyFiled
+    ? { data: [] as { match_type: string; match_value: string; set_category_id: string | null; set_folder_id: string | null }[] }
+    : await supabase
+        .from("tag_rules")
+        .select("match_type, match_value, set_category_id, set_folder_id")
+        .eq("association_id", doc.association_id);
 
   const matched = (rules ?? []).find((r) => {
     const needle = r.match_value.toLowerCase();
@@ -131,8 +118,6 @@ export async function runExtraction(
   });
 
   if (matched?.set_category_id) {
-    // Read before marking done, in one write — "done" always means complete.
-    const declarations = await readDeclarationsIfInsurance(supabase, doc, matched.set_category_id, bytes);
     await supabase
       .from("documents")
       .update({
@@ -142,7 +127,6 @@ export async function runExtraction(
         tag_source: "manual",
         tag_confidence: null,
         review_state: "ok",
-        ...(declarations ? { extraction: { declarations } } : {}),
         extraction_state: "done",
         extraction_error: null,
       })
@@ -158,6 +142,8 @@ export async function runExtraction(
     .order("sort_order");
 
   const result = await classifyDocument({
+    supabase,
+    associationId: doc.association_id,
     filename: doc.filename,
     mimeType: doc.mime_type,
     text: extracted.text,
@@ -189,20 +175,13 @@ export async function runExtraction(
   const guessedId = categoryRow?.[0]?.id ?? null;
   const confident = e.confidence >= CONFIDENCE_THRESHOLD;
 
-  // A category a person already chose is never overwritten by a guess. The
-  // extracted fields still get saved — those are additive.
-  const alreadyFiled = doc.category_id !== null && doc.tag_source === "manual";
-
-  // Only on a category a person chose or the model was sure of — an unsure
-  // guess goes to the review queue first, and re-running reads it then.
-  const filedAs = alreadyFiled ? doc.category_id : confident ? guessedId : null;
-  const declarations = await readDeclarationsIfInsurance(supabase, doc, filedAs, bytes);
-
+  // A category a person already chose stays (alreadyFiled, above). The
+  // extracted fields still get saved: those are additive.
   await supabase
     .from("documents")
     .update({
       extracted_text: extracted.text,
-      extraction: declarations ? { ...e, declarations } : e,
+      extraction: e,
       extraction_state: "done",
       extraction_error: null,
       ...(alreadyFiled

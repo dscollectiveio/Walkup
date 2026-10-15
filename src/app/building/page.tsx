@@ -1,16 +1,21 @@
 import { createClient } from "@/lib/supabase/server";
 import { Card, Empty, Restricted } from "@/components/ui";
+import { BoardOnly, viewerIsOwnerOnly } from "@/components/board-only";
 import { AssociationProfileForm, type AssociationProfile } from "./association-profile-form";
 import { AddUnitForm } from "./add-unit-form";
 import { UnitRow, type UnitRecord } from "./unit-row";
 import { AddPersonForm } from "./add-person-form";
-import { PersonRow, type PersonRecord } from "./person-row";
+import { PersonRow } from "./person-row";
 import { OwnershipRow, type CurrentOwner } from "./ownership-row";
 import { OwnershipAmendmentForm } from "./ownership-amendment-form";
 import { AmendmentHistory, type AmendmentHistoryEntry } from "./amendment-history";
 import { GenerateInviteForm } from "./generate-invite-form";
 import { InviteRow, type InviteRecord } from "./invite-row";
 import { AccessReviewCard, type AccessReviewRecord } from "./access-review-card";
+import Link from "next/link";
+import { formatMoney, longDate } from "@/lib/insurance/format";
+import { inForce } from "@/lib/insurance/status";
+import { todayIso as localTodayIso } from "@/lib/dates";
 
 export const dynamic = "force-dynamic";
 
@@ -20,7 +25,7 @@ export default async function BuildingPage() {
   const { data: associations } = await supabase
     .from("associations")
     .select(
-      "id, legal_name, display_name, state_code, county, city, street_address, postal_code, year_built, construction_type, stories, roof_replaced_year, ein, incorporated_on, fiscal_year_end_month, capitalization_threshold, capitalization_threshold_source",
+      "id, legal_name, display_name, state_code, county, city, street_address, postal_code, year_built, construction_type, stories, roof_replaced_year, ein, incorporated_on, fiscal_year_end_month, capitalization_threshold, capitalization_threshold_source, board_contact_name, board_contact_email, board_contact_phone",
     );
   const association = associations?.[0];
   if (!association) return <Restricted what="building settings" />;
@@ -30,7 +35,38 @@ export default async function BuildingPage() {
     roles: ["board_admin", "board_member"],
   });
   const isBoard = isBoardRes === true;
-  if (!isBoard) return <Restricted what="building settings" />;
+  if (!isBoard) {
+    // An owner (not the board or the accountant) gets the page that says so
+    // and points at the owner's building page (owner-portal-spec 2.4).
+    if (await viewerIsOwnerOnly()) {
+      return (
+        <BoardOnly
+          what="Building Info"
+          why="It is where the board manages units, owners and who can sign in."
+          alternative={{ label: "See your building", href: "/owner/building" }}
+        />
+      );
+    }
+    return (
+      <div className="space-y-6">
+        <Restricted what="building settings" />
+        <Card title="About the building">
+          <ul className="space-y-1 text-[13px]">
+            <li>
+              <Link href="/insurance" className="inline-flex min-h-[40px] items-center text-ink underline underline-offset-2">
+                What the building&rsquo;s insurance covers
+              </Link>
+            </li>
+            <li>
+              <Link href="/repairs/emergency-info" className="inline-flex min-h-[40px] items-center text-ink underline underline-offset-2">
+                Emergency information
+              </Link>
+            </li>
+          </ul>
+        </Card>
+      </div>
+    );
+  }
 
   const { data: isBoardAdminRes } = await supabase.rpc("has_role_in", {
     assoc: association.id,
@@ -48,6 +84,8 @@ export default async function BuildingPage() {
     { data: amendmentRows },
     { data: inviteRows },
     { data: reviewRows },
+    { data: factRows },
+    { data: policyRows },
   ] = await Promise.all([
     supabase
       .from("units")
@@ -84,6 +122,15 @@ export default async function BuildingPage() {
       .select("id, reviewed_at, reviewed_by, notes, active_grants, revoked_count")
       .order("reviewed_at", { ascending: false })
       .limit(5),
+    // The facts the insurance coverage check reads (insurance-spec §12 I-6).
+    supabase
+      .from("insurance_building_facts")
+      .select("replacement_cost_estimate::text, replacement_cost_as_of, flood_zone, has_boiler, has_elevator, manager_handles_funds")
+      .limit(1),
+    supabase
+      .from("insurance_policies")
+      .select("id, coverage, carrier_name, effective_from, effective_to, renewal_reminder_days, archived_at, replaced_by_policy_id, replaced_at")
+      .is("archived_at", null),
   ]);
 
   const profile: AssociationProfile = {
@@ -103,6 +150,9 @@ export default async function BuildingPage() {
     fiscal_year_end_month: association.fiscal_year_end_month,
     capitalization_threshold: Number(association.capitalization_threshold),
     capitalization_threshold_source: association.capitalization_threshold_source,
+    board_contact_name: association.board_contact_name,
+    board_contact_email: association.board_contact_email,
+    board_contact_phone: association.board_contact_phone,
   };
 
   const unitList: UnitRecord[] = units ?? [];
@@ -117,7 +167,7 @@ export default async function BuildingPage() {
     rolesByPerson.set(g.person_id, list);
   }
 
-  const personRecords: PersonRecord[] = persons ?? [];
+  const personRecords = persons ?? [];
 
   const currentOwnerIds = new Set((unitOwnerRows ?? []).map((r) => r.person_id));
   const nameByAuthUser = new Map(
@@ -172,6 +222,24 @@ export default async function BuildingPage() {
     };
   });
 
+  const insuranceFacts = buildingInsuranceFacts(factRows?.[0] ?? null);
+  const master = inForce(
+    (policyRows ?? []).map((p) => ({
+      id: p.id as string,
+      coverage: p.coverage as string,
+      carrier_name: p.carrier_name as string,
+      effective_from: p.effective_from as string,
+      effective_to: p.effective_to as string,
+      renewal_reminder_days: (p.renewal_reminder_days as number | null) ?? 60,
+      archived_at: (p.archived_at as string | null) ?? null,
+      replaced_by_policy_id: (p.replaced_by_policy_id as string | null) ?? null,
+      replaced_at: (p.replaced_at as string | null) ?? null,
+    })),
+    localTodayIso(),
+  )
+    .filter((p) => p.coverage === "property")
+    .sort((a, b) => a.effective_to.localeCompare(b.effective_to))[0];
+
   const invites: InviteRecord[] = (inviteRows ?? []).map((i) => ({
     id: i.id,
     token: i.token,
@@ -191,6 +259,16 @@ export default async function BuildingPage() {
         </p>
       </div>
 
+      {isBoardAdmin ? (
+        <p className="text-[13px] text-mute">
+          <Link href="/building/import" className="font-medium text-ink underline underline-offset-2">
+            Import from a spreadsheet
+          </Link>
+          {" "}
+          Bring in units, owners, transactions and opening balances.
+        </p>
+      ) : null}
+
       <Card
         title="Association profile"
         hint="Legal name, filing details, and the capitalization threshold used for the 1120-H."
@@ -202,6 +280,12 @@ export default async function BuildingPage() {
             {[profile.city, profile.county, profile.state_code].filter(Boolean).join(", ")}
           </p>
           {profile.ein ? <p className="text-mute">EIN {profile.ein}</p> : null}
+          <p className="text-mute">
+            Owners write to:{" "}
+            {profile.board_contact_name || profile.board_contact_email
+              ? [profile.board_contact_name, profile.board_contact_email].filter(Boolean).join(", ")
+              : "not set yet"}
+          </p>
         </div>
         {isBoardAdmin ? (
           <div className="mt-4">
@@ -210,11 +294,43 @@ export default async function BuildingPage() {
         ) : null}
       </Card>
 
+      <Card title="Insurance facts" hint="What the insurance coverage check knows about the building.">
+        <dl className="grid gap-x-6 gap-y-3 text-[13px] sm:grid-cols-2">
+          {insuranceFacts.map((f) => (
+            <div key={f.label}>
+              <dt className="text-[12px] text-mute">{f.label}</dt>
+              <dd className={f.value ? "text-ink" : "text-mute-soft"}>{f.value ?? "Not answered yet"}</dd>
+            </div>
+          ))}
+        </dl>
+        <p className="mt-4 text-[13px] text-ink">
+          <Link href="/insurance" className="underline underline-offset-2">
+            {master
+              ? `Master policy: ${master.carrier_name}, renews ${longDate(master.effective_to)}`
+              : "No master policy recorded yet"}
+          </Link>
+        </p>
+        <div className="mt-3 flex flex-wrap gap-x-5 gap-y-1 text-[13px]">
+          <Link href="/insurance/facts" className="inline-flex min-h-[40px] items-center font-medium text-ink underline underline-offset-2">
+            Edit on Insurance
+          </Link>
+          <Link href="/repairs/emergency-info" className="inline-flex min-h-[40px] items-center text-ink underline underline-offset-2">
+            Emergency information
+          </Link>
+        </div>
+      </Card>
+
       <Card title="Units" hint="The roster of units and their specs.">
         <div className="space-y-4">
           <AddUnitForm />
           {unitList.length === 0 ? (
-            <Empty>No units on file.</Empty>
+            <Empty>
+              No units yet. Add them one at a time, or{" "}
+              <Link href="/building/import" className="underline underline-offset-2">
+                import a spreadsheet
+              </Link>
+              .
+            </Empty>
           ) : (
             <ul className="divide-y divide-line">
               {unitList.map((u) => (
@@ -242,6 +358,11 @@ export default async function BuildingPage() {
                   roles={rolesByPerson.get(p.id) ?? []}
                   canEdit={isBoard}
                   canEditRoles={isBoardAdmin}
+                  invite={
+                    isBoard && !p.auth_user_id && ((rolesByPerson.get(p.id) ?? []).includes("owner") || currentOwnerIds.has(p.id))
+                      ? { associationName: association.display_name, boardContactName: association.board_contact_name ?? null }
+                      : null
+                  }
                   canRedact={
                     isBoardAdmin &&
                     (rolesByPerson.get(p.id) ?? []).length === 0 &&
@@ -311,7 +432,7 @@ export default async function BuildingPage() {
           hint="Send a link instead of granting a role by hand — the person sets their own password and joins at the role you pick."
         >
           <div className="space-y-4">
-            <GenerateInviteForm />
+            <GenerateInviteForm people={(persons ?? []).filter((p) => !p.auth_user_id).map((p) => ({ id: p.id, full_name: p.full_name }))} />
             {invites.length === 0 ? (
               <Empty>No invites yet.</Empty>
             ) : (
@@ -326,4 +447,51 @@ export default async function BuildingPage() {
       ) : null}
     </div>
   );
+}
+
+/**
+ * Four facts from insurance_building_facts for the Building Info card
+ * (insurance-spec §12 I-6); null value = not answered yet.
+ */
+function buildingInsuranceFacts(
+  row: {
+    replacement_cost_estimate: string | null;
+    replacement_cost_as_of: string | null;
+    flood_zone: string | null;
+    has_boiler: boolean | null;
+    has_elevator: boolean | null;
+    manager_handles_funds: boolean | null;
+  } | null,
+): { label: string; value: string | null }[] {
+  const cost = formatMoney(row?.replacement_cost_estimate ?? null);
+  const equipment =
+    row?.has_boiler === true && row?.has_elevator === true
+      ? "A boiler and an elevator"
+      : row?.has_boiler === true
+        ? "A boiler"
+        : row?.has_elevator === true
+          ? "An elevator"
+          : row?.has_boiler === false && row?.has_elevator === false
+            ? "Neither"
+            : null;
+  return [
+    {
+      label: "Replacement cost estimate",
+      value: cost ? (row?.replacement_cost_as_of ? `${cost} as of ${longDate(row.replacement_cost_as_of)}` : cost) : null,
+    },
+    {
+      label: "Flood zone",
+      value: !row?.flood_zone ? null : row.flood_zone === "unknown" ? "Not sure" : `Zone ${row.flood_zone}`,
+    },
+    { label: "Boiler or elevator", value: equipment },
+    {
+      label: "Who handles the association's money",
+      value:
+        row?.manager_handles_funds === true
+          ? "A management company"
+          : row?.manager_handles_funds === false
+            ? "The board"
+            : null,
+    },
+  ];
 }

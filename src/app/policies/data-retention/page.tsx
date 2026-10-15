@@ -44,6 +44,16 @@ export default function DataRetentionPolicyPage() {
               "Personal-data fields scrubbed with the person's other data; the record of events is kept.",
             ],
             [
+              "Email history (who, which kind, when, delivery result)",
+              "24 months",
+              "Removed by a daily job after 24 months. Addresses are blanked sooner when a person's data is removed.",
+            ],
+            [
+              "Spreadsheets a board imports",
+              "Removed once the rows are read, unless the board chooses to keep a copy",
+              "A kept copy sits in the Document Hub, where the board can delete it once the import is no longer needed.",
+            ],
+            [
               "Invitations",
               "Until redeemed or expired",
               "An invitation's email is cleared when that person's data is removed.",
@@ -103,7 +113,8 @@ export default function DataRetentionPolicyPage() {
           All association and bank data is stored in a single managed Postgres database
           (Supabase), encrypted at rest, and transmitted only over TLS. Walkup does not sell data,
           share it for marketing, or copy it to any system other than its infrastructure
-          providers (Supabase, Vercel, Plaid).
+          and service providers (Supabase, Vercel, Plaid, Anthropic and Resend, and the address and
+          contractor lookups named in the Privacy Policy).
         </p>
       </PolicySection>
     </PolicyPage>

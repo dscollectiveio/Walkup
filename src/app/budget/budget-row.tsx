@@ -1,5 +1,6 @@
 "use client";
 
+import Link from "next/link";
 import { useActionState, useState } from "react";
 import { saveBudgetLine } from "./actions";
 
@@ -14,6 +15,7 @@ export function BudgetRow({
   variance,
   canEdit,
   canSeeActuals,
+  hint = null,
 }: {
   associationId: string;
   fiscalYearId: string;
@@ -25,6 +27,8 @@ export function BudgetRow({
   variance: number | null;
   canEdit: boolean;
   canSeeActuals: boolean;
+  /** A short related figure under the name, such as the insurance premiums in force. */
+  hint?: { text: string; href: string } | null;
 }) {
   const [state, action, pending] = useActionState(saveBudgetLine, null);
   const [value, setValue] = useState(budgeted !== null ? String(budgeted) : "");
@@ -34,7 +38,14 @@ export function BudgetRow({
 
   return (
     <tr>
-      <td className="py-2 text-ink">{name}</td>
+      <td className="py-2 text-ink">
+        {name}
+        {hint ? (
+          <Link href={hint.href} className="mt-0.5 block text-[11px] text-mute underline-offset-2 hover:underline">
+            {hint.text}
+          </Link>
+        ) : null}
+      </td>
       <td className="py-2 text-right">
         {canEdit ? (
           <>

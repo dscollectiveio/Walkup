@@ -12,6 +12,9 @@ import { DocumentListRow } from "./document-row";
 import { ReviewRow } from "./review-row";
 
 export const dynamic = "force-dynamic";
+// Uploads and re-reads run the document reader in after(); give it the
+// full Vercel budget (foundation-spec 5.2).
+export const maxDuration = 300;
 
 interface Search {
   category?: string;
@@ -121,7 +124,7 @@ export default async function DocumentHubPage({
       <div>
         <h1 className="text-[20px] font-bold tracking-tight text-ink">Document Hub</h1>
         <p className="mt-1 text-mute">
-          Insurance certificates, minutes, W-9s, invoices — anything the next board will need and
+          Insurance certificates, minutes, W-9s, invoices, anything the next board will need and
           nobody can find in an old inbox.
         </p>
       </div>
@@ -222,14 +225,14 @@ export default async function DocumentHubPage({
           isBinned
             ? "Binned documents stay here so a mistake is recoverable. Nothing is destroyed until someone says so."
             : isReview
-              ? "Walkup guessed at these and wasn't sure. Confirm or correct each one — it only takes a moment, and nothing is filed on a guess alone."
+              ? "Walkup guessed at these and wasn't sure. Confirm or correct each one. It only takes a moment, and nothing is filed on a guess alone."
               : undefined
         }
       >
         {documents.length === 0 ? (
           <Empty>
             {nothingAtAll
-              ? "Nothing here yet — the insurance certificate and the declaration are usually the two worth having first."
+              ? "Nothing here yet. The insurance certificate and the declaration are usually the two worth having first."
               : isReview
                 ? "Nothing waiting. Every document has been filed by a person."
                 : isBinned

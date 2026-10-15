@@ -103,6 +103,19 @@ describe("forecastYearEnd", () => {
     ).toBeNull();
   });
 
+  it("pins the three-month minimum: 2 months is refused, 3 months is the first forecast", () => {
+    const run = (monthsElapsed: number) =>
+      forecastYearEnd({
+        ...base,
+        spentByAccount: [{ accountId: "rep", name: "Repairs", cents: 300_00 }],
+        today: new Date("2026-04-02T12:00:00"),
+        monthsElapsed,
+      });
+    expect(run(2)).toBeNull();
+    expect(run(3)).not.toBeNull();
+    expect(run(4)).not.toBeNull();
+  });
+
   it("projects straight-line and names the category pushing it over", () => {
     // Halfway through the year: repairs spent the whole annual budget, utilities half.
     const f = forecastYearEnd({
@@ -140,5 +153,14 @@ describe("comparisonSentence", () => {
   });
   it("is null without a prior period", () => {
     expect(comparisonSentence([{ name: "Repairs", cents: 1 }], [], fmt, "last year")).toBeNull();
+  });
+});
+
+describe("toCents refuses what it cannot hold exactly (REVIEW-4 #15)", () => {
+  it("rejects beyond-safe amounts and turns -0.00 into plain zero", async () => {
+    const { toCents } = await import("@/lib/money/cents");
+    expect(() => toCents("99999999999999999.99")).toThrow(/NUMERIC\(14,2\)/);
+    expect(Object.is(toCents("-0.00"), 0)).toBe(true);
+    expect(toCents("999999999999.99")).toBe(99_999_999_999_999);
   });
 });

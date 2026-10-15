@@ -1,12 +1,12 @@
 import { PolicyPage, PolicySection, PolicyList, PolicyTable } from "@/components/policy-page";
 
-export const metadata = { title: "Access Controls Policy — Walkup" };
+export const metadata = { title: "Access Controls Policy | Walkup" };
 
 export default function AccessControlsPolicyPage() {
   return (
     <PolicyPage
       title="Access Controls Policy"
-      subtitle="Version 1.1 — effective 2026-08-05, updated 2026-09-26. Reviewed every 6 months."
+      subtitle="Version 1.1, effective 2026-08-05, updated 2026-10-14. Reviewed every 6 months."
       intro="Defines how access to Walkup's production systems, source code, and the association data they hold is granted, authenticated, reviewed, and removed."
     >
       <PolicySection title="Roles and responsibilities">
@@ -21,11 +21,11 @@ export default function AccessControlsPolicyPage() {
         <PolicyList
           items={[
             "Supabase, Vercel, Plaid, and GitHub are single-owner accounts. No account is shared; no generic or team login exists.",
-            "Every infrastructure account requires multi-factor authentication. Phishing-resistant passkeys are registered on GitHub, Vercel, and the Google account used for Plaid and Anthropic; Supabase uses an authenticator app. SMS is not accepted as a second factor on any account.",
+            "Every infrastructure account requires multi-factor authentication. Phishing-resistant passkeys are registered on GitHub, Vercel, and the Google account used for Plaid and Anthropic; Supabase uses an authenticator app. Text-message codes are being removed as a second factor everywhere they remain; until that is finished (tracked in the security policy), they are the weakest second factor in use.",
             "Vercel team membership enforces two-factor authentication for every member.",
             "Credentials are stored in a password manager, never reused, never shared over chat or email, never committed to source control.",
             "The workstation holding production credentials has full-disk encryption and automatic security updates.",
-            "Every schema change and every change to who can read what is made through a reviewed, version-controlled migration — never a direct dashboard edit.",
+            "Every schema change and every change to who can read what is made through a reviewed, version-controlled migration, never a direct dashboard edit.",
           ]}
         />
       </PolicySection>
@@ -58,7 +58,7 @@ export default function AccessControlsPolicyPage() {
           enforced both in the application and independently in the database, which refuses any
           session that has not completed MFA. One documented exception: a user may view or edit
           their own name and contact details before completing MFA, so account setup remains
-          possible — no financial or association data is reachable that way.
+          possible, so no financial or association data is reachable that way.
         </p>
       </PolicySection>
 
@@ -83,7 +83,7 @@ export default function AccessControlsPolicyPage() {
             "Accountant access expires on its end date; the database refuses an expired grant immediately and the revocation is recorded.",
             "These checks run daily and at the start of every access review. System revocations are recorded in the audit log and distinguishable from manual ones.",
             "A board admin can revoke any role immediately at any time.",
-            "Once a person has no access and no ownership, their personal details can be removed entirely — see the Data Retention and Deletion Policy.",
+            "Once a person has no access and no ownership, their personal details can be removed entirely. See the Data Retention and Deletion Policy.",
           ]}
         />
       </PolicySection>
@@ -92,11 +92,17 @@ export default function AccessControlsPolicyPage() {
         <p>
           All traffic between browsers, the application, its database, and third parties is
           encrypted with TLS. Bank connections use Plaid-issued tokens, scoped to read-only
-          transaction data. The one elevated, non-user database credential is confined to a
-          single scheduled job, authenticated by a dedicated secret on every invocation. Plaid
-          access tokens are stored in a database table no user role can read, including
-          administrators, reachable only through two narrow functions that check the caller&rsquo;s
-          authorization first.
+          transaction data. The elevated, non-user database credential is confined to four server
+          entry points, each of which authenticates itself on every request: the daily bank sync
+          and the daily email-reminder run (a dedicated secret), the email provider&rsquo;s
+          delivery reports (a signed message) and the bank provider&rsquo;s status messages (a
+          signed message). The email entry points can call six named functions and nothing
+          else, and the bank status message can call one. Plaid
+          access tokens are encrypted by the application before they are stored, with a key held
+          only in the server&rsquo;s environment, in a database table no user role can read
+          directly. They are reachable only through narrow functions that check the caller&rsquo;s
+          authorization first, and even an administrator calling them receives only the
+          encrypted value.
         </p>
       </PolicySection>
 
@@ -105,7 +111,7 @@ export default function AccessControlsPolicyPage() {
           Walkup does not grant trust based on network location. There is no internal network or
           VPN: every request is authenticated, checked for completed MFA, and authorized row by
           row by the database, whether it comes from the application&rsquo;s own pages or directly
-          against its API. This follows zero-trust principles — verify every request, least
+          against its API. This follows zero-trust principles: verify every request, least
           privilege, no implicit trust. It is not a formally certified zero-trust architecture:
           there is no device-posture check or identity-aware proxy in front of the vendors&rsquo;
           administrative dashboards, which rely on those vendors&rsquo; own controls plus the MFA
@@ -116,7 +122,7 @@ export default function AccessControlsPolicyPage() {
       <PolicySection title="Audit logging and incident response">
         <p>
           Changes to access and to financial records are written to an append-only audit log
-          that no role can edit — the single exception is the removal of a former member&rsquo;s
+          that no role can edit, with the single exception is the removal of a former member&rsquo;s
           personal details, which scrubs those fields from the log while keeping the record of
           what happened. If a credential is exposed or unauthorized access is suspected: the
           affected credential is rotated at its source, the audit log and provider logs are

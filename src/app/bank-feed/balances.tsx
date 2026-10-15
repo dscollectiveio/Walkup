@@ -2,7 +2,7 @@ import { readBankToken } from "@/lib/plaid/token";
 import { createClient } from "@/lib/supabase/server";
 import { money } from "@/components/ui";
 import { syncedAgo } from "@/lib/dates";
-import { plaidClient, describePlaidError, isLoginRequired, isProductNotEnabled } from "@/lib/plaid";
+import { plaidClient, plaidErrorLog, describePlaidError, isLoginRequired, isProductNotEnabled } from "@/lib/plaid";
 import { rememberBalance } from "@/lib/plaid/balance-cache";
 import { ConnectBankButton } from "./connect-bank-button";
 import { ReconnectButton } from "./reconnect-button";
@@ -74,7 +74,7 @@ export async function getConnectionBalance(
     } catch (cause) {
       if (isLoginRequired(cause)) return { connectionId, accounts: [], needsReconnect: true };
       if (!isProductNotEnabled(cause)) {
-        console.error("Plaid accountsBalanceGet failed", cause);
+        console.error("Plaid accountsBalanceGet failed", plaidErrorLog(cause));
         return { connectionId, accounts: [], error: describePlaidError(cause) };
       }
       console.warn("Plaid Balance isn't enabled for this client; using cached balances from accountsGet.");
@@ -83,7 +83,7 @@ export async function getConnectionBalance(
         return { connectionId, accounts: toAccounts(response.data.accounts), source: "last_sync" };
       } catch (fallback) {
         if (isLoginRequired(fallback)) return { connectionId, accounts: [], needsReconnect: true };
-        console.error("Plaid accountsGet failed", fallback);
+        console.error("Plaid accountsGet failed", plaidErrorLog(fallback));
         return { connectionId, accounts: [], error: describePlaidError(fallback) };
       }
     }

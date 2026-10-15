@@ -1,6 +1,8 @@
 import { redirect } from "next/navigation";
+import { safeNext } from "@/lib/security/safe-next";
 import { createClient } from "@/lib/supabase/server";
 import { AuthShell } from "@/components/auth/auth-shell";
+import { BackToSignIn } from "@/components/auth/back-to-sign-in";
 import { MfaChallengeForm } from "./mfa-challenge-form";
 
 export const dynamic = "force-dynamic";
@@ -25,13 +27,14 @@ export default async function MfaChallengePage({ searchParams }: { searchParams:
   return (
     <AuthShell
       title="Enter your code"
+      footer={<BackToSignIn />}
       subtitle="Open your authenticator app and enter the current 6-digit code for Walkup."
       aside={{
         heading: "Almost there.",
-        body: "Two-step sign-in keeps your association's records safe, even if a password gets out.",
+        body: "Two-step sign-in protects the books if a password is stolen.",
       }}
     >
-      <MfaChallengeForm factorId={factor.id} next={next} />
+      <MfaChallengeForm factorId={factor.id} next={safeNext(next, "") || undefined} />
     </AuthShell>
   );
 }

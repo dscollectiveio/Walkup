@@ -33,6 +33,10 @@ const nextConfig: NextConfig = {
     // changes data calls revalidatePath, which clears this cache, so a save
     // is never hidden behind a stale page.
     staleTimes: { dynamic: 30, static: 180 },
+    // Safety net only. Files go browser -> Storage directly (docs/specs/foundation-spec.md 6);
+    // this covers any form that still posts a file through a Server Action. Vercel caps
+    // request bodies at 4.5 MB, so a higher number would only move the failure.
+    serverActions: { bodySizeLimit: "4mb" },
   },
 };
 

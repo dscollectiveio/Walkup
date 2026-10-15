@@ -47,6 +47,24 @@ export function plaidClient() {
 }
 
 /**
+ * What is safe to write to a log about a failed Plaid call: Plaid's own error
+ * type, code and request id, and nothing else. The error object itself is NOT
+ * safe to log: an axios error carries the request config, which includes the
+ * PLAID-SECRET header and the access token in the body. Always log this, never
+ * the caught value (a test enforces it).
+ */
+export function plaidErrorLog(cause: unknown) {
+  const r = (cause as { response?: { status?: number; data?: Record<string, unknown> } } | null)?.response;
+  return {
+    status: r?.status,
+    error_type: r?.data?.error_type,
+    error_code: r?.data?.error_code,
+    request_id: r?.data?.request_id,
+    name: cause instanceof Error ? cause.name : "unknown",
+  };
+}
+
+/**
  * True when Plaid refused because this client isn't approved for a product
  * (e.g. real-time Balance in production, which Plaid enables per account —
  * sandbox allows everything). A fixable account setting, not a bug, so
@@ -71,6 +89,41 @@ export function isProductNotEnabled(cause: unknown): boolean {
 export function isLoginRequired(cause: unknown): boolean {
   const code = (cause as { response?: { data?: { error_code?: string } } })?.response?.data?.error_code;
   return code === "ITEM_LOGIN_REQUIRED" || code === "ITEM_LOCKED" || code === "ACCESS_NOT_GRANTED";
+}
+
+/**
+ * Plaid changed the data while a /transactions/sync pagination was in flight.
+ * Plaid's documented recovery is to restart the pagination from the cursor it
+ * began with; the data is fine.
+ */
+export function isSyncMutationDuringPagination(cause: unknown): boolean {
+  const code = (cause as { response?: { data?: { error_code?: string } } } | null)?.response?.data?.error_code;
+  return code === "TRANSACTIONS_SYNC_MUTATION_DURING_PAGINATION";
+}
+
+const DEAD_CONNECTION_MESSAGES: Record<string, string> = {
+  ITEM_NOT_FOUND:
+    "Plaid no longer has this bank connection. Disconnect it and connect the bank again.",
+  INVALID_ACCESS_TOKEN:
+    "The stored access for this bank is no longer valid. Disconnect it and connect the bank again.",
+  USER_PERMISSION_REVOKED:
+    "Access to this bank was revoked at the bank or at Plaid. Disconnect it and connect the bank again if you want the feed back.",
+  INVALID_PRODUCT:
+    "This bank connection was not set up for transactions. Disconnect it and connect the bank again.",
+};
+
+/**
+ * The Item or its access token is gone for good (as opposed to a login that
+ * update mode can repair, see isLoginRequired). Retrying cannot help, so the
+ * caller marks the connection 'error' and the daily cron stops trying it.
+ * Returns Plaid's code and a distinct, actionable message, or null.
+ */
+export function deadConnectionReason(cause: unknown): { code: string; message: string } | null {
+  const code = (cause as { response?: { data?: { error_code?: string } } } | null)?.response?.data?.error_code;
+  if (code && Object.hasOwn(DEAD_CONNECTION_MESSAGES, code)) {
+    return { code, message: DEAD_CONNECTION_MESSAGES[code] };
+  }
+  return null;
 }
 
 /** Plaid's own error shape carries a plain-English display_message. Falls

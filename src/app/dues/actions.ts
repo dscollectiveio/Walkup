@@ -2,9 +2,23 @@
 
 import { revalidatePath } from "next/cache";
 import { createClient } from "@/lib/supabase/server";
+import { buildingTodayIso } from "@/lib/dates";
 import { currentPeriodStart, periodLabel, perUnitAmount, type DuesFrequency } from "@/lib/dues/period";
 import { PLAN_FREQUENCIES, perPeriodCents, periodStartFor, planStartsOn } from "@/lib/dues/plan";
 import { applyCategorizations } from "@/app/bank-feed/actions";
+
+/**
+ * A database error as a sentence a person can use. Messages the database raises on purpose for people (22023)
+ * pass through; everything else is logged by code and shown as one plain line, so constraint and table names
+ * never reach the page (REVIEW-2 #25).
+ */
+function friendly(error: { code?: string | null; message?: string | null }): string {
+  if (error.code === "42501") return "Only a board member can do that.";
+  if (error.code === "22023" && error.message) return error.message;
+  if (error.code === "23505") return "That was already recorded.";
+  console.error("[dues]", error.code ?? "-");
+  return "Something went wrong saving that. Try again.";
+}
 
 const FREQUENCIES: DuesFrequency[] = ["monthly", "quarterly", "annual", "one_time"];
 const ALLOCATIONS = ["fixed_per_unit", "equal"] as const;
@@ -32,7 +46,7 @@ export async function createDuesSchedule(_prev: unknown, formData: FormData) {
 
   const supabase = await createClient();
   const [{ data: associations }, { data: funds }] = await Promise.all([
-    supabase.from("associations").select("id").limit(1),
+    supabase.from("associations").select("id").order("created_at").order("id").limit(1),
     supabase.from("funds").select("id").eq("kind", "operating").limit(1),
   ]);
   const associationId = associations?.[0]?.id;
@@ -52,7 +66,7 @@ export async function createDuesSchedule(_prev: unknown, formData: FormData) {
   });
 
   if (error) {
-    return { error: error.code === "42501" ? "Only a board member can set a dues schedule." : error.message };
+    return { error: error.code === "42501" ? "Only a board member can set a dues schedule." : friendly(error) };
   }
 
   revalidatePath("/dues");
@@ -138,7 +152,7 @@ export async function chargeDuesPeriod(scheduleId: string) {
       p_income_account_id: incomeAccountId,
       p_schedule_id: scheduleId,
     });
-    if (error) errors.push(error.message);
+    if (error) errors.push(friendly(error));
     else charged += 1;
   }
 
@@ -149,7 +163,7 @@ export async function chargeDuesPeriod(scheduleId: string) {
 }
 
 async function currentAssociationId(supabase: Awaited<ReturnType<typeof createClient>>) {
-  const { data: associations } = await supabase.from("associations").select("id").limit(1);
+  const { data: associations } = await supabase.from("associations").select("id").order("created_at").order("id").limit(1);
   return associations?.[0]?.id ?? null;
 }
 
@@ -173,7 +187,7 @@ export async function updateDuesPaymentInstructions(_prev: unknown, formData: Fo
     .eq("id", associationId)
     .select("id");
 
-  if (error) return { error: error.message };
+  if (error) return { error: friendly(error) };
   if (!data || data.length === 0) {
     return { error: "Only a board admin can edit payment instructions." };
   }
@@ -212,7 +226,7 @@ export async function saveLateFeeRule(_prev: unknown, formData: FormData) {
     })
     .eq("id", associationId)
     .select("id");
-  if (error) return { error: error.message };
+  if (error) return { error: friendly(error) };
   if (!data || data.length === 0) return { error: "Only a board admin can change the late-fee rule." };
 
   revalidatePath("/dues");
@@ -239,6 +253,29 @@ export async function addUnitCharge(input: {
   const associationId = await currentAssociationId(supabase);
   if (!associationId) return { error: "No association is visible to you." };
 
+  // A late fee is the association's own rule, not whatever the browser sent, and it is charged once per unit
+  // and period (REVIEW-2 #21): the amount comes from the rule, and a second click or a second board member
+  // finds the first charge and stops.
+  let amount = input.amount;
+  if (input.kind === "late_fee") {
+    const [{ data: rule }, { data: existing }] = await Promise.all([
+      supabase.from("associations").select("dues_late_fee_amount").eq("id", associationId).limit(1),
+      supabase
+        .from("assessment_charges")
+        .select("id")
+        .eq("unit_id", input.unitId)
+        .eq("charge_type", "late_fee")
+        .eq("period_start", input.periodStart)
+        .is("waived_at", null)
+        .is("written_off_at", null)
+        .limit(1),
+    ]);
+    const ruleAmount = Number(rule?.[0]?.dues_late_fee_amount ?? 0);
+    if (!Number.isFinite(ruleAmount) || ruleAmount <= 0) return { error: "Set the late fee on the Dues page first." };
+    if (existing?.length) return { error: "A late fee for that period was already added." };
+    amount = ruleAmount;
+  }
+
   const dueOn = input.dueOn ?? new Date().toISOString().slice(0, 10);
   const incomeCode = input.kind === "late_fee" ? "4020" : "4000";
   const [{ data: fiscalYears }, { data: accounts }, { data: funds }] = await Promise.all([
@@ -261,14 +298,14 @@ export async function addUnitCharge(input: {
     p_charge_type: input.kind,
     p_period_start: input.periodStart,
     p_due_on: dueOn,
-    p_amount: Math.round(input.amount * 100) / 100,
+    p_amount: Math.round(amount * 100) / 100,
     p_fund_id: fundId,
     p_ar_account_id: ar,
     p_income_account_id: income,
     p_schedule_id: null,
     p_memo: input.memo ?? null,
   });
-  if (error) return { error: error.message };
+  if (error) return { error: friendly(error) };
 
   revalidatePath("/dues");
   revalidatePath("/delinquency");
@@ -297,6 +334,7 @@ export async function reportOutsidePayment(_prev: unknown, formData: FormData) {
   if (!unitId) return { error: "Choose the unit." };
   if (!Number.isFinite(amount) || amount <= 0) return { error: "Enter the amount you paid." };
   if (!paidOn) return { error: "Enter the date you paid." };
+  if (paidOn > buildingTodayIso()) return { error: "Enter the date you paid, not a future date." };
   if (!["zelle", "check", "cash", "bank_transfer", "other"].includes(method)) return { error: "Choose how you paid." };
 
   const supabase = await createClient();
@@ -317,10 +355,16 @@ export async function reportOutsidePayment(_prev: unknown, formData: FormData) {
     note,
   });
   if (error) {
-    return { error: error.code === "42501" ? "You can only report a payment for your own unit." : error.message };
+    // 0054's cap trigger: ten pending reports per unit (hint report_cap).
+    if (error.code === "53400") {
+      return { error: "There are already ten reports waiting for this unit. The board will answer them first." };
+    }
+    return { error: error.code === "42501" ? "You can only report a payment for your own unit." : friendly(error) };
   }
 
   revalidatePath("/dues");
+  revalidatePath("/owner/pay");
+  revalidatePath("/owner");
   revalidatePath("/");
   return { ok: true };
 }
@@ -360,7 +404,7 @@ export async function confirmDepositAsDues(input: {
       })
       .eq("id", input.reportId)
       .eq("status", "pending");
-    if (error) return { ok: true, warning: `Posted, but the owner's report couldn't be marked matched: ${error.message}` };
+    if (error) return { ok: true, warning: `Posted, but the owner's report couldn't be marked matched: ${friendly(error)}` };
   }
 
   revalidatePath("/dues");
@@ -387,7 +431,7 @@ export async function dismissPaymentReport(reportId: string, note: string) {
     .eq("id", reportId)
     .eq("status", "pending")
     .select("id");
-  if (error) return { error: error.message };
+  if (error) return { error: friendly(error) };
   if (!data || data.length === 0) return { error: "Only a board member can resolve a report." };
   revalidatePath("/dues");
   return { ok: true };
@@ -464,7 +508,7 @@ export async function saveUnitDues(_prev: unknown, formData: FormData) {
         note,
       });
   if (error) {
-    return { error: error.code === "42501" ? "Only a board member can set a unit's dues." : error.message };
+    return { error: error.code === "42501" ? "Only a board member can set a unit's dues." : friendly(error) };
   }
 
   revalidatePath("/dues");
@@ -553,7 +597,7 @@ export async function chargeDueNow() {
       p_schedule_id: p.id,
       p_memo: `Dues · ${periodLabel(p.frequency as DuesFrequency, p.periodStart)}`,
     });
-    if (error) errors.push(error.message);
+    if (error) errors.push(friendly(error));
     else charged += 1;
   }
 

@@ -3,6 +3,7 @@
 import Link from "next/link";
 import { useActionState } from "react";
 import { signUp } from "@/app/login/actions";
+import { PasswordInput } from "@/components/auth/password-input";
 
 export function InviteSignupForm({ token }: { token: string }) {
   const [state, action, pending] = useActionState(signUp, null);
@@ -38,10 +39,9 @@ export function InviteSignupForm({ token }: { token: string }) {
         <label htmlFor="password" className="block text-[12px] font-medium text-ink">
           Password
         </label>
-        <input
+        <PasswordInput
           id="password"
           name="password"
-          type="password"
           autoComplete="new-password"
           required
           minLength={8}
@@ -53,10 +53,9 @@ export function InviteSignupForm({ token }: { token: string }) {
         <label htmlFor="confirm_password" className="block text-[12px] font-medium text-ink">
           Confirm password
         </label>
-        <input
+        <PasswordInput
           id="confirm_password"
           name="confirm_password"
-          type="password"
           autoComplete="new-password"
           required
           minLength={8}
@@ -74,6 +73,10 @@ export function InviteSignupForm({ token }: { token: string }) {
         />
         <label htmlFor="privacy_consent" className="text-[12px] text-mute">
           I agree to the{" "}
+          <Link href="/terms" target="_blank" className="text-ink underline-offset-2 hover:underline">
+            Terms of Service
+          </Link>{" "}
+          and the{" "}
           <Link href="/privacy" target="_blank" className="text-ink underline-offset-2 hover:underline">
             Privacy Policy
           </Link>

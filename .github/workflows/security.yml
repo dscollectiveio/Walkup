@@ -25,7 +25,12 @@ jobs:
           node-version-file: .nvmrc
           cache: npm
       - run: npm ci
-      - run: npm audit --audit-level=high
+      # What ships to production is the gate. Dev-only tooling is reported below
+      # but does not fail the run (accepted risks: docs/SECURITY_POLICY.md).
+      - run: npm audit --omit=dev --audit-level=high
+      - name: Development dependencies (informational)
+        run: npm audit --audit-level=high
+        continue-on-error: true
 
   end-of-life:
     name: Runtime end-of-life

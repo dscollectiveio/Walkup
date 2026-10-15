@@ -98,7 +98,7 @@ export function thisYearAnswer(input: ThisYearInput): ThisYearAnswer {
       status: "attention",
       headline: `Needs you: get a W-9 from ${first}${rest.length > 0 ? ` and ${plural(rest.length, "other")}` : ""}`,
       detail: "They were paid at or above the 1099 threshold this year, and their 1099-NEC needs the taxpayer ID from the W-9. Ask now rather than in January.",
-      step: { label: "Open Contractors", href: "/contractors" },
+      step: { label: "Open Contractors", href: "/repairs?view=contractors" },
     };
   }
 

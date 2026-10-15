@@ -121,13 +121,13 @@ function signoff(input: AccountantEmailInput): string[] {
 }
 
 function dueLine(due: AccountantEmailInput["due"], citationChars: number): string {
-  if (!due.on) return "Due date: not on file — can you confirm it?";
+  if (!due.on) return "Due date: not on file. Can you confirm it?";
   const when = dateWords(due.on);
   if (due.basis === "verified") {
     const cite = due.citation ? clip(due.citation, citationChars) : "";
     return `Due date on file: ${when}${cite ? ` (${cite})` : ""}`;
   }
-  return `Due date on file: ${when} (estimated — please confirm)`;
+  return `Due date on file: ${when} (estimated, please confirm)`;
 }
 
 function openItemsBlock(items: string[], limits: Limits): string[] {
@@ -157,7 +157,7 @@ function body1120h(input: AccountantEmailInput, limits: Limits): string[] {
   const spendRatio = t ? t.expenditure.ratio : f.totalExpendituresCents > 0 ? f.exemptExpendituresCents / f.totalExpendituresCents : null;
   // "97.5% of $49,250.00 gross income" — the denominator is named so all five figures are in the body.
   const share = (ratio: number | null, totalCents: number, of: string) =>
-    ratio === null ? `n/a — no ${of} recorded` : `${pct(ratio)} of ${money(totalCents)} ${of}`;
+    ratio === null ? `n/a, no ${of} recorded` : `${pct(ratio)} of ${money(totalCents)} ${of}`;
   const needsWords = (test: EmailTest | undefined) => (test ? ` (needs ${needs(test.threshold)})` : " (test threshold not on file in Walkup)");
 
   const byAccount = [...f.nonexemptByAccount]
@@ -175,16 +175,16 @@ function body1120h(input: AccountantEmailInput, limits: Limits): string[] {
   const deductionWords = p?.specificDeductionCents != null ? `${money(p.specificDeductionCents)} specific deduction` : "specific deduction";
   const estimate =
     input.estimatedTaxCents === null
-      ? "not available — the rate or specific deduction isn't on file in Walkup; please work it out from this year's instructions"
+      ? "not available. The rate or specific deduction isn't on file in Walkup; please work it out from this year's instructions"
       : `${money(input.estimatedTaxCents)} (provisional; the ${rateWords} and ${deductionWords} are ${input.parametersVerified ? "checked" : "not yet checked"} against this year's instructions)`;
 
   return [
     greeting(input),
     "",
-    `Here are ${input.association.legalName}'s figures for Form 1120-H, fiscal year ${dateWords(input.fiscalYear.startsOn)} to ${dateWords(input.fiscalYear.endsOn)}, worked out on a cash basis from our books in Walkup. Nobody has checked them against this year's IRS instructions yet — that's what we're asking you to do.`,
+    `Here are ${input.association.legalName}'s figures for Form 1120-H, fiscal year ${dateWords(input.fiscalYear.startsOn)} to ${dateWords(input.fiscalYear.endsOn)}, worked out on a cash basis from our books in Walkup. Nobody has checked them against this year's IRS instructions yet, that's what we're asking you to do.`,
     "",
-    `Owner fees (exempt function income): ${money(f.exemptIncomeCents)} — ${share(incomeRatio, f.grossIncomeCents, "gross income")}${needsWords(t?.income)}`,
-    `Spending on the building (exempt function expenditures): ${money(f.exemptExpendituresCents)} — ${share(spendRatio, f.totalExpendituresCents, "total spending")}${needsWords(t?.expenditure)}`,
+    `Owner fees (exempt function income): ${money(f.exemptIncomeCents)}, ${share(incomeRatio, f.grossIncomeCents, "gross income")}${needsWords(t?.income)}`,
+    `Spending on the building (exempt function expenditures): ${money(f.exemptExpendituresCents)}, ${share(spendRatio, f.totalExpendituresCents, "total spending")}${needsWords(t?.expenditure)}`,
     `Income that isn't owner fees: ${money(f.nonexemptIncomeCents)}${accountWords}`,
     `Walkup's estimate of tax due before any deductions: ${estimate}`,
     dueLine(input.due, limits.citationChars),
@@ -207,17 +207,17 @@ function body1099(input: AccountantEmailInput, limits: Limits): string[] {
   const more = sorted.length - shown.length;
   const list =
     sorted.length === 0
-      ? ["- nobody — we recorded no contractor payments for services"]
+      ? ["- nobody. We recorded no contractor payments for services"]
       : [
-          ...shown.map((c) => `- ${c.name}: ${money(c.totalCents)} — W-9 on file: ${c.w9OnFile ? "yes" : "no"}`),
+          ...shown.map((c) => `- ${c.name}: ${money(c.totalCents)}, W-9 on file: ${c.w9OnFile ? "yes" : "no"}`),
           ...(more > 0 ? [`- and ${more} more`] : []),
         ];
 
   const t = input.threshold;
   const over = overThreshold(input).length;
   const thresholdWords = t
-    ? `The reporting threshold for payments made in ${year} is ${money(t.cents)} per contractor (${t.verified ? "checked" : "not yet checked"} against this year's instructions) — ${over} of the ${sorted.length} ${over === 1 ? "is" : "are"} at or above it.`
-    : `The reporting threshold for payments made in ${year} isn't on file in Walkup — can you tell us which of these need a 1099?`;
+    ? `The reporting threshold for payments made in ${year} is ${money(t.cents)} per contractor (${t.verified ? "checked" : "not yet checked"} against this year's instructions), and ${over} of the ${sorted.length} ${over === 1 ? "is" : "are"} at or above it.`
+    : `The reporting threshold for payments made in ${year} isn't on file in Walkup. Can you tell us which of these need a 1099?`;
 
   return [
     greeting(input),
@@ -228,7 +228,7 @@ function body1099(input: AccountantEmailInput, limits: Limits): string[] {
     "",
     thresholdWords,
     "",
-    "Their TINs are on the W-9s, which I'll send separately — Walkup stores only the last four digits. Copy A can't be printed from the IRS PDF — should we file through IRIS or do you handle that?",
+    "Their TINs are on the W-9s, which I'll send separately. Walkup stores only the last four digits. Copy A can't be printed from the IRS PDF. Should we file through IRIS or do you handle that?",
     "",
     dueLine(input.due, limits.citationChars),
     "",
@@ -248,7 +248,7 @@ function bodyHeadsUp(input: AccountantEmailInput): string[] {
   const dates = deadlines.map((d) =>
     d.dueOn
       ? `- ${d.name}: ${dateWords(d.dueOn)}${d.basis === "verified" ? "" : " (estimated)"}`
-      : `- ${d.name}: not on file — can you confirm it?`,
+      : `- ${d.name}: not on file. Can you confirm it?`,
   );
 
   const over = overThreshold(input);
@@ -261,12 +261,12 @@ function bodyHeadsUp(input: AccountantEmailInput): string[] {
 
   const sendBy = input.due.on
     ? `We'll send the 1120-H figures by ${dateWords(minusDays(input.due.on, 60))}, worked out on a cash basis from our books in Walkup, for you to check against this year's instructions.`
-    : "We'll send the 1120-H figures once the year's books are closed — can you confirm the due date?";
+    : "We'll send the 1120-H figures once the year's books are closed. Can you confirm the due date?";
 
   return [
     greeting(input),
     "",
-    `A heads-up on ${input.association.legalName}'s tax season so you can plan — nothing needs doing yet.`,
+    `A heads-up on ${input.association.legalName}'s tax season so you can plan. Nothing needs doing yet.`,
     "",
     "Dates on our list:",
     ...dates,
@@ -285,11 +285,11 @@ function subjectFor(input: AccountantEmailInput): string {
   const name = input.association.displayName;
   switch (input.variant) {
     case "1120h":
-      return `${name} — Form 1120-H ${input.taxYear}: figures for your review`;
+      return `${name}: Form 1120-H ${input.taxYear}: figures for your review`;
     case "1099":
-      return `${name} — 1099-NEC contractor list for ${input.taxYear}`;
+      return `${name}: 1099-NEC contractor list for ${input.taxYear}`;
     default:
-      return `${name} — what's coming this tax season`;
+      return `${name}: what's coming this tax season`;
   }
 }
 
@@ -322,11 +322,7 @@ export function accountantEmail(input: AccountantEmailInput): { subject: string;
 
 /**
  * A mailto: link, with or without a recipient (no accountant on file still
- * opens a draft). Line breaks go as %0D%0A per RFC 6068 so every mail client
- * keeps the paragraphs.
+ * opens a draft). The shared builder: CRLF line breaks per RFC 6068, each
+ * recipient encoded, optional Cc/Bcc.
  */
-export function mailtoHref(to: string | null, subject: string, body: string): string {
-  const recipient = to?.trim() ? encodeURIComponent(to.trim()) : "";
-  const crlf = body.replace(/\r?\n/g, "\r\n");
-  return `mailto:${recipient}?subject=${encodeURIComponent(subject)}&body=${encodeURIComponent(crlf)}`;
-}
+export { mailtoHref } from "@/lib/email/mailto";

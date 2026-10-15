@@ -1,6 +1,7 @@
 import { NextResponse, type NextRequest } from "next/server";
 import type { EmailOtpType } from "@supabase/supabase-js";
 import { createClient } from "@/lib/supabase/server";
+import { safeNext } from "@/lib/security/safe-next";
 
 /**
  * Where every emailed link lands: sign-up confirmation, a resent
@@ -23,9 +24,8 @@ export async function GET(request: NextRequest) {
   const tokenHash = searchParams.get("token_hash");
   const type = searchParams.get("type") as EmailOtpType | null;
   const code = searchParams.get("code");
-  const rawNext = searchParams.get("next") ?? "/";
-  // Only a path on this site — never "//evil.example" or a full URL.
-  const next = rawNext.startsWith("/") && !rawNext.startsWith("//") ? rawNext : "/";
+  // Only a path on this site — never "//evil.example", "/\\evil.example" or a full URL.
+  const next = safeNext(searchParams.get("next"));
 
   const supabase = await createClient();
 

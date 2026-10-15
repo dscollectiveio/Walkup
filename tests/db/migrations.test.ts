@@ -1,5 +1,9 @@
 import { describe, expect, it } from "vitest";
+import { readFile } from "node:fs/promises";
+import path from "node:path";
 import { freshDb } from "./harness";
+
+const MIGRATIONS = path.resolve(import.meta.dirname, "../../supabase/migrations");
 
 describe("migrations", () => {
   it("apply cleanly from empty", async () => {
@@ -113,6 +117,51 @@ describe("migrations", () => {
     await db.close();
   });
 
+  it("let authenticated execute every function a 0053 INVOKER RPC or trigger calls as the caller", async () => {
+    // DECISIONS #21: an INVOKER function's inner calls are privilege-checked
+    // as the caller (repairs-spec §17.2). Static, for the same reason as above.
+    const db = await freshDb();
+    const required = [
+      "public.bill_next_due(date, public.bill_frequency, smallint)",
+      "public.upkeep_next_due(date, integer, integer)",
+      "public.is_board(uuid)",
+      "public.current_person_id(uuid)",
+      "public.ticket_visible_to_caller(uuid, uuid)",
+      "public.ticket_association_id(uuid)",
+      "public.mark_upkeep_done(uuid, date, numeric, uuid, text, uuid)",
+      "public.insurance_premium_bill_advance(uuid, date)",
+    ];
+    for (const fn of required) {
+      const { rows } = await db.query<{ ok: boolean }>(
+        `select has_function_privilege('authenticated', $1, 'execute') as ok`,
+        [fn],
+      );
+      expect(rows[0].ok, `authenticated must be able to execute ${fn}`).toBe(true);
+    }
+    await db.close();
+  });
+
+  it("let anon execute none of the functions 0053 creates", async () => {
+    const sql = await readFile(path.join(MIGRATIONS, "0053_repairs_v2.sql"), "utf8");
+    const names = [...new Set([...sql.matchAll(/create or replace function public\.([a-z0-9_]+)\(/g)].map((m) => m[1]))];
+    expect(names.length).toBeGreaterThan(40);
+
+    const db = await freshDb();
+    const { rows } = await db.query<{ fn: string; anon: boolean; auth: boolean }>(
+      `select p.oid::regprocedure::text as fn,
+              has_function_privilege('anon', p.oid, 'execute') as anon,
+              has_function_privilege('authenticated', p.oid, 'execute') as auth
+         from pg_proc p
+         join pg_namespace n on n.oid = p.pronamespace
+        where n.nspname = 'public' and p.proname = any($1::text[])`,
+      [names],
+    );
+    expect(rows.length).toBeGreaterThanOrEqual(names.length);
+    expect(rows.filter((r) => r.anon).map((r) => r.fn)).toEqual([]);
+    expect(rows.filter((r) => !r.auth).map((r) => r.fn)).toEqual([]);
+    await db.close();
+  });
+
   it("never let the anon role execute a SECURITY DEFINER function", async () => {
     // Postgres grants EXECUTE to PUBLIC on every new function, so a SECURITY
     // DEFINER function is callable over /rest/v1/rpc without signing in unless
@@ -129,8 +178,50 @@ describe("migrations", () => {
     );
     // The one deliberate exception (0049, DECISIONS #34): the landing page's
     // other-states waitlist, written by signed-out visitors through a single
-    // narrow function. Anything else here is a forgotten revoke.
-    expect(rows.map((r) => r.fn)).toEqual(["join_state_waitlist(text,text,text)"]);
+    // narrow function. 0055 (DECISIONS #36) adds the signed-out unsubscribe
+    // page, behind a 48-byte token: email_preference_for_token and
+    // email_unsubscribe. Anything else here is a forgotten revoke.
+    expect(rows.map((r) => r.fn)).toEqual([
+      "email_preference_for_token(text)",
+      "email_unsubscribe(text,text,boolean)",
+      "join_state_waitlist(text,text,text)",
+    ]);
+    await db.close();
+  });
+
+  it("never let anon execute ANY public function except the three signed-out ones", async () => {
+    // Widened from SECURITY DEFINER only (REVIEW-1 #12): a pure helper or a
+    // trigger function that nobody revoked is still callable at /rest/v1/rpc.
+    const db = await freshDb();
+    const { rows } = await db.query<{ fn: string }>(
+      `select p.oid::regprocedure::text as fn
+         from pg_proc p
+         join pg_namespace n on n.oid = p.pronamespace
+        where n.nspname = 'public'
+          and p.prokind = 'f'
+          and has_function_privilege('anon', p.oid, 'execute')
+        order by 1`,
+    );
+    expect(rows.map((r) => r.fn)).toEqual([
+      "email_preference_for_token(text)",
+      "email_unsubscribe(text,text,boolean)",
+      "join_state_waitlist(text,text,text)",
+    ]);
+    await db.close();
+  });
+
+  it("pin search_path on every public function", async () => {
+    const db = await freshDb();
+    const { rows } = await db.query<{ fn: string }>(
+      `select p.oid::regprocedure::text as fn
+         from pg_proc p
+         join pg_namespace n on n.oid = p.pronamespace
+        where n.nspname = 'public'
+          and p.prokind = 'f'
+          and not exists (select 1 from unnest(coalesce(p.proconfig, '{}')) c where c like 'search_path=%')
+        order by 1`,
+    );
+    expect(rows.map((r) => r.fn)).toEqual([]);
     await db.close();
   });
 

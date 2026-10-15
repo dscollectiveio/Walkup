@@ -5,7 +5,6 @@ import {
   CONTACT_EMAIL,
   DUES_PAYMENTS_ENABLED,
   FAQ,
-  FOUNDER_PHOTO,
   FOUNDING,
   PLANS,
   SITE_DESCRIPTION,
@@ -79,12 +78,6 @@ const FEATURES: { title: string; body: string; points: string[] }[] = [
     body: "Anyone in the building can report a problem. Yearly upkeep runs on a schedule, not someone's memory, and every document lives in one place.",
     points: ["Contractor directory with W-9s on file", "Insurance policy and renewal reminders", "Searchable document library"],
   },
-];
-
-const COMPARE = [
-  { instead: "HOA software built for large communities", typical: "$50+ a month, plus per-payment fees", walkup: "$19 to $55 flat" },
-  { instead: "A property management company", typical: "$300 to $600+ a month", walkup: "About 5 to 15% of that" },
-  { instead: "A spreadsheet, Zelle and a shared drive", typical: "Free, until the treasurer moves out", walkup: "Nothing lost at the handoff" },
 ];
 
 const FAQ_GROUPS: FaqGroup[] = ["For treasurers", "About Walkup", "Data and security"];
@@ -387,13 +380,7 @@ export function Landing({ nonce }: { nonce?: string }) {
                 buildings like ours: small, self-run, and tired of the spreadsheet.
               </p>
             </div>
-            <div className="mt-6 flex items-center gap-3">
-              {FOUNDER_PHOTO ? (
-                // eslint-disable-next-line @next/next/no-img-element -- a small static photo; next/image adds nothing here
-                <img src={FOUNDER_PHOTO} alt="Doug Smart" width={48} height={48} className="h-12 w-12 rounded-full object-cover" />
-              ) : null}
-              <p className="text-[15px] font-semibold text-ink">Doug Smart, founder of Walkup and condo board president</p>
-            </div>
+            <p className="mt-6 text-[15px] font-semibold text-ink">Doug Smart, founder of Walkup and condo board president</p>
           </div>
           {TESTIMONIAL ? (
             <figure className="mt-12 max-w-2xl rounded-xl border border-line bg-bone p-6">
@@ -411,10 +398,10 @@ export function Landing({ nonce }: { nonce?: string }) {
         <div className="mx-auto max-w-[1100px] px-6 py-20">
           <p className="text-[12px] font-semibold uppercase tracking-[0.12em] text-[#D9A441]">Built to be trusted with money</p>
           <h2 className="mt-2 max-w-2xl text-[28px] font-bold leading-tight tracking-tight sm:text-[32px]">
-            Is Walkup safe for our association&rsquo;s money?
+            How does Walkup protect our association&rsquo;s money?
           </h2>
           <p className="mt-3 max-w-2xl text-[16px] leading-relaxed text-white/80">
-            Yes. Walkup records, reminds and prepares. Your board stays in control of every dollar and every decision.
+            Walkup records, reminds and prepares. Your board stays in control of every dollar and every decision.
           </p>
           <div className="mt-10 grid gap-6 sm:grid-cols-2 lg:grid-cols-3">
             {[
@@ -424,11 +411,11 @@ export function Landing({ nonce }: { nonce?: string }) {
                   ? "Owner payments go straight to the association's bank. Walkup never holds funds."
                   : "Bank access is read-only through Plaid. Owners pay the association directly, and you pay bills from your own bank.",
               ],
-              ["Never sends anything without you.", "Reminders and accountant emails open as drafts in your own inbox. You press send."],
+              ["Never emails anyone without a board admin's approval.", "Reminders and statements go out only after a board admin approves them. Messages to contractors, agents and your accountant open as drafts in your own email app."],
               ["Two-step sign-in on every account.", "Each association's data is walled off from every other, and every change is logged with who made it."],
               ["Every number shows its work.", "Tax figures link back to the transactions behind them. Rules and deadlines show their source."],
-              ["Prepares, never files.", "Walkup is not a tax adviser. We recommend an accountant review anything before it's filed."],
-              ["Your data leaves when you do.", "Export the ledger, documents and owner list any time. No contract."],
+              ["Prepares, never files.", "Walkup is not a tax adviser. Have an accountant review anything before it's filed."],
+              ["Your records stay yours.", "Download your financial statements, budget, tax forms and every document you uploaded. Ask us for anything else. No contract."],
             ].map(([t, b]) => (
               <div key={t}>
                 <h3 className="text-[16px] font-bold">{t}</h3>
@@ -550,32 +537,6 @@ export function Landing({ nonce }: { nonce?: string }) {
             <li>Prices in USD.</li>
           </ul>
 
-          <div className="mt-12">
-            <h3 className="text-[18px] font-bold text-ink">What do small condo boards pay for bookkeeping today?</h3>
-            <div className="mt-4 overflow-x-auto rounded-xl border border-line">
-              <table className="w-full min-w-[34rem] text-left text-[14px]">
-                <thead className="bg-bone text-[12px] uppercase tracking-[0.08em] text-mute">
-                  <tr>
-                    <th className="px-4 py-3 font-semibold">Option</th>
-                    <th className="px-4 py-3 font-semibold">Typical cost</th>
-                    <th className="px-4 py-3 font-semibold">With Walkup</th>
-                  </tr>
-                </thead>
-                <tbody className="divide-y divide-line">
-                  {COMPARE.map((c) => (
-                    <tr key={c.instead}>
-                      <td className="px-4 py-3 text-ink">{c.instead}</td>
-                      <td className="px-4 py-3 text-mute">{c.typical}</td>
-                      <td className="px-4 py-3 font-semibold text-good-text">{c.walkup}</td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
-            <p className="mt-2 text-[12px] text-mute">
-              Based on published vendor pricing and management fees, September 2026.
-            </p>
-          </div>
         </div>
       </section>
 
@@ -618,7 +579,7 @@ export function Landing({ nonce }: { nonce?: string }) {
               Set up in an afternoon, then about 15 minutes a month. Free during early access, with founding prices for
               the first {FOUNDING.associations} {FOUNDING.region} associations.
             </p>
-            <p className="mt-3 text-[13px] text-white/60">No card. Read-only bank access. Your data, always exportable.</p>
+            <p className="mt-3 text-[13px] text-white/60">No card. Read-only bank access. Your records stay yours.</p>
           </div>
           <div className="flex flex-wrap gap-3">
             <Link href="/signup" data-cta="final" className={primaryBtn}>
@@ -648,7 +609,7 @@ export function Landing({ nonce }: { nonce?: string }) {
             <Link href="/signup" className="hover:text-ink hover:underline">Create an account</Link>
             <Link href="/security" className="hover:text-ink hover:underline">Security</Link>
             <Link href="/privacy" className="hover:text-ink hover:underline">Privacy Policy</Link>
-            {/* TODO(doug): add a Terms of Service page, then link it here next to Privacy Policy. */}
+            <Link href="/terms" className="hover:text-ink hover:underline">Terms of Service</Link>
             <Link href="/policies" className="hover:text-ink hover:underline">Policies</Link>
             <a href={`mailto:${CONTACT_EMAIL}`} className="hover:text-ink hover:underline">Contact</a>
           </nav>

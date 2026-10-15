@@ -4,7 +4,7 @@ import { LoginForm } from "./login-form";
 import { DevSignIn } from "./dev-sign-in";
 import { AuthShell } from "@/components/auth/auth-shell";
 
-export const metadata = { title: "Sign in — Walkup" };
+export const metadata = { title: "Sign in | Walkup" };
 
 export const dynamic = "force-dynamic";
 
@@ -24,26 +24,26 @@ export default async function LoginPage({
       subtitle="Sign in to your association's books."
       aside={{
         heading: "Good to see you again.",
-        body: "Your building's books, dues, budget and tax deadlines — right where you left them.",
+        body: "Your building's books, dues, budget and tax deadlines, right where you left them.",
       }}
       footer={
         <>
           New to Walkup?{" "}
-          <Link href="/signup" className="font-semibold text-ink underline-offset-2 hover:underline">
-            Create an account — free
+          <Link href="/signup" className="inline-flex min-h-[44px] items-center font-semibold text-ink underline-offset-2 hover:underline">
+            Create an account, free
           </Link>
         </>
       }
     >
       {error === "confirmation_failed" ? (
         <p className="mb-5 rounded-lg border border-bad-line bg-bad-tint px-3.5 py-2.5 text-[13px] text-bad-text">
-          That confirmation link didn&rsquo;t work — it may have expired. Try signing up again.
+          That confirmation link didn&rsquo;t work. It may have expired. Try signing up again.
         </p>
       ) : null}
 
       {notice === "confirmed_elsewhere" ? (
         <p className="mb-5 rounded-lg border border-good-line bg-good-tint px-3.5 py-2.5 text-[13px] text-good-text">
-          If you just confirmed your email, youYour email is confirmed. Sign in to keep going.rsquo;re all set — sign in to keep going.
+          Your email is confirmed. Sign in to keep going.
         </p>
       ) : notice === "reset_other_browser" ? (
         <p className="mb-5 rounded-lg border border-warning-line bg-warning-tint px-3.5 py-2.5 text-[13px] text-warning-text">

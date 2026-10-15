@@ -4,17 +4,47 @@ import { readBankToken } from "@/lib/plaid/token";
 import { sealSecret } from "@/lib/security/secret-box";
 import { revalidatePath } from "next/cache";
 import { createClient } from "@/lib/supabase/server";
-import { plaidClient, describePlaidError } from "@/lib/plaid";
+import { plaidClient, plaidErrorLog, describePlaidError } from "@/lib/plaid";
 import { syncOneConnection } from "@/lib/plaid/sync";
+import { plaidClientUserId } from "@/lib/plaid/client-user-id";
 import { forgetBalance } from "@/lib/plaid/balance-cache";
 import { matchRule, type CategorizationRule } from "@/lib/plaid/dedupe";
 import { isMatchableDescription, normalizeDescription } from "@/lib/plaid/similar";
 import { CountryCode, Products } from "plaid";
 
+async function currentClientUserId(): Promise<string | null> {
+  const supabase = await createClient();
+  const { data } = await supabase.auth.getUser();
+  return data.user ? plaidClientUserId(data.user.id) : null;
+}
+
+/**
+ * Link's webhook URL, from one env var: Production only, left unset on
+ * Preview and local dev so Plaid never posts to a URL that cannot verify it
+ * (same reasoning as PLAID_REDIRECT_URI, DECISIONS #27).
+ */
+function webhookParam() {
+  return process.env.PLAID_WEBHOOK_URL ? { webhook: process.env.PLAID_WEBHOOK_URL } : {};
+}
+
 async function currentAssociationId(): Promise<string | null> {
   const supabase = await createClient();
-  const { data } = await supabase.from("associations").select("id").limit(1);
+  const { data } = await supabase.from("associations").select("id").order("created_at").order("id").limit(1);
   return data?.[0]?.id ?? null;
+}
+
+const BOARD_ADMIN_ONLY = "Only a board admin can connect a bank.";
+
+/**
+ * Connecting a bank is a board-admin job and the database decides it. Every
+ * Plaid call that creates or exchanges something checks this first: a Link
+ * token or an exchanged Item for anyone else is a billable Item Walkup could
+ * not store or retire (REVIEW-2 #2).
+ */
+async function isBoardAdmin(associationId: string): Promise<boolean> {
+  const supabase = await createClient();
+  const { data } = await supabase.rpc("has_role_in", { assoc: associationId, roles: ["board_admin"] });
+  return data === true;
 }
 
 /**
@@ -24,10 +54,14 @@ async function currentAssociationId(): Promise<string | null> {
 export async function createLinkToken(): Promise<{ linkToken?: string; error?: string }> {
   const associationId = await currentAssociationId();
   if (!associationId) return { error: "No association is visible to you." };
+  if (!(await isBoardAdmin(associationId))) return { error: BOARD_ADMIN_ONLY };
+  const clientUserId = await currentClientUserId();
+  if (!clientUserId) return { error: "You are not signed in." };
 
   try {
     const response = await plaidClient().linkTokenCreate({
-      user: { client_user_id: associationId },
+      user: { client_user_id: clientUserId },
+      ...webhookParam(),
       client_name: "Walkup",
       products: [Products.Transactions],
       country_codes: [CountryCode.Us],
@@ -50,6 +84,7 @@ export async function createLinkToken(): Promise<{ linkToken?: string; error?: s
     });
     return { linkToken: response.data.link_token };
   } catch (cause) {
+    console.error("Plaid linkTokenCreate failed", plaidErrorLog(cause));
     return { error: describePlaidError(cause) };
   }
 }
@@ -65,6 +100,8 @@ export async function createUpdateLinkToken(
 ): Promise<{ linkToken?: string; error?: string }> {
   const associationId = await currentAssociationId();
   if (!associationId) return { error: "No association is visible to you." };
+  const clientUserId = await currentClientUserId();
+  if (!clientUserId) return { error: "You are not signed in." };
 
   const supabase = await createClient();
   const { token: accessToken, error: tokenError } = await readBankToken(supabase, connectionId);
@@ -72,7 +109,8 @@ export async function createUpdateLinkToken(
 
   try {
     const response = await plaidClient().linkTokenCreate({
-      user: { client_user_id: associationId },
+      user: { client_user_id: clientUserId },
+      ...webhookParam(),
       client_name: "Walkup",
       country_codes: [CountryCode.Us],
       language: "en",
@@ -83,6 +121,28 @@ export async function createUpdateLinkToken(
     });
     return { linkToken: response.data.link_token };
   } catch (cause) {
+    console.error("Plaid linkTokenCreate (update mode) failed", plaidErrorLog(cause));
+    return { error: describePlaidError(cause) };
+  }
+}
+
+/**
+ * One-off for a bank connected before PLAID_WEBHOOK_URL existed: tells Plaid
+ * where to post this Item's webhooks. Board admin only (the token comes
+ * through the same RLS-gated path as a manual sync); never a bulk read of
+ * tokens. No-ops when PLAID_WEBHOOK_URL is unset.
+ */
+export async function registerBankWebhook(connectionId: string): Promise<{ ok?: true; error?: string }> {
+  const webhook = process.env.PLAID_WEBHOOK_URL;
+  if (!webhook) return { error: "PLAID_WEBHOOK_URL is not set." };
+  const supabase = await createClient();
+  const { token: accessToken, error: tokenError } = await readBankToken(supabase, connectionId);
+  if (tokenError || !accessToken) return { error: tokenError?.message ?? "No access token on file." };
+  try {
+    await plaidClient().itemWebhookUpdate({ access_token: accessToken, webhook });
+    return { ok: true };
+  } catch (cause) {
+    console.error("Plaid itemWebhookUpdate failed", plaidErrorLog(cause));
     return { error: describePlaidError(cause) };
   }
 }
@@ -119,6 +179,9 @@ export async function connectBank(
 ): Promise<{ ok?: true; error?: string }> {
   const associationId = await currentAssociationId();
   if (!associationId) return { error: "No association is visible to you." };
+  // Before anything is exchanged: an exchanged Item for a caller who cannot
+  // store it is a live, billable Item nobody can retire.
+  if (!(await isBoardAdmin(associationId))) return { error: BOARD_ADMIN_ONLY };
 
   let accessToken: string;
   let itemId: string;
@@ -129,6 +192,7 @@ export async function connectBank(
     accessToken = response.data.access_token;
     itemId = response.data.item_id;
   } catch (cause) {
+    console.error("Plaid itemPublicTokenExchange failed", plaidErrorLog(cause));
     return { error: describePlaidError(cause) };
   }
 
@@ -140,7 +204,17 @@ export async function connectBank(
     p_access_token: sealSecret(accessToken),
   });
 
-  if (error) return { error: error.message };
+  if (error) {
+    // The Item exists at Plaid but Walkup could not keep its token. Retire it
+    // now, while this function still holds the only copy.
+    try {
+      await plaidClient().itemRemove({ access_token: accessToken });
+    } catch (cause) {
+      console.error("Plaid itemRemove after a failed store failed", plaidErrorLog(cause));
+    }
+    console.error("store_bank_connection failed", error.code);
+    return { error: "Walkup couldn't save this bank connection, so it was not connected. Try again." };
+  }
 
   // Every posting needs a cash leg. Default to Operating Cash / Operating
   // fund so the first sync can post; the board can change it on the page.
@@ -224,6 +298,7 @@ export async function disconnectBank(
         // a warning, not blocked: the board admin still gets what they
         // asked for locally, with an honest note that Plaid-side cleanup is
         // still outstanding.
+        console.error("Plaid itemRemove failed", plaidErrorLog(cause));
         warning =
           "Disconnected here, but couldn't confirm with the bank that the connection was closed on their end. " +
           describePlaidError(cause);
@@ -331,7 +406,7 @@ export async function syncBankTransactions(
   // The person asked for fresh numbers, so the bank card re-asks Plaid too.
   forgetBalance(connectionId);
   if ("error" in result) {
-    if (result.needsReconnect) revalidatePath("/bank-feed");
+    if (result.needsReconnect || result.deadConnection) revalidatePath("/bank-feed");
     return { error: result.error, needsReconnect: result.needsReconnect };
   }
 
@@ -340,7 +415,11 @@ export async function syncBankTransactions(
     ok: true,
     count: result.count,
     posted: result.posted,
-    warning: result.postErrors.length > 0 ? result.postErrors.join(" · ") : undefined,
+    warning:
+      [
+        ...result.postErrors,
+        ...(result.more ? ["Imported part of the history. Sync again to continue."] : []),
+      ].join(" · ") || undefined,
   };
 }
 

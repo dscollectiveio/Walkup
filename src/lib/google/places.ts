@@ -1,4 +1,5 @@
 import "server-only";
+import { bayesianRating, GOOGLE_PRIOR } from "@/lib/contractors/ranking";
 
 // Google Places API (New) and the Geocoding API, server-side only. The key
 // never reaches the browser: this module is server-only and nothing here is
@@ -32,6 +33,8 @@ export interface PlaceResult {
   reviewCount: number | null;
   latitude: number | null;
   longitude: number | null;
+  /** OPERATIONAL, CLOSED_TEMPORARILY or CLOSED_PERMANENTLY; absent on rows cached before 0053. */
+  businessStatus?: string | null;
 }
 
 interface RawPlace {
@@ -57,41 +60,77 @@ function toResult(p: RawPlace): PlaceResult {
     reviewCount: typeof p.userRatingCount === "number" ? p.userRatingCount : null,
     latitude: p.location?.latitude ?? null,
     longitude: p.location?.longitude ?? null,
+    businessStatus: p.businessStatus ?? null,
   };
 }
 
-/** Operating businesses matching the query near a point, best rated first. */
+/** Every Google request gets this long before it counts as "Google didn't answer". */
+export const GOOGLE_TIMEOUT_MS = 10_000;
+/** Soft daily cap on live Google calls per building (same Chicago day as the AI limits). */
+export const GOOGLE_DAILY_LIMIT = 60;
+
+/** fetch, with a timeout, where a network failure or abort is a GoogleUnavailableError (map bug 12). */
+async function googleFetch(url: string, init: RequestInit, what: string): Promise<Response> {
+  try {
+    return await fetch(url, { ...init, cache: "no-store", signal: AbortSignal.timeout(GOOGLE_TIMEOUT_MS) });
+  } catch (cause) {
+    throw new GoogleUnavailableError(`${what} didn't answer (${cause instanceof Error ? cause.name : "error"}).`);
+  }
+}
+
+/**
+ * Operating businesses matching the query near a point, as Google returned
+ * them (ranking for a job lives in src/lib/contractors/ranking.ts).
+ *
+ * Request shape per Text Search (New): `pageSize` 1 to 20; `includedType`
+ * takes one Table A type and only biases (strictTypeFiltering stays off so a
+ * differently categorised business still shows); `locationBias` is a circle
+ * (locationRestriction takes only a rectangle and can't be combined with a
+ * bias), so the 15-mile limit is enforced by the caller from each result's
+ * location; nothing about the location is written into textQuery, which
+ * would override the bias.
+ */
 export async function searchNearby(
   query: string,
   latitude: number,
   longitude: number,
+  opts?: { includedType?: string },
 ): Promise<PlaceResult[]> {
   const key = googleKey();
   if (!key) throw new GoogleUnavailableError("No Google key configured.");
-  const res = await fetch(TEXT_SEARCH_URL, {
-    method: "POST",
-    headers: {
-      "Content-Type": "application/json",
-      "X-Goog-Api-Key": key,
-      "X-Goog-FieldMask": SEARCH_FIELD_MASK,
+  const res = await googleFetch(
+    TEXT_SEARCH_URL,
+    {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        "X-Goog-Api-Key": key,
+        "X-Goog-FieldMask": SEARCH_FIELD_MASK,
+      },
+      body: JSON.stringify({
+        textQuery: query,
+        pageSize: 20,
+        locationBias: { circle: { center: { latitude, longitude }, radius: SEARCH_RADIUS_METERS } },
+        ...(opts?.includedType ? { includedType: opts.includedType } : {}),
+      }),
     },
-    body: JSON.stringify({
-      textQuery: query,
-      locationBias: { circle: { center: { latitude, longitude }, radius: SEARCH_RADIUS_METERS } },
-    }),
-    cache: "no-store",
-  });
-  if (!res.ok) throw new GoogleUnavailableError(`Places search failed (${res.status}).`);
-  const body = (await res.json()) as { places?: RawPlace[] };
-  return sortByRating(
-    (body.places ?? []).filter((p) => (p.businessStatus ?? "OPERATIONAL") === "OPERATIONAL").map(toResult),
+    "Places search",
   );
+  if (!res.ok) throw new GoogleUnavailableError(`Places search failed (${res.status}).`);
+  const body = (await res.json().catch(() => ({}))) as { places?: RawPlace[] };
+  return (body.places ?? [])
+    .filter((p) => (p.businessStatus ?? "OPERATIONAL") === "OPERATIONAL")
+    .map(toResult);
 }
 
-export function sortByRating(results: PlaceResult[]): PlaceResult[] {
-  return [...results].sort(
-    (a, b) => (b.rating ?? -1) - (a.rating ?? -1) || (b.reviewCount ?? -1) - (a.reviewCount ?? -1),
-  );
+/**
+ * Review-count-weighted (Bayesian, GOOGLE_PRIOR) rating first, so 4.8 from 3
+ * reviews no longer outranks 4.5 from 200; then more reviews; unrated last.
+ * Ranking for a job lives in src/lib/contractors/ranking.ts.
+ */
+export function sortByWeightedRating(results: PlaceResult[]): PlaceResult[] {
+  const score = (p: PlaceResult) => bayesianRating(p.rating, p.reviewCount, GOOGLE_PRIOR) ?? -1;
+  return [...results].sort((a, b) => score(b) - score(a) || (b.reviewCount ?? -1) - (a.reviewCount ?? -1));
 }
 
 export async function placeDetails(placeId: string): Promise<{
@@ -103,12 +142,13 @@ export async function placeDetails(placeId: string): Promise<{
 }> {
   const key = googleKey();
   if (!key) throw new GoogleUnavailableError("No Google key configured.");
-  const res = await fetch(`${DETAILS_URL}${encodeURIComponent(placeId)}`, {
-    headers: { "X-Goog-Api-Key": key, "X-Goog-FieldMask": REFRESH_FIELD_MASK },
-    cache: "no-store",
-  });
+  const res = await googleFetch(
+    `${DETAILS_URL}${encodeURIComponent(placeId)}`,
+    { headers: { "X-Goog-Api-Key": key, "X-Goog-FieldMask": REFRESH_FIELD_MASK } },
+    "Place details",
+  );
   if (!res.ok) throw new GoogleUnavailableError(`Place details failed (${res.status}).`);
-  const p = (await res.json()) as RawPlace;
+  const p = (await res.json().catch(() => ({ id: placeId }))) as RawPlace;
   return {
     rating: typeof p.rating === "number" ? p.rating : null,
     reviewCount: typeof p.userRatingCount === "number" ? p.userRatingCount : null,
@@ -122,9 +162,9 @@ export async function geocode(address: string): Promise<{ latitude: number; long
   const key = googleKey();
   if (!key) return null;
   const url = `${GEOCODE_URL}?address=${encodeURIComponent(address)}&key=${encodeURIComponent(key)}`;
-  const res = await fetch(url, { cache: "no-store" });
+  const res = await googleFetch(url, {}, "Geocoding");
   if (!res.ok) throw new GoogleUnavailableError(`Geocoding failed (${res.status}).`);
-  const body = (await res.json()) as {
+  const body = (await res.json().catch(() => ({ status: "ERROR" }))) as {
     status: string;
     results?: { geometry?: { location?: { lat: number; lng: number } } }[];
   };

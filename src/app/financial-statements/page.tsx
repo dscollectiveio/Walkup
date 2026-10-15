@@ -3,6 +3,7 @@ import { redirect } from "next/navigation";
 import { ChevronRight } from "lucide-react";
 import { createClient } from "@/lib/supabase/server";
 import { Card, Empty, Restricted, money } from "@/components/ui";
+import { BoardOnly, viewerIsOwnerOnly } from "@/components/board-only";
 import { shortDate, todayIso } from "@/lib/dates";
 import { statementHref, type PeriodGrain } from "./periods";
 import { loadStatement, type AccountLine, type LineEntry } from "./data";
@@ -132,7 +133,18 @@ export default async function FinancialStatementsPage({
 
   const supabase = await createClient();
   const statement = await loadStatement(supabase, sort === "size" ? "expenses" : "total", period, offset);
-  if ("restricted" in statement) return <Restricted what="financial statements" />;
+  if ("restricted" in statement) {
+    if (await viewerIsOwnerOnly()) {
+      return (
+        <BoardOnly
+          what="Financial statements"
+          why="Profit and loss reports are shared with owners as documents when the board decides to."
+          alternative={{ label: "See documents shared with you", href: "/documents" }}
+        />
+      );
+    }
+    return <Restricted what="financial statements" />;
+  }
 
   // Several periods chosen: side-by-side columns. A single one is just the ordinary view.
   if (sp.periods) {

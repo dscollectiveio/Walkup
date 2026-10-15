@@ -1,144 +1,82 @@
 import Link from "next/link";
+import { notFound, redirect } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
-import { Restricted } from "@/components/ui";
-import { FIELD_DEFS, POLICY_TYPES, resolveAll, type RawField, type ResolvedField } from "@/lib/insurance/declarations";
-import type { DeclarationsRead } from "@/lib/documents/pipeline";
-import { ReviewForm } from "./review-form";
-import { Waiting } from "./waiting";
+import { Card } from "@/components/ui";
+import { loadInsuranceContext } from "@/lib/insurance/queries";
+import { BackLink } from "../../components/page-header";
+import { linkClass } from "../../components/styles";
+import { ReadButtons } from "./read-buttons";
 
 export const dynamic = "force-dynamic";
+// The shim's buttons start a read (insurance-spec §3.1).
+export const maxDuration = 300;
 
-const typeLabel = (v: string) => POLICY_TYPES.find((p) => p.value === v)?.label ?? v;
-
-/** A chosen quote's figures become the starting point for a new policy — still reviewed before saving. */
-function fromQuote(q: Record<string, unknown>): ResolvedField[] {
-  const col: Record<string, unknown> = { ...q, coverage: q.coverage, effective_from: q.covers_from };
-  return FIELD_DEFS.map((def) => {
-    const v = col[def.column];
-    const has = v !== null && v !== undefined && v !== "" && !(def.key === "coverage_form" && v === "unknown");
-    return {
-      key: def.key,
-      status: has ? "high" : "blank",
-      value: has ? (def.kind === "money" ? Number(v).toFixed(2) : String(v)) : null,
-      candidates: [],
-      page: null,
-      snippet: null,
-      confidence: null,
-      reason: null,
-    } as ResolvedField;
-  });
+/** The reuse window of startInsuranceRead (§8.1 step 3). */
+function thirtyDaysAgo(): string {
+  return new Date(Date.now() - 30 * 86_400_000).toISOString();
 }
 
-export default async function ReviewPage({
+const isUuid = (v: string) => /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(v);
+
+/**
+ * /insurance/review/[documentId], the legacy route (insurance-spec §8.1).
+ * Old links (the Document Hub, bookmarks) still land somewhere useful, and a
+ * GET never starts work: the latest read of the document from the last 30
+ * days opens if there is one; otherwise the board chooses to read it.
+ */
+export default async function LegacyReviewShim({
   params,
   searchParams,
 }: {
   params: Promise<{ documentId: string }>;
-  searchParams: Promise<{ mode?: string; request?: string; quote?: string; manual?: string }>;
+  searchParams: Promise<{ mode?: string }>;
 }) {
   const { documentId } = await params;
   const sp = await searchParams;
-  const mode = sp.mode === "quote" ? "quote" : "policy";
   const supabase = await createClient();
+  const ctx = await loadInsuranceContext(supabase);
+  if (!ctx || !ctx.isBoard) notFound();
 
-  const [{ data: associations }, { data: docs }] = await Promise.all([
-    supabase.from("associations").select("id, legal_name").limit(1),
-    documentId === "manual"
-      ? Promise.resolve({ data: [] as { id: string; filename: string; extraction_state: string; extraction: unknown }[] })
-      : supabase.from("documents").select("id, filename, extraction_state, extraction").eq("id", documentId).limit(1),
-  ]);
-  const association = associations?.[0];
-  if (!association) return <Restricted what="insurance records" />;
-  const { data: isBoard } = await supabase.rpc("is_board", { assoc: association.id });
-  if (isBoard !== true) return <Restricted what="insurance records" />;
+  // The old "enter it by hand" link.
+  if (documentId === "manual") redirect(sp.mode === "quote" ? "/insurance/quotes/new" : "/insurance/policies/new");
+  if (!isUuid(documentId)) notFound();
 
-  const doc = docs?.[0] ?? null;
-  if (documentId !== "manual" && !doc) return <Restricted what="this document" />;
+  const since = thirtyDaysAgo();
+  const { data: reads } = await supabase
+    .from("insurance_document_reads")
+    .select("id")
+    .eq("document_id", documentId)
+    .gte("created_at", since)
+    .order("created_at", { ascending: false })
+    .limit(1);
+  const latest = ((reads ?? []) as { id: string }[])[0];
+  if (latest) redirect(`/insurance/import/${latest.id}`);
 
-  const { data: current } = await supabase
-    .from("insurance_policies")
-    .select("id, coverage, carrier_name, effective_to")
-    .is("replaced_at", null)
-    .gte("effective_to", new Date().toISOString().slice(0, 10));
-  const replaceable = (current ?? []).map((p) => ({
-    id: p.id,
-    coverage: p.coverage,
-    label: `${typeLabel(p.coverage)} — ${p.carrier_name}, through ${p.effective_to}`,
-  }));
-
-  const manualHref = `/insurance/review/manual?mode=${mode}${sp.request ? `&request=${sp.request}` : ""}`;
-  const title = mode === "quote" ? "Review the quote" : sp.quote ? "Start a policy from this quote" : "Review your policy";
-
-  let body: React.ReactNode;
-  let resolved: ResolvedField[] | null = null;
-  let deductiblesPage: number | null = null;
-  let initialSource: "extracted" | "quote" = "extracted";
-  let note: string | null = null;
-
-  if (sp.quote) {
-    const { data: quotes } = await supabase.from("insurance_quotes").select("*").eq("id", sp.quote).limit(1);
-    if (!quotes?.[0]) return <Restricted what="this quote" />;
-    resolved = fromQuote(quotes[0] as Record<string, unknown>);
-    initialSource = "quote";
-    note = "These figures come from the quote. Check them against the policy the insurer issues before relying on them.";
-  } else if (!doc) {
-    resolved = FIELD_DEFS.map((d) => ({ key: d.key, status: "blank", value: null, candidates: [], page: null, snippet: null, confidence: null, reason: null }));
-  } else {
-    // The pipeline writes the declarations in the same update that marks the
-    // document done, so "not done yet" is the only thing worth waiting for.
-    const declarations = (doc.extraction as { declarations?: DeclarationsRead } | null)?.declarations;
-    if (["pending", "running"].includes(doc.extraction_state)) {
-      body = <Waiting manualHref={manualHref} />;
-    } else if (!declarations || declarations.state !== "done") {
-      note =
-        declarations?.reason ??
-        (doc.extraction_state === "skipped" || doc.extraction_state === "failed"
-          ? "Walkup couldn't read this file — it may be a scan. Enter the details by hand below."
-          : "Walkup didn't read the details from this file. Enter them by hand below.");
-      resolved = FIELD_DEFS.map((d) => ({ key: d.key, status: "blank", value: null, candidates: [], page: null, snippet: null, confidence: null, reason: null }));
-    } else {
-      resolved = resolveAll((declarations.fields ?? []) as RawField[]);
-      deductiblesPage =
-        resolved.find((r) => ["property_deductible", "wind_hail_deductible"].includes(r.key) && r.page)?.page ?? null;
-    }
-  }
+  const { data } = await supabase.from("documents").select("id, filename, document_categories(slug)").eq("id", documentId).maybeSingle();
+  type Doc = { id: string; filename: string; document_categories: { slug: string } | { slug: string }[] | null };
+  const doc = data as Doc | null;
+  if (!doc) notFound();
+  const category = Array.isArray(doc.document_categories) ? doc.document_categories[0] : doc.document_categories;
 
   return (
-    <div className="space-y-6">
-      <div>
-        <Link href={mode === "quote" ? "/insurance?view=quotes" : "/insurance"} className="text-[13px] text-mute hover:underline">
-          ← Insurance
-        </Link>
-        <h1 className="mt-2 text-[20px] font-bold tracking-tight text-ink">{title}</h1>
-        <p className="mt-1 text-mute">
-          {doc ? (
-            <>
-              From{" "}
-              <Link href={`/documents/${doc.id}`} className="underline underline-offset-2">
-                {doc.filename}
-              </Link>
-              . Check each figure; anything Walkup wasn&rsquo;t sure of is highlighted.
-            </>
-          ) : sp.quote ? null : (
-            "Enter what's on the declarations page. Leave anything that isn't stated blank."
-          )}
-        </p>
-      </div>
-      {note ? <p className="rounded-lg border border-line bg-fill px-4 py-3 text-[13px] text-ink">{note}</p> : null}
-      {body ??
-        (resolved ? (
-          <ReviewForm
-            mode={mode}
-            documentId={doc?.id ?? null}
-            requestId={sp.request ?? null}
-            acceptedQuoteId={sp.quote ?? null}
-            resolved={resolved}
-            initialSource={initialSource}
-            legalName={association.legal_name}
-            replaceable={replaceable}
-            deductiblesPage={deductiblesPage}
-          />
-        ) : null)}
+    <div className="space-y-4">
+      <BackLink href="/insurance">Insurance</BackLink>
+      <Card title="Read this document">
+        {category?.slug === "insurance" ? (
+          <div className="space-y-3">
+            <p className="text-[13px] text-ink">{doc.filename}</p>
+            <p className="text-[13px] text-mute">Walkup reads the figures for you to check before anything is saved.</p>
+            <ReadButtons documentId={doc.id} />
+          </div>
+        ) : (
+          <div className="space-y-2 text-[13px]">
+            <p className="text-ink">Walkup only reads files filed as Insurance.</p>
+            <Link href={`/documents/${doc.id}`} className={linkClass}>
+              Open {doc.filename} in the Document Hub
+            </Link>
+          </div>
+        )}
+      </Card>
     </div>
   );
 }

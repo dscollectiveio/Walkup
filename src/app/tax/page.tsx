@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { headers } from "next/headers";
 import { createClient } from "@/lib/supabase/server";
+import { BoardOnly, viewerIsOwnerOnly } from "@/components/board-only";
 import { Answer, Card, Empty, Jargon, Provisional, Restricted, money, moneyRounded } from "@/components/ui";
 import {
   computeForm1120h,
@@ -344,12 +345,6 @@ function cardViewFor(ctx: TaxContext, o: FormOutcome, canWrite: boolean): FormCa
   };
 }
 
-/** mailto: with several recipients — RFC 6068 wants them comma-separated, each one encoded. */
-function mailtoMany(to: string[], subject: string, body: string): string {
-  const draft = mailtoHref(null, subject, body);
-  return draft.replace(/^mailto:\?/, `mailto:${to.map(encodeURIComponent).join(",")}?`);
-}
-
 /** The heads-up draft for the accountant, from the same figures the tab shows. */
 function headsUpInput(ctx: TaxContext, result: Form1120hResult | null, senderName: string): AccountantEmailInput {
   const f = ctx.input.figures;
@@ -444,7 +439,18 @@ export default async function TaxPage({ searchParams }: { searchParams: Promise<
   // disagree. `?fy=` shows an earlier year; an unknown id falls back to the
   // year whose return is next to file.
   const ctx = await loadTaxContext(supabase, { fiscalYearId: fyParam || undefined });
-  if (!ctx) return <Restricted what="the tax section" />;
+  if (!ctx) {
+    if (await viewerIsOwnerOnly()) {
+      return (
+        <BoardOnly
+          what="Taxes"
+          why="The association's tax returns and 1099s are prepared by the board with the accountant."
+          alternative={{ label: "See documents shared with you", href: "/documents" }}
+        />
+      );
+    }
+    return <Restricted what="the tax section" />;
+  }
   const fy = { id: ctx.fiscalYear.id, label: ctx.fiscalYear.label, association_id: ctx.association.id };
   const isIllinois = ctx.association.state_code === "IL";
 
@@ -639,7 +645,7 @@ export default async function TaxPage({ searchParams }: { searchParams: Promise<
   };
   const boardEmails = ctx.boardMembers.filter((m) => m.email && m.authUserId !== user?.id).map((m) => m.email as string);
   const board = boardDraft(ctx, taxUrl, senderName);
-  const boardHref = boardEmails.length > 0 ? mailtoMany(boardEmails, board.subject, board.body) : null;
+  const boardHref = boardEmails.length > 0 ? mailtoHref(boardEmails, board.subject, board.body) : null;
 
   // ---- Your forms -----------------------------------------------------------------
   const dueByKey = new Map(ctx.deadlines.map((d) => [d.key, d.dueOn]));

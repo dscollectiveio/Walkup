@@ -6,14 +6,14 @@ const empty: SnapshotInput = {
   today,
   bankConnections: [],
   uncategorizedCount: 0,
-  insuranceExpiresOn: null,
+  insuranceRenewal: null,
   nextFiling: null,
   contractors: [],
 };
 const tile = (t: ReturnType<typeof buildSnapshot>, key: string) => t.find((x) => x.key === key)!;
 
 describe("buildSnapshot", () => {
-  it("is exactly four tiles, and on a brand-new account every one is a nudge — no invented numbers", () => {
+  it("is exactly four tiles, and on a brand-new account every one is a nudge, no invented numbers", () => {
     const tiles = buildSnapshot(empty);
     expect(tiles.map((t) => t.key)).toEqual(["bank", "insurance", "filing", "contractors"]);
     expect(tiles.every((t) => t.value === null)).toBe(true);
@@ -53,12 +53,37 @@ describe("buildSnapshot", () => {
     });
   });
 
-  it("counts days to the insurance renewal and flags one inside 60 days", () => {
-    expect(tile(buildSnapshot({ ...empty, insuranceExpiresOn: "2026-11-15" }), "insurance")).toMatchObject({
-      value: "Nov 15", note: "in 46 days", tone: "attention",
+  describe("insurance", () => {
+    const renewal = (effective_to: string, daysToEnd: number, withinReminder: boolean, renewed = false) => ({
+      policy: { effective_to },
+      daysToEnd,
+      withinReminder,
+      renewed,
     });
-    expect(tile(buildSnapshot({ ...empty, insuranceExpiresOn: "2027-06-01" }), "insurance")).toMatchObject({
-      value: "Jun 1, 2027", tone: "neutral",
+
+    it("counts days to the renewal and flags it inside the policy's own reminder window", () => {
+      expect(tile(buildSnapshot({ ...empty, insuranceRenewal: renewal("2026-11-15", 46, true) }), "insurance")).toMatchObject({
+        value: "Nov 15", note: "in 46 days", tone: "attention",
+      });
+      expect(tile(buildSnapshot({ ...empty, insuranceRenewal: renewal("2027-06-01", 244, false) }), "insurance")).toMatchObject({
+        value: "Jun 1, 2027", tone: "neutral",
+      });
+    });
+
+    it("does not flag a renewal inside 60 days when the policy's lead time is shorter", () => {
+      expect(tile(buildSnapshot({ ...empty, insuranceRenewal: renewal("2026-11-15", 46, false) }), "insurance")).toMatchObject({
+        note: "in 46 days", tone: "neutral",
+      });
+    });
+
+    it("says the renewal is saved, quietly, when it is", () => {
+      expect(tile(buildSnapshot({ ...empty, insuranceRenewal: renewal("2026-10-20", 20, false, true) }), "insurance")).toMatchObject({
+        value: "Oct 20", note: "renewal saved", tone: "neutral",
+      });
+    });
+
+    it("nudges to record a policy when none is in force", () => {
+      expect(tile(buildSnapshot(empty), "insurance")).toMatchObject({ value: null, note: "No active policy recorded", href: "/insurance" });
     });
   });
 
@@ -82,26 +107,50 @@ describe("buildSnapshot", () => {
   });
 
   describe("contractor paperwork", () => {
-    const c = (over = {}) => ({ w9OnFile: true, is1099Exempt: false, insuredUntil: "2027-03-01", ...over });
+    const c = (over = {}) => ({ w9OnFile: true, is1099Exempt: false, insuredUntil: "2027-03-01", inUse: true, ...over });
 
-    it("is quiet when everything is current", () => {
+    it("is quiet when everything is current, and links to the directory", () => {
       expect(tile(buildSnapshot({ ...empty, contractors: [c(), c()] }), "contractors")).toMatchObject({
-        value: "In order", note: "2 contractors, all current", tone: "good",
+        value: "In order", note: "2 contractors, all current", tone: "good", href: "/repairs?view=contractors",
       });
     });
 
-    it("counts missing W-9s, expired certificates and contractors with none on file", () => {
+    it("counts missing W-9s and expired certificates and licenses among contractors in use", () => {
       const t = tile(
         buildSnapshot({
           ...empty,
-          contractors: [c({ w9OnFile: false }), c({ insuredUntil: "2026-08-01" }), c({ insuredUntil: null }), c({ w9OnFile: false, is1099Exempt: true })],
+          contractors: [
+            c({ w9OnFile: false }),
+            c({ insuredUntil: "2026-08-01" }),
+            c({ licenseExpiresOn: "2026-09-01" }),
+            c({ insuredUntil: null }),
+            c({ w9OnFile: false, is1099Exempt: true }),
+          ],
         }),
         "contractors",
       );
       expect(t).toMatchObject({
         value: "3 gaps",
-        note: "1 W-9 missing · 1 insurance certificate expired · 1 with no insurance on file",
+        note: "1 W-9 missing · 1 insurance certificate expired · 1 license expired",
         tone: "attention",
+        href: "/repairs?view=contractors",
+      });
+    });
+
+    it("ignores archived contractors and the paperwork of contractors not in use", () => {
+      const t = tile(
+        buildSnapshot({
+          ...empty,
+          contractors: [c(), c({ archived: true, insuredUntil: "2026-01-01" }), c({ inUse: false, w9OnFile: false, insuredUntil: "2026-01-01" })],
+        }),
+        "contractors",
+      );
+      expect(t).toMatchObject({ value: "In order", note: "2 contractors, all current", tone: "good" });
+    });
+
+    it("nudges to add one when every contractor is archived", () => {
+      expect(tile(buildSnapshot({ ...empty, contractors: [c({ archived: true })] }), "contractors")).toMatchObject({
+        value: null, note: "None added yet",
       });
     });
   });

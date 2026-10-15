@@ -1,28 +1,69 @@
 import { describe, expect, it } from "vitest";
-import { NAV_GROUPS, TRAILING_NAV, UNGROUPED_NAV } from "@/components/sidebar/config";
+import { MY_UNIT_NAV, NAV_GROUPS, TRAILING_NAV, UNGROUPED_NAV } from "@/components/sidebar/config";
+import { ownerNavItems } from "@/lib/owner/nav";
 import { tourRoleFrom, tourStepsFor, type TourRole } from "@/lib/tour/steps";
 
 const ROLES: TourRole[] = ["board_admin", "board_member", "accountant", "owner"];
 const navTourIds = new Set(
-  [...UNGROUPED_NAV, ...NAV_GROUPS.flatMap((g) => g.items), ...TRAILING_NAV].map((i) => i.tourId).filter(Boolean),
+  [...UNGROUPED_NAV, ...MY_UNIT_NAV, ...NAV_GROUPS.flatMap((g) => g.items), ...TRAILING_NAV, ...ownerNavItems()]
+    .map((i) => i.tourId)
+    .filter(Boolean),
 );
 
 describe("first-login tour", () => {
   it("gives each role its own stops, welcome first and finish last", () => {
-    expect(tourStepsFor("owner").map((s) => s.id)).toEqual(["welcome", "dashboard", "dues", "repairs", "finish"]);
+    expect(tourStepsFor("owner").map((s) => s.id)).toEqual([
+      "welcome",
+      "dashboard",
+      "owner-statement",
+      "dues",
+      "announcements",
+      "repairs",
+      "insurance",
+      "owner-building",
+      "finish",
+    ]);
     expect(tourStepsFor("accountant").map((s) => s.id)).toEqual([
       "welcome",
       "financial-statements",
       "budget",
       "taxes",
+      "insurance",
       "documents",
       "finish",
     ]);
+    const board = tourStepsFor("board_member").map((s) => s.id);
+    expect(board.indexOf("insurance")).toBe(board.indexOf("taxes") + 1);
     for (const role of ROLES) {
       const ids = tourStepsFor(role).map((s) => s.id);
       expect(ids[0]).toBe("welcome");
       expect(ids.at(-1)).toBe("finish");
     }
+  });
+
+  it("points each role only at items in its own navigation", () => {
+    const staffIds = new Set(
+      [...UNGROUPED_NAV, ...MY_UNIT_NAV, ...NAV_GROUPS.flatMap((g) => g.items), ...TRAILING_NAV].map((i) => i.tourId),
+    );
+    const ownerIds = new Set(ownerNavItems().map((i) => i.tourId));
+    for (const s of tourStepsFor("owner")) if (s.target) expect(ownerIds.has(s.target), `owner: ${s.target}`).toBe(true);
+    for (const role of ["board_admin", "board_member", "accountant"] as const) {
+      for (const s of tourStepsFor(role)) if (s.target) expect(staffIds.has(s.target), `${role}: ${s.target}`).toBe(true);
+    }
+  });
+
+  it("gives the board My unit after the dashboard and Announcements after Building Info", () => {
+    const ids = tourStepsFor("board_admin").map((s) => s.id);
+    expect(ids[ids.indexOf("dashboard") + 1]).toBe("my-unit");
+    expect(ids[ids.indexOf("building") + 1]).toBe("announcements");
+    expect(tourStepsFor("accountant").map((s) => s.id)).not.toContain("my-unit");
+  });
+
+  it("describes Collections, statements and the import where the board would look for them", () => {
+    const dues = tourStepsFor("board_admin").find((s) => s.id === "dues")!;
+    expect(dues.body).toBe("Who owes what, reminders you review and send, and statements for every owner.");
+    const building = tourStepsFor("board_admin").find((s) => s.id === "building")!;
+    expect(building.body).toMatch(/Import them from a spreadsheet/);
   });
 
   it("only board admins are sent to the setup checklist at the end", () => {
@@ -48,5 +89,20 @@ describe("first-login tour", () => {
     expect(tourRoleFrom(["owner", "board_admin"])).toBe("board_admin");
     expect(tourRoleFrom(["owner", "accountant"])).toBe("accountant");
     expect(tourRoleFrom([])).toBeNull();
+  });
+
+  it("gives each role its own insurance stop, naming Illinois law only for Illinois", () => {
+    const body = (role: TourRole, stateCode?: string | null) => tourStepsFor(role, { stateCode }).find((s) => s.id === "insurance")!.body;
+    expect(body("board_admin")).toContain("against Illinois law and your building's facts");
+    expect(body("board_admin", "IL")).toContain("Illinois law");
+    expect(body("board_admin", "WI")).toBe(
+      "Your policies and what they cover. Walkup checks them against your building's facts, and drafts emails to your agent.",
+    );
+    expect(body("accountant")).toBe("The association's policies and premiums, read-only.");
+    expect(body("owner")).toMatch(/your own condo policy/);
+  });
+
+  it("tells owners Walkup doesn't alert the board", () => {
+    expect(tourStepsFor("owner").find((s) => s.id === "repairs")!.body).toMatch(/doesn't alert the board/);
   });
 });

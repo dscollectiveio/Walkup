@@ -1,132 +1,182 @@
+import Link from "next/link";
 import { createClient } from "@/lib/supabase/server";
-import { Answer, Card, Jargon, MoneyOrDash, UnitLink, money } from "@/components/ui";
+import { Answer, Card } from "@/components/ui";
+import { BoardOnly } from "@/components/board-only";
+import { getViewer } from "@/lib/owner/viewer";
+import { buildingTodayIso } from "@/lib/dates";
+import { loadCollections } from "@/lib/collections/data";
+import { sendConfig } from "@/lib/email-outbox/config";
+import { OFF_STRIP, emailStatus, type SettingsRow } from "@/lib/email-outbox/status";
+import { statusWords } from "@/lib/email-outbox/reasons";
+import { KIND_LABEL, type EmailKind } from "@/lib/email-outbox/facts";
+import { fromCents } from "@/lib/tax/form1120h";
+import { formatMoney } from "@/lib/email-outbox/format";
 import { PaymentForm } from "./payment-form";
-import { ReminderLetterButton } from "./reminder-letter-button";
+import { CollectionsTable, type CollectionRow, type HistoryItem } from "./collections-table";
 
 export const dynamic = "force-dynamic";
 
-export default async function DelinquencyPage() {
+const HISTORY_PER_UNIT = 20;
+
+export default async function CollectionsPage({ searchParams }: { searchParams: Promise<{ select?: string }> }) {
+  const viewer = await getViewer();
+  if (viewer && !viewer.isStaff) {
+    return (
+      <BoardOnly
+        what="Collections"
+        why="It lists every unit's balance, which is private to the board."
+        alternative={{ label: "See your own balance", href: "/owner" }}
+      />
+    );
+  }
+
   const supabase = await createClient();
+  const today = buildingTodayIso();
+  const isBoard = viewer?.isBoard === true;
+  const associationId = viewer?.associationId;
+  const data = associationId ? await loadCollections(supabase, associationId, today, { board: isBoard }) : null;
 
-  const [{ data: rows }, { data: owners }] = await Promise.all([
-    supabase
-      .from("delinquency_aging")
-      .select("unit_id, label, current_due, days_1_30, days_31_60, days_60_plus, total_owed")
-      .order("total_owed", { ascending: false }),
-    supabase.from("unit_owners").select("unit_id, persons(full_name, email)"),
-  ]);
+  const heading = (
+    <div>
+      <h1 className="text-[20px] font-bold tracking-tight text-ink">Collections</h1>
+      <p className="mt-1 text-mute">Who is behind, for how long, and what has been sent.</p>
+    </div>
+  );
 
-  const ownerName = new Map<string, string>();
-  const ownerEmail = new Map<string, string | null>();
-  for (const o of owners ?? []) {
-    const p = o.persons as unknown as { full_name: string; email: string | null } | null;
-    if (p) {
-      ownerName.set(o.unit_id, p.full_name);
-      ownerEmail.set(o.unit_id, p.email);
+  if (!viewer || !data) {
+    return (
+      <div className="space-y-6">
+        {heading}
+        <Answer status="bad" headline="We couldn't load balances" detail="Reload the page. If it keeps happening, write to support." />
+      </div>
+    );
+  }
+
+  const { units, totals } = data;
+  const sp = await searchParams;
+
+  // Email status strip and history: board only (the outbox and settings are board-readable).
+  let strip: { label: "Off" | "On" | "Suspended"; text: string | null } | null = null;
+  const history: Record<string, HistoryItem[]> = {};
+  if (isBoard) {
+    const { data: settings } = await supabase
+      .from("email_settings")
+      .select("sending_enabled, enabled_at, daily_cap, suspended_at, suspended_reason")
+      .maybeSingle();
+    const status = emailStatus(sendConfig().ok, (settings as SettingsRow | null) ?? null);
+    strip = status === "on" ? { label: "On", text: null } : status === "suspended" ? { label: "Suspended", text: null } : { label: "Off", text: OFF_STRIP };
+
+    const ids = units.map((u) => u.unitId);
+    if (ids.length) {
+      const { data: rows } = await supabase
+        .from("email_outbox")
+        .select("unit_ids, kind, status, skip_reason, last_error, provider_message_id, sent_at, created_at")
+        .overlaps("unit_ids", ids)
+        .order("created_at", { ascending: false })
+        .limit(400);
+      for (const r of rows ?? []) {
+        const item: HistoryItem = {
+          date: ((r.sent_at ?? r.created_at) as string).slice(0, 10),
+          kind: KIND_LABEL[r.kind as EmailKind] ?? String(r.kind),
+          status: statusWords(r.status as string, {
+            manual: String(r.provider_message_id ?? "").startsWith("manual:"),
+            reason: r.skip_reason as string | null,
+            error: r.last_error ? String(r.last_error).slice(0, 80) : null,
+          }),
+        };
+        for (const unitId of r.unit_ids as string[]) {
+          if (!history[unitId]) history[unitId] = [];
+          if (history[unitId].length < HISTORY_PER_UNIT) history[unitId].push(item);
+        }
+      }
     }
   }
 
-  const total = (rows ?? []).reduce((s, r) => s + Number(r.total_owed), 0);
+  const rows: CollectionRow[] = units.map((u) => {
+    const waiting = u.suggestion.action === "wait";
+    const call = u.suggestion.action === "call";
+    return {
+      unitId: u.unitId,
+      label: u.label,
+      ownerNames: u.ownerNames,
+      chips: [!u.hasEmail ? "no email" : null, u.bounced ? "bounced" : null, u.optedOut ? "opted out" : null].filter((c): c is string => c !== null),
+      aging: u.aging,
+      owedCents: u.owedCents,
+      overdueCents: u.overdueCents,
+      daysOverdue: u.daysOverdue,
+      lastReminderOn: u.lastReminderOn,
+      lastResult: u.lastResult,
+      suggestion: u.suggestion,
+      selectable: !waiting && !call && u.suggestion.action !== "none",
+      disabledReason: waiting || call ? u.suggestion.why : null,
+      feeChargeId: u.openLateFeeChargeId,
+      history: history[u.unitId] ?? [],
+    };
+  });
 
-  const overdueUnits = (rows ?? []).map((r) => ({
-    id: r.unit_id,
-    label: r.label,
-    owed: Number(r.total_owed),
-    ownerName: ownerName.get(r.unit_id) ?? null,
-    ownerEmail: ownerEmail.get(r.unit_id) ?? null,
-  }));
+  const answer =
+    units.length === 0 ? (
+      <Answer status="good" headline="Nobody is behind" detail="Every unit is up to date." />
+    ) : (
+      <Answer
+        status="attention"
+        headline={`${formatMoney(fromCents(totals.owedCents))} is outstanding across ${units.length} unit${units.length === 1 ? "" : "s"}`}
+        detail={`${formatMoney(fromCents(totals.overdueCents))} of it is past due.`}
+      />
+    );
 
   return (
     <div className="space-y-6">
-      <div>
-        <h1 className="text-[20px] font-bold tracking-tight text-ink">Who owes money</h1>
-        <p className="mt-1 text-mute">
-          Unpaid fees, grouped by how overdue they are.
+      {heading}
+      {answer}
+      {units.length > 0 ? (
+        <p className="-mt-3 text-[13px] text-mute">
+          Unpaid dues are money earned but not received. They also lower the income your tax eligibility depends on; see the{" "}
+          <Link href="/tax" className="underline underline-offset-2 hover:text-ink">
+            Taxes
+          </Link>{" "}
+          page.
         </p>
-      </div>
+      ) : null}
 
-      {!rows || rows.length === 0 ? (
-        <Answer
-          status="good"
-          headline="Nobody is behind"
-          detail="Every unit that you can see is up to date on their fees."
-        />
-      ) : (
+      {strip ? (
+        <div className="flex flex-wrap items-center gap-x-3 gap-y-1 rounded-lg border border-line bg-paper px-4 py-3 text-[13px]">
+          <span className="font-medium text-ink">Email from Walkup: {strip.label}</span>
+          {strip.text ? <span className="text-mute">{strip.text}</span> : null}
+          <Link href="/dues/email" className="ml-auto text-ink underline underline-offset-2">
+            Set up
+          </Link>
+        </div>
+      ) : null}
+
+      {units.length > 0 ? (
         <>
-          <Answer
-            status="attention"
-            headline={`${money(total)} is outstanding`}
-            detail="Unpaid fees are money you have earned but not received. As well as the cash-flow problem, they lower the income figure your tax eligibility depends on — see the Tax filing page."
-          />
-
-          <div className="flex flex-wrap items-start gap-2">
-            <PaymentForm units={overdueUnits} />
-            <ReminderLetterButton units={overdueUnits} />
-          </div>
+          {isBoard ? (
+            <div className="flex flex-col gap-2 sm:flex-row sm:flex-wrap sm:items-start">
+              <PaymentForm units={units.map((u) => ({ id: u.unitId, label: u.label, owed: u.owedCents / 100 }))} />
+              <Link
+                href="/dues/statements"
+                className="inline-flex min-h-[44px] items-center justify-center rounded-md border border-line-strong bg-paper px-4 py-2 text-[13px] font-medium text-ink hover:bg-fill"
+              >
+                Statements
+              </Link>
+            </div>
+          ) : (
+            <p className="text-[13px] text-mute">Preparing email is for the board.</p>
+          )}
 
           <Card
             title="Overdue by unit"
-            hint="The longer a balance sits in the right-hand columns, the harder it usually is to recover."
+            hint="Older balances are in the right-hand columns."
           >
-            <div className="overflow-x-auto">
-              <table className="w-full min-w-[34rem] text-[13px]">
-                <thead>
-                  <tr className="border-b border-line text-left text-mute">
-                    <th className="pb-2 font-medium">Unit</th>
-                    <th className="pb-2 text-right font-medium">Not yet due</th>
-                    <th className="pb-2 text-right font-medium">Up to a month</th>
-                    <th className="pb-2 text-right font-medium">1–2 months</th>
-                    <th className="pb-2 text-right font-medium">Over 2 months</th>
-                    <th className="pb-2 text-right font-medium">Total</th>
-                  </tr>
-                </thead>
-                <tbody className="divide-y divide-line">
-                  {rows.map((r) => (
-                    <tr key={r.unit_id}>
-                      <td className="py-3">
-                        <UnitLink id={r.unit_id} label={r.label} />
-                        {ownerName.get(r.unit_id) ? (
-                          <div className="text-[11px] text-mute">
-                            {ownerName.get(r.unit_id)}
-                          </div>
-                        ) : null}
-                      </td>
-                      <td className="figures py-3 text-right">
-                        <MoneyOrDash value={r.current_due} className="text-mute" />
-                      </td>
-                      <td className="figures py-3 text-right">
-                        <MoneyOrDash value={r.days_1_30} className="text-ink" />
-                      </td>
-                      <td className="figures py-3 text-right">
-                        <MoneyOrDash value={r.days_31_60} className="text-bad-text" />
-                      </td>
-                      <td className="figures py-3 text-right">
-                        <MoneyOrDash value={r.days_60_plus} className="text-bad-text" />
-                      </td>
-                      <td className="figures py-3 text-right text-ink">
-                        {money(r.total_owed)}
-                      </td>
-                    </tr>
-                  ))}
-                </tbody>
-                <tfoot>
-                  <tr className="border-t border-line">
-                    <td className="pt-3 text-mute">Total</td>
-                    <td colSpan={4} />
-                    <td className="figures pt-3 text-right text-ink">{money(total)}</td>
-                  </tr>
-                </tfoot>
-              </table>
-            </div>
-            <p className="mt-4 text-[11px] text-mute-soft">
-              <Jargon term="delinquency aging">
-                Grouping unpaid amounts by age
-              </Jargon>{" "}
-              is what an accountant will ask for at year end.
+            <p className="mb-4 text-[12px] text-mute">
+              A late fee is only ever charged by the board, from the Dues page. A notice just tells the owner about a fee that is
+              already posted. Check your declaration and bylaws before sending.
             </p>
+            <CollectionsTable rows={rows} canPrepare={isBoard} preselect={sp.select ?? null} today={today} />
           </Card>
         </>
-      )}
+      ) : null}
     </div>
   );
 }

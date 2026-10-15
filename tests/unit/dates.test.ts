@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { shortDate, syncedAgo, todayIso } from "@/lib/dates";
+import { buildingTodayIso, longDate, shortDate, syncedAgo, todayIso } from "@/lib/dates";
 
 describe("shortDate", () => {
   it("drops the year when it's this year", () => {
@@ -34,5 +34,23 @@ describe("syncedAgo", () => {
 describe("todayIso", () => {
   it("formats local date", () => {
     expect(todayIso(new Date(2026, 0, 5))).toBe("2026-01-05");
+  });
+});
+
+describe("buildingTodayIso", () => {
+  it("is the date in Chicago, whatever the server's zone", () => {
+    expect(buildingTodayIso(new Date("2026-10-15T03:00:00Z"))).toBe("2026-10-14");
+    expect(buildingTodayIso(new Date("2026-10-15T06:00:00Z"))).toBe("2026-10-15");
+  });
+});
+
+describe("longDate", () => {
+  it("writes the month out", () => {
+    expect(longDate("2026-10-14")).toBe("October 14, 2026");
+    expect(longDate("2026-03-01T23:30:00Z")).toBe("March 1, 2026");
+  });
+  it("passes through junk unchanged", () => {
+    expect(longDate("n/a")).toBe("n/a");
+    expect(longDate("2026-13-01")).toBe("2026-13-01");
   });
 });

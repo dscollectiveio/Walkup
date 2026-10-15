@@ -28,7 +28,8 @@ export function buildCsp({ nonce, supabaseUrl, dev }: { nonce: string; supabaseU
     "default-src": ["'self'"],
     "script-src": ["'self'", `'nonce-${nonce}'`, "'strict-dynamic'", "https://cdn.plaid.com", ...(dev ? ["'unsafe-eval'"] : [])],
     "style-src": ["'self'", "'unsafe-inline'"],
-    "img-src": ["'self'", "data:", "blob:"],
+    // Signed Storage URLs for ticket photos. Our own project only.
+    "img-src": ["'self'", "data:", "blob:", ...(supabase.length ? [supabase[0]] : [])],
     "font-src": ["'self'"],
     "connect-src": ["'self'", ...supabase, "https://*.plaid.com", ...(dev ? ["ws://localhost:*", "http://localhost:*"] : [])],
     "frame-src": ["https://cdn.plaid.com"],

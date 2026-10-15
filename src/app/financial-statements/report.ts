@@ -1,5 +1,6 @@
 import type { SupabaseClient } from "@supabase/supabase-js";
 import { money } from "@/components/ui";
+import { mailtoHref } from "@/lib/email/mailto";
 import { loadStatement, type Statement } from "./data";
 import { mergeRows, parseSelection, type MergedRow } from "./summary";
 import type { PeriodGrain } from "./periods";
@@ -66,7 +67,7 @@ export function emailDraft(report: Report, mode: ReportMode): string {
 export function emailHref(report: Report, mode: ReportMode): string {
   const title = mode === "full" ? "Profit & Loss" : "Expenses";
   const subject = `${report.associationName} — ${title} — ${report.rangeLabel}`;
-  return `mailto:?subject=${encodeURIComponent(subject)}&body=${encodeURIComponent(emailDraft(report, mode))}`;
+  return mailtoHref(null, subject, emailDraft(report, mode));
 }
 
 /** Loads whatever the URL asks for: ?periods=… (several) or period/offset (one). Used by the PDF route. */

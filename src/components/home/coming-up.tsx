@@ -1,3 +1,4 @@
+import Link from "next/link";
 import { daysUntil, formatDueDate, railFor, type Reminder } from "@/lib/home/reminders";
 import { ESTIMATED_NOTE } from "@/lib/tax/copy";
 
@@ -48,7 +49,13 @@ export function ComingUp({ reminders, today }: { reminders: Reminder[]; today: D
                 className={`h-9 w-[3px] shrink-0 rounded-full ${RAIL[r.overdue ? "bad" : railFor(days)]}`}
               />
               <span className="min-w-0 flex-1">
-                <span className="block text-[13px] font-medium text-ink">{r.name}</span>
+                {r.href ? (
+                  <Link href={r.href} className="block text-[13px] font-medium text-ink underline-offset-2 hover:underline">
+                    {r.name}
+                  </Link>
+                ) : (
+                  <span className="block text-[13px] font-medium text-ink">{r.name}</span>
+                )}
                 <span className="block text-[11px] text-mute">
                   {r.kind}
                   {r.unverified ? <span className="text-mute-soft"> · {ESTIMATED_WORDS}</span> : null}

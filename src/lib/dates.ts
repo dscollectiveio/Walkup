@@ -32,3 +32,31 @@ export function syncedAgo(lastSyncedAt: string | null, now: Date = new Date()): 
   if (days === 1) return "synced yesterday";
   return `synced ${days} days ago`;
 }
+
+const LONG_MONTHS = [
+  "January", "February", "March", "April", "May", "June",
+  "July", "August", "September", "October", "November", "December",
+];
+
+/**
+ * The building's "today" (America/Chicago) as YYYY-MM-DD, regardless of the
+ * server's zone (Vercel runs in UTC). Walkup is Illinois-only, and the AI
+ * quota day in SQL (`ai_day_start()`) uses the same zone.
+ */
+export function buildingTodayIso(now: Date = new Date()): string {
+  return new Intl.DateTimeFormat("en-CA", {
+    timeZone: "America/Chicago",
+    year: "numeric",
+    month: "2-digit",
+    day: "2-digit",
+  }).format(now);
+}
+
+/** "October 14, 2026" from "2026-10-14" or an ISO timestamp (date part, no zone shift). Junk passes through. */
+export function longDate(iso: string): string {
+  const m = /^(\d{4})-(\d{2})-(\d{2})/.exec(iso ?? "");
+  if (!m) return iso;
+  const [y, mo, d] = [Number(m[1]), Number(m[2]), Number(m[3])];
+  if (mo < 1 || mo > 12 || d < 1 || d > 31) return iso;
+  return `${LONG_MONTHS[mo - 1]} ${d}, ${y}`;
+}

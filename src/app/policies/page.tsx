@@ -5,6 +5,7 @@ export const metadata = { title: "Policies — Walkup" };
 
 const POLICIES = [
   { href: "/security", title: "Security & Privacy", desc: "How access, authentication, and data protection work." },
+  { href: "/terms", title: "Terms of Service", desc: "The agreement for using Walkup: what it does, what it doesn't, and each side's responsibilities." },
   { href: "/privacy", title: "Privacy Policy", desc: "What we collect, why, and your rights over it." },
   { href: "/policies/access-controls", title: "Access Controls Policy", desc: "Who can access what, how identity is verified, and how access is reviewed and removed." },
   { href: "/policies/vulnerability-management", title: "Vulnerability and Patch Management Policy", desc: "How known vulnerabilities and end-of-life software are found and fixed." },

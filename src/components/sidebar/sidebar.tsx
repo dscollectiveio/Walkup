@@ -6,12 +6,15 @@ import { useEffect, useState } from "react";
 import { PanelLeftClose, PanelLeftOpen, X } from "lucide-react";
 import { WalkupMark } from "@/components/mark";
 import { ThemeToggle } from "./theme-toggle";
-import { NAV_GROUPS, TRAILING_NAV, UNGROUPED_NAV, type NavItemConfig } from "./config";
+import { isNavItemActive, navFor, type NavItemConfig, type NavRole } from "./config";
 import { primeServerMode, setDrawerOpen, setSidebarMode, useSidebarState, type SidebarMode } from "./sidebar-state";
 
-function isActive(pathname: string, href: string) {
-  return href === "/" ? pathname === "/" : pathname.startsWith(href);
-}
+/** Badge colour by what it counts: rust for bank work waiting, gold for repairs to look at. */
+const BADGE_TONE: Record<string, { number: string; dot: string }> = {
+  uncategorized: { number: "bg-rust text-paper", dot: "bg-rust" },
+  repairs: { number: "bg-brass text-ink", dot: "bg-brass" },
+  announcements: { number: "bg-brass text-ink", dot: "bg-brass" },
+};
 
 /** How long the content takes to fade out before the layout swaps. */
 const FADE_OUT_MS = 120;
@@ -39,6 +42,7 @@ function NavItemLink({
   expanded: boolean;
 }) {
   const Icon = item.icon;
+  const tone = BADGE_TONE[item.badgeKey ?? ""] ?? BADGE_TONE.uncategorized;
   const count = typeof badgeCount === "number" && badgeCount > 0 ? badgeCount : 0;
   const countWords = count > 0 ? `${count > 99 ? "99+" : count} waiting` : "";
 
@@ -62,7 +66,7 @@ function NavItemLink({
           <>
             <span
               aria-hidden="true"
-              className="flex h-4 min-w-4 items-center justify-center rounded-full bg-rust px-1 text-[9px] font-medium leading-none text-paper"
+              className={`flex h-4 min-w-4 items-center justify-center rounded-full px-1 text-[9px] font-medium leading-none ${tone.number}`}
             >
               {count > 99 ? "99+" : count}
             </span>
@@ -91,7 +95,7 @@ function NavItemLink({
         {active ? <span aria-hidden="true" className="absolute -left-[14px] bottom-1 top-1 w-[3px] rounded-r bg-brass" /> : null}
         <span className="relative">
           <Icon size={18} strokeWidth={1.6} className={active ? "text-brass" : "text-current"} aria-hidden="true" />
-          {count > 0 ? <span aria-hidden="true" className="absolute -right-1.5 -top-1.5 h-2 w-2 rounded-full bg-rust" /> : null}
+          {count > 0 ? <span aria-hidden="true" className={`absolute -right-1.5 -top-1.5 h-2 w-2 rounded-full ${tone.dot}`} /> : null}
         </span>
         <span className="sr-only">
           {item.label}
@@ -105,11 +109,23 @@ function NavItemLink({
 export function Sidebar({
   associationName,
   uncategorizedCount,
+  repairsCount = 0,
+  announcementsCount = 0,
+  ownsUnit = false,
+  role = null,
   userEmail,
   initialMode = "expanded",
 }: {
   associationName: string | null;
   uncategorizedCount: number;
+  /** Repairs to look at (layout.tsx, repairs-spec §18.6); 0 for anyone with nothing new. */
+  repairsCount?: number;
+  /** Announcements the viewer has not opened (owner-portal-spec 7.2); 0 for anyone with nothing new. */
+  announcementsCount?: number;
+  /** A board member or accountant who also owns a unit gets a "My unit" item. */
+  ownsUnit?: boolean;
+  /** The viewer's highest role, for the role-dependent labels. */
+  role?: NavRole | null;
   userEmail: string;
   /** From the walkup.sidebar cookie, so the first paint already matches. */
   initialMode?: SidebarMode;
@@ -170,7 +186,9 @@ export function Sidebar({
     setDrawerOpen(false);
   }, [pathname]);
 
-  const badges = { uncategorized: uncategorizedCount };
+  const badges = { uncategorized: uncategorizedCount, repairs: repairsCount, announcements: announcementsCount };
+  const nav = navFor(role, { ownsUnit });
+  const navGroups = nav.groups;
   const initials = userEmail.slice(0, 2).toUpperCase();
   const toggle = () => setSidebarMode(state.mode === "expanded" ? "rail" : "expanded");
   const badgeFor = (item: NavItemConfig) => (item.badgeKey ? badges[item.badgeKey as keyof typeof badges] : undefined);
@@ -227,12 +245,12 @@ export function Sidebar({
         <div className={`flex min-h-0 flex-1 flex-col ${fade}`}>
         <div className={`flex-1 overflow-y-auto pb-4 pt-2 ${expanded ? "px-3" : "px-[14px]"}`}>
           <div className="space-y-0.5">
-            {UNGROUPED_NAV.map((item) => (
-              <NavItemLink key={item.href} item={item} active={isActive(pathname, item.href)} badgeCount={badgeFor(item)} expanded={expanded} />
+            {nav.ungrouped.map((item) => (
+              <NavItemLink key={item.href} item={item} active={isNavItemActive(pathname, item)} badgeCount={badgeFor(item)} expanded={expanded} />
             ))}
           </div>
 
-          {NAV_GROUPS.map((group) => (
+          {navGroups.map((group) => (
             <div key={group.label}>
               {divider}
               {expanded ? (
@@ -240,7 +258,7 @@ export function Sidebar({
               ) : null}
               <div className="space-y-0.5">
                 {group.items.map((item) => (
-                  <NavItemLink key={item.href} item={item} active={isActive(pathname, item.href)} badgeCount={badgeFor(item)} expanded={expanded} />
+                  <NavItemLink key={item.href} item={item} active={isNavItemActive(pathname, item)} badgeCount={badgeFor(item)} expanded={expanded} />
                 ))}
               </div>
             </div>
@@ -248,8 +266,8 @@ export function Sidebar({
 
           <div className="space-y-0.5">
             {divider}
-            {TRAILING_NAV.map((item) => (
-              <NavItemLink key={item.href} item={item} active={isActive(pathname, item.href)} badgeCount={badgeFor(item)} expanded={expanded} />
+            {nav.trailing.map((item) => (
+              <NavItemLink key={item.href} item={item} active={isNavItemActive(pathname, item)} badgeCount={badgeFor(item)} expanded={expanded} />
             ))}
           </div>
         </div>

@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { redirect } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
 import { Card, Empty, Restricted, UnitLink, money } from "@/components/ui";
 import { PaymentForm } from "@/app/delinquency/payment-form";
@@ -6,7 +7,6 @@ import { PaymentInstructionsForm } from "./payment-instructions-form";
 import { DuesScheduleCard, type ScheduleView } from "./dues-schedule-card";
 import { NeedsYou, type NeedsYouItem, type UnitOption } from "./needs-you";
 import { LateFeeRuleForm, OneOffChargeForm } from "./charge-forms";
-import { ReportPaymentForm } from "./report-payment-form";
 import { UnitDuesEditor, type UnitPlan } from "./unit-dues-editor";
 import { annualFromPeriodCents, nextPeriodStartFor } from "@/lib/dues/plan";
 import { currentPeriodStart, periodLabel, perUnitAmount, type DuesFrequency } from "@/lib/dues/period";
@@ -33,11 +33,6 @@ const STANDING_TONE: Record<UnitStanding, string> = {
   not_charged: "bg-fill text-mute",
 };
 
-function suggestedMemo(unitLabel: string): string {
-  const monthYear = new Date().toLocaleDateString("en-US", { month: "short", year: "numeric" });
-  return `${unitLabel} dues ${monthYear}`;
-}
-
 /** The first day of the period after the one `today` falls in. */
 function nextPeriodStart(frequency: DuesFrequency, today: Date, startsOn: string): string | null {
   const iso = (d: Date) =>
@@ -52,12 +47,6 @@ function nextPeriodStart(frequency: DuesFrequency, today: Date, startsOn: string
   const n = iso(next);
   return n < startsOn ? startsOn : n;
 }
-
-const REPORT_STATUS_WORDS: Record<string, string> = {
-  pending: "waiting for the deposit to show up at the bank",
-  matched: "matched to the bank deposit",
-  dismissed: "the board couldn't find it",
-};
 
 export default async function DuesPage() {
   const supabase = await createClient();
@@ -97,6 +86,9 @@ export default async function DuesPage() {
   const isBoardAdmin = isBoardAdminRes === true;
   const isBoard = isBoardRes === true;
   const canReadFinancials = canReadFinancialsRes === true;
+  // Owners have their own pages now (owner-portal-spec 2.4): what they owe,
+  // how to pay and the "I paid" report live at /owner/pay.
+  if (!canReadFinancials) redirect("/owner/pay");
   const myUnitIds: string[] = ownedUnitIds ?? [];
 
   // Everyone sees the units; what's attached to them is RLS-scoped below.
@@ -441,89 +433,6 @@ export default async function DuesPage() {
   );
 
   // ---------------------------------------------------------------------------
-  // Owner view: what do I owe, how do I pay, tell the board I paid.
-  // ---------------------------------------------------------------------------
-  if (!canReadFinancials) {
-    const myUnits = unitList.filter((u) => myUnitIds.includes(u.id));
-    const myOwed = myUnits.reduce((s, u) => s + (standingByUnit.get(u.id)?.owedCents ?? 0), 0);
-    return (
-      <div className="space-y-6">
-        <div>
-          <h1 className="text-[20px] font-bold tracking-tight text-ink">HOA Dues</h1>
-          <p className="mt-1 text-mute">What you owe, how to pay it, and a way to tell the board when you have.</p>
-        </div>
-
-        <Card navy title="Your dues" hint={myUnits.length === 0 ? undefined : "Charges are listed as the board posts them; payments clear them once the deposit lands."}>
-          {myUnits.length === 0 ? (
-            <Empty>No unit is on file for you yet. Ask a board member to add you to your unit.</Empty>
-          ) : (
-            <div className="space-y-5">
-              {myUnits.map((u) => {
-                const s = standingByUnit.get(u.id)!;
-                const open = chargeLines.filter((c) => c.unit_id === u.id && (c.status === "open" || c.status === "partial"));
-                const credit = creditByUnit.get(u.id) ?? 0;
-                return (
-                  <div key={u.id}>
-                    <div className="flex flex-wrap items-baseline justify-between gap-2">
-                      <div className="flex items-center gap-2">
-                        <span className="text-[15px] font-bold text-ink">{u.label}</span>
-                        <span className={`rounded-full px-2 py-0.5 text-[11px] ${STANDING_TONE[s.standing]}`}>{STANDING_WORDS[s.standing]}</span>
-                      </div>
-                      <span className={`figures text-[22px] ${s.owedCents > 0 ? "text-ink" : "text-good-text"}`}>{dollars(s.owedCents)}</span>
-                    </div>
-                    {open.length > 0 ? (
-                      <ul className="mt-2 divide-y divide-line rounded-lg border border-line text-[13px]">
-                        {open.map((c) => (
-                          <li key={c.id} className="flex items-baseline justify-between gap-3 px-3 py-2">
-                            <span className="text-ink">
-                              {c.charge_type === "late_fee" ? "Late fee" : c.charge_type === "other" ? "Charge" : "Dues"} ·{" "}
-                              {periodLabel(c.charge_type === "assessment" ? "monthly" : "one_time", c.period_start)}
-                              <span className={`ml-2 text-[11px] ${c.due_on < todayKey ? "text-bad-text" : "text-mute"}`}>
-                                {c.due_on < todayKey ? `was due ${shortDate(c.due_on, todayKey)}` : `due ${shortDate(c.due_on, todayKey)}`}
-                              </span>
-                            </span>
-                            <span className="figures text-ink">{dollars(c.balanceCents)}</span>
-                          </li>
-                        ))}
-                      </ul>
-                    ) : (
-                      <p className="mt-1 text-[13px] text-mute">
-                        {s.standing === "not_charged" ? "Nothing has been charged yet." : "Nothing owed right now."}
-                        {credit > 0 ? ` You're ${dollars(credit)} ahead.` : ""}
-                      </p>
-                    )}
-                    <p className="mt-2 text-[11px] text-mute-soft">
-                      Suggested memo when you pay: “{suggestedMemo(u.label)}” ·{" "}
-                      <Link href={`/units/${u.id}`} className="underline-offset-2 hover:underline">
-                        Full statement →
-                      </Link>
-                    </p>
-                  </div>
-                );
-              })}
-              <div className="border-t border-line pt-4">
-                <ReportPaymentForm units={myUnits.map((u) => ({ id: u.id, label: u.label }))} defaultAmount={myOwed / 100} />
-                {reports.length > 0 ? (
-                  <ul className="mt-3 space-y-1 text-[12px] text-mute">
-                    {reports.slice(0, 5).map((r) => (
-                      <li key={r.id}>
-                        {shortDate(r.paid_on, todayKey)} · {dollars(r.amountCents)} — {REPORT_STATUS_WORDS[r.status] ?? r.status}
-                        {r.status === "dismissed" && r.resolution_note ? ` (“${r.resolution_note}”)` : ""}
-                      </li>
-                    ))}
-                  </ul>
-                ) : null}
-              </div>
-            </div>
-          )}
-        </Card>
-
-        {howToPay}
-      </div>
-    );
-  }
-
-  // ---------------------------------------------------------------------------
   // Treasurer view.
   // ---------------------------------------------------------------------------
   const monthWord = today.toLocaleDateString("en-US", { month: "long" });
@@ -536,6 +445,19 @@ export default async function DuesPage() {
         <p className="mt-1 text-mute">
           Who&rsquo;s paid, who hasn&rsquo;t, and what to do about it. Owners pay from their own bank; you confirm it when it lands.
         </p>
+        {isBoard ? (
+          <p className="mt-2 flex flex-wrap gap-x-4 gap-y-1 text-[13px]">
+            <Link href="/delinquency" className="text-ink underline underline-offset-2">
+              Collections
+            </Link>
+            <Link href="/dues/statements" className="text-ink underline underline-offset-2">
+              Owner statements
+            </Link>
+            <Link href="/dues/email" className="text-ink underline underline-offset-2">
+              Email &amp; reminders
+            </Link>
+          </p>
+        ) : null}
       </div>
 
       <Card
@@ -576,6 +498,12 @@ export default async function DuesPage() {
               <Link href="/building" className="underline underline-offset-2">
                 Add them on Building Info →
               </Link>
+              <br />
+              Set each unit&rsquo;s dues, or{" "}
+              <Link href="/building/import" className="underline underline-offset-2">
+                import them with your units
+              </Link>
+              .
             </Empty>
           </div>
         ) : (

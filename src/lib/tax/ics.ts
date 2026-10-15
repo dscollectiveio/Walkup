@@ -32,7 +32,16 @@ const MONTHS = ["January", "February", "March", "April", "May", "June", "July", 
 
 /** RFC 5545 §3.3.11 TEXT: backslash, semicolon and comma are escaped; newlines become "\n". */
 export function escapeText(value: string): string {
-  return value.replace(/\\/g, "\\\\").replace(/;/g, "\\;").replace(/,/g, "\\,").replace(/\r\n|\r|\n/g, "\\n");
+  return (
+    value
+      .replace(/\\/g, "\\\\")
+      .replace(/;/g, "\\;")
+      .replace(/,/g, "\\,")
+      .replace(/\r\n|\r|\n/g, "\\n")
+      // Every other control or line-separator character (VT, FF, NEL, U+2028, U+2029, tab, DEL) would start a new
+      // line in a parser that splits on them: a space instead (REVIEW-2 #16).
+      .replace(/[\u0000-\u001f\u007f-\u009f\u2028\u2029]/g, " ")
+  );
 }
 
 const encoder = new TextEncoder();

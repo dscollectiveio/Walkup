@@ -3,7 +3,7 @@
 import { useRef } from "react";
 import { usePathname } from "next/navigation";
 import { CircleHelp, LogOut, Menu, X } from "lucide-react";
-import { pageTitleFor } from "./config";
+import { pageTitleFor, type NavRole } from "./config";
 import { setDrawerOpen, useSidebarState } from "./sidebar-state";
 import { START_TOUR_EVENT } from "@/components/tour/app-tour";
 
@@ -40,16 +40,19 @@ export function TopBar({
   userName,
   userEmail,
   signOutAction,
+  role = null,
 }: {
   associationName: string | null;
   userName: string | null;
   userEmail: string;
   signOutAction: () => Promise<void>;
+  /** The viewer's highest role, so the page name matches the sidebar's label. */
+  role?: NavRole | null;
 }) {
   const pathname = usePathname();
   const { phone } = useSidebarState();
   const helpRef = useRef<HTMLDialogElement>(null);
-  const page = pageTitleFor(pathname);
+  const page = pageTitleFor(pathname, role);
   const shownName = userName ?? userEmail;
 
   return (

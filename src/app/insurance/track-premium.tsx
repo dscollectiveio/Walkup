@@ -1,9 +1,10 @@
 "use client";
 
 import { useState, useTransition } from "react";
-import { trackPremiumAsBill } from "./actions";
+import { useRouter } from "next/navigation";
+import { trackPremium } from "./policy-actions";
 
-/** Puts the premium on the bills list so it shows under "Coming up." */
+/** Puts the premium on the bills list, one bill per policy, so it shows under "Coming up" (§6.6, §9.1 item 3). */
 export function TrackPremium({
   policyId,
   categories,
@@ -13,12 +14,13 @@ export function TrackPremium({
   categories: { id: string; name: string }[];
   defaultCategoryId: string | null;
 }) {
+  const router = useRouter();
   const [accountId, setAccountId] = useState(defaultCategoryId ?? "");
   const [pending, start] = useTransition();
   const [done, setDone] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
-  if (done) return <p className="text-[12px] text-good-text">Added to your bills — it&rsquo;ll show under &ldquo;Coming up&rdquo; before it&rsquo;s due.</p>;
+  if (done) return <p className="text-[12px] text-good-text">Added to your bills. It shows under &ldquo;Coming up&rdquo; before it&rsquo;s due.</p>;
 
   return (
     <div className="flex flex-wrap items-end gap-2">
@@ -28,7 +30,7 @@ export function TrackPremium({
           id={`premium-cat-${policyId}`}
           value={accountId}
           onChange={(e) => setAccountId(e.target.value)}
-          className="mt-1 min-h-[40px] rounded-lg border border-line-strong bg-paper px-3 text-[13px] text-ink"
+          className="mt-1 min-h-[44px] rounded-lg border border-line-strong bg-paper px-3 text-[13px] text-ink"
         >
           <option value="">Choose…</option>
           {categories.map((c) => (
@@ -42,12 +44,15 @@ export function TrackPremium({
         onClick={() =>
           start(async () => {
             setError(null);
-            const r = await trackPremiumAsBill(policyId, accountId);
-            if (r.error) setError(r.error);
-            else setDone(true);
+            const r = await trackPremium(policyId, accountId);
+            if ("error" in r) setError(r.error);
+            else {
+              setDone(true);
+              router.refresh();
+            }
           })
         }
-        className="min-h-[40px] rounded-md border border-line-strong bg-paper px-3 text-[12px] font-medium text-ink hover:bg-fill disabled:opacity-50"
+        className="min-h-[44px] rounded-md border border-line-strong bg-paper px-3 text-[13px] font-medium text-ink hover:bg-fill disabled:opacity-50"
       >
         {pending ? "Adding…" : "Track the premium as a bill"}
       </button>

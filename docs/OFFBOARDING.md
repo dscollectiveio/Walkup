@@ -7,7 +7,7 @@ advisor granted access to Walkup's infrastructure. **Currently applicable
 to no one** — Doug Smart is the sole person with access to source code,
 infrastructure dashboards, and credentials (see `docs/SECURITY_POLICY.md`
 §2 and the Access Controls Policy, published at
-walkup-gold.vercel.app/policies/access-controls, §2). This checklist
+www.walkuphoa.com/policies/access-controls, §2). This checklist
 exists so that changes the day someone joins, not the day they leave.
 **Last reviewed:** 2026-09-29.
 
@@ -15,7 +15,7 @@ This is the infrastructure/team side of access. It's a different thing from
 how Walkup removes a board member's or owner's access to their
 association's data inside the app itself — that side is automated
 (`deprovision_stale_access()`, `docs/SECURITY_POLICY.md` §4b, published at
-walkup-gold.vercel.app/policies/access-controls §7) and needs no manual
+www.walkuphoa.com/policies/access-controls §7) and needs no manual
 checklist. This document is for DS Collective's own team, if and when it
 grows beyond one person.
 

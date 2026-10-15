@@ -1,6 +1,6 @@
 // "Right now" tiles for the Where-the-association-stands card. Every tile is
 // either a real figure from the records or an honest nudge to set the thing
-// up — never a placeholder number. Pure, so the wording and thresholds are
+// up, never a placeholder number. Pure, so the wording and thresholds are
 // testable.
 //
 // Four tiles, chosen for what a small self-managed HOA actually gets caught
@@ -25,16 +25,35 @@ export interface SnapshotInput {
   /** Every bank connection that isn't disconnected. */
   bankConnections: { status: string; institutionName: string; lastSyncedAt: string | null }[];
   uncategorizedCount: number;
-  /** Soonest end date among active insurance policies, ISO. */
-  insuranceExpiresOn: string | null;
+  /**
+   * The soonest-ending policy in force (lib/insurance/status): when it ends,
+   * whether it is inside its own renewal_reminder_days, and whether its
+   * renewal is already saved. Null with no active policy.
+   */
+  insuranceRenewal: {
+    policy: { effective_to: string };
+    daysToEnd: number;
+    withinReminder: boolean;
+    renewed?: boolean;
+  } | null;
   /**
    * The next tax or compliance filing (lib/tax/deadlines, via Home's
    * reminders), if any, as an ISO date. May already be past: an overdue
    * deadline keeps showing for a while rather than rolling forward.
    */
   nextFiling: { name: string; dueOn: string; estimated: boolean } | null;
-  /** Contractors the board still uses (not marked "do not use"). */
-  contractors: { w9OnFile: boolean; is1099Exempt: boolean; insuredUntil: string | null }[];
+  /**
+   * Saved contractors not marked "do not use". Archived ones are dropped here;
+   * paperwork only counts for contractors in use (lib/contractors/compliance).
+   */
+  contractors: {
+    w9OnFile: boolean;
+    is1099Exempt: boolean;
+    insuredUntil: string | null;
+    licenseExpiresOn?: string | null;
+    archived?: boolean;
+    inUse?: boolean;
+  }[];
 }
 
 const plural = (n: number, one: string, many = `${one}s`) => `${n} ${n === 1 ? one : many}`;
@@ -94,7 +113,7 @@ export function buildSnapshot(input: SnapshotInput): SnapshotTile[] {
     tiles.push({
       key: "bank",
       label: "Bank",
-      value: broken.length > 0 ? "Linked — one needs attention" : "Linked",
+      value: broken.length > 0 ? "Linked, one needs attention" : "Linked",
       note:
         `${where} · ${syncedWords(newest, todayIso)}` +
         (backlog > 0 ? ` · ${backlog} need a category` : ""),
@@ -104,17 +123,20 @@ export function buildSnapshot(input: SnapshotInput): SnapshotTile[] {
   }
 
   // ---- Insurance renewal ----------------------------------------------------------
-  if (!input.insuranceExpiresOn) {
+  const renewal = input.insuranceRenewal;
+  if (!renewal) {
     tiles.push({ key: "insurance", label: "Insurance", value: null, note: "No active policy recorded", href: "/insurance", tone: "neutral" });
   } else {
-    const days = daysBetween(todayIso, input.insuranceExpiresOn);
+    const endsOn = renewal.policy.effective_to;
+    const days = renewal.daysToEnd;
     tiles.push({
       key: "insurance",
       label: "Insurance renews",
-      value: shortDate(input.insuranceExpiresOn, todayIso),
-      note: days === 0 ? "today" : `in ${plural(days, "day")}`,
+      value: shortDate(endsOn, todayIso),
+      // A renewal already on file: nothing to chase, whatever the date.
+      note: renewal.renewed ? "renewal saved" : days <= 0 ? "today" : `in ${plural(days, "day")}`,
       href: "/insurance",
-      tone: days <= 60 ? "attention" : "neutral",
+      tone: renewal.renewed ? "neutral" : renewal.withinReminder ? "attention" : "neutral",
     });
   }
 
@@ -134,16 +156,20 @@ export function buildSnapshot(input: SnapshotInput): SnapshotTile[] {
   }
 
   // ---- Contractor paperwork -----------------------------------------------------------
-  if (input.contractors.length === 0) {
-    tiles.push({ key: "contractors", label: "Contractors", value: null, note: "None added yet", href: "/contractors", tone: "neutral" });
+  // Archived contractors are history, not paperwork to chase; and a contractor
+  // saved from a search but never hired owes nothing yet (repairs-spec §18.4).
+  const saved = input.contractors.filter((c) => !c.archived);
+  if (saved.length === 0) {
+    tiles.push({ key: "contractors", label: "Contractors", value: null, note: "None added yet", href: "/repairs?view=contractors", tone: "neutral" });
   } else {
-    const missingW9 = input.contractors.filter((c) => !c.w9OnFile && !c.is1099Exempt).length;
-    const lapsed = input.contractors.filter((c) => c.insuredUntil !== null && c.insuredUntil < todayIso).length;
-    const noCoi = input.contractors.filter((c) => c.insuredUntil === null).length;
+    const used = saved.filter((c) => c.inUse !== false);
+    const missingW9 = used.filter((c) => !c.w9OnFile && !c.is1099Exempt).length;
+    const lapsed = used.filter((c) => c.insuredUntil !== null && c.insuredUntil < todayIso).length;
+    const lapsedLicense = used.filter((c) => (c.licenseExpiresOn ?? null) !== null && c.licenseExpiresOn! < todayIso).length;
     const parts = [
       missingW9 > 0 ? `${plural(missingW9, "W-9")} missing` : null,
       lapsed > 0 ? `${plural(lapsed, "insurance certificate")} expired` : null,
-      noCoi > 0 ? `${noCoi} with no insurance on file` : null,
+      lapsedLicense > 0 ? `${plural(lapsedLicense, "license")} expired` : null,
     ].filter((p): p is string => p !== null);
     tiles.push(
       parts.length === 0
@@ -151,16 +177,16 @@ export function buildSnapshot(input: SnapshotInput): SnapshotTile[] {
             key: "contractors",
             label: "Contractor paperwork",
             value: "In order",
-            note: `${plural(input.contractors.length, "contractor")}, all current`,
-            href: "/contractors",
+            note: `${plural(saved.length, "contractor")}, all current`,
+            href: "/repairs?view=contractors",
             tone: "good",
           }
         : {
             key: "contractors",
             label: "Contractor paperwork",
-            value: `${plural(missingW9 + lapsed + noCoi, "gap")}`,
+            value: `${plural(missingW9 + lapsed + lapsedLicense, "gap")}`,
             note: parts.join(" · "),
-            href: "/contractors",
+            href: "/repairs?view=contractors",
             tone: "attention",
           },
     );

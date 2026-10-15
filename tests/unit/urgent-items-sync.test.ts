@@ -8,7 +8,7 @@ const quiet = {
   aging: [],
   vendorsMissingW9: 0,
   nec1099Due: new Date("2027-01-31T00:00:00Z"),
-  insuranceExpiry: null,
+  insuranceRenewal: null,
   bankConnected: true,
   today,
 };

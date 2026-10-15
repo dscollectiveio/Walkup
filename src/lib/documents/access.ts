@@ -1,5 +1,7 @@
 import "server-only";
+import { postgrestIlikeValue } from "@/lib/repairs/search";
 import type { createClient } from "@/lib/supabase/server";
+import { documentError } from "./errors";
 
 type Supabase = Awaited<ReturnType<typeof createClient>>;
 
@@ -93,7 +95,7 @@ export interface DocumentFilters {
 
 /** Association the caller can see. Single-association UI, per DECISIONS #11. */
 export async function currentAssociationId(supabase: Supabase): Promise<string | null> {
-  const { data } = await supabase.from("associations").select("id").limit(1);
+  const { data } = await supabase.from("associations").select("id").order("created_at").order("id").limit(1);
   return data?.[0]?.id ?? null;
 }
 
@@ -132,7 +134,8 @@ export async function listDocuments(
   if (filters.q?.trim()) {
     // Searching the extracted text is the point — a filename-only search is
     // what every shared folder already does badly.
-    const term = `%${filters.q.trim().replace(/[%_]/g, (m) => `\\${m}`)}%`;
+    // Quoted by the shared helper: a comma, bracket or quote in the search words must not add filters.
+    const term = postgrestIlikeValue(filters.q.trim());
     query = query.or(
       `title.ilike.${term},filename.ilike.${term},extracted_text.ilike.${term}`,
     );
@@ -241,6 +244,39 @@ export async function signedUrlFor(
     .from("documents")
     .createSignedUrl(doc.storage_path, 60);
 
-  if (error) return { error: error.message };
+  if (error) return { error: documentError(error) };
   return { url: data.signedUrl, filename: doc.filename };
+}
+
+/**
+ * Signed URLs for images the caller can already see; 10 minutes so a page's
+ * <img> tags load (ticket photo thumbnails, foundation-spec 6.7).
+ *
+ * The rows come from a function that already applied the documents rule
+ * (`ticket_photos()`), and Storage signs only objects the caller may read
+ * (0020's policy asks for a visible documents row), so a path that slipped
+ * through would simply get no URL. Returns document_id -> url; rows Storage
+ * refused are absent, and the caller shows a file chip instead.
+ */
+export async function signedImageUrls(
+  supabase: Supabase,
+  rows: { document_id: string; storage_path: string }[],
+  ttlSeconds = 600,
+): Promise<Map<string, string>> {
+  const urls = new Map<string, string>();
+  if (rows.length === 0) return urls;
+
+  const paths = [...new Set(rows.map((r) => r.storage_path))];
+  const { data, error } = await supabase.storage.from("documents").createSignedUrls(paths, ttlSeconds);
+  if (error || !data) return urls;
+
+  const byPath = new Map<string, string>();
+  for (const item of data) {
+    if (item.path && item.signedUrl && !item.error) byPath.set(item.path, item.signedUrl);
+  }
+  for (const r of rows) {
+    const url = byPath.get(r.storage_path);
+    if (url) urls.set(r.document_id, url);
+  }
+  return urls;
 }

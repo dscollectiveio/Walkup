@@ -18,6 +18,7 @@ import {
   type FilingFiscalYear,
 } from "@/lib/tax/deadlines";
 import { FORM_LABEL } from "@/lib/tax/determine";
+import { coverageShort } from "@/lib/insurance/coverage";
 
 export interface Reminder {
   name: string;
@@ -35,6 +36,8 @@ export interface Reminder {
    * can pick one out without matching display names. Nudges carry none.
    */
   filingKey?: string;
+  /** Where the row's name links, when there is a page for it. */
+  href?: string;
 }
 
 export type ReminderRail = "bad" | "warning" | "neutral";
@@ -189,8 +192,23 @@ export function homeTaxDeadlines(rows: HomeTaxRows): HomeTaxDeadlines {
 // ---- Coming up ----------------------------------------------------------------------
 
 interface ReminderInputs {
-  bills: { name: string; next_due_on: string | null; autopay_arranged: boolean }[];
-  policies: { coverage: string; effective_to: string; renewal_reminder_days?: number | null }[];
+  /** Paused bills (paused_at set) are skipped. */
+  bills: { name: string; next_due_on: string | null; autopay_arranged: boolean; paused_at?: string | null }[];
+  /**
+   * Active and upcoming policies (lib/insurance/status). `renewed` = the
+   * renewal is already saved, so there are no quotes to chase.
+   */
+  policies: { coverage: string; effective_to: string; renewal_reminder_days?: number | null; renewed?: boolean }[];
+  /** Board only: quote requests to the board's insurance contacts (insurance_quote_requests). */
+  quoteRequests?: { contactName: string; followUpOn: string | null; status: string }[];
+  /** Board only: quotes received (insurance_quotes). */
+  quotes?: { carrier: string; validUntil: string | null; declined: boolean; selected: boolean }[];
+  /** Board only: active upkeep tasks (repairs-spec §18.3). */
+  upkeep?: { name: string; next_due_on: string }[];
+  /** Board only: contractor visits on open problems. */
+  visits?: { title: string; reference: number; scheduled_for: string }[];
+  /** Board only: certificate and license expiry dates of contractors in use. */
+  contractorExpiries?: { name: string; kind: "coi" | "license"; date: string }[];
   upcomingChargeDates: string[]; // due_on of open/partial charges after today
   today: Date;
   /**
@@ -216,12 +234,19 @@ export function assembleReminders({
   lastAccessReviewAt,
   taxDeadlines = [],
   contractorsMissingW9 = 0,
+  quoteRequests = [],
+  quotes = [],
+  upkeep = [],
+  visits = [],
+  contractorExpiries = [],
 }: ReminderInputs): Reminder[] {
   const reminders: Reminder[] = [];
   const horizon = new Date(today.getTime() + 120 * 86400000);
+  const asDay = (iso: string) => new Date(`${iso.slice(0, 10)}T00:00:00`);
+  const within = (days: number) => new Date(today.getFullYear(), today.getMonth(), today.getDate() + days);
 
   for (const b of bills) {
-    if (b.autopay_arranged || !b.next_due_on) continue;
+    if (b.autopay_arranged || !b.next_due_on || b.paused_at) continue;
     const due = new Date(`${b.next_due_on}T00:00:00`);
     if (due >= today && due <= horizon) {
       reminders.push({ name: b.name, kind: "Bill to pay by hand", due });
@@ -233,6 +258,7 @@ export function assembleReminders({
       coverage: p.coverage,
       due: new Date(`${p.effective_to}T00:00:00`),
       leadDays: p.renewal_reminder_days ?? 60,
+      renewed: p.renewed === true,
     }))
     .filter((p) => p.due >= today)
     .sort((a, b) => a.due.getTime() - b.due.getTime());
@@ -240,21 +266,88 @@ export function assembleReminders({
   if (nextRenewal) {
     reminders.push({
       name: "Insurance renewal",
-      kind: String(nextRenewal.coverage).replace(/_/g, " "),
+      kind: coverageShort(nextRenewal.coverage),
       due: nextRenewal.due,
+      href: "/insurance",
     });
   }
   // The board's own lead time (renewal_reminder_days, per policy) is when to
-  // start shopping — overdue reads as today, like the access review below.
+  // start shopping; overdue reads as today, like the access review below. A
+  // policy whose renewal is already saved has nothing left to shop for.
   for (const r of renewals) {
+    if (r.renewed) continue;
     const start = new Date(r.due.getFullYear(), r.due.getMonth(), r.due.getDate() - r.leadDays);
     const due = start < today ? today : start;
     if (due > horizon) continue;
-    const kind = r.coverage === "property" ? "master" : String(r.coverage).replace(/_/g, " ");
+    const short = coverageShort(r.coverage);
+    // "master", "D&O", "liability": an acronym keeps its capitals.
+    const kind = r.coverage === "property" ? "master" : /^[A-Z&]+$/.test(short) ? short : short.toLowerCase();
     reminders.push({
       name: "Get insurance quotes",
       kind: `Your ${kind} policy renews on ${formatDueDate(r.due, today)}. This is a good time to get quotes.`,
       due,
+      href: "/insurance?view=quotes&new=1",
+    });
+  }
+
+  // Quote follow-ups and expiries, computed on every render (no cron,
+  // DECISIONS #28). A follow-up date that has passed reads as today.
+  for (const q of quoteRequests) {
+    if (q.status !== "sent" || !q.followUpOn) continue;
+    const on = asDay(q.followUpOn);
+    if (on > horizon) continue;
+    reminders.push({
+      name: `Follow up with ${q.contactName} about your quote`,
+      kind: "Insurance quote request",
+      due: on < today ? today : on,
+      href: "/insurance?view=quotes",
+    });
+  }
+  for (const q of quotes) {
+    if (q.declined || q.selected || !q.validUntil) continue;
+    const ends = asDay(q.validUntil);
+    if (ends < today) continue;
+    // Shown from 7 days before the quote lapses.
+    if (ends > within(7)) continue;
+    reminders.push({
+      name: `${q.carrier} quote expires ${ends.toLocaleDateString("en-US", { month: "short", day: "numeric" })}`,
+      kind: "Insurance quote",
+      due: ends,
+      href: "/insurance?view=quotes",
+    });
+  }
+
+  // Repairs & Upkeep (repairs-spec §18.3). Upkeep keeps an overdue job on its
+  // real date, like a tax filing, rather than rolling it forward.
+  for (const t of upkeep) {
+    const due = asDay(t.next_due_on);
+    if (due > within(60)) continue;
+    reminders.push({
+      name: t.name,
+      kind: "Upkeep",
+      due,
+      ...(due < today ? { overdue: true } : {}),
+      href: "/repairs?view=upkeep",
+    });
+  }
+  for (const v of visits) {
+    const on = asDay(v.scheduled_for);
+    if (on < today || on > within(14)) continue;
+    reminders.push({
+      name: `Contractor visit: ${v.title} (#${v.reference})`,
+      kind: "Repair visit",
+      due: on,
+      href: "/repairs?view=today",
+    });
+  }
+  for (const c of contractorExpiries) {
+    const on = asDay(c.date);
+    if (on < today || on > within(60)) continue;
+    reminders.push({
+      name: c.kind === "coi" ? `${c.name}'s insurance certificate` : `${c.name}'s license`,
+      kind: "Contractor paperwork",
+      due: on,
+      href: "/repairs?view=contractors",
     });
   }
 

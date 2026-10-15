@@ -1,9 +1,13 @@
+import { redirect } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
 import { Card, MoneyOrDash, Restricted, money } from "@/components/ui";
 import { listLinkedDocuments } from "@/lib/documents/access";
 import { EntityDocuments } from "@/app/documents/entity-documents";
 
 export const dynamic = "force-dynamic";
+// Hosts EntityDocuments, whose uploads read the file in after(); give it the
+// full Vercel budget (foundation-spec 5.2).
+export const maxDuration = 300;
 
 export default async function UnitStatementPage({
   params,
@@ -35,6 +39,11 @@ export default async function UnitStatementPage({
   if (!unit) {
     return <Restricted what="this unit's ledger" />;
   }
+
+  // An owner (not a financial reader) who owns this unit has a statement page
+  // of their own (owner-portal-spec 2.4); "not yours" stays Restricted above.
+  const { data: canReadFinancials } = await supabase.rpc("can_read_financials", { assoc: unit.association_id });
+  if (canReadFinancials !== true) redirect(`/owner/statement/${unitId}`);
 
   const [{ data: charges }, { data: payments }, documents, { data: isBoard }] =
     await Promise.all([

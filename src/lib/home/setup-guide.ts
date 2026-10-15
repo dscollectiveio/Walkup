@@ -38,6 +38,9 @@ export interface SetupInputs {
     dues_payee_name: string | null;
     dues_account_number: string | null;
     dues_zelle_handle: string | null;
+    /** Who owners write to (owner-portal 0054); the email is what "done" means. */
+    board_contact_name?: string | null;
+    board_contact_email?: string | null;
   };
   units: { id: string }[];
   unitOwners: { unit_id: string; effective_from: string; effective_to: string | null }[];
@@ -50,6 +53,12 @@ export interface SetupInputs {
   }[];
   myPersonId: string | null;
   inviteCount: number;
+  /** Announcements the board has posted (owner portal). */
+  announcementCount?: number;
+  /** Board only: imports by kind and status (import_batches), for the optional import steps. */
+  importBatches?: { kind: string; status: string }[];
+  /** Board only: email_settings.sending_enabled. */
+  emailSendingEnabled?: boolean;
   bankConnections: { status: string; created_at: string; last_synced_at: string | null }[];
   uncategorizedCount: number;
   postedEntryCount: number;
@@ -58,8 +67,24 @@ export interface SetupInputs {
   taxFilingComputedAt: string | null;
   /** tax_forms rows started for the year the Taxes tab is working on — the return by its fiscal year, 1099s by their payment year. */
   taxFormsStarted: number;
-  policies: { effective_from: string; effective_to: string }[];
-  vendors: { w9_on_file: boolean; w9_received_on: string | null; is_1099_exempt: boolean }[];
+  /** Every policy with its computed status (lib/insurance/status withStatus); "done" means one is active. */
+  policies: { effective_from: string; status: string }[];
+  /** Board only: when the owner summary was last published (insurance_owner_summaries.published_at). */
+  ownerSummaryPublishedAt?: string | null;
+  /** aiConfigured(): the insurance step's wording says whether Walkup reads the declarations. */
+  aiConfigured?: boolean;
+  /** Saved contractors. Archived ones don't count; the W-9 step counts only contractors in use. */
+  vendors: {
+    w9_on_file: boolean;
+    w9_received_on: string | null;
+    is_1099_exempt: boolean;
+    archived_at?: string | null;
+    inUse?: boolean;
+  }[];
+  /** Active upkeep tasks (repairs-spec §18.5). */
+  upkeepTasks?: { id: string }[];
+  /** Facts plus contacts filled in on building_emergency_info(). */
+  emergencyInfo?: { filled: number };
   /** Current, non-deleted documents with their category slug. */
   documents: { category_slug: string | null; uploaded_at: string }[];
 }
@@ -99,7 +124,16 @@ export function buildSetupGuide(input: SetupInputs): SetupSection[] {
   const peopleDone = input.persons.length > 1 && activeOtherGrants.length > 0;
   const latestGrant = activeOtherGrants.map((g) => g.granted_on).sort().at(-1) ?? null;
 
+  // Any invite counts, whether it points at a person already in the list or not.
   const invitesDone = input.inviteCount > 0;
+  const contactDone = Boolean(a.board_contact_email);
+  const contactName = a.board_contact_name?.trim() || null;
+  const announcementCount = input.announcementCount ?? 0;
+  const committed = (kind: string) => (input.importBatches ?? []).some((b) => b.kind === kind && b.status === "committed");
+  const importedUnits = committed("units_owners");
+  const importedOpening = committed("opening_accounts");
+  const importedHistory = committed("transactions");
+  const emailSendingOn = input.emailSendingEnabled === true;
 
   // ---- Finances & Dues ------------------------------------------------
   const activeConnection = input.bankConnections.find((c) => c.status === "active");
@@ -117,17 +151,28 @@ export function buildSetupGuide(input: SetupInputs): SetupSection[] {
   // Either way the board has been through Taxes: saved the year's figures, or
   // started a form under "Your forms".
   const taxDone = input.taxFilingComputedAt !== null || input.taxFormsStarted > 0;
+  // Status, not dates: a renewal recorded early keeps the old policy active
+  // until the new one starts (lib/insurance/status).
   const activePolicy = input.policies
-    .filter((p) => onOrAfter(p.effective_to, today))
+    .filter((p) => p.status === "active")
     .sort((x, y) => x.effective_from.localeCompare(y.effective_from))[0];
   const insuranceDone = Boolean(activePolicy);
+  const ai = input.aiConfigured === true;
+  const ownerSummaryOn = input.ownerSummaryPublishedAt ?? null;
 
   // ---- Building upkeep -----------------------------------------------------
-  const vendorsDone = input.vendors.length > 0;
-  const missingW9 = input.vendors.filter((v) => !v.w9_on_file && !v.is_1099_exempt).length;
-  // Zero contractors is not "every contractor has a W-9" — it's nothing to check yet.
+  const upkeepTasks = input.upkeepTasks ?? [];
+  const upkeepDone = upkeepTasks.length > 0;
+  const emergencyFilled = input.emergencyInfo?.filled ?? 0;
+  const emergencyDone = emergencyFilled >= 2;
+  const savedVendors = input.vendors.filter((v) => !v.archived_at);
+  const vendorsDone = savedVendors.length > 0;
+  // Only contractors the board actually uses owe a W-9 (lib/contractors/compliance).
+  const usedVendors = savedVendors.filter((v) => v.inUse !== false);
+  const missingW9 = usedVendors.filter((v) => !v.w9_on_file && !v.is_1099_exempt).length;
+  // Zero contractors is not "every contractor has a W-9": it's nothing to check yet.
   const w9Done = vendorsDone && missingW9 === 0;
-  const lastW9 = input.vendors
+  const lastW9 = savedVendors
     .map((v) => v.w9_received_on)
     .filter((d): d is string => d !== null)
     .sort()
@@ -156,16 +201,43 @@ export function buildSetupGuide(input: SetupInputs): SetupSection[] {
           ],
         },
         {
+          key: "board_contact",
+          name: "Say who owners should write to",
+          detail: contactDone
+            ? `Owners see ${contactName ?? "your board contact"} on their home page.`
+            : "A name and an email, so owners know who to ask.",
+          href: "/building#contact",
+          done: contactDone,
+          doneOn: null,
+          instructions: [
+            "On Building Info, open the association profile and fill in Who owners write to.",
+            "Owners see it on their home page and your reminder emails reply to it.",
+          ],
+        },
+        {
+          key: "import_units",
+          name: "Import your units and owners (optional)",
+          detail: importedUnits ? "Imported from a spreadsheet." : "Faster than typing them one at a time.",
+          href: "/building/import",
+          done: importedUnits,
+          doneOn: null,
+          informational: true,
+          instructions: [
+            "On Building Info, open Import from a spreadsheet and download the template.",
+            "Fill it in, upload it, check the preview, and import.",
+          ],
+        },
+        {
           key: "units",
           name: "Add every unit",
           detail: unitsDone
             ? `${input.units.length} unit${input.units.length === 1 ? "" : "s"} on file.`
-            : "Dues, balances and tickets are all tracked per unit.",
+            : "Add your units, or import them from a spreadsheet.",
           href: "/building",
           done: unitsDone,
           doneOn: null,
           instructions: [
-            "On Building Info, use “Add a unit” once per unit — label them the way owners say them (“Unit 2”, “Garden”).",
+            "On Building Info, use “Add a unit” once per unit. Label them the way owners say them (“Unit 2”, “Garden”).",
             "Get the count right now; adding one later is easy, but every dues charge is per unit.",
           ],
         },
@@ -178,7 +250,7 @@ export function buildSetupGuide(input: SetupInputs): SetupSection[] {
           doneOn: ownersDone ? latestOwnerFrom : null,
           instructions: [
             "Add each owner under People first, then assign them to their unit under Ownership.",
-            "Owners don't need a login — a name and email is enough to keep the records straight.",
+            "Owners don't need a login. A name and email is enough to keep the records straight.",
           ],
         },
         {
@@ -189,7 +261,7 @@ export function buildSetupGuide(input: SetupInputs): SetupSection[] {
           done: peopleDone,
           doneOn: peopleDone ? latestGrant : null,
           instructions: [
-            "Add board members under People and tick their role — Board member sees everything, Board admin can also edit.",
+            "Add board members under People and tick their role. Board member sees everything, Board admin can also edit.",
             "An accountant's access expires on its own after 90 days.",
           ],
         },
@@ -201,9 +273,19 @@ export function buildSetupGuide(input: SetupInputs): SetupSection[] {
           done: invitesDone,
           doneOn: null,
           instructions: [
-            "Under Invites, generate a link for the role you want and send it yourself — Walkup never emails on your behalf.",
+            "On Building Info, press “Invite to sign in” next to a person, or generate a link under Invites. Send it yourself: Walkup does not email invites.",
             "Everyone who signs in must set up two-factor authentication on first login.",
           ],
+        },
+        {
+          key: "first_announcement",
+          name: "Post a welcome note",
+          detail: announcementCount > 0 ? "Owners can read what you posted." : "Owners see announcements on their home page.",
+          href: "/announcements/new",
+          done: announcementCount > 0,
+          doneOn: null,
+          informational: true,
+          instructions: ["Open Announcements, write a short welcome, and post it to everyone."],
         },
       ],
     },
@@ -213,6 +295,19 @@ export function buildSetupGuide(input: SetupInputs): SetupSection[] {
       blurb: "The bank feed is the source of truth. Connect it, post what it reports, and the statements, budget and dues follow.",
       steps: [
         {
+          key: "import_opening",
+          name: "Enter your opening balances (optional)",
+          detail: importedOpening ? "Imported from a spreadsheet." : "Start from where the books stood, in one file.",
+          href: "/building/import",
+          done: importedOpening,
+          doneOn: null,
+          informational: true,
+          instructions: [
+            "On Building Info, open Import from a spreadsheet and choose opening balances.",
+            "Check the preview. Nothing is posted until you press Import.",
+          ],
+        },
+        {
           key: "bank",
           name: "Connect the bank account",
           detail: "Read-only. Walkup can see transactions and can never move money.",
@@ -221,7 +316,7 @@ export function buildSetupGuide(input: SetupInputs): SetupSection[] {
           doneOn: isoDay(activeConnection?.created_at),
           instructions: [
             "On Bank Feed & Transactions, click “Connect a bank account” and sign in through Plaid.",
-            "Your bank password is never seen or stored by Walkup — only a read-only token.",
+            "Your bank password is never seen or stored by Walkup, only a read-only token.",
           ],
         },
         {
@@ -247,14 +342,27 @@ export function buildSetupGuide(input: SetupInputs): SetupSection[] {
           doneOn: null,
           instructions: [
             "Click a recommended category to post that row; “Post all N recommended” does every one your own history backs.",
-            "Deposits from owners are Dues — pick the unit. Transfers between your own accounts are Transfers.",
+            "Deposits from owners are Dues. Pick the unit. Transfers between your own accounts are Transfers.",
             "Anything you save “for later” shows under Ready to post; “Post N saved” finishes it.",
+          ],
+        },
+        {
+          key: "import_history",
+          name: "Import last year's transactions (optional)",
+          detail: importedHistory ? "Imported from a spreadsheet." : "Bring in earlier spending from a bank or accounting export.",
+          href: "/building/import",
+          done: importedHistory,
+          doneOn: null,
+          informational: true,
+          instructions: [
+            "On Building Info, open Import from a spreadsheet and choose transactions.",
+            "Match each category to an account, check the preview, then import. You can undo an import afterwards.",
           ],
         },
         {
           key: "statements",
           name: "Financial statements",
-          detail: "Built automatically from what you post — nothing to set up.",
+          detail: "Built automatically from what you post. Nothing to set up.",
           href: "/financial-statements",
           done: statementsDone,
           doneOn: null,
@@ -270,7 +378,7 @@ export function buildSetupGuide(input: SetupInputs): SetupSection[] {
           doneOn: null,
           instructions: [
             "On Budget, enter an annual amount for each category. Last year's actuals are a fine starting point.",
-            "Add a category if one is missing — it becomes an account you can post to.",
+            "Add a category if one is missing. It becomes an account you can post to.",
           ],
         },
         {
@@ -282,6 +390,19 @@ export function buildSetupGuide(input: SetupInputs): SetupSection[] {
           doneOn: null,
           instructions: [
             "On HOA Dues, fill in “How to pay”. Owners set up bill pay once and it runs on its own.",
+          ],
+        },
+        {
+          key: "email_sending",
+          name: "Turn on email from Walkup (optional)",
+          detail: emailSendingOn ? "Sending is on." : "So reminders and statements can go out after you approve them.",
+          href: "/dues/email",
+          done: emailSendingOn,
+          doneOn: null,
+          informational: true,
+          instructions: [
+            "Add the board contact email on Building Info first; replies go there.",
+            "On Email & reminders, turn sending on. Nothing is sent until a board admin approves it.",
           ],
         },
         {
@@ -315,25 +436,42 @@ export function buildSetupGuide(input: SetupInputs): SetupSection[] {
         {
           key: "tax",
           name: "Review Taxes at year end",
-          detail: "Nothing to enter now — the figures come from posted activity.",
+          detail: "Nothing to enter now. The figures come from posted activity.",
           href: "/tax",
           done: taxDone,
           doneOn: isoDay(input.taxFilingComputedAt),
           instructions: [
-            "Now: on Taxes, confirm how each kind of income is classified — once, and Walkup remembers.",
+            "Now: on Taxes, confirm how each kind of income is classified, once, and Walkup remembers.",
             "After the fiscal year closes, start each form under “Your forms,” confirm the figures, and export a packet to sign or to hand your CPA. Walkup never files anything itself.",
           ],
         },
         {
           key: "insurance",
           name: "Record the insurance policy",
-          detail: "Carrier, premium and dates — so the renewal shows up here before the invoice does.",
+          detail: "Carrier, premium and dates, so the renewal shows up here before the invoice does.",
           href: "/insurance",
           done: insuranceDone,
           doneOn: activePolicy?.effective_from ?? null,
+          instructions: ai
+            ? [
+                "On Insurance, upload the declarations pages (or the whole renewal package). Walkup reads each policy and you check the figures before saving.",
+                "No PDF handy? Photos of each page work, or ask your agent to send the declarations.",
+              ]
+            : [
+                "On Insurance, upload your declarations pages to keep them on file, then enter the key figures. It takes about 5 minutes per policy.",
+                "No PDF handy? Ask your agent to send the declarations.",
+              ],
+        },
+        {
+          key: "insurance_owner_summary",
+          name: "Tell owners what the master policy covers",
+          detail: "Publish a short summary of what the master policy covers and what it leaves to owners.",
+          href: "/insurance/owner-summary",
+          done: ownerSummaryOn !== null,
+          doneOn: isoDay(ownerSummaryOn),
           instructions: [
-            "On Insurance, upload the declarations page (usually the first 1–3 pages of the policy). Walkup reads the limits, deductibles and dates, and you check each one before saving.",
-            "No PDF handy? Enter the details by hand instead. One entry per policy — the master policy, liability and D&O are often separate.",
+            "On Insurance, open the owner summary. It starts from the master policy's figures; put it in your own words, then publish.",
+            "Owners see it on their Insurance page, so they know what their own condo policy has to cover.",
           ],
         },
       ],
@@ -344,15 +482,44 @@ export function buildSetupGuide(input: SetupInputs): SetupSection[] {
       blurb: "Who you call, and the paperwork the next board will ask for.",
       steps: [
         {
+          key: "upkeep_schedule",
+          name: "Set up the upkeep schedule",
+          detail: upkeepDone
+            ? `${upkeepTasks.length} job${upkeepTasks.length === 1 ? "" : "s"} on the calendar.`
+            : "Boiler service, gutters, the backflow test: the jobs every building has.",
+          href: "/repairs?view=upkeep",
+          done: upkeepDone,
+          doneOn: null,
+          instructions: [
+            "On Repairs & Upkeep, open Upkeep and choose “Add from the usual checklist”.",
+            "Untick anything your building doesn't have. Each job comes back on its own date.",
+          ],
+        },
+        {
+          key: "emergency_info",
+          name: "Add your building's emergency info",
+          detail:
+            emergencyFilled > 0
+              ? "Owners see it when they report an emergency."
+              : "Where the water shut-off is, the gas company's emergency line, who to call on the board.",
+          href: "/repairs/emergency-info",
+          done: emergencyDone,
+          doneOn: null,
+          instructions: [
+            "Open Repairs & Upkeep, then In an emergency.",
+            "Add what you know. Owners see it in the safety steps when something goes wrong.",
+          ],
+        },
+        {
           key: "vendors",
           name: "Add your contractors",
-          detail: "Plumber, electrician, snow, cleaning — whoever you already pay.",
-          href: "/contractors",
+          detail: "Plumber, electrician, snow, cleaning: whoever you already pay. Or import them from a spreadsheet.",
+          href: "/repairs?view=contractors",
           done: vendorsDone,
           doneOn: null,
           instructions: [
-            "On Contractors, “Add a contractor” with their trade and contact details.",
-            "Note when their insurance certificate expires — you'll be warned before it lapses.",
+            "On Repairs & Upkeep, open Contractors and choose “Add a contractor” with their trade and contact details.",
+            "Note when their insurance certificate expires. You'll be warned before it lapses.",
           ],
         },
         {
@@ -364,12 +531,12 @@ export function buildSetupGuide(input: SetupInputs): SetupSection[] {
               : vendorsDone
                 ? "Everyone who needs one has one on file."
                 : "Needed before a 1099 can be issued in January.",
-          href: "/contractors",
+          href: "/repairs?view=contractors",
           done: w9Done,
           doneOn: w9Done ? (lastW9 ?? null) : null,
           instructions: [
             "Ask each contractor for a signed W-9 and tick “W-9 on file” on their row. Corporations can be marked 1099-exempt.",
-            "Only the last four digits of their tax ID are stored — file the form itself in the Document Hub.",
+            "Only the last four digits of their tax ID are stored. File the form itself in the Document Hub.",
           ],
         },
         {

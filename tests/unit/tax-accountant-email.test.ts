@@ -43,9 +43,9 @@ const TIN_SHAPES = [/\d{2}-\d{7}/, /\d{3}-\d{2}-\d{4}/, /\d{9,}/];
 
 describe("accountantEmail subjects", () => {
   it("names the building, the form and the year per variant", () => {
-    expect(accountantEmail(input()).subject).toBe("2158 N. Damen — Form 1120-H 2026: figures for your review");
-    expect(accountantEmail(input({ variant: "1099" })).subject).toBe("2158 N. Damen — 1099-NEC contractor list for 2026");
-    expect(accountantEmail(input({ variant: "heads_up" })).subject).toBe("2158 N. Damen — what's coming this tax season");
+    expect(accountantEmail(input()).subject).toBe("2158 N. Damen: Form 1120-H 2026: figures for your review");
+    expect(accountantEmail(input({ variant: "1099" })).subject).toBe("2158 N. Damen: 1099-NEC contractor list for 2026");
+    expect(accountantEmail(input({ variant: "heads_up" })).subject).toBe("2158 N. Damen: what's coming this tax season");
   });
 });
 
@@ -57,8 +57,8 @@ describe("accountantEmail 1120h body", () => {
 
   it("carries the five figures, both test percentages, and says nobody has checked them", () => {
     const { body } = accountantEmail(input());
-    expect(body).toContain("Owner fees (exempt function income): $48,000.00 — 97.5% of $49,250.00 gross income (needs 60%)");
-    expect(body).toContain("Spending on the building (exempt function expenditures): $41,000.00 — 96.5% of $42,500.00 total spending (needs 90%)");
+    expect(body).toContain("Owner fees (exempt function income): $48,000.00, 97.5% of $49,250.00 gross income (needs 60%)");
+    expect(body).toContain("Spending on the building (exempt function expenditures): $41,000.00, 96.5% of $42,500.00 total spending (needs 90%)");
     expect(body).toContain("Income that isn't owner fees: $1,250.00 (Laundry Income $900.00, Interest Income $350.00)");
     expect(body).toContain("Nobody has checked them against this year's IRS instructions yet");
     expect(body).toContain("fiscal year January 1, 2026 to December 31, 2026");
@@ -75,7 +75,7 @@ describe("accountantEmail 1120h body", () => {
     );
     // No parameters on file: no estimate, and no number is invented.
     const none = accountantEmail(input({ estimatedTaxCents: null, parameters: null })).body;
-    expect(none).toContain("Walkup's estimate of tax due before any deductions: not available — the rate or specific deduction isn't on file in Walkup");
+    expect(none).toContain("Walkup's estimate of tax due before any deductions: not available. The rate or specific deduction isn't on file in Walkup");
     expect(none).not.toContain("30%");
   });
 
@@ -89,8 +89,8 @@ describe("accountantEmail 1120h body", () => {
     expect(
       accountantEmail(input({ due: { on: "2027-04-15", basis: "verified", citation: "Instructions for Form 1120-H (2025), When To File" } })).body,
     ).toContain("Due date on file: April 15, 2027 (Instructions for Form 1120-H (2025), When To File)");
-    expect(accountantEmail(input()).body).toContain("Due date on file: April 15, 2027 (estimated — please confirm)");
-    expect(accountantEmail(input({ due: { on: null, basis: "none", citation: null } })).body).toContain("Due date: not on file — can you confirm it?");
+    expect(accountantEmail(input()).body).toContain("Due date on file: April 15, 2027 (estimated, please confirm)");
+    expect(accountantEmail(input({ due: { on: null, basis: "none", citation: null } })).body).toContain("Due date: not on file. Can you confirm it?");
   });
 
   it("names every attachment on its own line and explains the card caveat", () => {
@@ -150,13 +150,13 @@ describe("accountantEmail 1099 body", () => {
   it("lists contractors largest first with W-9 status, states the threshold as of the payment year, and asks about IRIS", () => {
     const { body } = accountantEmail(input({ variant: "1099", due: { on: "2027-01-31", basis: "estimated", citation: null } }));
     expect(body).toContain("Here's who 2158 N. Damen Condominium Association paid for services in 2026");
-    expect(body).toContain("- Damen Plumbing: $2,400.00 — W-9 on file: yes\n- Snow Co: $650.00 — W-9 on file: no");
+    expect(body).toContain("- Damen Plumbing: $2,400.00, W-9 on file: yes\n- Snow Co: $650.00, W-9 on file: no");
     expect(body).toContain(
-      "The reporting threshold for payments made in 2026 is $2,000.00 per contractor (not yet checked against this year's instructions) — 1 of the 2 is at or above it.",
+      "The reporting threshold for payments made in 2026 is $2,000.00 per contractor (not yet checked against this year's instructions), and 1 of the 2 is at or above it.",
     );
-    expect(body).toContain("Their TINs are on the W-9s, which I'll send separately — Walkup stores only the last four digits.");
-    expect(body).toContain("Copy A can't be printed from the IRS PDF — should we file through IRIS or do you handle that?");
-    expect(body).toContain("Due date on file: January 31, 2027 (estimated — please confirm)");
+    expect(body).toContain("Their TINs are on the W-9s, which I'll send separately. Walkup stores only the last four digits.");
+    expect(body).toContain("Copy A can't be printed from the IRS PDF. Should we file through IRIS or do you handle that?");
+    expect(body).toContain("Due date on file: January 31, 2027 (estimated, please confirm)");
   });
 
   it("says checked when the threshold is, and asks the CPA when none is on file", () => {
@@ -164,7 +164,7 @@ describe("accountantEmail 1099 body", () => {
       "$2,000.00 per contractor (checked against this year's instructions)",
     );
     const none = accountantEmail(input({ variant: "1099", threshold: null })).body;
-    expect(none).toContain("The reporting threshold for payments made in 2026 isn't on file in Walkup — can you tell us which of these need a 1099?");
+    expect(none).toContain("The reporting threshold for payments made in 2026 isn't on file in Walkup. Can you tell us which of these need a 1099?");
     expect(none).not.toContain("$2,000.00");
   });
 
@@ -198,7 +198,7 @@ describe("accountantEmail heads_up body", () => {
     expect(body).toContain("- Form 1120-H: April 15, 2027 (estimated)");
     expect(body).toContain("- 1099-NEC to contractors: January 31, 2027\n");
     expect(body).not.toContain("January 31, 2027 (estimated)");
-    expect(body).toContain("- Illinois annual report: not on file — can you confirm it?");
+    expect(body).toContain("- Illinois annual report: not on file. Can you confirm it?");
     expect(body).toContain("2 contractors are at or above the 1099 threshold so far (threshold not yet checked against this year's instructions); 1 W-9 still outstanding.");
     expect(body).toContain("We'll send the 1120-H figures by February 14, 2027");
     expect(body).toContain("Nothing on this list has been filed yet.");
@@ -208,8 +208,8 @@ describe("accountantEmail heads_up body", () => {
     expect(accountantEmail(input({ variant: "heads_up", contractors: [] })).body).toContain("- Form 1120-H: April 15, 2027 (estimated)");
     expect(accountantEmail(input({ variant: "heads_up", contractors: [] })).body).toContain("No contractor is at or above the 1099 threshold so far");
     const none = accountantEmail(input({ variant: "heads_up", due: { on: null, basis: "none", citation: null } })).body;
-    expect(none).toContain("- Form 1120-H: not on file — can you confirm it?");
-    expect(none).toContain("We'll send the 1120-H figures once the year's books are closed — can you confirm the due date?");
+    expect(none).toContain("- Form 1120-H: not on file. Can you confirm it?");
+    expect(none).toContain("We'll send the 1120-H figures once the year's books are closed. Can you confirm the due date?");
   });
 });
 

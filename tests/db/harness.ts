@@ -18,8 +18,11 @@ const MIGRATIONS_DIR = path.resolve(import.meta.dirname, "../../supabase/migrati
  * The deliberate consequence: every RLS policy and every trigger can be
  * proven locally, with no Docker and no cloud project, before real data
  * exists anywhere.
+ *
+ * `before`: apply only migration files whose name sorts strictly before it
+ * ("0053" applies 0001 to 0052). Omitted, every migration is applied.
  */
-export async function freshDb(): Promise<PGlite> {
+export async function freshDb(opts: { before?: string } = {}): Promise<PGlite> {
   const db = await PGlite.create({ extensions: { btree_gist } });
 
   await db.exec(`
@@ -67,13 +70,45 @@ export async function freshDb(): Promise<PGlite> {
     -- missing GRANT — otherwise the isolation tests would pass for the wrong
     -- reason and keep passing after someone removed the policy.
     grant usage on schema public to anon, authenticated, service_role;
+    -- Supabase lets these roles resolve names in auth (auth.uid() and
+    -- auth.jwt() are callable; auth.users stays unreadable: no table grant).
+    -- Without it, a SECURITY INVOKER function that calls auth.uid() in its
+    -- body or in dynamic SQL fails here but not in production (0052).
+    grant usage on schema auth to anon, authenticated, service_role;
     alter default privileges in schema public
       grant all on tables to anon, authenticated, service_role;
     alter default privileges in schema public
       grant all on sequences to anon, authenticated, service_role;
+    -- ... and, on a real project, execute on every NEW function in public to
+    -- the same three roles (Supabase's default privileges). A function that a
+    -- migration only revokes from public and anon is therefore still callable
+    -- by authenticated and service_role in production; without this line the
+    -- tests would show it as locked (REVIEW-1 #18). Migrations that mean
+    -- "service only" must revoke from authenticated too, and the tests now
+    -- prove it.
+    alter default privileges in schema public
+      grant execute on functions to anon, authenticated, service_role;
   `);
 
-  for (const file of await migrationFiles()) {
+  const files = await migrationFiles();
+  await applyFiles(db, opts.before === undefined ? files : files.filter((f) => f < opts.before!));
+
+  return db;
+}
+
+/**
+ * Apply, in order, every migration file whose name sorts at or after `from`
+ * ("0053" applies 0053 and anything later). Pairs with
+ * `freshDb({ before: "0053" })` to test a data migration: seed, write the
+ * legacy rows the migration has to repair, then apply the rest.
+ */
+export async function applyMigrations(db: PGlite, opts: { from: string }): Promise<void> {
+  const files = await migrationFiles();
+  await applyFiles(db, files.filter((f) => f >= opts.from));
+}
+
+async function applyFiles(db: PGlite, files: string[]): Promise<void> {
+  for (const file of files) {
     const sql = await readFile(path.join(MIGRATIONS_DIR, file), "utf8");
     try {
       await db.exec(sql);
@@ -81,8 +116,28 @@ export async function freshDb(): Promise<PGlite> {
       throw new Error(`migration ${file} failed: ${(cause as Error).message}`, { cause });
     }
   }
+}
 
-  return db;
+/**
+ * A stand-in for Supabase Storage's `storage.objects`, with only the columns
+ * 0051's functions read (foundation-spec 2.6). Created after the migrations,
+ * so the storage policies they would add are absent, exactly as under plain
+ * PGlite; what it lets a test prove is the SECURITY DEFINER functions'
+ * storage branch (attach_ticket_photo's object check, the pending-upload
+ * count). Rows are written as superuser, the way Storage itself writes them.
+ */
+export async function addStorageStub(db: PGlite): Promise<void> {
+  await db.exec(`
+    create schema if not exists storage;
+    create table storage.objects (
+      id         uuid primary key default gen_random_uuid(),
+      bucket_id  text,
+      name       text,
+      owner_id   text,
+      metadata   jsonb,
+      created_at timestamptz default now()
+    );
+  `);
 }
 
 export async function migrationFiles(): Promise<string[]> {
@@ -112,6 +167,25 @@ export async function asUser<T>(
   } finally {
     await db.exec(`reset role;`);
     await db.exec(`select set_config('request.jwt.claim.sub', '', false);`);
+    await db.exec(`select set_config('request.jwt.claims', '', false);`);
+  }
+}
+
+/**
+ * Run `fn` as a request made with the project's service key (0055): the role is
+ * `service_role` and the JWT carries `role: service_role`, which is what
+ * `email_is_service()` reads. Only the reminder cron and the Resend webhook
+ * ever do this in production.
+ */
+export async function asService<T>(db: PGlite, fn: () => Promise<T>): Promise<T> {
+  const claims = JSON.stringify({ role: "service_role" });
+  await db.exec(`select set_config('request.jwt.claim.sub', '', false);`);
+  await db.exec(`select set_config('request.jwt.claims', '${claims}', false);`);
+  await db.exec(`set role service_role;`);
+  try {
+    return await fn();
+  } finally {
+    await db.exec(`reset role;`);
     await db.exec(`select set_config('request.jwt.claims', '', false);`);
   }
 }
