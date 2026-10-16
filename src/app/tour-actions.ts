@@ -11,5 +11,9 @@ export async function completeTour(): Promise<void> {
   const supabase = await createClient();
   const { data } = await supabase.auth.getUser();
   if (!data.user || data.user.user_metadata?.tour_completed_at) return;
-  await supabase.auth.updateUser({ data: { tour_completed_at: new Date().toISOString() } });
+  const { error } = await supabase.auth.updateUser({ data: { tour_completed_at: new Date().toISOString() } });
+  // The layout reads user metadata from the access token's claims, which only
+  // pick up the change on the next token; refresh now so a reload doesn't
+  // start the tour again.
+  if (!error) await supabase.auth.refreshSession();
 }

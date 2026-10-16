@@ -43,7 +43,7 @@ export function Standing({
     <section
       className={`flex flex-col rounded-xl border border-line bg-paper `}
     >
-      <header className="flex min-h-[4.75rem] flex-col justify-center rounded-t-[7px] bg-ink px-5 py-4">
+      <header className="flex min-h-[4.75rem] flex-col justify-center rounded-t-[7px] band bg-ink px-5 py-4">
         <div className="flex items-center justify-between gap-3">
           <div>
             <h2 className="eyebrow text-paper">Where the association stands</h2>

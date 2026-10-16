@@ -2,7 +2,7 @@ import type { Metadata } from "next";
 import { Outfit } from "next/font/google";
 import { SITE_URL } from "@/lib/site-config";
 import "./globals.css";
-import { createClient } from "@/lib/supabase/server";
+import { createClient, sessionUser } from "@/lib/supabase/server";
 import { signOut } from "./login/actions";
 import Link from "next/link";
 import { Sidebar } from "@/components/sidebar/sidebar";
@@ -49,19 +49,13 @@ export default async function RootLayout({
   const sidebarMode: "expanded" | "rail" =
     jar.get("walkup.sidebar")?.value === "rail" || jar.get("sidebar")?.value === "collapsed" ? "rail" : "expanded";
 
-  // getSession(), not getUser(), deliberately — unlike src/lib/supabase/server.ts's
-  // getUser() (used everywhere auth actually gates something), this layout
-  // never gates access itself; proxy.ts's middleware already ran a real,
-  // network-verified getUser() for this exact request moments ago and would
-  // have redirected an invalid session before this layout ever rendered. A
-  // second network round-trip here to re-verify what middleware just verified
-  // was pure duplicated latency on every single navigation. getSession() reads
-  // the already-refreshed cookie locally — no network call — which is safe
-  // here specifically because middleware is the real gate, not this display.
-  const {
-    data: { session },
-  } = await supabase.auth.getSession();
-  const user = session?.user ?? null;
+  // getClaims(), not getUser(): this layout never gates access itself (proxy.ts
+  // already verified this request), so a second network round-trip to the auth
+  // server would be pure latency on every navigation. getClaims verifies the
+  // token's signature locally, so unlike getSession() what it returns can be
+  // trusted, and Supabase stops logging its insecure-session warning.
+  const { data: claimsData } = await supabase.auth.getClaims();
+  const user = sessionUser(claimsData?.claims);
 
   // Whether this page gets the frame is decided in the browser (AppFrame), not
   // here: a server redirect after sign-in renders this layout with the old path.

@@ -18,11 +18,11 @@ export default async function OwnerProfilePage() {
 
   const [personRes, sessionRes, units] = await Promise.all([
     supabase.from("persons").select("phone, mailing_address").eq("id", viewer.personId).limit(1),
-    supabase.auth.getSession(),
+    supabase.auth.getClaims(),
     loadOwnedUnits(supabase, viewer),
   ]);
   const person = personRes.data?.[0] as { phone: string | null; mailing_address: string | null } | undefined;
-  const email = sessionRes.data.session?.user.email ?? "";
+  const email = sessionRes.data?.claims?.email ?? "";
 
   return (
     <div className="mx-auto w-full max-w-[640px] space-y-6">

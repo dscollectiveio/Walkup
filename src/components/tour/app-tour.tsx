@@ -185,7 +185,7 @@ export function AppTour({
         className="absolute w-[min(20rem,calc(100vw-2rem))] overflow-hidden rounded-xl border border-line bg-paper text-ink shadow-2xl transition-[left,top] duration-200 motion-reduce:transition-none"
         style={cardStyle}
       >
-        <div className="bg-ink px-5 py-3">
+        <div className="band bg-ink px-5 py-3">
           <p className="text-[11px] font-medium uppercase tracking-[0.08em] text-ondark-mute">
             {index + 1} of {steps.length}
           </p>

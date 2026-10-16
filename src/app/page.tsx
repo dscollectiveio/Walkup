@@ -13,7 +13,7 @@ import {
 import { Greeting } from "@/components/home/greeting";
 import { SetupGuidePanel } from "@/components/home/setup-guide-panel";
 import { cashByMonth } from "@/lib/money/cash";
-import { todayIso as localIso } from "@/lib/dates";
+import { buildingTodayIso, todayIso as localIso } from "@/lib/dates";
 import { defaultContractorYear, parametersAsOf } from "@/app/tax/data";
 import { buildSnapshot } from "@/lib/home/snapshot";
 import { spendByAccount } from "@/lib/money/spending";
@@ -21,6 +21,8 @@ import { monthKey, monthKeyOf, monthsBetween } from "@/lib/money/months";
 import { buildPlanRows, overBudgetAlerts } from "@/lib/money/plan";
 import { dateOfKey, monthLongLabel, monthShortLabel } from "@/lib/money/months";
 import { WorthAMinute } from "@/components/home/worth-a-minute";
+import { AnnouncementsStrip } from "@/components/home/announcements-strip";
+import { loadAnnouncements } from "@/lib/owner/load";
 import { Standing } from "@/components/home/standing";
 import { YourList, type ManualTask } from "@/components/home/your-list";
 import {
@@ -398,10 +400,12 @@ export default async function HomePage() {
   ]);
   const isBoard = isBoardRes === true;
   const canReadFinancials = canReadFinancialsRes === true;
-  const [board, finance, email] = await Promise.all([
+  const buildingToday = buildingTodayIso();
+  const [board, finance, email, notices] = await Promise.all([
     isBoard ? loadBoardHome(supabase, association.id) : Promise.resolve(null),
     canReadFinancials ? loadRepairsHome(supabase, todayLocal) : Promise.resolve(null),
     isAdmin === true ? loadEmailHealth(supabase) : Promise.resolve(null),
+    loadAnnouncements(supabase, buildingToday, 6),
   ]);
 
   // Contractors: in use = on an open problem, the usual contractor on an
@@ -750,6 +754,10 @@ export default async function HomePage() {
         hour={hour}
         books={booksVisible ? { visible: true, balanced: booksBalanced } : null}
       />
+
+      {notices ? (
+        <AnnouncementsStrip rows={notices.rows} unread={notices.unread} todayIso={buildingToday} canPost={isBoard} />
+      ) : null}
 
       <WorthAMinute
         items={urgent}

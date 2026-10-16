@@ -12,8 +12,8 @@ import { primeServerMode, setDrawerOpen, setSidebarMode, useSidebarState, type S
 /** Badge colour by what it counts: rust for bank work waiting, gold for repairs to look at. */
 const BADGE_TONE: Record<string, { number: string; dot: string }> = {
   uncategorized: { number: "bg-rust text-paper", dot: "bg-rust" },
-  repairs: { number: "bg-brass text-ink", dot: "bg-brass" },
-  announcements: { number: "bg-brass text-ink", dot: "bg-brass" },
+  repairs: { number: "bg-brass text-on-brass", dot: "bg-brass" },
+  announcements: { number: "bg-brass text-on-brass", dot: "bg-brass" },
 };
 
 /** How long the content takes to fade out before the layout swaps. */
@@ -218,7 +218,7 @@ export function Sidebar({
             read as one bar across the top. It collapses with the sidebar. Its
             navy never fades — only what's on it does — so no white shows
             through while the sidebar slides. */}
-        <div className="relative -mr-px h-[56px] shrink-0 bg-ink text-paper">
+        <div className="relative -mr-px h-[56px] shrink-0 band bg-ink text-paper">
         <div className={`flex h-full items-center ${expanded ? "gap-3 px-4" : "justify-center"} ${fade}`}>
           <Link href="/" aria-label="Walkup home" className="flex min-w-0 items-center gap-3">
             <WalkupMark variant="tile" size={32} className="shrink-0" title={expanded ? "" : "Walkup"} />

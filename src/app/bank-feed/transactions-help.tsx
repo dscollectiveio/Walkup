@@ -55,7 +55,7 @@ export function TransactionsHelp() {
         }}
         className="m-auto w-[min(32rem,calc(100vw-2rem))] rounded-xl border border-line bg-paper p-0 text-ink shadow-xl backdrop:bg-ink/40"
       >
-        <header className="flex items-start justify-between gap-4 rounded-t-xl bg-ink px-5 py-4">
+        <header className="flex items-start justify-between gap-4 rounded-t-xl band bg-ink px-5 py-4">
           <div>
             <h2 id="transactions-help-title" className="font-bold tracking-tight text-paper">
               How to categorize transactions

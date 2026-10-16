@@ -56,7 +56,7 @@ export function TopBar({
   const shownName = userName ?? userEmail;
 
   return (
-    <header className="sticky top-0 z-20 flex h-[56px] items-center gap-3 bg-ink px-4 text-paper min-[900px]:px-6">
+    <header className="sticky top-0 z-20 flex h-[56px] items-center gap-3 band bg-ink px-4 text-paper min-[900px]:px-6">
       {phone ? (
         <button
           type="button"
@@ -115,7 +115,7 @@ export function TopBar({
         }}
         className="m-auto w-[min(32rem,calc(100vw-2rem))] rounded-xl border border-line bg-paper p-0 text-ink shadow-xl backdrop:bg-ink-deep/40"
       >
-        <div className="flex items-start justify-between gap-4 rounded-t-[11px] bg-ink px-5 py-4">
+        <div className="flex items-start justify-between gap-4 rounded-t-[11px] band bg-ink px-5 py-4">
           <div>
             <h2 id="help-title" className="eyebrow text-paper">
               How Walkup works

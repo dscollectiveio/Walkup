@@ -49,7 +49,7 @@ export function UnsubscribeForm({ token, associationName, initial }: { token: st
       <button
         type="submit"
         disabled={pending}
-        className="inline-flex min-h-[48px] w-full items-center justify-center rounded-lg bg-[#1B2A41] px-4 text-[15px] font-semibold text-white hover:bg-[#283B5A] disabled:opacity-60"
+        className="inline-flex min-h-[48px] w-full items-center justify-center rounded-lg bg-ink px-4 text-[15px] font-semibold text-paper hover:bg-ink-mid disabled:opacity-60"
       >
         {pending ? "Saving..." : "Save"}
       </button>

@@ -39,7 +39,7 @@ export function WaitlistForm() {
         <button
           type="submit"
           disabled={pending}
-          className="min-h-[44px] rounded-md bg-[#1B2A41] px-4 text-[14px] font-semibold text-white hover:bg-[#283B5A] disabled:opacity-60"
+          className="min-h-[44px] rounded-md bg-ink px-4 text-[14px] font-semibold text-paper hover:bg-ink-mid disabled:opacity-60"
         >
           {pending ? "Sending…" : "Notify me"}
         </button>

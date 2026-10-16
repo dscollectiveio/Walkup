@@ -22,7 +22,7 @@ export function CollapsibleCard({
   const [open, setOpen] = useState(defaultOpen);
   return (
     <section className="rounded-xl border border-line bg-paper">
-      <header className="rounded-t-[7px] bg-ink px-5 py-4">
+      <header className="rounded-t-[7px] band bg-ink px-5 py-4">
         <div className="flex items-start justify-between gap-3">
           <div className="min-w-0">
             <h2 className="eyebrow text-paper">{title}</h2>

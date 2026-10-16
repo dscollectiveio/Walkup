@@ -42,6 +42,19 @@ export async function createClient() {
 }
 
 /**
+ * The few user fields display code needs, read from verified JWT claims
+ * (supabase.auth.getClaims()). Not for gating anything: use getUser() for that.
+ */
+export type SessionUser = { id: string; email: string; user_metadata: Record<string, unknown> };
+
+export function sessionUser(
+  claims: { sub?: string; email?: string; user_metadata?: Record<string, unknown> } | null | undefined,
+): SessionUser | null {
+  if (!claims?.sub) return null;
+  return { id: claims.sub, email: claims.email ?? "", user_metadata: claims.user_metadata ?? {} };
+}
+
+/**
  * The signed-in user, verified against the auth server.
  *
  * getUser() rather than getSession(): getSession reads the cookie and trusts

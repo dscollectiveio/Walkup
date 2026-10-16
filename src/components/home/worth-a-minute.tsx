@@ -104,7 +104,7 @@ export function WorthAMinute({ items, emptyNote }: { items: UrgentItem[]; emptyN
 
   return (
     <section aria-labelledby="worth-a-minute-title" className="rounded-xl border border-line bg-paper">
-      <header className="flex min-h-[4.75rem] flex-wrap items-center justify-between gap-x-4 gap-y-2 rounded-t-[7px] bg-ink px-5 py-4">
+      <header className="flex min-h-[4.75rem] flex-wrap items-center justify-between gap-x-4 gap-y-2 rounded-t-[7px] band bg-ink px-5 py-4">
         <div className="min-w-0">
           <h2 id="worth-a-minute-title" className="eyebrow text-paper">
             Worth a minute today

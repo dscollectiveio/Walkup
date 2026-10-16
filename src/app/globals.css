@@ -24,6 +24,8 @@
   --w-ink-deep: #111b2c;
   --w-slate: #2d4a7c;
   --w-brass: #d9a441;      /* Walkup gold */
+  --w-on-brass: #1b2a41;   /* text on a gold fill, navy in both themes (7.4:1) */
+  --w-eyebrow: #8a5f12;    /* gold section labels on the landing page, 5.1:1 on cream */
   --w-moss: #2f7a5c;
   --w-rust: #a3432f;      /* Walkup brick */
 
@@ -98,6 +100,7 @@
   --w-ink-deep: #ffffff;
   --w-slate: #8c9bb7;      /* 5.7:1 on surface */
   --w-brass: #d9a441;      /* 6.9:1 on surface */
+  --w-eyebrow: #d9a441;    /* 8.1:1 on the dark ground */
   --w-moss: #86b2a0;       /* 6.8:1 */
   --w-rust: #d0897e;       /* 5.8:1 */
 
@@ -126,8 +129,8 @@
   --w-good-line: #2c4a4d;
   --w-good-text: #c1d7ce;  /* 8.9:1 on its tint */
   --w-warning: #d9a441;
-  --w-warning-tint: #33343d;
-  --w-warning-line: #4f4a47;
+  --w-warning-tint: #3a3427;  /* warmer, so gold callouts read as gold, not grey */
+  --w-warning-line: #5c4d32;
   --w-warning-text: #ecdcc5;
   --w-bad: #d0897e;
   --w-bad-tint: #31273a;
@@ -154,6 +157,20 @@
   --w-shadow-pop: 0 8px 24px rgba(0, 0, 0, 0.5);
 }
 
+/* Navy bands (card headers, the top bar, dialog headers) stay navy in dark
+   mode instead of flipping to a bright cream block. Inside a .band the light
+   roles come back: bg-ink is the band, text-paper is cream text, a bg-paper
+   button is cream with navy text. The band is a lighter, bluer navy than the
+   cards (#1b2a41) so it still reads as a header. Cream on band 9.4:1,
+   ondark-mute on band 6.1:1. */
+[data-theme="dark"] .band {
+  --w-ink: #263c62;
+  --w-ink-mid: #31507f;
+  --w-paper: #f5efe3;
+  --w-ondark-mute: #b8c2d6;
+  --w-bone: #f5efe3;       /* the wordmark on the sidebar's logo band */
+}
+
 @theme inline {
   --font-sans: var(--font-outfit), "Outfit", system-ui, sans-serif;
   --font-serif: var(--font-sans);
@@ -164,6 +181,8 @@
   --color-ink-deep: var(--w-ink-deep);
   --color-slate: var(--w-slate);
   --color-brass: var(--w-brass);
+  --color-on-brass: var(--w-on-brass);
+  --color-eyebrow: var(--w-eyebrow);
   --color-moss: var(--w-moss);
   --color-rust: var(--w-rust);
 

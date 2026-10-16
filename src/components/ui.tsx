@@ -72,7 +72,7 @@ export function Card({
     <section className="rounded-xl border border-line bg-paper">
       <header
         className={
-          navy ? "rounded-t-[7px] bg-ink px-5 py-4" : "border-b border-line px-5 py-4"
+          navy ? "rounded-t-[7px] band bg-ink px-5 py-4" : "border-b border-line px-5 py-4"
         }
       >
         <div className="flex items-start justify-between gap-3">

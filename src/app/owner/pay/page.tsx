@@ -58,7 +58,7 @@ export default async function OwnerPayPage() {
       .in("unit_id", units.map((u) => u.id))
       .order("created_at", { ascending: false })
       .limit(10),
-    supabase.auth.getSession(),
+    supabase.auth.getClaims(),
   ]);
   const a = assocRes.data?.[0] as
     | {
@@ -71,7 +71,7 @@ export default async function OwnerPayPage() {
       }
     | undefined;
   const configured = a ? hasPaymentDetails(a) : false;
-  const myUserId = sessionRes.data.session?.user.id ?? null;
+  const myUserId = sessionRes.data?.claims?.sub ?? null;
   const unitLabel = new Map(units.map((u) => [u.id, u.label]));
   const reports: MyReport[] = ((reportsRes.data ?? []) as unknown as (ReportRow & { reported_by: string })[]).map((r) => ({
     id: r.id,

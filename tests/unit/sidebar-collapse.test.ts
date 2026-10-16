@@ -136,7 +136,7 @@ describe("Sidebar: expanded and rail", () => {
   it("shows the repairs badge in gold, next to the rust bank badge", () => {
     const html = render("expanded", { repairsCount: 4 });
     expect(html).toContain(">4<");
-    expect(html).toContain("bg-brass text-ink");
+    expect(html).toContain("bg-brass text-on-brass");
     expect(html).toContain("bg-rust text-paper");
   });
 

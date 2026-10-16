@@ -22,7 +22,7 @@ export const authInput =
   "mt-1.5 w-full rounded-lg border border-line-strong bg-paper px-3.5 py-2.5 text-[15px] text-ink placeholder:text-mute-soft focus:border-[#1B2A41] focus:outline-none focus:ring-2 focus:ring-[#D9A441]/40";
 export const authLabel = "block text-[13px] font-semibold text-ink";
 export const authButton =
-  "inline-flex min-h-[48px] w-full items-center justify-center rounded-lg bg-[#1B2A41] px-4 text-[15px] font-semibold text-white transition-colors hover:bg-[#283B5A] focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#D9A441] disabled:opacity-60";
+  "inline-flex min-h-[48px] w-full items-center justify-center rounded-lg bg-ink px-4 text-[15px] font-semibold text-paper transition-colors hover:bg-ink-mid focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#D9A441] disabled:opacity-60";
 export const authError = "rounded-lg border border-bad-line bg-bad-tint px-3.5 py-2.5 text-[13px] text-bad-text";
 
 const POINTS = [

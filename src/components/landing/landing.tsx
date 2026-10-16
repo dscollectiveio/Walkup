@@ -15,6 +15,7 @@ import {
   type FaqGroup,
 } from "@/lib/site-config";
 import { WaitlistForm } from "./waitlist-form";
+import { HeroSlideshow } from "./hero-slideshow";
 
 /**
  * The public home page at "/" for anyone not signed in. Signed-in people get
@@ -44,8 +45,9 @@ const primaryBtn =
   "inline-flex min-h-[48px] items-center justify-center rounded-md bg-[#D9A441] px-6 text-[15px] font-semibold text-[#1B2A41] transition-colors hover:bg-[#E4B75B] focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-white";
 const ghostBtn =
   "inline-flex min-h-[48px] items-center justify-center rounded-md border border-white/40 px-6 text-[15px] font-semibold text-white transition-colors hover:bg-white/10";
+// Navy on light, cream on dark: the app's own primary button, so it never sinks into a dark section.
 const navyBtn =
-  "inline-flex min-h-[48px] items-center rounded-md bg-[#1B2A41] px-6 text-[15px] font-semibold text-white hover:bg-[#283B5A]";
+  "inline-flex min-h-[48px] items-center rounded-md bg-ink px-6 text-[15px] font-semibold text-paper hover:bg-ink-mid";
 
 const FEATURES: { title: string; body: string; points: string[] }[] = [
   {
@@ -85,7 +87,7 @@ const FAQ_GROUPS: FaqGroup[] = ["For treasurers", "About Walkup", "Data and secu
 function SectionHeading({ eyebrow, title, intro }: { eyebrow: string; title: string; intro?: string }) {
   return (
     <div className="max-w-2xl">
-      <p className="text-[12px] font-semibold uppercase tracking-[0.12em] text-[#8A5F12]">{eyebrow}</p>
+      <p className="text-[12px] font-semibold uppercase tracking-[0.12em] text-eyebrow">{eyebrow}</p>
       <h2 className="mt-2 text-[28px] font-bold leading-tight tracking-tight text-ink sm:text-[32px]">{title}</h2>
       {intro ? <p className="mt-3 text-[16px] leading-relaxed text-mute">{intro}</p> : null}
     </div>
@@ -97,61 +99,6 @@ function Check() {
     <svg viewBox="0 0 16 16" aria-hidden="true" className="mt-[3px] h-4 w-4 shrink-0 text-good-text">
       <path d="M3 8.5l3 3 7-7" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" />
     </svg>
-  );
-}
-
-/** A small, clearly-labelled example of the Dashboard's first screen. Illustrative figures only. */
-function ExampleDashboard() {
-  const rows = [
-    { name: "Form 1120-H", note: "Federal tax return", days: 184, rail: "bg-line-strong" },
-    { name: "Insurance renewal", note: "Master policy", days: 52, rail: "bg-warning" },
-    { name: "Assessments due from 4 units", note: "Owner fees", days: 18, rail: "bg-bad" },
-  ];
-  return (
-    <div className="relative">
-      <div className="overflow-hidden rounded-xl border border-white/15 bg-white text-[#1B2A41] shadow-2xl">
-        <div className="flex items-center justify-between bg-[#1B2A41] px-4 py-2.5 text-[12px] text-white/80">
-          <span className="font-semibold text-white">Dashboard</span>
-          <span>1420 W. Example St.</span>
-        </div>
-        <div className="space-y-4 p-4">
-          <div className="grid grid-cols-3 gap-2">
-            {[
-              ["Operating", "$18,240"],
-              ["Reserve", "$41,900"],
-              ["Owed to us", "$1,350"],
-            ].map(([k, v]) => (
-              <div key={k} className="rounded-lg border border-[#E3DED3] px-3 py-2">
-                <p className="text-[10px] text-[#5B6475]">{k}</p>
-                <p className="mt-0.5 text-[16px] font-semibold tabular-nums">{v}</p>
-              </div>
-            ))}
-          </div>
-          <div className="rounded-lg border border-[#dcd8cf]">
-            <p className="border-b border-[#dcd8cf] px-3 py-2 text-[11px] font-semibold uppercase tracking-[0.08em] text-[#62677a]">Coming up</p>
-            <ul className="divide-y divide-[#EFE8DA]">
-              {rows.map((r) => (
-                <li key={r.name} className="flex items-center gap-3 px-3 py-2">
-                  <span className="w-[4.25rem] shrink-0 whitespace-nowrap text-right tabular-nums">
-                    <span className="text-[15px] font-semibold">{r.days}</span>
-                    <span className="ml-1 text-[11px] text-[#5B6475]">days</span>
-                  </span>
-                  <span aria-hidden="true" className={`h-7 w-[3px] rounded-full ${r.rail}`} />
-                  <span className="min-w-0">
-                    <span className="block truncate text-[12px] font-medium">{r.name}</span>
-                    <span className="block text-[10px] text-[#62677a]">{r.note}</span>
-                  </span>
-                </li>
-              ))}
-            </ul>
-          </div>
-          <div className="rounded-lg bg-[#e8f3ec] px-3 py-2 text-[12px] text-[#1f6b45]">
-            You&rsquo;re on plan: $2,140 under budget with 9 months gone.
-          </div>
-        </div>
-      </div>
-      <p className="mt-2 text-center text-[11px] text-white/60">Example building, illustrative figures</p>
-    </div>
   );
 }
 
@@ -257,7 +204,7 @@ export function Landing({ nonce }: { nonce?: string }) {
               Free during early access. No card. Read-only bank access. Leave any time with your data.
             </p>
           </div>
-          <ExampleDashboard />
+          <HeroSlideshow />
         </div>
       </section>
 
@@ -330,7 +277,7 @@ export function Landing({ nonce }: { nonce?: string }) {
             ["Set dues and the budget", "Start from last year's numbers. From here, Walkup tells you what needs you each month."],
           ].map(([t, b], i) => (
             <li key={t} className="rounded-xl border border-line bg-paper p-6">
-              <span className="flex h-8 w-8 items-center justify-center rounded-full bg-[#1B2A41] text-[14px] font-bold text-white">{i + 1}</span>
+              <span className="flex h-8 w-8 items-center justify-center rounded-full bg-ink text-[14px] font-bold text-paper">{i + 1}</span>
               <h3 className="mt-4 text-[16px] font-bold text-ink">{t}</h3>
               <p className="mt-2 text-[14px] leading-relaxed text-mute">{b}</p>
             </li>
@@ -361,7 +308,7 @@ export function Landing({ nonce }: { nonce?: string }) {
       <section className="border-t border-line bg-paper">
         <div className="mx-auto max-w-[1100px] px-6 py-20">
           <div className="max-w-2xl">
-            <p className="text-[12px] font-semibold uppercase tracking-[0.12em] text-[#8A5F12]">Why Walkup exists</p>
+            <p className="text-[12px] font-semibold uppercase tracking-[0.12em] text-eyebrow">Why Walkup exists</p>
             <h2 className="mt-2 text-[28px] font-bold leading-tight tracking-tight text-ink sm:text-[32px]">
               Built by a volunteer condo board president in Chicago
             </h2>
