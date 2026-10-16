@@ -75,7 +75,7 @@ export const NAV_GROUPS: NavGroupConfig[] = [
     items: [
       { href: "/bank-feed", label: "Bank Feed & Transactions", icon: Landmark, badgeKey: "uncategorized", tourId: "bank-feed" },
       { href: "/financial-statements", label: "Financial Statements", icon: FileBarChart, tourId: "financial-statements" },
-      { href: "/budget", label: "Budget & spending", icon: BarChart3, badgeKey: "uncategorized", tourId: "budget" },
+      { href: "/budget", label: "Budget & Spending", icon: BarChart3, badgeKey: "uncategorized", tourId: "budget" },
       { href: "/dues", label: "HOA Dues", icon: HandCoins, tourId: "dues" },
     ],
   },
@@ -83,7 +83,7 @@ export const NAV_GROUPS: NavGroupConfig[] = [
     label: "Taxes & Insurance",
     items: [
       { href: "/tax", label: "Taxes", icon: FileText, tourId: "taxes" },
-      { href: "/insurance", label: "Insurance Marketplace", icon: Shield, tourId: "insurance" },
+      { href: "/insurance", label: "Insurance", icon: Shield, tourId: "insurance" },
     ],
   },
   {
@@ -130,14 +130,13 @@ export const OWNER_TRAILING_NAV: NavItemConfig[] = OWNER_SECTIONS[OWNER_SECTIONS
 export type NavRole = "board_admin" | "board_member" | "accountant" | "owner";
 
 /**
- * Board roles shop for insurance there, so it's the Marketplace (brief
- * decision 1 allows the word). Owners land on the published summary ("Building
- * insurance", as the owner navigation names it) and the accountant on a
- * read-only view, where it is just Insurance.
+ * "Insurance" for the board and the accountant (the Marketplace is one tab
+ * inside it); owners land on the published summary, "Building insurance", as
+ * the owner navigation names it.
  */
 export function insuranceNavLabel(role: NavRole | null | undefined): string {
   if (role === "owner") return "Building insurance";
-  return role === "accountant" ? "Insurance" : "Insurance Marketplace";
+  return "Insurance";
 }
 
 /** NAV_GROUPS with the role-dependent labels applied. The routes and tour ids never change. */
@@ -151,19 +150,20 @@ export function navGroupsFor(role: NavRole | null | undefined): NavGroupConfig[]
 
 /**
  * The three runs of navigation for a viewer: owner-only people get the owner
- * navigation, everyone else the board's (plus "My unit" when they own one).
+ * navigation, everyone else the board's. A board member's own unit and
+ * Walkup's billing are reached from the Your account page, not the sidebar.
  */
 export function navFor(
   role: NavRole | null | undefined,
-  opts: { ownsUnit?: boolean } = {},
 ): { ungrouped: NavItemConfig[]; groups: NavGroupConfig[]; trailing: NavItemConfig[] } {
   if (role === "owner") {
     return { ungrouped: OWNER_UNGROUPED_NAV, groups: OWNER_NAV_GROUPS, trailing: OWNER_TRAILING_NAV };
   }
   return {
-    ungrouped: [...UNGROUPED_NAV, ...(opts.ownsUnit ? MY_UNIT_NAV : [])],
+    // "My unit" and Billing live in the Your account page (top-right profile button), not here.
+    ungrouped: UNGROUPED_NAV,
     groups: navGroupsFor(role),
-    trailing: role === "board_admin" ? [...TRAILING_NAV, BILLING_NAV] : TRAILING_NAV,
+    trailing: TRAILING_NAV,
   };
 }
 
@@ -210,6 +210,7 @@ const EXTRA_TITLES: { prefix: string; label: string }[] = [
   { prefix: "/delinquency", label: "Collections" },
   { prefix: "/admin", label: "Admin" },
   { prefix: "/billing", label: "Billing" },
+  { prefix: "/account", label: "Your account" },
   { prefix: "/login", label: "Sign in" },
   { prefix: "/onboarding", label: "Set up" },
 ];
@@ -221,7 +222,7 @@ export function pageTitleFor(pathname: string, role?: NavRole | null): string | 
   const extra = EXTRA_TITLES.find((e) => pathname.startsWith(e.prefix));
   if (extra) return extra.label;
   const owner = navFor("owner");
-  const staff = navFor(role, { ownsUnit: true });
+  const staff = navFor(role);
   const lists = role === "owner" ? [owner, staff] : [staff, owner];
   const all = lists
     .flatMap((n) => [...n.ungrouped, ...n.groups.flatMap((g) => g.items), ...n.trailing])

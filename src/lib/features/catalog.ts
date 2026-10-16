@@ -614,7 +614,7 @@ export const CATEGORIES: Category[] = [
         summary: "Everything about the association and the building in one place.",
         details: [
           "Legal and display name, address with autocomplete, EIN and fiscal year end",
-          "Year built, construction type, stories, and a Street View photo of the building",
+          "Year built, construction type, stories, and a Google map of the building",
           "Details the insurance check and tax pages use, kept in one spot",
         ],
         who: ["board", "accountant"],

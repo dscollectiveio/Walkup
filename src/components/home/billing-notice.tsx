@@ -26,7 +26,7 @@ export function BillingNotice({ copy, canPay }: { copy: BillingCopy; canPay: boo
       </div>
       {canPay && copy.action ? (
         <Link
-          href="/billing"
+          href="/account?tab=billing"
           className="inline-flex min-h-[40px] shrink-0 items-center rounded-md bg-ink px-4 text-[13px] font-medium text-paper hover:bg-ink-mid"
         >
           {copy.action === "manage" ? "Manage billing" : "Choose a plan"}

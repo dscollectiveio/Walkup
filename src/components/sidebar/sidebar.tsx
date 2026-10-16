@@ -113,7 +113,6 @@ export function Sidebar({
   uncategorizedCount,
   repairsCount = 0,
   announcementsCount = 0,
-  ownsUnit = false,
   role = null,
   userEmail,
   initialMode = "expanded",
@@ -125,7 +124,6 @@ export function Sidebar({
   /** Announcements the viewer has not opened (owner-portal-spec 7.2); 0 for anyone with nothing new. */
   announcementsCount?: number;
   /** A board member or accountant who also owns a unit gets a "My unit" item. */
-  ownsUnit?: boolean;
   /** The viewer's highest role, for the role-dependent labels. */
   role?: NavRole | null;
   userEmail: string;
@@ -199,7 +197,7 @@ export function Sidebar({
   }, [pathname]);
 
   const badges = { uncategorized: uncategorizedCount, repairs: repairsCount, announcements: announcementsCount };
-  const nav = navFor(role, { ownsUnit });
+  const nav = navFor(role);
   const navGroups = nav.groups;
   const initials = userEmail.slice(0, 2).toUpperCase();
   const toggle = () => setSidebarMode(state.mode === "expanded" ? "rail" : "expanded");
@@ -287,14 +285,17 @@ export function Sidebar({
         </div>
 
         {!narrow ? (
+          <div className={`border-t border-nav-divider pt-2 ${expanded ? "px-3" : ""}`}>
           <button
             type="button"
             onClick={toggle}
             aria-label={pinned ? "Collapse navigation" : "Expand navigation"}
             aria-expanded={pinned}
             title={pinned ? "Collapse navigation  ( [ )" : "Keep navigation open  ( ] )"}
-            className={`mb-2 flex items-center text-[12px] text-nav-muted transition-colors hover:bg-nav-hover hover:text-nav-text ${
-              expanded ? "mx-3 gap-3 rounded-md px-3 py-2" : "mx-auto h-11 w-11 justify-center rounded-lg"
+            className={`mb-2 flex items-center text-nav-muted transition-colors duration-300 hover:bg-nav-hover hover:text-nav-text ${
+              expanded
+                ? "min-h-[40px] w-full gap-2.5 rounded-md border-l-[3px] border-transparent px-2.5 text-[13px] font-bold"
+                : "mx-auto h-11 w-11 justify-center rounded-lg"
             }`}
           >
             {expanded ? (
@@ -310,6 +311,7 @@ export function Sidebar({
               <PanelLeftOpen size={18} strokeWidth={1.6} aria-hidden="true" />
             )}
           </button>
+          </div>
         ) : null}
 
         <div className={`flex items-center border-t border-nav-divider ${expanded ? "gap-2.5 px-3 py-3" : "flex-col gap-2 py-3"}`}>

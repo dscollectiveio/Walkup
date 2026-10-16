@@ -74,7 +74,7 @@ key is refused anywhere except `VERCEL_ENV=production`.
 - [ ] Set `BILLING_ENABLED=1` and redeploy. (Existing buildings are comped, so
       their board admins see "complimentary access" and no button.)
 - [ ] On `/admin/billing`, end the comp on a test building (or use a fresh
-      sign-up, which gets a 30-day trial).
+      sign-up, which gets a 14-day trial).
 - [ ] As that building's board admin, open `/billing`, Choose a plan, pay with
       Stripe's test card `4242 4242 4242 4242`. Back on `/billing` the plan
       should show within a minute. Check Developers > Webhooks shows 200s.
@@ -113,7 +113,7 @@ key is refused anywhere except `VERCEL_ENV=production`.
 | 1 | Provider | Stripe (hosted Checkout and Portal, no card data on our pages) |
 | 2 | Prices | Tiers by unit count from `PLANS` in `site-config.ts`; above 20 units: "email sales" |
 | 3 | Founding offer | Now "free for the first 25 associations" on the site. Not built as a mechanism: comp each one on /admin/billing, and decide how long it lasts |
-| 4 | Trial | 30 days, no card, starts when a building is created (`0062` trigger, `TRIAL_DAYS`) |
+| 4 | Trial | 14 days, no card, starts when a building is created (`0064` trigger, `TRIAL_DAYS`). Choosing a plan during the trial keeps the free days: Stripe charges when the trial ends |
 | 5 | Early-access buildings | Comped "Early access" with no end date; you can set an end date per building |
 | 6 | Grace period | 14 days after the first failed payment or after a trial or plan ends (`GRACE_DAYS`) |
 | 7 | What read-only pauses | Nothing yet: enforcement is off and not wired into actions |

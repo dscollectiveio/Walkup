@@ -357,8 +357,8 @@ export function AssociationSummary({
               <div className="relative aspect-[2/1] w-full shrink-0 overflow-hidden rounded-lg bg-fill sm:order-last sm:w-[280px]">
                 {/* eslint-disable-next-line @next/next/no-img-element -- same-origin proxy, not a static asset */}
                 <img
-                  src={`/api/building/street-view?a=${encodeURIComponent(address)}`}
-                  alt={`Street view of ${profile.street_address}`}
+                  src={`/api/building/map?a=${encodeURIComponent(address)}`}
+                  alt={`Map of ${profile.street_address}`}
                   onLoad={() => setPhoto("ok")}
                   onError={() => setPhoto("none")}
                   className={`h-full w-full object-cover transition-opacity ${photo === "ok" ? "opacity-100" : "opacity-0"}`}

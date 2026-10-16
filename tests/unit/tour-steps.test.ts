@@ -9,6 +9,8 @@ const navTourIds = new Set(
     .map((i) => i.tourId)
     .filter(Boolean),
 );
+// Top-bar targets: the profile circle.
+navTourIds.add("account");
 
 describe("first-login tour", () => {
   it("gives each role its own stops, welcome first and finish last", () => {
@@ -21,6 +23,7 @@ describe("first-login tour", () => {
       "repairs",
       "insurance",
       "owner-building",
+      "account",
       "finish",
     ]);
     expect(tourStepsFor("accountant").map((s) => s.id)).toEqual([
@@ -30,6 +33,7 @@ describe("first-login tour", () => {
       "taxes",
       "insurance",
       "documents",
+      "account",
       "finish",
     ]);
     const board = tourStepsFor("board_member").map((s) => s.id);
@@ -45,18 +49,22 @@ describe("first-login tour", () => {
     const staffIds = new Set(
       [...UNGROUPED_NAV, ...MY_UNIT_NAV, ...NAV_GROUPS.flatMap((g) => g.items), ...TRAILING_NAV].map((i) => i.tourId),
     );
+    // The top bar's profile circle is a tour stop too, for everyone.
+    staffIds.add("account");
     const ownerIds = new Set(ownerNavItems().map((i) => i.tourId));
+    ownerIds.add("account");
     for (const s of tourStepsFor("owner")) if (s.target) expect(ownerIds.has(s.target), `owner: ${s.target}`).toBe(true);
     for (const role of ["board_admin", "board_member", "accountant"] as const) {
       for (const s of tourStepsFor(role)) if (s.target) expect(staffIds.has(s.target), `${role}: ${s.target}`).toBe(true);
     }
   });
 
-  it("gives the board Announcements right after the dashboard, then My unit", () => {
+  it("gives the board Announcements right after the dashboard, and ends on the account circle", () => {
     const ids = tourStepsFor("board_admin").map((s) => s.id);
     expect(ids[ids.indexOf("dashboard") + 1]).toBe("announcements");
-    expect(ids[ids.indexOf("announcements") + 1]).toBe("my-unit");
-    expect(tourStepsFor("accountant").map((s) => s.id)).not.toContain("my-unit");
+    expect(ids).not.toContain("my-unit");
+    expect(ids[ids.indexOf("finish") - 1]).toBe("account");
+    expect(tourStepsFor("accountant").map((s) => s.id)).toContain("account");
   });
 
   it("describes Collections, statements and the import where the board would look for them", () => {

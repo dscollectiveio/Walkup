@@ -81,8 +81,8 @@ export function billingCopy(facts: BillingFacts | null, ent: Entitlement): Billi
       if (facts?.hasSubscription && facts.subscriptionStatus === "trialing") {
         return {
           label: `${plan} plan`,
-          headline: `${plan} plan, trial until ${billingDate(facts.currentPeriodEnd)}.`,
-          detail: null,
+          headline: `${plan} plan, free until ${billingDate(facts.currentPeriodEnd)}.`,
+          detail: `Your first ${intervalWord(facts.billingInterval)} payment is taken on that date. Cancel before then and nothing is charged.`,
           action: "manage",
           tone: "good",
         };

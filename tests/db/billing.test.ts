@@ -42,7 +42,9 @@ describe("billing (0062): backfill", () => {
     const fresh = await db.query<{ days: number }>(
       `select extract(day from trial_ends_at - now())::int as days from public.billing_accounts where association_id = '33333333-3333-3333-3333-333333333333'`,
     );
-    expect(fresh.rows[0].days).toBeGreaterThanOrEqual(29);
+    // 14 days since 0064 (it was 30 in 0062).
+    expect(fresh.rows[0].days).toBeGreaterThanOrEqual(13);
+    expect(fresh.rows[0].days).toBeLessThanOrEqual(14);
     const freshComps = await db.query(`select 1 from public.billing_comps where association_id = '33333333-3333-3333-3333-333333333333'`);
     expect(freshComps.rows).toHaveLength(0);
     await db.close();

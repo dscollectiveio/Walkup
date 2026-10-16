@@ -17,7 +17,7 @@ export interface OwnerNavGroup {
   items: OwnerNavItem[];
 }
 
-/** What an owner-only person sees, in order: Home, My unit, Building, then Documents and My profile. */
+/** What an owner-only person sees, in order: Home, My unit, Building, then Documents and Your account. */
 export const OWNER_NAV: OwnerNavGroup[] = [
   { label: null, items: [{ href: "/owner", label: "Home", tourId: "dashboard" }] },
   {
@@ -41,7 +41,7 @@ export const OWNER_NAV: OwnerNavGroup[] = [
     label: null,
     items: [
       { href: "/documents", label: "Documents", tourId: "documents" },
-      { href: "/owner/profile", label: "My profile", tourId: "owner-profile" },
+      { href: "/account", label: "Your account", tourId: "owner-profile" },
     ],
   },
 ];

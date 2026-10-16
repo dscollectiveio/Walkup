@@ -46,7 +46,7 @@ const STEPS: Record<string, TourStep> = {
   budget: {
     id: "budget",
     target: "budget",
-    title: "Budget & spending",
+    title: "Budget & Spending",
     body: "Plan vs. spent, biggest category first, so surprises jump out.",
   },
   duesBoard: {
@@ -85,11 +85,17 @@ const STEPS: Record<string, TourStep> = {
     title: "Your building",
     body: "Who to contact, and the shut-offs and numbers to know in an emergency.",
   },
-  myUnit: {
-    id: "my-unit",
-    target: "my-unit",
-    title: "My unit",
-    body: "You own a unit too. This is your balance and your statement, separate from the board's books.",
+  account: {
+    id: "account",
+    target: "account",
+    title: "Your account",
+    body: "The circle at the top right opens your profile, password and sign-in settings. If you own a unit, your own statement is here too, separate from the board's books.",
+  },
+  accountBoard: {
+    id: "account",
+    target: "account",
+    title: "Your account",
+    body: "The circle at the top right opens your profile and password. Your own unit, if you own one, and Walkup's billing are here too.",
   },
   taxes: {
     id: "taxes",
@@ -180,7 +186,6 @@ export function tourStepsFor(role: TourRole, opts: { stateCode?: string | null }
         WELCOME,
         s.dashboard,
         s.announcements,
-        s.myUnit,
         s.bankFeed,
         s.statements,
         s.budget,
@@ -191,10 +196,11 @@ export function tourStepsFor(role: TourRole, opts: { stateCode?: string | null }
         s.repairsBoard,
         s.findContractor,
         s.documents,
+        s.accountBoard,
         role === "board_admin" ? FINISH_ADMIN : FINISH,
       ];
     case "accountant":
-      return [WELCOME, s.statements, s.budget, s.taxes, s.insuranceAccountant, s.documents, FINISH];
+      return [WELCOME, s.statements, s.budget, s.taxes, s.insuranceAccountant, s.documents, s.account, FINISH];
     case "owner":
       return [
         WELCOME,
@@ -205,6 +211,7 @@ export function tourStepsFor(role: TourRole, opts: { stateCode?: string | null }
         s.repairsOwner,
         s.insuranceOwner,
         s.ownerBuilding,
+        s.account,
         FINISH,
       ];
   }

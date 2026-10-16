@@ -70,15 +70,15 @@ describe("Sidebar: expanded and rail", () => {
 
   it("names the current page for the top bar", () => {
     expect(pageTitleFor("/")).toBe("Dashboard");
-    expect(pageTitleFor("/budget")).toBe("Budget & spending");
+    expect(pageTitleFor("/budget")).toBe("Budget & Spending");
     expect(pageTitleFor("/repairs?view=upkeep")).toBe("Repairs & Upkeep");
     expect(pageTitleFor("/units/abc")).toBe("Unit statement");
     expect(pageTitleFor("/nowhere")).toBeNull();
   });
 
   it("names the insurance and repairs sub-pages before their section", () => {
-    expect(pageTitleFor("/insurance")).toBe("Insurance Marketplace");
-    expect(pageTitleFor("/insurance?view=check")).toBe("Insurance Marketplace");
+    expect(pageTitleFor("/insurance")).toBe("Insurance");
+    expect(pageTitleFor("/insurance?view=check")).toBe("Insurance");
     expect(pageTitleFor("/insurance/policies/abc")).toBe("Policy");
     expect(pageTitleFor("/insurance/policies/new")).toBe("Policy");
     expect(pageTitleFor("/insurance/import/abc")).toBe("Import insurance");
@@ -98,9 +98,9 @@ describe("Sidebar: expanded and rail", () => {
     expect(pageTitleFor("/contractors/abc")).toBe("Contractor");
   });
 
-  it("calls it Building insurance for owners, Insurance for the accountant, and the Marketplace for the board", () => {
-    expect(insuranceNavLabel("board_admin")).toBe("Insurance Marketplace");
-    expect(insuranceNavLabel("board_member")).toBe("Insurance Marketplace");
+  it("calls it Building insurance for owners, and Insurance for the board and the accountant", () => {
+    expect(insuranceNavLabel("board_admin")).toBe("Insurance");
+    expect(insuranceNavLabel("board_member")).toBe("Insurance");
     expect(insuranceNavLabel("accountant")).toBe("Insurance");
     expect(insuranceNavLabel("owner")).toBe("Building insurance");
     expect(pageTitleFor("/insurance", "owner")).toBe("Building insurance");
@@ -142,7 +142,7 @@ describe("Sidebar: expanded and rail", () => {
 
   it("gives owner-only people the owner navigation and none of the board's pages", () => {
     const html = render("expanded", { role: "owner" });
-    for (const label of ["Home", "Statement", "How to pay", "Announcements", "Repairs", "Budget", "Your building", "Documents", "My profile"]) {
+    for (const label of ["Home", "Statement", "How to pay", "Announcements", "Repairs", "Budget", "Your building", "Documents", "Your account"]) {
       expect(html, label).toContain(`>${label}<`);
     }
     for (const never of ["Dashboard", "Bank Feed", "Financial Statements", "HOA Dues", "Taxes", "Building Info", "Find a Contractor"]) {
@@ -152,13 +152,14 @@ describe("Sidebar: expanded and rail", () => {
     expect(html).toContain('data-tour="owner-statement"');
   });
 
-  it("gives board and accountant Announcements right under the Dashboard, and My unit only when they own a unit", () => {
+  it("gives board and accountant Announcements right under the Dashboard, and keeps My unit and Billing out of the sidebar", () => {
     const building = navFor("board_admin").groups.find((g) => g.label === "Building")!;
     expect(building.items.map((i) => i.href)).not.toContain("/announcements");
-    expect(navFor("board_member", { ownsUnit: false }).ungrouped.map((i) => i.label)).toEqual(["Dashboard", "Announcements"]);
-    expect(navFor("board_member", { ownsUnit: true }).ungrouped.map((i) => i.label)).toEqual(["Dashboard", "Announcements", "My unit"]);
-    expect(render("expanded", { role: "board_admin", ownsUnit: true })).toContain('data-tour="my-unit"');
-    expect(render("expanded", { role: "board_admin" })).not.toContain('data-tour="my-unit"');
+    expect(navFor("board_member").ungrouped.map((i) => i.label)).toEqual(["Dashboard", "Announcements"]);
+    expect(navFor("board_admin").trailing).toEqual([]);
+    const html = render("expanded", { role: "board_admin" });
+    expect(html).not.toContain('data-tour="my-unit"');
+    expect(html).not.toContain('href="/billing"');
   });
 
   it("shows the announcements count as a badge", () => {

@@ -42,8 +42,8 @@ export const PLAN_TIERS: PlanTier[] = PLANS.map((p, i) => ({
 
 export const MAX_SELF_SERVE_UNITS = 20;
 
-/** Days of free trial a new association gets. Must match 0062's trigger. */
-export const TRIAL_DAYS = 30;
+/** Days of free trial a new association gets. Must match the trigger in 0064_trial_14_days.sql. */
+export const TRIAL_DAYS = 14;
 
 /** Days after a failed payment (or a lapse) during which everything keeps working. */
 export const GRACE_DAYS = 14;

@@ -30,7 +30,7 @@ export default async function EmailPage({ searchParams }: { searchParams: Promis
       <BoardOnly
         what="Email from Walkup"
         why="It is where the board sets up and approves reminders, statements and notices."
-        alternative={{ label: "Choose which emails you get", href: "/owner/profile" }}
+        alternative={{ label: "Choose which emails you get", href: "/account?tab=notifications" }}
       />
     );
   }

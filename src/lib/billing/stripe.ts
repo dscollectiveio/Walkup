@@ -75,14 +75,22 @@ export async function createCheckoutSession(input: {
   customerEmail: string | null;
   successUrl: string;
   cancelUrl: string;
+  /**
+   * When the building's free time ends (its Walkup trial or a comp), so
+   * choosing a plan early keeps the free days: Stripe starts the subscription
+   * as trialing and takes the first payment on this date. Stripe needs it at
+   * least 48 hours ahead; anything sooner is dropped and billing starts now.
+   */
+  freeUntil?: string | null;
 }): Promise<{ id: string; url: string }> {
+  const trialEnd = checkoutTrialEnd(input.freeUntil);
   const s = await stripeRequest<{ id: string; url: string }>("POST", "/checkout/sessions", {
     mode: "subscription",
     line_items: [{ price: input.priceId, quantity: 1 }],
     client_reference_id: input.associationId,
     customer: input.customerId ?? undefined,
     customer_email: input.customerId ? undefined : (input.customerEmail ?? undefined),
-    subscription_data: { metadata: { association_id: input.associationId } },
+    subscription_data: { metadata: { association_id: input.associationId }, trial_end: trialEnd ?? undefined },
     metadata: { association_id: input.associationId },
     allow_promotion_codes: true,
     consent_collection: { terms_of_service: "required" },
@@ -92,6 +100,16 @@ export async function createCheckoutSession(input: {
   });
   if (!s.url) throw new StripeError("Stripe did not return a checkout page.", 502);
   return s;
+}
+
+const HOURS_48 = 48 * 3_600_000;
+
+/** Unix seconds for subscription_data.trial_end, or null when there is no usable free time left. */
+export function checkoutTrialEnd(freeUntil: string | null | undefined, now: Date = new Date()): number | null {
+  if (!freeUntil) return null;
+  const t = Date.parse(/^\d{4}-\d{2}-\d{2}$/.test(freeUntil) ? `${freeUntil}T23:59:59Z` : freeUntil);
+  if (Number.isNaN(t) || t - now.getTime() < HOURS_48 + 3_600_000) return null;
+  return Math.floor(t / 1000);
 }
 
 export async function createPortalSession(input: { customerId: string; returnUrl: string }): Promise<{ url: string }> {
@@ -121,7 +139,7 @@ interface RawSubscription {
   metadata?: Record<string, string>;
   cancel_at_period_end?: boolean;
   current_period_end?: number;
-  items?: { data?: { current_period_end?: number; price?: { id?: string; recurring?: { interval?: string } } }[] };
+  items?: { data?: { id?: string; current_period_end?: number; price?: { id?: string; recurring?: { interval?: string } } }[] };
 }
 
 const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
@@ -150,5 +168,40 @@ export function snapshotSubscription(sub: RawSubscription, env: NodeJS.ProcessEn
 export async function retrieveSubscription(id: string): Promise<SubscriptionSnapshot> {
   if (!/^sub_[A-Za-z0-9]+$/.test(id)) throw new StripeError("Not a subscription id.", 400);
   const sub = await stripeRequest<RawSubscription>("GET", `/subscriptions/${id}`);
+  return snapshotSubscription(sub);
+}
+
+/** The customer's one live subscription, or null. Used to change its billing interval. */
+export async function findLiveSubscription(customerId: string): Promise<(SubscriptionSnapshot & { itemId: string | null }) | null> {
+  if (!/^cus_[A-Za-z0-9]+$/.test(customerId)) throw new StripeError("Not a customer id.", 400);
+  const list = await stripeRequest<{ data?: (RawSubscription & { items?: { data?: { id?: string }[] } })[] }>("GET", "/subscriptions", {
+    customer: customerId,
+    status: "active",
+    limit: 1,
+  });
+  const sub = list.data?.[0];
+  if (!sub) return null;
+  return { ...snapshotSubscription(sub), itemId: sub.items?.data?.[0]?.id ?? null };
+}
+
+/**
+ * Moves a subscription to another price of the same plan (monthly to yearly).
+ * Stripe credits the unused part of the current period and charges the new
+ * price now, in one invoice, and the new period starts today. If the card
+ * fails the switch is refused and nothing changes (error_if_incomplete).
+ */
+export async function switchSubscriptionPrice(subscriptionId: string, itemId: string, priceId: string): Promise<SubscriptionSnapshot> {
+  if (!/^sub_[A-Za-z0-9]+$/.test(subscriptionId) || !/^si_[A-Za-z0-9]+$/.test(itemId)) throw new StripeError("Not a subscription.", 400);
+  const sub = await stripeRequest<RawSubscription>(
+    "POST",
+    `/subscriptions/${subscriptionId}`,
+    {
+      items: [{ id: itemId, price: priceId }],
+      proration_behavior: "always_invoice",
+      billing_cycle_anchor: "now",
+      payment_behavior: "error_if_incomplete",
+    },
+    { idempotencyKey: `switch-${subscriptionId}-${priceId}` },
+  );
   return snapshotSubscription(sub);
 }

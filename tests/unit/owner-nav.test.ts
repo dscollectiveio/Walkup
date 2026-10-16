@@ -13,7 +13,7 @@ describe("owner navigation (owner-portal-spec 7.1)", () => {
   const labels = items.map((i) => i.label);
 
   it("has the pages an owner uses and none of the board's", () => {
-    for (const want of ["Home", "Statement", "How to pay", "Announcements", "Repairs", "Budget", "Building insurance", "Your building", "Documents", "My profile"]) {
+    for (const want of ["Home", "Statement", "How to pay", "Announcements", "Repairs", "Budget", "Building insurance", "Your building", "Documents", "Your account"]) {
       expect(labels).toContain(want);
     }
     for (const never of ["Bank Feed", "Taxes", "HOA Dues", "Building Info", "Ledger", "Delinquency", "Financial Statements", "Contractors"]) {

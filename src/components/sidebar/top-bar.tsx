@@ -1,6 +1,7 @@
 "use client";
 
 import { useRef } from "react";
+import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { CircleHelp, LogOut, Menu, X } from "lucide-react";
 import { pageTitleFor, type NavRole } from "./config";
@@ -54,6 +55,14 @@ export function TopBar({
   const helpRef = useRef<HTMLDialogElement>(null);
   const page = pageTitleFor(pathname, role);
   const shownName = userName ?? userEmail;
+  // Initials for the profile circle: first letters of the first and last name, else the email's first two.
+  const initials = (() => {
+    const parts = (userName ?? "").trim().split(/\s+/).filter(Boolean);
+    if (parts.length >= 2) return (parts[0][0] + parts[parts.length - 1][0]).toUpperCase();
+    if (parts.length === 1) return parts[0].slice(0, 2).toUpperCase();
+    return userEmail.slice(0, 2).toUpperCase();
+  })();
+  const onAccount = pathname === "/account" || pathname.startsWith("/account/") || pathname.startsWith("/billing");
 
   return (
     <header className="sticky top-0 z-20 flex h-[56px] items-center gap-3 band bg-ink px-4 text-paper min-[900px]:px-6">
@@ -89,7 +98,7 @@ export function TopBar({
           type="button"
           onClick={() => helpRef.current?.showModal()}
           data-tour="help"
-          className="inline-flex h-9 items-center gap-1.5 rounded-md border border-ondark-mute/60 px-3 text-[13px] font-medium text-paper hover:bg-ink-mid"
+          className="inline-flex h-9 items-center gap-1.5 px-2 text-[13px] font-medium text-paper underline decoration-paper/50 underline-offset-4 transition-colors duration-300 hover:decoration-paper"
         >
           <CircleHelp size={15} strokeWidth={1.6} aria-hidden="true" />
           <span className="hidden sm:inline">Help</span>
@@ -98,13 +107,25 @@ export function TopBar({
         <form action={signOutAction}>
           <button
             type="submit"
-            className="inline-flex h-9 items-center gap-1.5 rounded-md bg-paper px-3 text-[13px] font-medium text-ink hover:bg-fill"
+            className="inline-flex h-9 items-center gap-1.5 px-2 text-[13px] font-medium text-paper underline decoration-paper/50 underline-offset-4 transition-colors duration-300 hover:decoration-paper"
           >
             <LogOut size={15} strokeWidth={1.6} aria-hidden="true" />
             <span className="hidden sm:inline">Sign out</span>
             <span className="sr-only sm:hidden">Sign out</span>
           </button>
         </form>
+        <Link
+          href="/account"
+          data-tour="account"
+          aria-label="Your account"
+          aria-current={onAccount ? "page" : undefined}
+          title={`Your account (${shownName})`}
+          className={`ml-1 flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-[#D9A441] text-[13px] font-bold text-[#1B2A41] ring-2 transition duration-300 hover:scale-105 hover:brightness-105 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-paper ${
+            onAccount ? "ring-paper" : "ring-transparent"
+          }`}
+        >
+          {initials}
+        </Link>
       </div>
 
       <dialog

@@ -18,7 +18,7 @@ const ROUTES: Array<[string, string]> = [
   ["owner-statement", "/owner/statement"],
   ["owner-pay", "/owner/pay"],
   ["owner-building", "/owner/building"],
-  ["owner-profile", "/owner/profile"],
+  ["owner-profile", "/account"],
   ["announcements", "/announcements"],
 ];
 const SIZES = { phone: VIEWPORTS.phone, desktop: VIEWPORTS.desktop } as const;

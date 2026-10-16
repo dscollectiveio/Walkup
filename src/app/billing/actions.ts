@@ -1,15 +1,17 @@
 "use server";
 
 import { headers } from "next/headers";
+import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
 import { getViewer } from "@/lib/owner/viewer";
 import { SITE_URL } from "@/lib/site-config";
 import { getBilling } from "@/lib/billing/entitlement";
-import { createCheckoutSession, createPortalSession } from "@/lib/billing/stripe";
+import { createCheckoutSession, createPortalSession, findLiveSubscription, switchSubscriptionPrice } from "@/lib/billing/stripe";
 import {
   TOO_MANY_UNITS_MESSAGE,
   billingEnabled,
+  planByKey,
   priceIdFor,
   stripeConfigProblem,
   tierForUnits,
@@ -49,6 +51,17 @@ async function boardAdminBilling() {
   return { viewer, view } as const;
 }
 
+/** The end of the building's free time still to come: the trial, or a comp with an end date. */
+function freeUntil(f: { trialEndsAt: string | null; compActive: boolean; compExpiresOn: string | null }): string | null {
+  const now = Date.now();
+  const ends = [f.trialEndsAt, f.compActive ? f.compExpiresOn : null]
+    .filter((v): v is string => !!v)
+    .map((v) => ({ v, t: Date.parse(/^\d{4}-\d{2}-\d{2}$/.test(v) ? `${v}T23:59:59Z` : v) }))
+    .filter((x) => !Number.isNaN(x.t) && x.t > now)
+    .sort((a, b) => b.t - a.t);
+  return ends[0]?.v ?? null;
+}
+
 export async function startCheckout(_prev: BillingActionState | null, formData: FormData): Promise<BillingActionState> {
   const ctx = await boardAdminBilling();
   if ("error" in ctx) return { error: ctx.error };
@@ -76,8 +89,9 @@ export async function startCheckout(_prev: BillingActionState | null, formData: 
       associationId: viewer.associationId,
       customerId: view.facts.stripeCustomerId,
       customerEmail: email,
-      successUrl: `${base}/billing?checkout=done`,
-      cancelUrl: `${base}/billing?checkout=cancelled`,
+      successUrl: `${base}/account?tab=billing&checkout=done`,
+      cancelUrl: `${base}/account?tab=billing&checkout=cancelled`,
+      freeUntil: freeUntil(view.facts),
     });
     url = session.url;
   } catch (cause) {
@@ -95,11 +109,46 @@ export async function openPortal(): Promise<BillingActionState> {
 
   let url: string;
   try {
-    const session = await createPortalSession({ customerId, returnUrl: `${await origin()}/billing` });
+    const session = await createPortalSession({ customerId, returnUrl: `${await origin()}/account?tab=billing` });
     url = session.url;
   } catch (cause) {
     console.error("[walkup-billing] portal_failed", (cause as { status?: number }).status ?? "-");
     return { error: "Stripe couldn't open the billing page. Try again in a minute." };
   }
   redirect(url);
+}
+
+/**
+ * Monthly to yearly on the same plan, with Stripe crediting the unused part of
+ * the month (see switchSubscriptionPrice). Board admin only. The webhook
+ * (customer.subscription.updated) is what updates Walkup's own record, so the
+ * Billing page catches up within a minute.
+ */
+export async function upgradeToYearly(): Promise<BillingActionState & { ok?: boolean }> {
+  const ctx = await boardAdminBilling();
+  if ("error" in ctx) return { error: ctx.error };
+  const { viewer, view } = ctx;
+  const f = view.facts;
+  if (!f.stripeCustomerId || !f.hasSubscription) return { error: "There's no plan to change yet. Choose a plan first." };
+  if (f.subscriptionStatus !== "active") return { error: "Yearly billing can be chosen once your plan is active." };
+  if (f.billingInterval === "year") return { error: "Your plan is already billed yearly." };
+  if (f.cancelAtPeriodEnd) return { error: "Your plan is set to end. Keep it going first, in Manage billing, then switch to yearly." };
+  const plan = planByKey(f.planKey)?.key;
+  if (!plan) return { error: "We couldn't tell which plan you're on. Email support and we'll sort it out." };
+  const priceId = priceIdFor(plan, "year");
+  if (!priceId) return { error: "Yearly billing isn't set up yet. Nothing has been charged." };
+
+  try {
+    const sub = await findLiveSubscription(f.stripeCustomerId);
+    // The subscription must be this building's own, never trusted from the customer id alone.
+    if (!sub || !sub.itemId) return { error: "We couldn't find your plan at Stripe. Nothing has been charged." };
+    if (sub.associationId && sub.associationId !== viewer.associationId) return { error: "That plan belongs to another building." };
+    if (sub.interval === "year") return { error: "Your plan is already billed yearly." };
+    await switchSubscriptionPrice(sub.id, sub.itemId, priceId);
+  } catch (cause) {
+    console.error("[walkup-billing] upgrade_failed", (cause as { status?: number }).status ?? "-", (cause as { code?: string }).code ?? "-");
+    return { error: "Stripe couldn't switch your plan to yearly. Nothing has changed, and you have not been charged twice. Try again, or use Manage billing." };
+  }
+  revalidatePath("/account");
+  return { ok: true };
 }

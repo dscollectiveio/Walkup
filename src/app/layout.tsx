@@ -67,7 +67,6 @@ export default async function RootLayout({
   let uncategorizedCount = 0;
   let repairsCount = 0;
   let announcementsCount = 0;
-  let ownsUnit = false;
   let stateCode: string | null = null;
   let tourRole: TourRole | null = null;
 
@@ -109,7 +108,6 @@ export default async function RootLayout({
         loadRepairsCount(supabase, associationId, tourRole, (me?.[0]?.id as string | undefined) ?? null, user.id),
       ]);
       announcementsCount = counts.announcements;
-      ownsUnit = counts.ownsUnit;
       repairsCount = repairs;
     }
   }
@@ -135,7 +133,6 @@ export default async function RootLayout({
             uncategorizedCount={uncategorizedCount}
             repairsCount={repairsCount}
             announcementsCount={announcementsCount}
-            ownsUnit={ownsUnit}
             role={tourRole}
             userEmail={user.email ?? ""}
             initialMode={sidebarMode}
