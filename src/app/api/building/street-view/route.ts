@@ -30,13 +30,20 @@ export async function GET() {
   try {
     const meta = await fetch(`${METADATA_URL}?${new URLSearchParams({ location, source: "outdoor", key })}`, { cache: "no-store" });
     const status = meta.ok ? ((await meta.json()) as { status?: string }).status : null;
-    if (status !== "OK") return new NextResponse(null, { status: 404 });
+    if (status !== "OK") {
+      // Reason code only (OK, ZERO_RESULTS, REQUEST_DENIED, ...): never the key or the address.
+      console.error("Street View metadata not OK", { http: meta.status, status });
+      return new NextResponse(null, { status: 404 });
+    }
 
     const image = await fetch(
       `${IMAGE_URL}?${new URLSearchParams({ location, size: "640x320", scale: "2", fov: "80", source: "outdoor", key })}`,
       { cache: "no-store" },
     );
-    if (!image.ok) return new NextResponse(null, { status: 404 });
+    if (!image.ok) {
+      console.error("Street View image request failed", { http: image.status });
+      return new NextResponse(null, { status: 404 });
+    }
     return new NextResponse(await image.arrayBuffer(), {
       headers: {
         "Content-Type": image.headers.get("content-type") ?? "image/jpeg",
