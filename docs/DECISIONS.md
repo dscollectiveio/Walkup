@@ -177,7 +177,7 @@ second layer.
 
 ## 10. Pricing: flat annual, provisional
 
-**Decided:** Doug (deferred), Claude default, 2026-07-28. **Status:** provisional.
+**Decided:** Doug (deferred), Claude default, 2026-07-28. **Status:** superseded by #42 (2026-10-16).
 
 No seat counting, no feature gating built. The only pricing model that would
 change Slice 1 is a tax-season paywall, which needs gating woven in from day
@@ -1948,3 +1948,37 @@ What it does not change: Walkup's fee is Walkup's own revenue and never
 touches an association's books, bank feed, dues or money (#22, #24); a test
 fails if billing code imports any of them. #29's rule that only a board
 member's action posts to the ledger stands.
+
+---
+
+## 42. Subscriptions: how Walkup charges, and who gets it free
+
+**Approved by Doug, 2026-10-16.** Supersedes #10. Built in 0062
+and `src/lib/billing/`; tested end to end in Stripe's sandbox on 2026-10-16.
+
+- **What is billed.** One subscription per association, paid by a board
+  admin on Stripe's hosted pages. Owners never pay Walkup. Tiers by unit count
+  from `PLANS` in `site-config.ts` (2 to 6, 7 to 12, 13 to 20 units), monthly
+  or yearly; above 20 units is "email sales". The tier follows the unit count
+  and changes at renewal, never mid-term. Every plan has every feature.
+- **Trial.** 30 days for a new association, no card. Tracked by Walkup, so a
+  building that never picks a plan never becomes a Stripe customer.
+- **Free access.** A platform admin can comp any association from
+  `/admin/billing`, with a required reason and an optional end date; the
+  history is kept. Every association that existed at launch is comped "Early
+  access" with no end date, and stays free until Doug gives notice.
+- **When payment lapses.** Stripe retries and emails. Walkup shows the board a
+  notice, then allows a 14-day grace period after a failed payment or after a
+  trial or plan ends. After that the building may become read-only, but only
+  once `BILLING_ENFORCE` is on (it is off). Read-only never blocks viewing or
+  downloading records, never affects owners, and never blocks the safety and
+  privacy actions or adding a board member.
+- **Cancelling.** At the end of the paid period, through Stripe's billing page.
+- **Switches.** `BILLING_ENABLED` turns the billing pages and buttons on;
+  public pricing words switch from "free during early access" to the trial
+  only when billing is on and the Stripe key is live (`lib/billing/launch.ts`).
+- **Separate money.** Walkup's fee never touches the association's books,
+  bank feed or dues (#22, #24, #41).
+
+Still open, for Doug: final prices and the founding offer, sales tax (CPA,
+Chicago lease tax), refunds, and the date early-access buildings start paying.

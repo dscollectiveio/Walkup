@@ -24,6 +24,9 @@ import { buildPlanRows, overBudgetAlerts } from "@/lib/money/plan";
 import { dateOfKey, monthLongLabel, monthShortLabel } from "@/lib/money/months";
 import { WorthAMinute } from "@/components/home/worth-a-minute";
 import { AnnouncementsStrip } from "@/components/home/announcements-strip";
+import { BillingNotice } from "@/components/home/billing-notice";
+import { getBilling } from "@/lib/billing/entitlement";
+import { billingNotice } from "@/lib/billing/copy";
 import { loadAnnouncements } from "@/lib/owner/load";
 import { Standing } from "@/components/home/standing";
 import { YourList, type ManualTask } from "@/components/home/your-list";
@@ -427,12 +430,15 @@ export default async function HomePage() {
   ]);
   const isBoard = isBoardRes === true;
   const canReadFinancials = canReadFinancialsRes === true;
-  const [board, finance, email, notices] = await Promise.all([
+  const [board, finance, email, notices, billing] = await Promise.all([
     isBoard ? loadBoardHome(supabase, association.id) : Promise.resolve(null),
     canReadFinancials ? loadRepairsHome(supabase, todayLocal) : Promise.resolve(null),
     isAdmin === true ? loadEmailHealth(supabase) : Promise.resolve(null),
     loadAnnouncements(supabase, buildingToday, 6),
+    // Walkup's own plan: billing_status answers only to the board.
+    isBoard ? getBilling(association.id) : Promise.resolve(null),
   ]);
+  const billingCopyForHome = billing ? billingNotice(billing.facts, billing.entitlement) : null;
 
   // Contractors: in use = on an open problem, the usual contractor on an
   // active upkeep job, or paid in the last year (lib/contractors/compliance).
@@ -821,6 +827,8 @@ export default async function HomePage() {
         books={booksVisible ? { visible: true, balanced: booksBalanced } : null}
       />
 
+
+      {billingCopyForHome ? <BillingNotice copy={billingCopyForHome} canPay={isAdmin === true} /> : null}
 
       {fundsError || totalsError ? (
         <p role="alert" className="rounded-xl border border-bad-line bg-bad-tint px-5 py-3 text-[13px] text-bad-text">

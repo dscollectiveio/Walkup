@@ -26,8 +26,8 @@ Do the steps in order. Test mode first; live mode only after it all works.
 - [ ] Products > create three products with a monthly and a yearly recurring
       price each (current landing prices; change them if you decide otherwise):
       - Starter (2 to 6 units): $19/month, $190/year
-      - Building (7 to 12 units): $35/month, $350/year
-      - Association (13 to 20 units): $55/month, $550/year
+      - Building (7 to 12 units): $39/month, $390/year
+      - Association (13 to 20 units): $59/month, $590/year
       Copy each price id (`price_...`).
 - [ ] Settings > Billing > Customer portal: allow updating the payment method,
       viewing invoices, and cancelling **at end of period**. Do **not** allow

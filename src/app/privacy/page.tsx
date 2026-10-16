@@ -41,7 +41,7 @@ export default function PrivacyPage() {
         Privacy Policy
       </h1>
       <p className="mt-2 text-[13px] text-mute-soft">
-        Last updated 2026-10-14.
+        Last updated 2026-10-16.
       </p>
 
       <p className="mt-6 text-[13px] leading-relaxed text-mute">
@@ -122,6 +122,13 @@ export default function PrivacyPage() {
           tell you when Walkup reaches your state. Email us and we&rsquo;ll
           remove it.
         </p>
+        <p>
+          Your association&rsquo;s plan: when its free trial ends, any
+          complimentary access, and, if a board administrator chooses a paid
+          plan, the details Stripe sends back (listed under &ldquo;Paying for
+          Walkup&rdquo; below). Card and bank account numbers are never among
+          them.
+        </p>
       </Section>
 
       <Section title="Why we collect it">
@@ -129,8 +136,9 @@ export default function PrivacyPage() {
           Solely to provide the service: keeping your association&rsquo;s
           books, tracking dues and expenses, preparing tax figures, and
           showing your board and owners the records they&rsquo;re entitled to
-          see. Nothing collected here is used for advertising, profiling, or
-          sold to anyone.
+          see, and, if your board chooses a paid plan, billing for Walkup.
+          Nothing collected here is used for advertising, profiling, or sold
+          to anyone.
         </p>
       </Section>
 
@@ -141,7 +149,8 @@ export default function PrivacyPage() {
           (bank connections), Anthropic (the AI features described below), Google
           and Photon (contractor search and address lookup, described below) and
           Resend (account emails, and the reminders, statements and notices a board
-          administrator approves). Walkup does not sell data, share it for
+          administrator approves) and Stripe (payment for Walkup&rsquo;s own plan,
+          described below). Walkup does not sell data, share it for
           marketing, or give access to it to any company beyond those named on this
           page.
         </p>
@@ -230,6 +239,32 @@ export default function PrivacyPage() {
           the recipient&rsquo;s name and email address and the text of the
           message, including a statement PDF when one is attached, and tells
           Walkup whether each message was delivered.
+        </p>
+        <p>
+          <strong className="font-semibold text-ink">Paying for Walkup (Stripe).</strong>{" "}
+          If a board administrator chooses a paid plan, payment happens on
+          Stripe&rsquo;s own pages. Walkup sends Stripe the board
+          administrator&rsquo;s sign-in email address, the plan chosen, and your
+          association&rsquo;s Walkup reference number, so the payment can be
+          matched to the right association. The board administrator enters the
+          payment details, and any billing details Stripe asks for, directly with
+          Stripe. Walkup never sees or stores card or bank account numbers.
+          Stripe sends Walkup back only its own reference numbers for the
+          customer and the subscription, the plan and whether it is monthly or
+          yearly, its status, when the current period ends, whether it is set to
+          end, when a payment failed, and when the board administrator agreed to
+          the Terms. Stripe also emails the board administrator receipts and
+          payment notices. Nothing about owners is sent to Stripe, and owners
+          never pay Walkup. Stripe handles payment information under its own{" "}
+          <a
+            href="https://stripe.com/privacy"
+            target="_blank"
+            rel="noopener noreferrer"
+            className="text-ink underline-offset-2 hover:underline"
+          >
+            Privacy Policy
+          </a>
+          .
         </p>
         <p>
           <strong className="font-semibold text-ink">Email from Walkup.</strong>{" "}

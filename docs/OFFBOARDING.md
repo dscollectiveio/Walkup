@@ -31,13 +31,15 @@ independent, and each requires its own multi-factor authentication:
 | Supabase | Own login | Authenticator app |
 | Plaid dashboard | "Sign in with Google" | Inherits the Google account's 2-Step Verification |
 | Anthropic Console | "Sign in with Google" | Inherits the Google account's 2-Step Verification |
+| Stripe | Own login (DS Collective LLC account, Walkup's own subscription fee only) | Two-step login, turned on when the account is created (`docs/billing-setup-checklist.md` step 2) |
 
 No shared logins exist on any of these. No password manager entry is
-shared between people, because there is only one person. Walkup has no
-Stripe account (dues are paid bank-to-bank directly, not through a
-processor) and no Notion workspace (documentation lives in this repository).
-If either of those changes, add a row to the table below the day it does —
-this document should describe what's actually true, not a template.
+shared between people, because there is only one person. Stripe is used
+only to charge Walkup's own subscription fee (DECISIONS #41); dues are still
+paid bank-to-bank directly, never through Stripe or any other processor.
+Walkup has no Notion workspace (documentation lives in this repository). If
+that changes, add a row to the table above the day it does. This document
+should describe what's actually true, not a template.
 
 ## Same-day checklist, for when this becomes applicable
 
@@ -52,16 +54,17 @@ this file.
 | 3 | Remove them from the Supabase organization | Supabase → Organization Settings → Team |
 | 4 | Remove them from the Plaid dashboard team | Plaid → Team Settings |
 | 5 | Remove them from the Anthropic Console organization | Anthropic Console → Settings → Members |
-| 6 | Suspend or remove the shared Google account they used to reach Plaid/Anthropic, if one was ever created for them | Google Account settings |
-| 7 | Rotate every secret they could have read: `SUPABASE_SERVICE_ROLE_KEY`, `PLAID_SECRET`, `CRON_SECRET`, `ANTHROPIC_API_KEY` | Each service's API keys page, then update Vercel environment variables and redeploy |
-| 8 | Revoke any personal access tokens, SSH keys, or deploy keys issued to them | GitHub → Settings → Developer settings; Vercel → Account → Tokens |
-| 9 | If they had access to production association data, revoke any application-level role they held as a Walkup user too (People section, per association) and record it | The association's Building page |
-| 10 | Confirm in each service's own audit or activity log that no session or token tied to them is still active | Each service's activity log |
-| 11 | Note the date and scope of what they had access to below | This file, "Completed offboardings" |
+| 6 | Remove them from the Stripe account's team | Stripe → Settings → Team and security |
+| 7 | Suspend or remove the shared Google account they used to reach Plaid/Anthropic, if one was ever created for them | Google Account settings |
+| 8 | Rotate every secret they could have read: `SUPABASE_SERVICE_ROLE_KEY`, `PLAID_SECRET`, `CRON_SECRET`, `ANTHROPIC_API_KEY`, `STRIPE_SECRET_KEY`, `STRIPE_WEBHOOK_SECRET` | Each service's API keys page (for Stripe, Developers → API keys and Developers → Webhooks), then update Vercel environment variables and redeploy |
+| 9 | Revoke any personal access tokens, SSH keys, or deploy keys issued to them | GitHub → Settings → Developer settings; Vercel → Account → Tokens |
+| 10 | If they had access to production association data, revoke any application-level role they held as a Walkup user too (People section, per association) and record it | The association's Building page |
+| 11 | Confirm in each service's own audit or activity log that no session or token tied to them is still active | Each service's activity log |
+| 12 | Note the date and scope of what they had access to below | This file, "Completed offboardings" |
 
 ## Role change, not departure
 
-Run steps 1–8 for whichever access the new role no longer needs. Leave
+Run steps 1–9 for whichever access the new role no longer needs. Leave
 everything else in place.
 
 ## Contractors
@@ -74,8 +77,8 @@ engagement ends.
 ## Verification
 
 Every 6 months (same cadence as the rest of Walkup's security review),
-confirm the member list on GitHub, Vercel, Supabase, Plaid, and Anthropic
-still shows only Doug Smart. Record the review date here:
+confirm the member list on GitHub, Vercel, Supabase, Plaid, Anthropic and
+Stripe still shows only Doug Smart. Record the review date here:
 
 - 2026-09-29 — confirmed: sole member on all five.
 

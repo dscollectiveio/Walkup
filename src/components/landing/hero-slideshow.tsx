@@ -308,10 +308,10 @@ export function HeroSlideshow() {
                 <div className="hero-stagger p-4">{s.body}</div>
               </div>
               <div className="mt-4 min-h-[3.25rem] text-center">
-                <p className="text-[11px] font-semibold uppercase tracking-[0.12em] text-[#D9A441]">
+                <p className="text-[11px] font-semibold uppercase tracking-[0.12em] text-eyebrow">
                   {i + 1} of {SLIDES.length} · {s.screen}
                 </p>
-                <p className="mt-1 text-[14px] leading-snug text-white/90">{s.caption}</p>
+                <p className="mt-1 text-[14px] leading-snug text-ink">{s.caption}</p>
               </div>
             </div>
           );
@@ -323,7 +323,7 @@ export function HeroSlideshow() {
           type="button"
           onClick={() => go(index - 1)}
           aria-label="Previous example"
-          className="flex h-8 w-8 items-center justify-center rounded-full text-white/70 transition-colors duration-300 hover:bg-white/10 hover:text-white"
+          className="flex h-8 w-8 items-center justify-center rounded-full text-mute transition-colors duration-300 hover:bg-ink/10 hover:text-ink"
         >
           <svg viewBox="0 0 12 12" width="12" height="12" aria-hidden="true">
             <path d="M8 2L4 6l4 4" fill="none" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round" />
@@ -344,7 +344,7 @@ export function HeroSlideshow() {
                 <span
                   aria-hidden="true"
                   className={`relative block h-1.5 overflow-hidden rounded-full transition-all duration-500 ease-out ${
-                    active ? "w-8 bg-white/25" : "w-1.5 bg-white/40 hover:bg-white/70"
+                    active ? "w-8 bg-ink/20" : "w-1.5 bg-ink/30 hover:bg-ink/60"
                   }`}
                 >
                   {active ? (
@@ -364,7 +364,7 @@ export function HeroSlideshow() {
           type="button"
           onClick={() => go(index + 1)}
           aria-label="Next example"
-          className="flex h-8 w-8 items-center justify-center rounded-full text-white/70 transition-colors duration-300 hover:bg-white/10 hover:text-white"
+          className="flex h-8 w-8 items-center justify-center rounded-full text-mute transition-colors duration-300 hover:bg-ink/10 hover:text-ink"
         >
           <svg viewBox="0 0 12 12" width="12" height="12" aria-hidden="true">
             <path d="M4 2l4 4-4 4" fill="none" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round" />
@@ -375,7 +375,7 @@ export function HeroSlideshow() {
           onClick={() => setStopped((v) => !v)}
           aria-label={stopped ? "Play the examples" : "Pause the examples"}
           aria-pressed={stopped}
-          className="ml-1 flex h-8 w-8 items-center justify-center rounded-full text-white/70 transition-colors duration-300 hover:bg-white/10 hover:text-white"
+          className="ml-1 flex h-8 w-8 items-center justify-center rounded-full text-mute transition-colors duration-300 hover:bg-ink/10 hover:text-ink"
         >
           {stopped ? (
             <svg viewBox="0 0 12 12" width="11" height="11" aria-hidden="true">
@@ -389,7 +389,7 @@ export function HeroSlideshow() {
           )}
         </button>
       </div>
-      <p className="relative mt-1 text-center text-[11px] text-white/60">Example building, illustrative figures</p>
+      <p className="relative mt-1 text-center text-[11px] text-mute">Example building, illustrative figures</p>
     </div>
   );
 }

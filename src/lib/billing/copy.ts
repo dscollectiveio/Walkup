@@ -123,3 +123,32 @@ export function billingCopy(facts: BillingFacts | null, ent: Entitlement): Billi
       };
   }
 }
+
+const DAY_MS = 86_400_000;
+
+/**
+ * The Dashboard's billing notice: the same words as the Billing page, but
+ * only when something needs the board soon. A payment problem, a lapsed
+ * plan or read-only always shows; a free trial shows in its last 7 days and
+ * a complimentary period in its last 30. Nothing while billing is off.
+ */
+export function billingNotice(facts: BillingFacts | null, ent: Entitlement, now: Date = new Date()): BillingCopy | null {
+  if (ent.status === "not_enabled") return null;
+  const within = (iso: string | null | undefined, days: number) => {
+    if (!iso) return false;
+    const t = Date.parse(/^\d{4}-\d{2}-\d{2}$/.test(iso) ? `${iso}T23:59:59` : iso);
+    return !Number.isNaN(t) && t - now.getTime() <= days * DAY_MS;
+  };
+  switch (ent.status) {
+    case "past_due":
+    case "grace":
+    case "read_only":
+      return billingCopy(facts, ent);
+    case "trialing":
+      return !facts?.hasSubscription && within(facts?.trialEndsAt, 7) ? billingCopy(facts, ent) : null;
+    case "comped":
+      return within(facts?.compExpiresOn, 30) ? billingCopy(facts, ent) : null;
+    default:
+      return null;
+  }
+}

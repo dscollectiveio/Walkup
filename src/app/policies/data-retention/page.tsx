@@ -113,7 +113,7 @@ export default function DataRetentionPolicyPage() {
           All association and bank data is stored in a single managed Postgres database
           (Supabase), encrypted at rest, and transmitted only over TLS. Walkup does not sell data,
           share it for marketing, or copy it to any system other than its infrastructure
-          and service providers (Supabase, Vercel, Plaid, Anthropic and Resend, and the address and
+          and service providers (Supabase, Vercel, Plaid, Anthropic, Resend and Stripe, and the address and
           contractor lookups named in the Privacy Policy).
         </p>
       </PolicySection>

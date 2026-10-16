@@ -67,8 +67,8 @@ export const operatorName = isPlaceholder(LEGAL_ENTITY) ? "Walkup, operated by D
 
 export const PLANS: { name: string; units: string; month: number; year: number; featured?: boolean }[] = [
   { name: "Starter", units: "2 to 6 units", month: 19, year: 190 },
-  { name: "Building", units: "7 to 12 units", month: 35, year: 350, featured: true },
-  { name: "Association", units: "13 to 20 units", month: 55, year: 550 },
+  { name: "Building", units: "7 to 12 units", month: 39, year: 390, featured: true },
+  { name: "Association", units: "13 to 20 units", month: 59, year: 590 },
 ];
 
 /** Annual plans: two months free (each `year` above is 10 × `month`). */
@@ -86,7 +86,7 @@ export const FAQ: { group: FaqGroup; q: string; a: string }[] = [
   {
     group: "For treasurers",
     q: "What should a small self-managed condo association look for in software?",
-    a: "Look for software built for small, volunteer-run buildings rather than large managed communities. Walkup is built for Illinois condo associations of 2 to 20 units and covers bookkeeping, dues, budgets, financial statements and Form 1120-H prep for a flat $19 to $55 a month.",
+    a: "Look for software built for small, volunteer-run buildings rather than large managed communities. Walkup is built for Illinois condo associations of 2 to 20 units and covers bookkeeping, dues, budgets, financial statements and Form 1120-H prep for a flat $19 to $59 a month.",
   },
   {
     group: "For treasurers",
@@ -132,6 +132,11 @@ export const FAQ: { group: FaqGroup; q: string; a: string }[] = [
   },
   {
     group: "About Walkup",
+    q: "Does Walkup send emails and reports for us?",
+    a: "Walkup prepares them and your board approves them. Dues reminders, late fee notices and owner statements follow rules you switch on, and each batch goes out only after a board admin approves it. The financial report for owners, quote requests to insurance agents and contractors, and notes to your accountant are drafted for you and open in your own email app to send.",
+  },
+  {
+    group: "About Walkup",
     q: "Do owners need an account?",
     a: "Only if you want them to have one. Owners can sign in to see what they owe and report a repair. They never see the association's books.",
   },
@@ -164,10 +169,10 @@ export const FAQ: { group: FaqGroup; q: string; a: string }[] = [
 export const SITE_TITLE = "Walkup: Software for Self-Managed Condo Associations in Illinois";
 export const SITE_DESCRIPTION =
   "Bookkeeping, dues, budgets and Form 1120-H prep for Illinois condo associations of 2 to 20 units. Built for volunteer treasurers. Free during early access.";
-export const SHARE_TITLE = "Run your building's books in 15 minutes a month";
+export const SHARE_TITLE = "Run your condo association in 15 minutes a month";
 export const SHARE_DESCRIPTION =
   "Walkup is software for self-managed Illinois condo associations. Dues, books, budget and taxes in one place. Free during early access.";
-export const SITE_TAGLINE = "Run your building's books in 15 minutes a month.";
+export const SITE_TAGLINE = "Run your condo association in 15 minutes a month.";
 
 /** US states and DC for the "notify me" waitlist. Illinois is left out: it's live. */
 export const WAITLIST_STATES: { code: string; name: string }[] = [

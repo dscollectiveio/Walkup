@@ -46,7 +46,7 @@ export default function SecurityPage() {
         Security &amp; Privacy
       </h1>
       <p className="mt-2 text-[13px] text-mute-soft">
-        Last updated 2026-10-14. Reviewed at least every 6 months, and after
+        Last updated 2026-10-16. Reviewed at least every 6 months, and after
         any incident or new integration.
       </p>
 
@@ -156,11 +156,13 @@ export default function SecurityPage() {
       <Section title="Service providers">
         <p>
           Walkup runs on Supabase (database and authentication), Vercel
-          (hosting), Plaid (bank data) and Resend (email delivery). Each provider publishes its own security documentation:{" "}
+          (hosting), Plaid (bank data), Resend (email delivery) and Stripe
+          (payment for Walkup&rsquo;s own plan). Each provider publishes its own security documentation:{" "}
           <a href="https://supabase.com/security" className="underline underline-offset-2" rel="noopener noreferrer">Supabase</a>,{" "}
           <a href="https://vercel.com/security" className="underline underline-offset-2" rel="noopener noreferrer">Vercel</a>,{" "}
-          <a href="https://plaid.com/safety/" className="underline underline-offset-2" rel="noopener noreferrer">Plaid</a> and{" "}
-          <a href="https://resend.com/security" className="underline underline-offset-2" rel="noopener noreferrer">Resend</a>.
+          <a href="https://plaid.com/safety/" className="underline underline-offset-2" rel="noopener noreferrer">Plaid</a>,{" "}
+          <a href="https://resend.com/security" className="underline underline-offset-2" rel="noopener noreferrer">Resend</a> and{" "}
+          <a href="https://docs.stripe.com/security" className="underline underline-offset-2" rel="noopener noreferrer">Stripe</a>.
           Walkup relies on them for
           infrastructure-level security rather than duplicating it, and
           focuses its own controls on how those services are configured and
@@ -173,6 +175,19 @@ export default function SecurityPage() {
           PDF when one is attached, and reports back whether each message was
           delivered, bounced or was marked as spam. Its sending key is scoped to
           sending only, and it is held in the server&rsquo;s environment.
+        </p>
+        <p className="mt-3">
+          Stripe takes payment for Walkup&rsquo;s own plan, on Stripe&rsquo;s
+          own pages, when a board administrator chooses one. Walkup never sees
+          or stores card or bank account numbers. Stripe&rsquo;s updates about a
+          plan are accepted only after their digital signature checks out, and
+          they can call five named database functions that record the plan and
+          nothing else. They never touch an association&rsquo;s books, bank
+          feed or dues. The{" "}
+          <Link href="/privacy" className="text-ink underline-offset-2 hover:underline">
+            Privacy Policy
+          </Link>{" "}
+          lists what Walkup and Stripe share.
         </p>
         <p className="mt-3">
           Walkup&rsquo;s AI features use Anthropic, the company that makes the
@@ -215,13 +230,14 @@ export default function SecurityPage() {
           24 months.
         </p>
         <p>
-          Two kinds of request reach Walkup without a signed-in person: the
-          scheduled jobs and the delivery reports from Resend and Plaid. They run
+          Three kinds of request reach Walkup without a signed-in person: the
+          scheduled jobs, the delivery reports from Resend and Plaid, and
+          Stripe&rsquo;s updates about Walkup&rsquo;s own plans. They run
           with a more powerful credential than any user has, so each proves who it
           is before it does anything and is kept as small as possible. The email
           jobs and Resend&rsquo;s delivery reports can call six named database
-          functions and nothing else, and Plaid&rsquo;s status messages can call
-          one. Only the daily bank sync reads bank connection records directly,
+          functions and nothing else, Plaid&rsquo;s status messages can call
+          one, and Stripe&rsquo;s updates can call five. Only the daily bank sync reads bank connection records directly,
           and only to fetch transactions. The only functions a
           signed-out visitor can call are the waitlist sign-up and the two that
           let an owner view and change their own email choices from an

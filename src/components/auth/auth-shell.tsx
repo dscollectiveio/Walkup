@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { Lockup } from "@/components/mark";
 import { SUPPORT_EMAIL } from "@/lib/site-config";
+import { pricingWords } from "@/lib/billing/launch";
 import { UsageTip } from "./usage-tip";
 import { BareMarker } from "@/components/app-frame";
 
@@ -29,7 +30,6 @@ const POINTS = [
   "Read-only bank access. Walkup never moves money",
   "Nothing goes out without a board admin's approval",
   "Two-step sign-in protects every account",
-  "Free during early access",
 ];
 
 function Brand() {
@@ -94,7 +94,7 @@ export function AuthShell({
               "Built for self-managed Illinois condo associations of 2 to 20 units, and the volunteers who keep them running."}
           </p>
           <ul className="mt-8 space-y-3 text-[14px] text-white/85">
-            {POINTS.map((p) => (
+            {[...POINTS, pricingWords().authPoint].map((p) => (
               <li key={p} className="flex gap-3">
                 <svg viewBox="0 0 16 16" aria-hidden="true" className="mt-[3px] h-4 w-4 shrink-0 text-[#D9A441]">
                   <path d="M3 8.5l3 3 7-7" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />

@@ -26,6 +26,10 @@
   --w-brass: #d9a441;      /* Walkup gold */
   --w-on-brass: #1b2a41;   /* text on a gold fill, navy in both themes (7.4:1) */
   --w-eyebrow: #8a5f12;    /* gold section labels on the landing page, 5.1:1 on cream */
+  /* Landing page bands, in rotation: blue, taupe, white (landing/reveal.tsx tone). */
+  --w-land-blue: #1b2a41;
+  --w-land-taupe: #f5efe3;
+  --w-land-white: #ffffff;
   --w-moss: #2f7a5c;
   --w-rust: #a3432f;      /* Walkup brick */
 
@@ -101,6 +105,9 @@
   --w-slate: #8c9bb7;      /* 5.7:1 on surface */
   --w-brass: #d9a441;      /* 6.9:1 on surface */
   --w-eyebrow: #d9a441;    /* 8.1:1 on the dark ground */
+  --w-land-blue: #26406b;
+  --w-land-taupe: #111b2c;
+  --w-land-white: #1b2a41;
   --w-moss: #86b2a0;       /* 6.8:1 */
   --w-rust: #d0897e;       /* 5.8:1 */
 
@@ -395,3 +402,45 @@ html[data-sidebar="rail"] {
 .hero-slide[data-active="true"] .hero-stagger li:nth-child(5) { animation-delay: 320ms; }
 .hero-slide[data-active="true"] .hero-stagger li:nth-child(6) { animation-delay: 400ms; }
 .hero-progress { animation-name: hero-progress; animation-timing-function: linear; animation-fill-mode: both; }
+
+/* In-page links land below the landing page's sticky header. */
+html { scroll-padding-top: 76px; }
+
+/* Landing sections fade and rise in as they scroll into view (landing/reveal.tsx). */
+[data-reveal="pending"] > *,
+[data-reveal="shown"] > * {
+  transition: opacity 800ms cubic-bezier(0.22, 1, 0.36, 1), transform 800ms cubic-bezier(0.22, 1, 0.36, 1);
+}
+[data-reveal="pending"] > * { opacity: 0; transform: translateY(28px); }
+[data-reveal="shown"] > * { opacity: 1; transform: none; }
+
+/* Landing page bands. Blue re-scopes the colour tokens to their dark-surface
+   values, so every card, heading and line inside it just works; white swaps
+   the card colour to taupe so cards stay visible on a white band. */
+.land-taupe { background: var(--w-land-taupe); }
+.land-white { background: var(--w-land-white); --w-paper: var(--w-land-taupe); --w-fill: var(--w-land-taupe); }
+.land-blue {
+  background: var(--w-land-blue);
+  color: #f5efe3;
+  --w-ink: #f5efe3;
+  --w-ink-mid: #e6dfd0;
+  --w-paper: color-mix(in srgb, white 8%, var(--w-land-blue));
+  --w-bone: color-mix(in srgb, white 5%, var(--w-land-blue));
+  --w-fill: color-mix(in srgb, white 11%, var(--w-land-blue));
+  --w-line: color-mix(in srgb, white 18%, var(--w-land-blue));
+  --w-line-strong: color-mix(in srgb, white 32%, var(--w-land-blue));
+  --w-mute: #c3cbdb;
+  --w-mute-soft: #98a4bd;
+  --w-eyebrow: #d9a441;
+  --w-good-text: #a9d6c0;
+  --w-good-tint: color-mix(in srgb, #86b2a0 14%, var(--w-land-blue));
+  --w-good-line: #3f6a63;
+  --w-bad-text: #eacac5;
+}
+
+/* The landing page's in-page links (nav bar, "See how it works", every
+   section button) glide to their section instead of jumping. Scoped to the
+   landing page; off for anyone who asks for reduced motion. */
+@media (prefers-reduced-motion: no-preference) {
+  html:has(.landing-smooth) { scroll-behavior: smooth; }
+}
