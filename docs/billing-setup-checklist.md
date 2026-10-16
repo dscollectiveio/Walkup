@@ -9,15 +9,12 @@ Do the steps in order. Test mode first; live mode only after it all works.
 
 ## 1. Before anything in Stripe
 
-- [ ] Approve the new service-role entry point (the Stripe webhook, plan 2.6)
-      as a DECISIONS entry, as you did for #37. It can call five `billing_*`
-      functions and nothing else.
-- [ ] Have the lead apply `supabase/migrations/0062_billing.sql` to production
-      (it is applied to dev already). It comps every existing building.
-- [ ] Make sure your `platform_admins` row exists in production (DECISIONS #31)
-      so `/admin/billing` opens for you.
-- [ ] Fill in `LEGAL_ADDRESS` in `src/lib/site-config.ts` (Stripe needs DS
-      Collective LLC's real address).
+- [x] Approve the new service-role entry point (the Stripe webhook, plan 2.6).
+      Approved 2026-10-16 as DECISIONS #41.
+- [x] Apply `supabase/migrations/0062_billing.sql` to production. Done
+      2026-10-16; all 4 buildings comped "Early access".
+- [x] Your `platform_admins` row exists in production (checked 2026-10-16).
+- [x] `LEGAL_ADDRESS` is set: 2158 N Damen Ave #4, Chicago, Illinois 60647.
 
 ## 2. Stripe, in TEST mode
 

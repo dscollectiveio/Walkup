@@ -33,8 +33,7 @@ export const LEGAL_ENTITY = "DS Collective LLC";
  * association carries it in the footer (CAN-SPAM, DECISIONS #36), so sending
  * refuses to start while this is a placeholder. Do not invent one.
  */
-// TODO(doug): DS Collective LLC's real postal address.
-export const LEGAL_ADDRESS = "TODO(doug): DS Collective LLC postal address";
+export const LEGAL_ADDRESS = "2158 N Damen Ave #4, Chicago, Illinois 60647";
 
 // TODO(doug): a real quote from a real board member. Null renders nothing; never write a placeholder quote.
 export const TESTIMONIAL: { quote: string; name: string; role: string } | null = null;

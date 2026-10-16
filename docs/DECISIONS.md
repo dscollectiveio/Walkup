@@ -1911,3 +1911,40 @@ another. Each table now has a same-association guard trigger (SECURITY DEFINER,
 pinned search path, errcode 42501), in the same shape as the other
 same-association guards. Inserts and updates only; existing rows are not
 rewritten, and a notice names any that already break the rule.
+
+---
+
+## 41. A fifth narrow service-role path: the Stripe billing webhook
+
+**Approved by Doug, 2026-10-16.** Built in migration 0062 and
+`src/app/api/stripe/webhook/route.ts`, switched off until `BILLING_ENABLED`.
+
+Walkup's own subscription is paid on Stripe's hosted pages, and Stripe tells
+Walkup what happened (a plan started, a payment failed, a plan was cancelled)
+by webhook. A webhook has no signed-in user, so, like the bank sync (#28), the
+reminder cron and the Resend webhook (#36) and the Plaid webhook (#37), it
+needs the service role. It is kept as small as those:
+
+- The route trusts nothing until Stripe's `Stripe-Signature` (HMAC-SHA256 over
+  the exact raw body with `STRIPE_WEBHOOK_SECRET`, timestamp within 5 minutes,
+  constant-time compare) verifies. Anything else is a 400 with no database
+  call. Only six event types are acted on; every other verified event is a
+  200 no-op.
+- It reaches the database only through `billingServiceRpc()`
+  (`src/lib/billing/service-rpc.ts`), an allowlist of five functions:
+  `billing_claim_event`, `billing_finish_event`, `billing_link_checkout`,
+  `billing_apply_subscription`, `billing_record_payment`. A unit test fails on
+  any other import of the service key in billing code.
+- Each function is SECURITY DEFINER with a pinned search path. They write only
+  `billing_accounts` and `billing_webhook_events`: Stripe's customer and
+  subscription references, status, plan, period end and payment-failed time.
+  No card data, no amounts, no names or emails.
+- Each event id is claimed once (idempotent), and the subscription is fetched
+  fresh from Stripe rather than trusted from the payload, so a replayed or
+  out-of-order event changes nothing.
+- `/api/stripe/webhook` (exact path) is in `PUBLIC_PATHS`.
+
+What it does not change: Walkup's fee is Walkup's own revenue and never
+touches an association's books, bank feed, dues or money (#22, #24); a test
+fails if billing code imports any of them. #29's rule that only a board
+member's action posts to the ledger stands.

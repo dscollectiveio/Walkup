@@ -24,10 +24,11 @@ describe("sendConfig", () => {
     expect(sendConfig({ RESEND_API_KEY: "re_key" }, "")).toEqual({ ok: false, reason: "no_legal_address" });
   });
 
-  it("uses the repository's real LEGAL_ADDRESS constant, which is still a placeholder", () => {
-    expect(LEGAL_ADDRESS.startsWith("TODO")).toBe(true);
-    expect(legalAddressIsSet).toBe(false);
-    expect(sendConfig({ RESEND_API_KEY: "re_key" })).toEqual({ ok: false, reason: "no_legal_address" });
+  it("uses the repository's real LEGAL_ADDRESS constant, which is now set, so sending can start once a key is present", () => {
+    expect(LEGAL_ADDRESS.startsWith("TODO")).toBe(false);
+    expect(legalAddressIsSet).toBe(true);
+    expect(sendConfig({ RESEND_API_KEY: "re_key" })).toMatchObject({ ok: true, apiKey: "re_key" });
+    expect(sendConfig({})).toEqual({ ok: false, reason: "no_key" });
   });
 
   it("takes a valid EMAIL_FROM_ADDRESS and ignores one that is not a plain address", () => {
