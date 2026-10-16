@@ -5,9 +5,9 @@ const SITE = SITE_URL;
 
 /** The pages anyone can read without an account. Everything else is behind sign-in. */
 export default function sitemap(): MetadataRoute.Sitemap {
-  return ["/", "/signup", "/login", "/security", "/privacy", "/terms", "/policies"].map((path) => ({
+  return ["/", "/features", "/signup", "/login", "/security", "/privacy", "/terms", "/policies"].map((path) => ({
     url: `${SITE}${path}`,
     changeFrequency: path === "/" ? "weekly" : "monthly",
-    priority: path === "/" ? 1 : path === "/signup" ? 0.8 : 0.4,
+    priority: path === "/" ? 1 : path === "/signup" ? 0.8 : path === "/features" ? 0.7 : 0.4,
   }));
 }

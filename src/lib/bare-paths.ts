@@ -3,7 +3,7 @@
  * the two-step pages and building setup, where the person isn't "in the app"
  * yet. Shared by the root layout (what to fetch) and AppFrame (what to show).
  */
-export const BARE_PATHS = ["/login", "/signup", "/forgot-password", "/reset-password", "/account/mfa", "/onboarding", "/unsubscribe"];
+export const BARE_PATHS = ["/login", "/signup", "/forgot-password", "/reset-password", "/account/mfa", "/onboarding", "/unsubscribe", "/features"];
 
 export function isBarePath(pathname: string): boolean {
   return BARE_PATHS.some((p) => pathname === p || pathname.startsWith(`${p}/`));

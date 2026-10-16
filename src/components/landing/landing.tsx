@@ -1,4 +1,6 @@
+import Image from "next/image";
 import Link from "next/link";
+import { Download, FileCheck, FileText, HandCoins, HardHat, Eye, KeyRound, Landmark, ListChecks, MailCheck, ShieldCheck, Wrench } from "lucide-react";
 import { Lockup } from "@/components/mark";
 import {
   ANNUAL_NOTE,
@@ -17,6 +19,7 @@ import {
 import { WaitlistForm } from "./waitlist-form";
 import { HeroSlideshow } from "./hero-slideshow";
 import { Reveal } from "./reveal";
+import { HowItWorksTimeline } from "./how-it-works-timeline";
 import { FeatureArt, type FeatureArtKind } from "./feature-art";
 import { pricingWords } from "@/lib/billing/launch";
 
@@ -52,42 +55,45 @@ const ghostBtn =
 const navyBtn =
   "inline-flex min-h-[48px] items-center rounded-md bg-ink px-6 text-[15px] font-semibold text-paper hover:bg-ink-mid";
 
-const FEATURES: { art: FeatureArtKind; title: string; body: string; points: string[] }[] = [
+const FEATURE_ICONS: Record<FeatureArtKind, typeof Landmark> = {
+  finance: Landmark,
+  dues: HandCoins,
+  tax: FileText,
+  insurance: ShieldCheck,
+  repairs: Wrench,
+  contractor: HardHat,
+};
+
+const FEATURES: { art: FeatureArtKind; title: string; body: string }[] = [
   {
-    art: "books",
-    title: "Your books, kept for you",
-    body: "Connect the association's bank once through Plaid. Every transaction arrives sorted, with a suggested category and the reason for it.",
-    points: ["Approve a month of transactions in minutes", "Read-only: Walkup can never move money", "Undo anything, any time"],
+    art: "finance",
+    title: "Financial Management",
+    body: "Your bank feed, budget and financial statements in one place. Transactions arrive sorted, spending is tracked against the budget, and board-ready reports are one click.",
   },
   {
     art: "dues",
-    title: "Know who paid, without asking",
-    body: "Set each unit's dues once. Walkup matches deposits to units, shows who's behind, and prepares friendly reminders and owner statements on the schedule you choose.",
-    points: ["Automatic reminder rules, sent only after a board admin approves each batch", "Late fees suggested, never charged on their own", "Owners can see exactly what they owe"],
-  },
-  {
-    art: "budget",
-    title: "A budget anyone on the board can read",
-    body: "One sentence tells you if you're on plan. Spending is ranked biggest first, so surprises jump out.",
-    points: ["Budget vs. actual by category", "Reserve savings tracked separately", "Next year's budget starts from this year's numbers"],
-  },
-  {
-    art: "statements",
-    title: "Board-ready financial statements in one click",
-    body: "Profit and loss for any month, quarter or year, straight from your books. Bring a PDF to the meeting instead of a spreadsheet.",
-    points: ["Side-by-side periods", "Financial report email to owners, drafted in one click", "Year-end package for your accountant"],
+    title: "HOA Dues and Reminders",
+    body: "Set each unit's dues once. Walkup matches deposits, shows who's behind, and prepares reminders that go out only after a board admin approves.",
   },
   {
     art: "tax",
-    title: "Form 1120-H, prepared from your books",
-    body: "Walkup checks whether your association qualifies for Form 1120-H, fills the official IRS form from your records, and puts every deadline on your calendar.",
-    points: ["Every figure traced to its transactions", "Contractor 1099 list from your payments", "One-click handoff to your accountant"],
+    title: "Tax Prep Support",
+    body: "Checks whether you qualify for Form 1120-H, fills the IRS form from your books, tracks contractor 1099s, and puts every deadline on your calendar.",
+  },
+  {
+    art: "insurance",
+    title: "Insurance Marketplace",
+    body: "Keep every policy and renewal in one place, run a coverage check, and request quotes from agents with emails drafted for you.",
   },
   {
     art: "repairs",
-    title: "Repairs, upkeep and the paper trail",
-    body: "Anyone in the building can report a problem. Yearly upkeep runs on a schedule, not someone's memory, and quote requests to contractors and insurance agents are drafted for you.",
-    points: ["Quote requests drafted and tracked, for contractors and insurance agents", "Contractor directory with W-9s on file", "Insurance renewal reminders and a coverage check"],
+    title: "Repairs Tracking",
+    body: "Anyone in the building can report a problem. Follow each repair from report to done, and run yearly upkeep on a schedule.",
+  },
+  {
+    art: "contractor",
+    title: "Find a Contractor",
+    body: "Search for nearby contractors for the job, keep the ones you use with their W-9s and insurance on file, and ask for a quote by email.",
   },
 ];
 
@@ -208,7 +214,6 @@ export function Landing({ nonce }: { nonce?: string }) {
               <strong className="font-bold text-ink underline decoration-[#D9A441] decoration-2 underline-offset-4">repairs and maintenance</strong>, and{" "}
               <strong className="font-bold text-ink underline decoration-[#D9A441] decoration-2 underline-offset-4">document storage</strong>{" "}
               software for self-managed condo associations of 2 to 20 units.
-              It&rsquo;s built for the volunteer treasurer who has a day job, not the property manager who does this full time.
             </p>
             <div className="mt-8 flex flex-wrap gap-3">
               <Link href="/signup" data-cta="hero" className={primaryBtn}>
@@ -263,24 +268,32 @@ export function Landing({ nonce }: { nonce?: string }) {
           />
           <div className="mt-10 grid gap-5 sm:grid-cols-2 lg:grid-cols-3">
             {FEATURES.map((f) => (
-              <article key={f.title} className="group flex flex-col rounded-xl border border-line bg-paper p-6">
+              <article key={f.title} className="group flex flex-col rounded-xl border border-line bg-paper p-5">
                 <FeatureArt kind={f.art} />
-                <h3 className="text-[17px] font-bold text-ink">{f.title}</h3>
-                <p className="mt-2 text-[14px] leading-relaxed text-mute">{f.body}</p>
-                <ul className="mt-4 space-y-2 text-[13px] text-ink">
-                  {f.points.map((p) => (
-                    <li key={p} className="flex gap-2">
-                      <Check />
-                      <span>{p}</span>
-                    </li>
-                  ))}
-                </ul>
+                <div className="flex items-center justify-between gap-3">
+                  <h3 className="text-[17px] font-bold text-ink">{f.title}</h3>
+                  <span aria-hidden="true" className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-[#D9A441]/15 text-eyebrow transition-colors duration-300 group-hover:bg-[#D9A441] group-hover:text-[#1B2A41]">
+                    {(() => {
+                      const Icon = FEATURE_ICONS[f.art];
+                      return <Icon size={18} strokeWidth={1.8} />;
+                    })()}
+                  </span>
+                </div>
+                <p className="mt-1.5 text-[14px] leading-relaxed text-mute">{f.body}</p>
               </article>
             ))}
           </div>
-          <div className="mt-10">
+          <div className="mt-10 flex flex-wrap items-center gap-3">
             <Link href="/signup" data-cta="features" className={navyBtn}>
               {CTA}
+            </Link>
+            <Link
+              href="/features"
+              data-cta="features-more"
+              className="inline-flex min-h-[48px] items-center gap-2 rounded-md border border-line-strong px-6 text-[15px] font-semibold text-ink transition-colors hover:bg-fill"
+            >
+              See every feature
+              <span aria-hidden="true">&rarr;</span>
             </Link>
           </div>
         </div>
@@ -294,21 +307,9 @@ export function Landing({ nonce }: { nonce?: string }) {
           title="How long does it take to set up Walkup?"
           intro="About an afternoon. After that, most treasurers spend around 15 minutes a month."
         />
-        <ol className="mt-10 grid gap-5 md:grid-cols-4">
-          {[
-            ["Create your building", "Name the association and turn on two-step sign-in. Walkup sets up your fiscal year, funds and chart of accounts for you."],
-            ["Add units and owners", "Enter each unit and its owner, then invite the rest of the board with a link."],
-            ["Connect your bank", "Read-only, through Plaid. Recent transactions arrive already sorted."],
-            ["Set dues and the budget", "Start from last year's numbers. From here, Walkup tells you what needs you each month."],
-          ].map(([t, b], i) => (
-            <li key={t} className="rounded-xl border border-line bg-paper p-6">
-              <span className="flex h-8 w-8 items-center justify-center rounded-full bg-ink text-[14px] font-bold text-paper">{i + 1}</span>
-              <h3 className="mt-4 text-[16px] font-bold text-ink">{t}</h3>
-              <p className="mt-2 text-[14px] leading-relaxed text-mute">{b}</p>
-            </li>
-          ))}
-        </ol>
-        <div className="mt-8 rounded-xl border border-line bg-paper p-6">
+        <HowItWorksTimeline />
+        <div aria-hidden="true" className="mt-14 h-px bg-gradient-to-r from-transparent via-line-strong/60 to-transparent" />
+        <div className="mt-14 rounded-xl border border-line bg-paper p-6">
           <h3 className="text-[16px] font-bold text-ink">Your 15 minutes a month</h3>
           <ul className="mt-3 space-y-2 text-[14px] text-ink">
             {["Approve the transactions Walkup sorted", "Approve the dues reminders and the financial report email it prepared", "Send the quote requests it drafted for contractors and insurance", "Read one sentence on the budget"].map((x) => (
@@ -320,7 +321,7 @@ export function Landing({ nonce }: { nonce?: string }) {
           </ul>
         </div>
         <p className="mt-6 text-[15px] text-mute">
-          Want a hand? A Walkup team member will set up your board with you on one 30-minute call, free.
+          Want a hand? A Walkup team member will set up your board with you on one 15-minute call, free.
         </p>
         <div className="mt-6">
           <Link href="/signup" data-cta="how-it-works" className={navyBtn}>
@@ -333,6 +334,7 @@ export function Landing({ nonce }: { nonce?: string }) {
       {/* ---------------------------------------------------------------- founder */}
       <Reveal tone="blue">
         <div className="mx-auto max-w-[1100px] px-6 py-20">
+          <div className="grid items-center gap-10 md:grid-cols-[1fr_260px] md:gap-12 lg:grid-cols-[1fr_290px]">
           <div className="max-w-2xl">
             <p className="text-[12px] font-semibold uppercase tracking-[0.12em] text-eyebrow">Why Walkup exists</p>
             <h2 className="mt-2 text-[28px] font-bold leading-tight tracking-tight text-ink sm:text-[32px]">
@@ -353,7 +355,28 @@ export function Landing({ nonce }: { nonce?: string }) {
                 buildings like ours: small, self-run, and tired of the spreadsheet.
               </p>
             </div>
-            <p className="mt-6 text-[15px] font-semibold text-ink">Doug Smart, founder of Walkup and condo board president</p>
+            <p className="mt-6 text-[15px] font-semibold text-ink">
+              <span aria-hidden="true">&ndash; </span>Doug Smart, founder of Walkup and condo board president
+            </p>
+          </div>
+          <figure className="mx-auto flex w-full max-w-[290px] flex-col items-center text-center md:mx-0">
+            {/* Round photo with one offset circle behind it, like the timeline's rectangles. */}
+            <div className="relative h-[230px] w-[230px] sm:h-[250px] sm:w-[250px]">
+              <span aria-hidden="true" className="absolute inset-0 translate-x-[18px] translate-y-[16px] rounded-full bg-[#D9A441]" />
+              <Image
+                src="/doug-smart.jpg"
+                alt="Doug Smart, founder of Walkup, smiling in front of the Chicago skyline at sunset"
+                width={896}
+                height={1200}
+                sizes="250px"
+                className="relative h-full w-full rounded-full object-cover object-[50%_18%] ring-4 ring-[#1B2A41]"
+              />
+            </div>
+            <figcaption className="mt-7">
+              <span className="block text-[17px] font-bold text-ink">Doug Smart</span>
+              <span className="mt-0.5 block text-[13px] leading-snug text-mute">Founder, and a condo board president in Chicago</span>
+            </figcaption>
+          </figure>
           </div>
           {TESTIMONIAL ? (
             <figure className="mt-12 max-w-2xl rounded-xl border border-line bg-bone p-6">
@@ -368,7 +391,7 @@ export function Landing({ nonce }: { nonce?: string }) {
 
       {/* ---------------------------------------------------------------- trust */}
       <Reveal tone="taupe">
-        <div className="mx-auto max-w-[1100px] px-6 py-20">
+        <div className="mx-auto max-w-[1100px] px-6 py-14">
           <p className="text-[12px] font-semibold uppercase tracking-[0.12em] text-eyebrow">Built to be trusted with money</p>
           <h2 className="mt-2 max-w-2xl text-[28px] font-bold leading-tight tracking-tight text-ink sm:text-[32px]">
             How does Walkup protect our association&rsquo;s money?
@@ -376,25 +399,34 @@ export function Landing({ nonce }: { nonce?: string }) {
           <p className="mt-3 max-w-2xl text-[16px] leading-relaxed text-mute">
             Walkup records, reminds and prepares. Your board stays in control of every dollar and every decision.
           </p>
-          <div className="mt-10 grid gap-6 sm:grid-cols-2 lg:grid-cols-3">
+          <div className="mt-8 grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
             {[
               [
+                Eye,
                 "Never holds your money.",
                 DUES_PAYMENTS_ENABLED
                   ? "Owner payments go straight to the association's bank. Walkup never holds funds."
                   : "Bank access is read-only through Plaid. Owners pay the association directly, and you pay bills from your own bank.",
               ],
-              ["Never emails anyone without a board admin's approval.", "Reminders and statements go out only after a board admin approves them. Messages to contractors, agents and your accountant open as drafts in your own email app."],
-              ["Two-step sign-in on every account.", "Each association's data is walled off from every other, and every change is logged with who made it."],
-              ["Every number shows its work.", "Tax figures link back to the transactions behind them. Rules and deadlines show their source."],
-              ["Prepares, never files.", "Walkup is not a tax adviser. Have an accountant review anything before it's filed."],
-              ["Your records stay yours.", "Download your financial statements, budget, tax forms and every document you uploaded. Ask us for anything else. No contract."],
-            ].map(([t, b]) => (
-              <div key={t}>
-                <h3 className="text-[16px] font-bold text-ink">{t}</h3>
-                <p className="mt-2 text-[14px] leading-relaxed text-mute">{b}</p>
-              </div>
-            ))}
+              [MailCheck, "Never emails anyone without a board admin's approval.", "Reminders and statements go out only after a board admin approves them. Messages to contractors, agents and your accountant open as drafts in your own email app."],
+              [KeyRound, "Two-step sign-in on every account.", "Each association's data is walled off from every other, and every change is logged with who made it."],
+              [ListChecks, "Every number shows its work.", "Tax figures link back to the transactions behind them. Rules and deadlines show their source."],
+              [FileCheck, "Prepares, never files.", "Walkup is not a tax adviser. Have an accountant review anything before it's filed."],
+              [Download, "Your records stay yours.", "Download your financial statements, budget, tax forms and every document you uploaded. Ask us for anything else. No contract."],
+            ].map(([Icon, t, b]) => {
+              const TrustIcon = Icon as typeof Eye;
+              return (
+                <div key={t as string} className="rounded-xl border border-line bg-paper p-4">
+                  <div className="flex items-start gap-3">
+                    <span aria-hidden="true" className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-[#D9A441]/15 text-eyebrow">
+                      <TrustIcon size={18} strokeWidth={1.8} />
+                    </span>
+                    <h3 className="pt-1.5 text-[15px] font-bold leading-snug text-ink">{t as string}</h3>
+                  </div>
+                  <p className="mt-2 text-[13px] leading-snug text-mute">{b as string}</p>
+                </div>
+              );
+            })}
           </div>
           <p className="mt-10 text-[14px]">
             <Link href="/security" className="font-medium text-ink underline underline-offset-4 hover:text-mute">
@@ -406,16 +438,16 @@ export function Landing({ nonce }: { nonce?: string }) {
 
       {/* ---------------------------------------------------------------- who it's for */}
       <Reveal tone="white">
-        <div className="mx-auto max-w-[1100px] px-6 py-20">
+        <div className="mx-auto max-w-[1100px] px-6 py-12">
         <SectionHeading
           eyebrow="Is it right for you?"
           title="Who is Walkup built for?"
           intro="Walkup is built for small, self-managed condominium associations in Illinois with 2 to 20 units and a volunteer board."
         />
-        <div className="mt-10 grid gap-5 md:grid-cols-2">
-          <div className="rounded-xl border border-good-line bg-good-tint/40 p-6">
+        <div className="mt-6 grid gap-4 md:grid-cols-2">
+          <div className="rounded-xl border border-good-line bg-good-tint/40 p-4">
             <h3 className="text-[16px] font-bold text-ink">A great fit if you are:</h3>
-            <ul className="mt-3 space-y-2 text-[14px] text-ink">
+            <ul className="mt-2 space-y-1.5 text-[14px] text-ink">
               {[
                 "An Illinois condo association of 2 to 20 units",
                 "Run by volunteer owners, not a management company",
@@ -429,9 +461,9 @@ export function Landing({ nonce }: { nonce?: string }) {
               ))}
             </ul>
           </div>
-          <div className="rounded-xl border border-line bg-paper p-6">
+          <div className="rounded-xl border border-line bg-paper p-4">
             <h3 className="text-[16px] font-bold text-ink">Not the right fit yet if you are:</h3>
-            <ul className="mt-3 space-y-2 text-[14px] text-mute">
+            <ul className="mt-2 space-y-1.5 text-[14px] text-mute">
               {[
                 "Outside Illinois (join the waitlist for your state)",
                 "A professionally managed community",
@@ -443,7 +475,7 @@ export function Landing({ nonce }: { nonce?: string }) {
                 </li>
               ))}
             </ul>
-            <div className="mt-5 border-t border-line pt-5">
+            <div className="mt-3 border-t border-line pt-3">
               <WaitlistForm />
             </div>
           </div>
@@ -494,9 +526,9 @@ export function Landing({ nonce }: { nonce?: string }) {
             {[
               [
                 "Founding offer",
-                `The first ${FOUNDING.associations} ${FOUNDING.region} associations lock in ${FOUNDING.prices.map((n) => `$${n}`).join(", ")} a month for ${FOUNDING.months} months. Join now to claim a founding spot.`,
+                `Free for the first ${FOUNDING.associations} associations`,
               ],
-              ["Free setup with a real person", "One 30-minute call and your board is live: owners, bank link and dues."],
+              ["Free setup with a real person", "One 15-minute call and your board is live: owners, bank link and dues."],
             ].map(([t, b]) => (
               <div key={t} className="rounded-xl bg-bone p-5">
                 <h3 className="font-bold text-ink">{t}</h3>
@@ -505,10 +537,10 @@ export function Landing({ nonce }: { nonce?: string }) {
             ))}
           </div>
 
-          <ul className="mt-6 space-y-1 text-[13px] text-mute">
+          <ul className="mt-6 grid w-full gap-x-8 gap-y-2 border-t border-line pt-4 text-[13px] text-mute sm:grid-cols-[1.2fr_1.6fr_0.5fr]">
             <li>Unit count changes are trued up at renewal, never mid-term.</li>
             <li>Walkup does not file taxes or give tax, legal or insurance advice.</li>
-            <li>Prices in USD.</li>
+            <li className="sm:text-right">Prices in USD.</li>
           </ul>
 
         </div>
@@ -531,6 +563,27 @@ export function Landing({ nonce }: { nonce?: string }) {
                       <span aria-hidden="true" className="text-[20px] leading-none text-mute transition-transform group-open:rotate-45">+</span>
                     </summary>
                     <p className="mt-3 max-w-3xl text-[14px] leading-relaxed text-mute">{f.a}</p>
+                    {f.links ? (
+                      <p className="mt-3 flex flex-wrap items-center gap-x-4 gap-y-1.5 text-[13px]">
+                        <span className="font-semibold uppercase tracking-[0.08em] text-mute-soft">Learn more</span>
+                        {f.links.map((l) =>
+                          l.href.startsWith("/") ? (
+                            <Link key={l.href} href={l.href} className="font-medium text-ink underline decoration-[#D9A441] decoration-2 underline-offset-4 hover:text-mute">
+                              {l.label} &rarr;
+                            </Link>
+                          ) : (
+                            <a
+                              key={l.href}
+                              href={l.href}
+                              {...(l.href.startsWith("http") ? { target: "_blank", rel: "noopener noreferrer" } : {})}
+                              className="font-medium text-ink underline decoration-[#D9A441] decoration-2 underline-offset-4 hover:text-mute"
+                            >
+                              {l.label} &rarr;
+                            </a>
+                          ),
+                        )}
+                      </p>
+                    ) : null}
                   </details>
                 ))}
               </div>
@@ -552,7 +605,7 @@ export function Landing({ nonce }: { nonce?: string }) {
           <div className="max-w-xl">
             <h2 className="text-[26px] font-bold tracking-tight text-ink sm:text-[30px]">Give your board its evenings back.</h2>
             <p className="mt-2 text-[15px] text-mute">
-              {words.finalLine}, with founding prices for the first {FOUNDING.associations} {FOUNDING.region} associations.
+              {words.finalLine}. The first {FOUNDING.associations} associations get Walkup free.
             </p>
             <p className="mt-3 text-[13px] text-mute">No card. Read-only bank access. Your records stay yours.</p>
           </div>

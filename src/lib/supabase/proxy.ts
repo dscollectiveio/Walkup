@@ -15,6 +15,8 @@ const MEMBER_COOKIE = "walkup.member";
 // /privacy specifically must be reachable pre-signup since signup requires
 // agreeing to it.
 const PUBLIC_PATHS = [
+  // The public features page.
+  "/features",
   // Files crawlers and link previews fetch without signing in.
   "/sitemap.xml",
   "/opengraph-image",

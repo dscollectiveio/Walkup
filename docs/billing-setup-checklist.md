@@ -112,7 +112,7 @@ key is refused anywhere except `VERCEL_ENV=production`.
 |---|---|---|
 | 1 | Provider | Stripe (hosted Checkout and Portal, no card data on our pages) |
 | 2 | Prices | Tiers by unit count from `PLANS` in `site-config.ts`; above 20 units: "email sales" |
-| 3 | Founding offer | Not built. Use a Stripe promotion code if you keep it (Checkout allows codes) |
+| 3 | Founding offer | Now "free for the first 25 associations" on the site. Not built as a mechanism: comp each one on /admin/billing, and decide how long it lasts |
 | 4 | Trial | 30 days, no card, starts when a building is created (`0062` trigger, `TRIAL_DAYS`) |
 | 5 | Early-access buildings | Comped "Early access" with no end date; you can set an end date per building |
 | 6 | Grace period | 14 days after the first failed payment or after a trial or plan ends (`GRACE_DAYS`) |

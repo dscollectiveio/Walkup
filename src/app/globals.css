@@ -379,28 +379,11 @@ html[data-sidebar="rail"] {
 }
 
 /* Landing hero slideshow (components/landing/hero-slideshow.tsx): the active
-   slide's rows rise in one after another, and the active dot fills over the
-   time to the next slide. Reduced motion keeps the fade and drops the rise
-   (the blanket rule above shortens every animation to nothing). */
-@keyframes hero-rise {
-  from { opacity: 0; transform: translateY(6px); }
-  to { opacity: 1; transform: none; }
-}
+   dot fills over the time to the next slide. Slides themselves only crossfade. */
 @keyframes hero-progress {
   from { transform: scaleX(0); }
   to { transform: scaleX(1); }
 }
-.hero-slide[data-active="true"] .hero-stagger > *,
-.hero-slide[data-active="true"] .hero-stagger li {
-  animation: hero-rise 560ms cubic-bezier(0.22, 1, 0.36, 1) both;
-}
-.hero-slide[data-active="true"] .hero-stagger > :nth-child(2),
-.hero-slide[data-active="true"] .hero-stagger li:nth-child(2) { animation-delay: 80ms; }
-.hero-slide[data-active="true"] .hero-stagger > :nth-child(3),
-.hero-slide[data-active="true"] .hero-stagger li:nth-child(3) { animation-delay: 160ms; }
-.hero-slide[data-active="true"] .hero-stagger li:nth-child(4) { animation-delay: 240ms; }
-.hero-slide[data-active="true"] .hero-stagger li:nth-child(5) { animation-delay: 320ms; }
-.hero-slide[data-active="true"] .hero-stagger li:nth-child(6) { animation-delay: 400ms; }
 .hero-progress { animation-name: hero-progress; animation-timing-function: linear; animation-fill-mode: both; }
 
 /* In-page links land below the landing page's sticky header. */
@@ -444,3 +427,25 @@ html { scroll-padding-top: 76px; }
 @media (prefers-reduced-motion: no-preference) {
   html:has(.landing-smooth) { scroll-behavior: smooth; }
 }
+
+/* How it works timeline pictures (landing/timeline-art.tsx). The resting state
+   is the finished picture; the loops only run when motion is welcome and the
+   step is on screen (.tl-run). */
+@media (prefers-reduced-motion: no-preference) {
+  .tl-run .tl-window { animation: tl-window 2.8s ease-in-out infinite; }
+  .tl-run .tl-pill { animation: tl-pill 3.2s ease-in-out infinite; }
+  .tl-run .tl-bar { animation: tl-bar 3.4s cubic-bezier(0.22, 1, 0.36, 1) infinite; transform-box: view-box; }
+  .tl-run .tl-check { animation: tl-check 3s ease-in-out infinite; }
+  .tl-run .tl-doc { animation: tl-doc 3s ease-in-out infinite; }
+  .tl-run .tl-bob { animation: tl-bob 2.6s ease-in-out infinite; }
+  .tl-run .tl-wrench { animation: tl-wrench 2.4s ease-in-out infinite; transform-origin: 50% 50%; }
+  .tl-run .tl-chip { animation: tl-chip 3.2s ease-in-out infinite; }
+}
+@keyframes tl-window { 0%, 100% { opacity: 0.22; } 45%, 70% { opacity: 1; } }
+@keyframes tl-pill { 0%, 12% { transform: scale(0.6); opacity: 0.25; } 30%, 85% { transform: scale(1); opacity: 1; } 100% { transform: scale(0.6); opacity: 0.25; } }
+@keyframes tl-bar { 0% { transform: scaleY(0.05); } 35%, 85% { transform: scaleY(1); } 100% { transform: scaleY(0.05); } }
+@keyframes tl-check { 0%, 8% { stroke-dashoffset: 60; } 40%, 88% { stroke-dashoffset: 0; } 100% { stroke-dashoffset: 60; } }
+@keyframes tl-doc { 0%, 100% { transform: translateY(0); } 50% { transform: translateY(-5px); } }
+@keyframes tl-bob { 0%, 100% { transform: translateY(0); } 50% { transform: translateY(-6px); } }
+@keyframes tl-wrench { 0%, 100% { transform: rotate(-14deg); } 50% { transform: rotate(14deg); } }
+@keyframes tl-chip { 0%, 15% { transform: translateY(8px) scale(0.85); opacity: 0; } 35%, 85% { transform: none; opacity: 1; } 100% { transform: translateY(-4px); opacity: 0; } }

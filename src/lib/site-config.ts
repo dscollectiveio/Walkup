@@ -74,7 +74,7 @@ export const PLANS: { name: string; units: string; month: number; year: number; 
 /** Annual plans: two months free (each `year` above is 10 × `month`). */
 export const ANNUAL_NOTE = "2 months free";
 
-export const FOUNDING = { associations: 50, region: "Illinois", prices: [15, 29, 45], months: 24 } as const;
+export const FOUNDING = { associations: 25 } as const;
 
 // ---- FAQ: the page and the FAQPage structured data both render this -------------
 // Written the way treasurers search. Each answer stands alone so search and AI
@@ -82,41 +82,51 @@ export const FOUNDING = { associations: 50, region: "Illinois", prices: [15, 29,
 
 export type FaqGroup = "For treasurers" | "About Walkup" | "Data and security";
 
-export const FAQ: { group: FaqGroup; q: string; a: string }[] = [
+export type FaqLink = { label: string; href: string };
+
+/** `links` are the "learn more" links shown under an answer on the page; the search-engine data keeps only q and a. */
+export const FAQ: { group: FaqGroup; q: string; a: string; links?: FaqLink[] }[] = [
   {
     group: "For treasurers",
     q: "What should a small self-managed condo association look for in software?",
     a: "Look for software built for small, volunteer-run buildings rather than large managed communities. Walkup is built for Illinois condo associations of 2 to 20 units and covers bookkeeping, dues, budgets, financial statements and Form 1120-H prep for a flat $19 to $59 a month.",
+    links: [{ label: "See every feature", href: "/features" }, { label: "See pricing", href: "/#pricing" }],
   },
   {
     group: "For treasurers",
     q: "How do I keep track of HOA dues without a spreadsheet?",
     a: "Connect the association's bank account to software that matches each deposit to a unit. Walkup does this automatically, shows who's paid and who's behind, and prepares reminders for a board admin to approve and send.",
+    links: [{ label: "HOA dues and reminders", href: "/features#cat-dues" }, { label: "Financial management", href: "/features#cat-finance" }],
   },
   {
     group: "For treasurers",
     q: "What does an HOA treasurer need to do each month?",
     a: "Record income and expenses, confirm who paid dues, follow up on late payments, and compare spending to the budget. With Walkup, that routine takes about 15 minutes.",
+    links: [{ label: "How it works", href: "/#how-it-works" }, { label: "Financial management", href: "/features#cat-finance" }],
   },
   {
     group: "For treasurers",
     q: "Does a condo association have to file a tax return?",
     a: "Yes. Most condo associations file a federal return every year, usually Form 1120-H or Form 1120, even if they owe little or no tax. Walkup prepares the figures from your books so your board or accountant can file.",
+    links: [{ label: "Tax prep support", href: "/features#cat-tax" }],
   },
   {
     group: "For treasurers",
     q: "What is Form 1120-H?",
     a: "Form 1120-H is a simplified federal tax return for homeowners and condo associations. Qualifying associations pay tax only on non-dues income, such as interest, and do not pay tax on member dues. It is due on the 15th day of the fourth month after the association's tax year ends.",
+    links: [{ label: "IRS: About Form 1120-H", href: "https://www.irs.gov/forms-pubs/about-form-1120-h" }, { label: "Tax prep support", href: "/features#cat-tax" }],
   },
   {
     group: "For treasurers",
     q: "Does our association qualify for Form 1120-H?",
     a: "Generally, at least 60% of gross income must come from owner dues and assessments, and at least 90% of spending must go to the building and common areas. Walkup runs these checks from your books all year, so you know before tax season. Confirm the final decision with your accountant.",
+    links: [{ label: "See the Form 1120-H check", href: "/features#cat-tax" }, { label: "IRS: About Form 1120-H", href: "https://www.irs.gov/forms-pubs/about-form-1120-h" }],
   },
   {
     group: "For treasurers",
     q: "How do we hand off the books when the treasurer changes?",
     a: "Keep everything in a shared system instead of one person's files. In Walkup, the full history, documents and budget stay with the association, and the new treasurer gets their own login in minutes.",
+    links: [{ label: "Roles and invites", href: "/features#cat-building" }, { label: "Documents", href: "/features#cat-documents" }],
   },
   {
     group: "About Walkup",
@@ -124,41 +134,49 @@ export const FAQ: { group: FaqGroup; q: string; a: string }[] = [
     a: DUES_PAYMENTS_ENABLED
       ? "No. Owner payments go straight to the association's bank account, and Walkup never holds funds. Walkup reads your bank through Plaid with read-only access, and you pay bills from your own bank."
       : "No. Walkup reads your bank through Plaid with read-only access. Owners pay the association the way they do today, and Walkup records and matches the payments.",
+    links: [{ label: "How Walkup protects your data", href: "/security" }, { label: "Security and trust", href: "/features#cat-security" }],
   },
   {
     group: "About Walkup",
     q: "Does Walkup file our taxes?",
     a: "No. Walkup fills the official IRS forms from your books, with every number traced to its transactions. Your board, ideally with an accountant, reviews and files.",
+    links: [{ label: "Tax prep support", href: "/features#cat-tax" }],
   },
   {
     group: "About Walkup",
     q: "Does Walkup send emails and reports for us?",
     a: "Walkup prepares them and your board approves them. Dues reminders, late fee notices and owner statements follow rules you switch on, and each batch goes out only after a board admin approves it. The financial report for owners, quote requests to insurance agents and contractors, and notes to your accountant are drafted for you and open in your own email app to send.",
+    links: [{ label: "Dues reminders and statements", href: "/features#cat-dues" }, { label: "How Walkup protects your data", href: "/security" }],
   },
   {
     group: "About Walkup",
     q: "Do owners need an account?",
     a: "Only if you want them to have one. Owners can sign in to see what they owe and report a repair. They never see the association's books.",
+    links: [{ label: "The owner portal", href: "/features#cat-owners" }],
   },
   {
     group: "About Walkup",
     q: "Can our accountant use Walkup?",
     a: "Yes. Walkup drafts an email with the year-end figures and files attached, and you can give your accountant time-limited, read-only access.",
+    links: [{ label: "Accountant handoff", href: "/features#cat-tax" }],
   },
   {
     group: "About Walkup",
     q: "We have more than 20 units. Can we use Walkup?",
     a: `Walkup is built for 2 to 20 units today. Email ${SALES_EMAIL} and we'll talk through whether it fits.`,
+    links: [{ label: "Email us", href: `mailto:${SALES_EMAIL}?subject=${encodeURIComponent("Walkup for more than 20 units")}` }],
   },
   {
     group: "Data and security",
     q: "Is Walkup secure?",
     a: "Every account uses two-step sign-in. Each association's data is walled off at the database level, and every change is logged.",
+    links: [{ label: "Read the security page", href: "/security" }, { label: "Privacy Policy", href: "/privacy" }],
   },
   {
     group: "Data and security",
     q: "What happens to our data if we leave?",
     a: "It's yours. Download your financial statements, budget, tax forms and documents any time, and email us for a copy of the rest. There's no contract.",
+    links: [{ label: "Your records stay yours", href: "/features#cat-security" }, { label: "Privacy Policy", href: "/privacy" }],
   },
 ];
 
@@ -168,7 +186,7 @@ export const FAQ: { group: FaqGroup; q: string; a: string }[] = [
 
 export const SITE_TITLE = "Walkup: Software for Self-Managed Condo Associations in Illinois";
 export const SITE_DESCRIPTION =
-  "Bookkeeping, dues, budgets and Form 1120-H prep for Illinois condo associations of 2 to 20 units. Built for volunteer treasurers. Free during early access.";
+  "Bookkeeping, dues, budgets and Form 1120-H prep for Illinois condo associations of 2 to 20 units. Free during early access.";
 export const SHARE_TITLE = "Run your condo association in 15 minutes a month";
 export const SHARE_DESCRIPTION =
   "Walkup is software for self-managed Illinois condo associations. Dues, books, budget and taxes in one place. Free during early access.";

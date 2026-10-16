@@ -145,8 +145,8 @@ export default function TermsPage() {
             "Taxes. Prices do not include taxes. Where the law requires us to collect a tax, we will add it to the charge.",
             // LAWYER: "plenty of notice" is the existing early-access promise. Consider stating a minimum notice period before complimentary access ends.
             "Complimentary access. Associations that joined during early access use Walkup free, with every feature, until we tell them otherwise. We will give plenty of notice before that changes, and you won't be charged unless a board administrator chooses a plan. We may also give other associations complimentary access, for a set time or until we give notice.",
-            // LAWYER: the founding offer locks a price for a fixed term. Confirm it matches the pricing page and how it fits with the price-change clause above.
-            `The first ${FOUNDING.associations} ${FOUNDING.region} associations to join can lock in ${FOUNDING.prices.map((n) => `$${n}`).join(", ")} a month for ${FOUNDING.months} months, as described on our pricing page.`,
+            // LAWYER: the founding offer is free access for the first 25 associations. Confirm how long it lasts and how it fits with the price-change and complimentary access clauses above.
+            `Founding offer. The first ${FOUNDING.associations} associations to join use Walkup free, as described on our pricing page.`,
             `Questions about a charge: email ${SUPPORT_EMAIL}.`,
           ]}
         />

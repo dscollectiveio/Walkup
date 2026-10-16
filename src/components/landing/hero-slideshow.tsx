@@ -10,7 +10,7 @@ import { useCallback, useEffect, useRef, useState } from "react";
  * motion it still advances, but only fades (no movement).
  */
 
-const ADVANCE_MS = 6000;
+const ADVANCE_MS = 7000;
 
 // Fixed colors on purpose: the example card is a light screenshot on the navy
 // hero in both themes, like a photo of the product.
@@ -291,8 +291,8 @@ export function HeroSlideshow() {
               aria-hidden={!active}
               inert={!active}
               data-active={active}
-              className={`hero-slide col-start-1 row-start-1 flex flex-col transition-[opacity,transform] duration-700 ease-[cubic-bezier(0.22,1,0.36,1)] motion-reduce:transition-opacity ${
-                active ? "translate-y-0 scale-100 opacity-100" : "pointer-events-none translate-y-2 scale-[0.98] opacity-0"
+              className={`hero-slide col-start-1 row-start-1 flex flex-col transition-opacity duration-[1400ms] ease-in-out ${
+                active ? "opacity-100" : "pointer-events-none opacity-0"
               }`}
             >
               <div className="flex-1 overflow-hidden rounded-2xl border border-white/20 bg-white text-[#1B2A41] shadow-[0_24px_60px_-12px_rgba(0,0,0,0.55)] ring-1 ring-black/5">
@@ -305,7 +305,7 @@ export function HeroSlideshow() {
                   <span className="font-semibold text-white">{s.screen}</span>
                   <span className="ml-auto truncate">1420 W. Example St.</span>
                 </div>
-                <div className="hero-stagger p-4">{s.body}</div>
+                <div className="p-4">{s.body}</div>
               </div>
               <div className="mt-4 min-h-[3.25rem] text-center">
                 <p className="text-[11px] font-semibold uppercase tracking-[0.12em] text-eyebrow">
