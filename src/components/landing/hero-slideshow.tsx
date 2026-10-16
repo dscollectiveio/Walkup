@@ -5,8 +5,9 @@ import { useCallback, useEffect, useRef, useState } from "react";
 /**
  * The landing hero's right side: small, clearly labelled examples of Walkup's
  * screens, most important feature first. Illustrative figures only. Advances
- * on its own every few seconds, pauses while hovered or focused, and never
- * moves for people who ask for reduced motion.
+ * on its own every few seconds with a soft crossfade; hovering or focusing it
+ * holds the current slide, and the pause button stops it. Under reduced
+ * motion it still advances, but only fades (no movement).
  */
 
 const ADVANCE_MS = 6000;
@@ -239,27 +240,19 @@ const SLIDES: Slide[] = [
 
 export function HeroSlideshow() {
   const [index, setIndex] = useState(0);
-  const [paused, setPaused] = useState(false);
-  const [reduced, setReduced] = useState(false);
+  // Hover and keyboard focus pause it for a moment; the button pauses it for good.
+  const [held, setHeld] = useState(false);
+  const [stopped, setStopped] = useState(false);
   const regionRef = useRef<HTMLDivElement>(null);
 
-  useEffect(() => {
-    const mq = window.matchMedia("(prefers-reduced-motion: reduce)");
-    const update = () => setReduced(mq.matches);
-    update();
-    mq.addEventListener("change", update);
-    return () => mq.removeEventListener("change", update);
-  }, []);
-
   const go = useCallback((next: number) => setIndex((next + SLIDES.length) % SLIDES.length), []);
+  const paused = held || stopped;
 
   useEffect(() => {
-    if (paused || reduced) return;
+    if (paused) return;
     const id = window.setTimeout(() => go(index + 1), ADVANCE_MS);
     return () => window.clearTimeout(id);
-  }, [index, paused, reduced, go]);
-
-  const auto = !paused && !reduced;
+  }, [index, paused, go]);
 
   return (
     <div
@@ -268,20 +261,25 @@ export function HeroSlideshow() {
       aria-roledescription="carousel"
       aria-label="Examples of Walkup's screens"
       className="relative"
-      onMouseEnter={() => setPaused(true)}
-      onMouseLeave={() => setPaused(false)}
-      onFocus={() => setPaused(true)}
+      onMouseEnter={() => setHeld(true)}
+      onMouseLeave={() => setHeld(false)}
+      onFocus={() => setHeld(true)}
       onBlur={(e) => {
-        if (!regionRef.current?.contains(e.relatedTarget as Node | null)) setPaused(false);
+        if (!regionRef.current?.contains(e.relatedTarget as Node | null)) setHeld(false);
       }}
       onKeyDown={(e) => {
         if (e.key === "ArrowRight") go(index + 1);
         else if (e.key === "ArrowLeft") go(index - 1);
       }}
     >
+      {/* A soft gold glow behind the card, so it lifts off the navy. */}
+      <div
+        aria-hidden="true"
+        className="pointer-events-none absolute -inset-6 -z-0 rounded-[32px] bg-[radial-gradient(60%_55%_at_60%_40%,rgba(217,164,65,0.22),transparent_70%)] blur-2xl"
+      />
       {/* Every slide sits in the same grid cell, so the card keeps the height
           of the tallest one and the page never jumps. */}
-      <div className="grid" aria-live={auto ? "off" : "polite"}>
+      <div className="relative grid" aria-live={paused ? "polite" : "off"}>
         {SLIDES.map((s, i) => {
           const active = i === index;
           return (
@@ -292,63 +290,106 @@ export function HeroSlideshow() {
               aria-label={`${i + 1} of ${SLIDES.length}: ${s.screen}`}
               aria-hidden={!active}
               inert={!active}
-              className={`col-start-1 row-start-1 flex flex-col transition-opacity duration-500 ${
-                active ? "opacity-100" : "pointer-events-none opacity-0"
+              data-active={active}
+              className={`hero-slide col-start-1 row-start-1 flex flex-col transition-[opacity,transform] duration-700 ease-[cubic-bezier(0.22,1,0.36,1)] motion-reduce:transition-opacity ${
+                active ? "translate-y-0 scale-100 opacity-100" : "pointer-events-none translate-y-2 scale-[0.98] opacity-0"
               }`}
             >
-              <div className="flex-1 overflow-hidden rounded-xl border border-white/15 bg-white text-[#1B2A41] shadow-2xl">
-                <div className="flex items-center justify-between px-4 py-2.5 text-[12px] text-white/80" style={{ background: NAVY }}>
+              <div className="flex-1 overflow-hidden rounded-2xl border border-white/20 bg-white text-[#1B2A41] shadow-[0_24px_60px_-12px_rgba(0,0,0,0.55)] ring-1 ring-black/5">
+                <div className="flex items-center gap-3 px-4 py-2.5 text-[12px] text-white/80" style={{ background: NAVY }}>
+                  <span aria-hidden="true" className="flex gap-1.5">
+                    <span className="h-2.5 w-2.5 rounded-full bg-white/25" />
+                    <span className="h-2.5 w-2.5 rounded-full bg-white/25" />
+                    <span className="h-2.5 w-2.5 rounded-full bg-[#D9A441]" />
+                  </span>
                   <span className="font-semibold text-white">{s.screen}</span>
-                  <span>1420 W. Example St.</span>
+                  <span className="ml-auto truncate">1420 W. Example St.</span>
                 </div>
-                <div className="p-4">{s.body}</div>
+                <div className="hero-stagger p-4">{s.body}</div>
               </div>
-              <p className="mt-3 min-h-[2.5rem] text-center text-[13px] leading-snug text-white/85">{s.caption}</p>
+              <div className="mt-4 min-h-[3.25rem] text-center">
+                <p className="text-[11px] font-semibold uppercase tracking-[0.12em] text-[#D9A441]">
+                  {i + 1} of {SLIDES.length} · {s.screen}
+                </p>
+                <p className="mt-1 text-[14px] leading-snug text-white/90">{s.caption}</p>
+              </div>
             </div>
           );
         })}
       </div>
 
-      <div className="mt-2 flex items-center justify-center gap-3">
+      <div className="relative mt-2 flex items-center justify-center gap-2">
         <button
           type="button"
           onClick={() => go(index - 1)}
           aria-label="Previous example"
-          className="flex h-8 w-8 items-center justify-center rounded-full text-white/70 hover:bg-white/10 hover:text-white"
+          className="flex h-8 w-8 items-center justify-center rounded-full text-white/70 transition-colors duration-300 hover:bg-white/10 hover:text-white"
         >
           <svg viewBox="0 0 12 12" width="12" height="12" aria-hidden="true">
             <path d="M8 2L4 6l4 4" fill="none" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round" />
           </svg>
         </button>
         <div className="flex items-center gap-1.5">
-          {SLIDES.map((s, i) => (
-            <button
-              key={s.key}
-              type="button"
-              onClick={() => go(i)}
-              aria-label={`Show ${s.screen}`}
-              aria-current={i === index ? "true" : undefined}
-              className="flex h-6 items-center px-0.5"
-            >
-              <span
-                aria-hidden="true"
-                className={`block h-1.5 rounded-full transition-all ${i === index ? "w-5 bg-[#D9A441]" : "w-1.5 bg-white/40 hover:bg-white/70"}`}
-              />
-            </button>
-          ))}
+          {SLIDES.map((s, i) => {
+            const active = i === index;
+            return (
+              <button
+                key={s.key}
+                type="button"
+                onClick={() => go(i)}
+                aria-label={`Show ${s.screen}`}
+                aria-current={active ? "true" : undefined}
+                className="flex h-6 items-center px-0.5"
+              >
+                <span
+                  aria-hidden="true"
+                  className={`relative block h-1.5 overflow-hidden rounded-full transition-all duration-500 ease-out ${
+                    active ? "w-8 bg-white/25" : "w-1.5 bg-white/40 hover:bg-white/70"
+                  }`}
+                >
+                  {active ? (
+                    // Fills over the time to the next slide; holds still while paused.
+                    <span
+                      key={index}
+                      className="hero-progress absolute inset-0 origin-left rounded-full bg-[#D9A441]"
+                      style={{ animationDuration: `${ADVANCE_MS}ms`, animationPlayState: paused ? "paused" : "running" }}
+                    />
+                  ) : null}
+                </span>
+              </button>
+            );
+          })}
         </div>
         <button
           type="button"
           onClick={() => go(index + 1)}
           aria-label="Next example"
-          className="flex h-8 w-8 items-center justify-center rounded-full text-white/70 hover:bg-white/10 hover:text-white"
+          className="flex h-8 w-8 items-center justify-center rounded-full text-white/70 transition-colors duration-300 hover:bg-white/10 hover:text-white"
         >
           <svg viewBox="0 0 12 12" width="12" height="12" aria-hidden="true">
             <path d="M4 2l4 4-4 4" fill="none" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round" />
           </svg>
         </button>
+        <button
+          type="button"
+          onClick={() => setStopped((v) => !v)}
+          aria-label={stopped ? "Play the examples" : "Pause the examples"}
+          aria-pressed={stopped}
+          className="ml-1 flex h-8 w-8 items-center justify-center rounded-full text-white/70 transition-colors duration-300 hover:bg-white/10 hover:text-white"
+        >
+          {stopped ? (
+            <svg viewBox="0 0 12 12" width="11" height="11" aria-hidden="true">
+              <path d="M3.5 2l6 4-6 4z" fill="currentColor" />
+            </svg>
+          ) : (
+            <svg viewBox="0 0 12 12" width="11" height="11" aria-hidden="true">
+              <rect x="3" y="2" width="2" height="8" rx="0.5" fill="currentColor" />
+              <rect x="7" y="2" width="2" height="8" rx="0.5" fill="currentColor" />
+            </svg>
+          )}
+        </button>
       </div>
-      <p className="mt-1 text-center text-[11px] text-white/60">Example building, illustrative figures</p>
+      <p className="relative mt-1 text-center text-[11px] text-white/60">Example building, illustrative figures</p>
     </div>
   );
 }

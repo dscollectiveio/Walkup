@@ -14,6 +14,7 @@ import {
   Receipt,
   LifeBuoy,
   UserSearch,
+  CreditCard,
   type LucideIcon,
 } from "lucide-react";
 import { OWNER_NAV, STAFF_ANNOUNCEMENTS, STAFF_MY_UNIT, type OwnerNavItem } from "@/lib/owner/nav";
@@ -109,6 +110,13 @@ export const NAV_GROUPS: NavGroupConfig[] = [
 // owners still get their own trailing run (OWNER_TRAILING_NAV).
 export const TRAILING_NAV: NavItemConfig[] = [];
 
+/**
+ * Walkup's own plan (subscriptions plan 2.9). Board admins only: other board
+ * members can open /billing to read the status but it is not in their nav,
+ * and owners and the accountant never see billing.
+ */
+export const BILLING_NAV: NavItemConfig = { href: "/billing", label: "Billing", icon: CreditCard };
+
 /** Staff who also own a unit get this one extra item, after the Dashboard and Announcements. */
 export const MY_UNIT_NAV: NavItemConfig[] = [toNavItem(STAFF_MY_UNIT)];
 
@@ -155,7 +163,7 @@ export function navFor(
   return {
     ungrouped: [...UNGROUPED_NAV, ...(opts.ownsUnit ? MY_UNIT_NAV : [])],
     groups: navGroupsFor(role),
-    trailing: TRAILING_NAV,
+    trailing: role === "board_admin" ? [...TRAILING_NAV, BILLING_NAV] : TRAILING_NAV,
   };
 }
 
@@ -201,6 +209,7 @@ const EXTRA_TITLES: { prefix: string; label: string }[] = [
   { prefix: "/ledger", label: "Ledger" },
   { prefix: "/delinquency", label: "Collections" },
   { prefix: "/admin", label: "Admin" },
+  { prefix: "/billing", label: "Billing" },
   { prefix: "/login", label: "Sign in" },
   { prefix: "/onboarding", label: "Set up" },
 ];

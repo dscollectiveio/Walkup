@@ -267,7 +267,10 @@ export default async function BankFeedPage({
     // transactions are still in the books, so they still show here.
     { data: firstRows },
     { data: readyRows },
-    { data: flowRows },
+    { data: allFlowRows },
+    { data: accountTypes },
+    { data: fundRows },
+    { data: accountFundRows },
   ] = await Promise.all([
     associationId
       ? supabase.rpc("has_role_in", { assoc: associationId, roles: ["board_admin"] })
@@ -316,12 +319,18 @@ export default async function BankFeedPage({
       .eq("pending", false)
       .order("posted_on")
       .limit(MAX_LIMIT),
+    // The same money Home's In & out chart counts (lib/bank/position): settled
+    // movements on cash accounts, never a card, loan or investment account.
     supabase
       .from("bank_transactions")
-      .select("amount")
+      .select("amount, plaid_account_id")
       .is("removed_at", null)
+      .eq("pending", false)
       .gte("posted_on", rangeStart(flowRange) ?? "")
       .limit(MAX_LIMIT),
+    supabase.from("bank_account_balances").select("plaid_account_id, account_type"),
+    supabase.from("funds").select("id, name, kind").order("name"),
+    supabase.from("bank_account_funds").select("bank_connection_id, plaid_account_id, fund_id"),
   ]);
   const canEdit = isBoardAdminRes === true;
 
@@ -480,6 +489,14 @@ export default async function BankFeedPage({
   const caughtUp = canEdit && explicitStatus === null && counts.needs === 0 && counts.all > 0;
 
   // What moved through the bank over the period, for the line under the total.
+  // Before any balance is stored the account types aren't known; count everything then.
+  const cashAccountIds = new Set(
+    (accountTypes ?? []).filter((a) => a.account_type === "depository").map((a) => a.plaid_account_id as string),
+  );
+  const flowRows =
+    cashAccountIds.size > 0
+      ? (allFlowRows ?? []).filter((r) => r.plaid_account_id !== null && cashAccountIds.has(r.plaid_account_id as string))
+      : allFlowRows;
   const flow: MoneyFlow | undefined =
     flowRows && flowRows.length > 0
       ? {
@@ -557,6 +574,13 @@ export default async function BankFeedPage({
             cashAccounts={pickers.cashAccounts}
             checkingIds={checking.map((c) => c.id)}
             flow={flow}
+            fundChoices={(fundRows ?? []).map((f) => ({
+              id: f.id as string,
+              label: f.kind === "reserve" ? "Reserve" : f.kind === "operating" ? "Day-to-day" : (f.name as string),
+            }))}
+            accountFunds={Object.fromEntries(
+              (accountFundRows ?? []).map((o) => [`${o.bank_connection_id}:${o.plaid_account_id}`, o.fund_id as string]),
+            )}
           />
         </Suspense>
       ) : null}

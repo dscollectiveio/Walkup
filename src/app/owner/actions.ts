@@ -27,6 +27,7 @@ export async function updateMyProfile(_prev: unknown, formData: FormData): Promi
   }
   revalidatePath("/owner/profile");
   revalidatePath("/owner");
+  revalidatePath("/account");
   return { ok: true };
 }
 

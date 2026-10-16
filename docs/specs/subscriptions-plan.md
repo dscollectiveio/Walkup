@@ -8,6 +8,45 @@ provisional") and the open decisions in Part 3 get answered there.
 Part 1 is for Doug, in plain words. Part 2 is the engineering plan. Part 3 is
 the list of decisions only Doug can make.
 
+## Built so far (2026-10-15, Phase 0 and the Phase 1 code)
+
+Everything that does not need Doug's Stripe account, switched off. What Doug
+must still do is in `docs/billing-setup-checklist.md`. Where the build differs
+from Part 2:
+
+- **Migration `0062_billing.sql`** (applied to dev, not production):
+  `billing_accounts`, `billing_comps`, `billing_webhook_events`, all RLS on;
+  `billing_status`, `billing_admin_overview`, `billing_grant_comp`,
+  `billing_revoke_comp`, `billing_extend_trial`, `billing_link_checkout`,
+  `billing_apply_subscription`, `billing_record_payment`,
+  `billing_claim_event`, `billing_finish_event`, and the new-association trial
+  trigger. Every existing association is comped "Early access". Comp codes
+  are not built (decision 13). The table stores `stripe_price_id` instead of a
+  lookup key, and has no `founding` column.
+- **The access rules live in TypeScript only** (`src/lib/billing/entitlement-rules.ts`,
+  table-tested); SQL returns facts. There is no `association_access()` in SQL
+  yet; add one with database-level enforcement if decision 14 asks for it.
+  Statuses: comped, trialing, active, past_due, grace (trial or plan ended,
+  still working for 14 days), read_only.
+- **Two switches instead of `BILLING_MODE`**: `BILLING_ENABLED` (status and
+  buttons) and `BILLING_ENFORCE` (read-only), both off by default. There is no
+  separate "shadow" mode: with `BILLING_ENABLED` on and `BILLING_ENFORCE` off,
+  the honest status shows and nothing is blocked; `/admin/billing` always
+  shows the honest status.
+- **No `stripe` package**: `src/lib/billing/stripe.ts` calls the REST API
+  with fetch (API version pinned), and `stripe-signature.ts` verifies
+  webhooks with HMAC-SHA256 like `email-outbox/svix.ts`. Prices come from
+  `STRIPE_PRICE_*` env vars, not lookup keys.
+- **Webhook at `/api/stripe/webhook`** (not `/api/billing/webhook`), through
+  `src/lib/billing/service-rpc.ts` (five functions).
+- **Pages**: `/billing` (board admin acts, board member reads, others go to
+  `/account`), `/admin/billing` (platform admin), the sidebar link for board
+  admins, and the account page's "Plan and billing" card reading the real
+  status. CSP `form-action` allows Stripe's hosted pages.
+- **Not built yet**: `assertCanWrite` wired into server actions and its static
+  test, the banner in the layout, home urgent items, landing/Terms/Privacy copy,
+  `scripts/stripe-check-prices.ts`, the DECISIONS entry.
+
 ---
 
 ## Part 1. The plan in plain words

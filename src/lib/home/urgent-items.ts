@@ -187,15 +187,17 @@ export function urgentItems(input: UrgentInputs): UrgentItem[] {
     });
   }
 
-  // A unit at least a month behind: anything aged past the current bucket.
-  // One unit gets its own item; several are grouped so they don't crowd out
-  // everything else on the card.
+  // Any unit with a charge past its due date. The wording follows the aging
+  // bucket honestly: 1 to 30 days is "past due", 31 to 60 is "over a month
+  // behind", 61 and up is "2+ months behind". One unit gets its own item;
+  // several are grouped so they don't crowd out everything else on the card.
   const behind = input.aging
     .map((u) => {
       const d60 = Number(u.days_31_60);
       const d60p = Number(u.days_60_plus);
       const overdue = Number(u.days_1_30) + d60 + d60p;
-      return { label: u.label, overdue, monthsBehind: d60p > 0 ? 3 : d60 > 0 ? 2 : 1 };
+      const lateness = d60p > 0 ? "2+ months behind" : d60 > 0 ? "over a month behind" : "past due";
+      return { label: u.label, overdue, lateness };
     })
     .filter((u) => u.overdue > 0)
     .sort((a, b) => b.overdue - a.overdue);
@@ -204,7 +206,7 @@ export function urgentItems(input: UrgentInputs): UrgentItem[] {
     items.push({
       key: "delinquent",
       severity: 1,
-      title: `${u.label} is ${u.monthsBehind === 1 ? "a month" : `${u.monthsBehind}+ months`} behind: ${money(u.overdue)}`,
+      title: `${u.label} is ${u.lateness}: ${money(u.overdue)}`,
       why: "Unpaid dues hurt cash flow. Collections shows who is behind and what has been sent.",
       action: { label: "Open Collections", href: "/delinquency" },
       tone: "bad",
@@ -293,7 +295,8 @@ export function urgentItems(input: UrgentInputs): UrgentItem[] {
     // A bank that stops syncing usually wants someone to sign in again.
     // Three days covers a weekend plus the daily sync missing once.
     const staleDays = Math.floor((input.today.getTime() - new Date(input.lastSyncedAt).getTime()) / 86400000);
-    if (staleDays > 3) {
+    // The same 3-day line as the Bank tile on the snapshot, so the two agree.
+    if (staleDays >= 3) {
       items.push({
         key: "sync",
         severity: 2,

@@ -26,10 +26,10 @@ const balances: ConnectionBalance[] = [
     connectionId: "c1",
     source: "last_sync",
     accounts: [
-      { name: "Plaid Checking", mask: "0000", type: "depository", currentCents: 11000 },
-      { name: "Plaid Saving", mask: "1111", type: "depository", currentCents: 21000 },
-      { name: "Plaid Credit Card", mask: "3333", type: "credit", currentCents: 41000 },
-      { name: "Plaid IRA", mask: "5555", type: "investment", currentCents: 32076 },
+      { accountId: "acc-chk", name: "Plaid Checking", mask: "0000", type: "depository", currentCents: 11000 },
+      { accountId: "acc-sav", name: "Plaid Saving", mask: "1111", type: "depository", currentCents: 21000 },
+      { accountId: "acc-cc", name: "Plaid Credit Card", mask: "3333", type: "credit", currentCents: 41000 },
+      { accountId: "acc-ira", name: "Plaid IRA", mask: "5555", type: "investment", currentCents: 32076 },
     ],
   },
 ];

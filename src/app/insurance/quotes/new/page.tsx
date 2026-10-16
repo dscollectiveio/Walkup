@@ -78,7 +78,7 @@ export default async function NewQuotePage({
     <div className="space-y-4">
       <BackLink href="/insurance?view=quotes">Insurance</BackLink>
       {!documentId ? (
-        <Card title="Have the quote as a file?">
+        <Card navy title="Have the quote as a file?">
           <div className="space-y-2">
             <p className="text-[13px] text-mute">
               {aiOn

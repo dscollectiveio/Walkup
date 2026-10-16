@@ -28,7 +28,7 @@ export function ProofRequestCard({
   const [sent, setSent] = useState(false);
 
   return (
-    <Card title="Ask the board for proof of insurance">
+    <Card navy title="Ask the board for proof of insurance">
       <div className="space-y-4">
         <p className="text-[13px] text-ink">
           Refinancing or selling? Your lender may need proof of the building&rsquo;s insurance. Ask the board and they&rsquo;ll request a certificate from the agent.

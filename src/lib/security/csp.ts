@@ -46,7 +46,9 @@ export function buildCsp({
     "frame-src": ["'self'", "https://cdn.plaid.com"],
     "frame-ancestors": [framedBySelf ? "'self'" : "'none'"],
     "base-uri": ["'self'"],
-    "form-action": ["'self'"],
+    // A billing server action redirects to Stripe's hosted pages, and Chrome
+    // applies form-action to that redirect (subscriptions plan 2.5).
+    "form-action": ["'self'", "https://checkout.stripe.com", "https://billing.stripe.com"],
     "object-src": ["'none'"],
     "worker-src": ["'self'", "blob:"],
     "manifest-src": ["'self'"],

@@ -17,7 +17,9 @@ import { buildingTodayIso, todayIso as localIso } from "@/lib/dates";
 import { defaultContractorYear, parametersAsOf } from "@/app/tax/data";
 import { buildSnapshot } from "@/lib/home/snapshot";
 import { spendByAccount } from "@/lib/money/spending";
-import { monthKey, monthKeyOf, monthsBetween } from "@/lib/money/months";
+import { addMonths, monthKey, monthKeyOf, monthsBetween } from "@/lib/money/months";
+import { bankMonths, loadBankCash } from "@/lib/bank/position";
+import { getConnectionBalance } from "@/app/bank-feed/balances";
 import { buildPlanRows, overBudgetAlerts } from "@/lib/money/plan";
 import { dateOfKey, monthLongLabel, monthShortLabel } from "@/lib/money/months";
 import { WorthAMinute } from "@/components/home/worth-a-minute";
@@ -92,19 +94,22 @@ export default async function HomePage() {
   const viewer = await getViewer();
   if (viewer && !viewer.isStaff) redirect("/owner");
   const supabase = await createClient();
-  const todayIso = new Date().toISOString().slice(0, 10);
-  // The local calendar day, the one every computed status on Home uses.
-  const todayLocal = localIso(new Date());
+  // The building's calendar day (America/Chicago), never the server's: Vercel
+  // runs on UTC, so at 8pm in Chicago on Oct 31 the server already says Nov 1.
+  // Every computed status on Home uses this one day.
+  const buildingToday = buildingTodayIso();
+  const todayIso = buildingToday;
+  const todayLocal = buildingToday;
   // 1099s are prepared in January and February for the year just ended; the
   // rest of the year looks at the current one (the Taxes tab's rule).
-  const contractorYear = defaultContractorYear(localIso(new Date()));
+  const contractorYear = defaultContractorYear(buildingToday);
 
   const [
     { data: associations },
     { data: fiscalYears },
-    { data: funds },
+    { data: funds, error: fundsError },
     { data: units },
-    { data: totals },
+    { data: totals, error: totalsError },
     { data: unitOwners },
     { data: bankConnections },
     { data: policies },
@@ -173,7 +178,7 @@ export default async function HomePage() {
       .is("deleted_at", null)
       .eq("is_current_version", true),
     supabase.from("units").select("id"),
-    supabase.from("role_grants").select("person_id, granted_on, revoked_at, expires_on"),
+    supabase.from("role_grants").select("person_id, role, granted_on, revoked_at, expires_on"),
     supabase.from("invites").select("id", { count: "exact", head: true }),
     supabase.from("budget_lines").select("id, budgets(fiscal_year_id)"),
     supabase.from("assessment_schedules").select("id", { count: "exact", head: true }),
@@ -216,7 +221,7 @@ export default async function HomePage() {
       .from("monthly_expense_actuals")
       .select("month, account_id, account_name, fund_id, total")
       .order("month"),
-    supabase.from("budget_vs_actual").select("type, variance, account_id, fund_id, name, budgeted"),
+    supabase.from("budget_vs_actual").select("fiscal_year_id, type, variance, account_id, fund_id, name, budgeted"),
     // The tax deadlines (lib/tax/deadlines) are built from these rows alone —
     // Home never loads the full tax context.
     supabase
@@ -249,12 +254,19 @@ export default async function HomePage() {
   const t = totals?.[0];
   const booksVisible = (t?.visible_tb_rows ?? 0) > 0;
   const booksBalanced = booksVisible && looseCents(t?.total_debits ?? 0) === looseCents(t?.total_credits ?? 0);
-  const owedCents = looseCents(t?.total_owed ?? 0);
-  const behind = Number(t?.units_behind ?? 0);
-  const fyLabel = fiscalYears?.[0]?.label ?? String(new Date().getFullYear());
+  const [ty, tm, td] = buildingToday.split("-").map(Number);
+  const today = new Date(ty, tm - 1, td);
 
-  const today = new Date();
-  today.setHours(0, 0, 0, 0);
+  // The fiscal year the building is in today (the Budget page's rule), not the
+  // newest one: a board drafting next year's budget in November must not
+  // switch Home to a year that hasn't started.
+  const fyList = fiscalYears ?? [];
+  const currentFy =
+    fyList.find((f) => f.starts_on <= buildingToday && f.ends_on >= buildingToday) ??
+    fyList.find((f) => f.starts_on <= buildingToday) ??
+    fyList[0];
+  const fyLabel = currentFy?.label ?? String(today.getFullYear());
+  const fyBudgetRows = (budgetRows ?? []).filter((r) => r.fiscal_year_id === currentFy?.id);
 
   // The building's clock, not the server's: Vercel runs on UTC, and the one
   // state on record is Illinois. Central time is the honest default.
@@ -273,17 +285,28 @@ export default async function HomePage() {
   const firstName = me?.full_name.split(" ")[0] ?? user?.email?.split("@")[0] ?? "there";
 
   const personName = new Map((persons ?? []).map((p) => [p.id, p.full_name]));
-  const ownerName = new Map<string, string>();
+  // Current owners only (a past owner's row has ended), co-owners together.
+  const ownerNames = new Map<string, string[]>();
   for (const o of unitOwners ?? []) {
     const p = o.persons as unknown as { full_name: string } | null;
-    if (p) ownerName.set(o.unit_id, p.full_name);
+    const current = o.effective_from <= buildingToday && (!o.effective_to || o.effective_to >= buildingToday);
+    if (!p || !current) continue;
+    ownerNames.set(o.unit_id, [...(ownerNames.get(o.unit_id) ?? []), p.full_name].sort());
   }
+  const ownerName = new Map([...ownerNames].map(([unitId, names]) => [unitId, names.join(" & ")]));
 
-  const statusLine = !booksVisible
-    ? "No financial activity has been recorded yet."
-    : behind > 0
-      ? `${moneyRounded(owedCents / 100)} is owed across ${behind} unit${behind === 1 ? "" : "s"}. Everything else looks in order.`
-      : "Every unit is current and nothing is overdue.";
+  // What is actually past due, by unit, from the aging buckets. The unit
+  // balances also count charges entered ahead of their due date, which aren't
+  // late yet and must not make a unit "behind".
+  const overdueByLabel = new Map(
+    (aging ?? []).map((a) => [
+      a.label as string,
+      looseCents(a.days_1_30 ?? 0) + looseCents(a.days_31_60 ?? 0) + looseCents(a.days_60_plus ?? 0),
+    ]),
+  );
+  const overdueCents = [...overdueByLabel.values()].reduce((s, c) => s + c, 0);
+  const unitsOverdue = [...overdueByLabel.values()].filter((c) => c > 0).length;
+
 
   // --------------------------------------------------------------------------
   // Worth a minute today
@@ -369,24 +392,28 @@ export default async function HomePage() {
   // any activity having been posted yet.
   // Categories past the 10% band against their share of the year so far —
   // the same arithmetic as the Budget page's list, so the two agree.
-  const fyRow = fiscalYears?.[0];
+  const fyRow = currentFy;
   const operatingFundId = (funds ?? []).find((f) => f.kind === "operating")?.fund_id ?? null;
   let budgetOver: { name: string; overCents: number }[] = [];
+  // Spent minus this point in the year's share of the plan, summed; positive is over.
+  let budgetVarianceToDateCents: number | null = null;
   if (fyRow?.starts_on && operatingFundId) {
     const fyStartKey = monthKeyOf(fyRow.starts_on);
     const current = monthKey(today);
     const fyMonths = Math.max(1, monthsBetween(fyStartKey, monthKeyOf(fyRow.ends_on)).length);
     const share = Math.min(1, monthsBetween(fyStartKey, current).length / fyMonths);
     const annual = new Map(
-      (budgetRows ?? [])
+      fyBudgetRows
         .filter((r) => r.type === "expense" && r.fund_id === operatingFundId && Number(r.budgeted) > 0)
         .map((r) => [r.account_id as string, Math.round(Number(r.budgeted) * 100)]),
     );
-    const nameOf = new Map((budgetRows ?? []).map((r) => [r.account_id as string, r.name as string]));
+    const nameOf = new Map(fyBudgetRows.map((r) => [r.account_id as string, r.name as string]));
     const spent = new Map(
       spendByAccount(spendingRows ?? [], fyStartKey, current, operatingFundId).map((a) => [a.accountId, a.cents]),
     );
-    budgetOver = overBudgetAlerts(buildPlanRows(annual, spent, (id) => nameOf.get(id) ?? "A category", share));
+    const planRows = buildPlanRows(annual, spent, (id) => nameOf.get(id) ?? "A category", share);
+    budgetOver = overBudgetAlerts(planRows);
+    if (planRows.length > 0) budgetVarianceToDateCents = -planRows.reduce((s, r) => s + r.leftCents, 0);
   }
 
   // --------------------------------------------------------------------------
@@ -400,7 +427,6 @@ export default async function HomePage() {
   ]);
   const isBoard = isBoardRes === true;
   const canReadFinancials = canReadFinancialsRes === true;
-  const buildingToday = buildingTodayIso();
   const [board, finance, email, notices] = await Promise.all([
     isBoard ? loadBoardHome(supabase, association.id) : Promise.resolve(null),
     canReadFinancials ? loadRepairsHome(supabase, todayLocal) : Promise.resolve(null),
@@ -489,31 +515,56 @@ export default async function HomePage() {
     budgetOver,
   });
 
+  // Only say "everything else looks in order" when nothing else is on the card.
+  const othersFlagged = urgent.some((i) => i.key !== "delinquent");
+  const statusLine = !booksVisible
+    ? "No financial activity has been recorded yet."
+    : unitsOverdue > 0
+      ? `${moneyRounded(overdueCents / 100)} is past due across ${unitsOverdue} unit${unitsOverdue === 1 ? "" : "s"}.${othersFlagged ? "" : " Everything else looks in order."}`
+      : othersFlagged
+        ? "Every unit is current. A few other things need a look below."
+        : "Every unit is current and nothing is overdue.";
+
   // --------------------------------------------------------------------------
   // Standing + checklist
   // --------------------------------------------------------------------------
   const visibleFunds = (funds ?? []).filter((f) => f.visible_lines > 0);
-  const operatingCents = visibleFunds
+  const booksOperatingCents = visibleFunds
     .filter((f) => f.kind === "operating")
     .reduce((s, f) => s + looseCents(f.cash_balance), 0);
-  const reserveCents = visibleFunds
+  const booksReserveCents = visibleFunds
     .filter((f) => f.kind === "reserve")
     .reduce((s, f) => s + looseCents(f.cash_balance), 0);
-  const totalCents = visibleFunds.reduce((s, f) => s + looseCents(f.cash_balance), 0);
+  const booksTotalCents = visibleFunds.reduce((s, f) => s + looseCents(f.cash_balance), 0);
+
+  // Cash is the bank's figure (lib/bank/position), the same one the Bank Feed
+  // shows. A board admin's visit refreshes the stored balances from Plaid
+  // (remembered for minutes), so the two pages agree to the cent. The books
+  // fill in only when no bank is connected.
+  const activeConnections = (bankConnections ?? []).filter((c) => c.status !== "disconnected");
+  if (isAdmin === true && activeConnections.length > 0) {
+    await Promise.all(activeConnections.map((c) => getConnectionBalance(supabase, c.id).catch(() => null)));
+  }
+  const bankCash = activeConnections.length > 0 ? await loadBankCash(supabase) : null;
+  const operatingCents = bankCash ? bankCash.operatingCents : booksOperatingCents;
+  const reserveCents = bankCash ? bankCash.reserveCents : booksReserveCents;
+  const totalCents = bankCash ? bankCash.totalCents : booksTotalCents;
+  const booksGap =
+    bankCash && booksVisible ? { cents: booksTotalCents - bankCash.totalCents, waiting: uncategorizedCount ?? 0 } : null;
 
   // Setting a reserve target is governance, not a books-derived figure —
   // available regardless of whether anything's been posted yet.
   const canSetTarget = isAdmin === true;
 
   // None of these inputs require any posted activity either.
-  const currentFyId = fiscalYears?.[0]?.id ?? null;
+  const currentFyId = currentFy?.id ?? null;
   const setupSections = buildSetupGuide({
     today,
     association,
     units: unitRows ?? [],
     unitOwners: unitOwners ?? [],
     persons: persons ?? [],
-    roleGrants: roleGrants ?? [],
+    roleGrants: (roleGrants ?? []).filter((g) => ["board_admin", "board_member", "accountant"].includes(g.role as string)),
     myPersonId: me?.id ?? null,
     inviteCount: inviteCount ?? 0,
     announcementCount: announcementCount ?? 0,
@@ -552,7 +603,9 @@ export default async function HomePage() {
   const setupCounts = countSteps(setupSections);
   const showSetupGuide =
     canSetTarget && !isSetupComplete(setupSections) && association.setup_dismissed_at === null;
-  const derived = openSteps(setupSections);
+  // Setup steps are the board's to do; an accountant can neither act on them
+  // nor see the invites, imports and email settings they're judged from.
+  const derived = isBoard ? openSteps(setupSections) : [];
 
   const manual: ManualTask[] = (boardTasks ?? []).map((task) => ({
     id: task.id,
@@ -570,12 +623,18 @@ export default async function HomePage() {
   // from "in" and "out" but still carried in the balance.
   let cash: CashCardData | null = null;
   let inOut: InOutCardData | null = null;
-  const series = cashByMonth(cashActivity ?? []);
+  const currentKey = monthKey(today);
+  const series: { key: string; inCents: number; outCents: number; netCents: number; balanceCents: number }[] = bankCash
+    ? (await bankMonths(supabase, bankCash, addMonths(currentKey, -11), currentKey)).map((m) => ({
+        ...m,
+        netCents: m.inCents - m.outCents,
+      }))
+    : cashByMonth(cashActivity ?? []);
 
   if (series.length > 0) {
     const window = series.slice(-12);
-    const beforeWindowCents =
-      window.length < series.length ? series[series.length - window.length - 1].balanceCents : 0;
+    // The balance just before the window: its first month's close less that month's movement.
+    const beforeWindowCents = window[0].balanceCents - window[0].netCents;
     const sinceLabel = `Since ${monthLongLabel(window[0].key, dateOfKey(window[0].key).getFullYear() !== today.getFullYear())}`;
 
     cash = {
@@ -591,14 +650,17 @@ export default async function HomePage() {
       if (top) topSpendByMonth.set(month, { name: top.name, cents: top.cents });
     }
 
-    let varianceCents: number | null = null;
-    const expenseBudgetRows = (budgetRows ?? []).filter((r) => r.type === "expense");
-    if (expenseBudgetRows.length > 0) {
-      varianceCents = expenseBudgetRows.reduce((s, r) => s + looseCents(r.variance), 0);
-    }
+    // Against the share of this year's plan that has come due so far, the
+    // same arithmetic as the over-budget alerts, so an on-plan April reads
+    // as on plan rather than as the whole year's budget left unspent.
+    const varianceCents = budgetVarianceToDateCents;
 
+    const lastSix = window.slice(-6);
+    // One "mostly …" caption, on the latest short month: six of them side by
+    // side run into each other under narrow bars.
+    const lastShortKey = [...lastSix].reverse().find((s) => s.outCents > s.inCents)?.key ?? null;
     inOut = {
-      groups: window.slice(-6).map((s) => {
+      groups: lastSix.map((s) => {
         const shortfall = s.outCents > s.inCents;
         const top = topSpendByMonth.get(s.key);
         return {
@@ -606,7 +668,7 @@ export default async function HomePage() {
           aCents: s.inCents,
           bCents: s.outCents,
           shortfall,
-          caption: shortfall && top ? `mostly ${top.name}` : null,
+          caption: s.key === lastShortKey && top ? `mostly ${top.name}` : null,
         };
       }),
       varianceCents,
@@ -712,7 +774,7 @@ export default async function HomePage() {
 
   const buildingUnits: BuildingUnit[] = (units ?? []).map((u) => {
     const name = ownerName.get(u.unit_id) ?? null;
-    const owed = looseCents(u.balance_owed);
+    const owed = overdueByLabel.get(u.label as string) ?? 0;
     const status: BuildingUnit["status"] =
       u.visible_charges === 0 && !booksVisible
         ? "hidden"
@@ -726,7 +788,7 @@ export default async function HomePage() {
       label: u.label,
       ownerName: name,
       status,
-      owedLabel: status === "behind" ? `owes ${money(u.balance_owed)}` : null,
+      owedLabel: status === "behind" ? `owes ${money(owed / 100)}` : null,
     };
   });
 
@@ -748,6 +810,10 @@ export default async function HomePage() {
   // --------------------------------------------------------------------------
   return (
     <div className="space-y-6">
+      {notices ? (
+        <AnnouncementsStrip rows={notices.rows} unread={notices.unread} todayIso={buildingToday} canPost={isBoard} />
+      ) : null}
+
       <Greeting
         firstName={firstName}
         statusLine={statusLine}
@@ -755,8 +821,11 @@ export default async function HomePage() {
         books={booksVisible ? { visible: true, balanced: booksBalanced } : null}
       />
 
-      {notices ? (
-        <AnnouncementsStrip rows={notices.rows} unread={notices.unread} todayIso={buildingToday} canPost={isBoard} />
+
+      {fundsError || totalsError ? (
+        <p role="alert" className="rounded-xl border border-bad-line bg-bad-tint px-5 py-3 text-[13px] text-bad-text">
+          Some balances couldn&rsquo;t be loaded just now, so figures below may read as zero. Reload the page in a moment.
+        </p>
       ) : null}
 
       <WorthAMinute
@@ -792,6 +861,8 @@ export default async function HomePage() {
           reserveTarget={reserveTarget}
           canSetTarget={canSetTarget}
           tiles={snapshotTiles}
+          source={bankCash ? "bank" : "books"}
+          booksGap={booksGap}
         />
         {showSetupGuide ? (
           <SetupGuidePanel
@@ -810,12 +881,12 @@ export default async function HomePage() {
         )}
       </div>
 
-      <ShowcaseCards cash={cash} inOut={inOut} spending={spending} />
-
-      <div className="grid items-start gap-4 lg:grid-cols-[3fr_2fr]">
+      <div className={`grid items-start gap-4 ${reminders.length > 0 ? "lg:grid-cols-[3fr_2fr]" : ""}`}>
         {reminders.length > 0 ? <ComingUp reminders={reminders} today={today} /> : null}
         <Building units={buildingUnits} duesLine={duesLine} />
       </div>
+
+      <ShowcaseCards cash={cash} inOut={inOut} spending={spending} />
     </div>
   );
 }

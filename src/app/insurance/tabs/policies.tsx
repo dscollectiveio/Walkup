@@ -71,8 +71,8 @@ export async function PoliciesTab({
         </div>
       ) : null}
 
-      <Card title="In force">{inForce.length ? list(inForce) : <Empty>No policy is in force today.</Empty>}</Card>
-      {upcoming.length ? <Card title="Starting soon">{list(upcoming)}</Card> : null}
+      <Card navy title="In force">{inForce.length ? list(inForce) : <Empty>No policy is in force today.</Empty>}</Card>
+      {upcoming.length ? <Card navy title="Starting soon">{list(upcoming)}</Card> : null}
       {ended.length ? (
         <details className="rounded-xl border border-line bg-paper px-5 py-3">
           <summary className="min-h-[44px] cursor-pointer py-2 text-[13px] font-bold text-ink">Ended or replaced ({ended.length})</summary>
@@ -86,7 +86,7 @@ export async function PoliciesTab({
         </details>
       ) : null}
 
-      <Card title="Claims">
+      <Card navy title="Claims">
         <div className="space-y-3">
           {claims.length === 0 ? (
             <p className="text-[13px] text-mute">No claims recorded.</p>
@@ -162,7 +162,7 @@ export async function PoliciesTab({
         </div>
       </Card>
 
-      <Card title="Year by year" hint="Each renewal, what it cost, and whether you looked at other quotes before it started.">
+      <Card navy title="Year by year" hint="Each renewal, what it cost, and whether you looked at other quotes before it started.">
         {(history.data ?? []).length === 0 ? (
           <Empty>No policies recorded yet.</Empty>
         ) : (

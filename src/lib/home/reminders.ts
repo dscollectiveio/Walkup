@@ -248,7 +248,11 @@ export function assembleReminders({
   for (const b of bills) {
     if (b.autopay_arranged || !b.next_due_on || b.paused_at) continue;
     const due = new Date(`${b.next_due_on}T00:00:00`);
-    if (due >= today && due <= horizon) {
+    // A hand-paid bill's date only moves on when someone marks it paid, so a
+    // past date means it hasn't been: keep it, flagged, instead of dropping it.
+    if (due < today) {
+      reminders.push({ name: b.name, kind: "Bill to pay by hand", due, overdue: true });
+    } else if (due <= horizon) {
       reminders.push({ name: b.name, kind: "Bill to pay by hand", due });
     }
   }

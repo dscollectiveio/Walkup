@@ -97,7 +97,7 @@ export default async function ComparePage({ searchParams }: { searchParams: Prom
       {withQuotes.length > 1 ? pills : null}
 
       {quotes.length === 0 ? (
-        <Card title={label}>
+        <Card navy title={label}>
           <div className="space-y-3">
             <Empty>No quotes for {label.toLowerCase()} yet.</Empty>
             {canEdit ? (
@@ -217,7 +217,7 @@ export default async function ComparePage({ searchParams }: { searchParams: Prom
               const changed = rows.filter((r) => chipText(r.cell) !== null && r.cell.change !== "same");
               const rest = rows.filter((r) => !changed.includes(r));
               return (
-                <Card key={q.id} title={`${q.carrier_name} vs now`}>
+                <Card navy key={q.id} title={`${q.carrier_name} vs now`}>
                   <div className="space-y-3 text-[13px]">
                     {current ? null : <p className="text-mute">No current policy to compare with.</p>}
                     {changed.length ? (

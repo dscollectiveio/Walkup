@@ -4,6 +4,7 @@ import { money } from "@/components/ui";
 import { syncedAgo } from "@/lib/dates";
 import { plaidClient, plaidErrorLog, describePlaidError, isLoginRequired, isProductNotEnabled } from "@/lib/plaid";
 import { rememberBalance } from "@/lib/plaid/balance-cache";
+import { storeBankBalances } from "@/lib/bank/balances-store";
 import { ConnectBankButton } from "./connect-bank-button";
 import { ReconnectButton } from "./reconnect-button";
 import { SyncButton } from "./sync-button";
@@ -11,6 +12,7 @@ import { BankCardActions, ManageLink } from "./bank-card-actions";
 import { DisconnectButton } from "./disconnect-button";
 import { BankAlertsButton } from "./bank-alerts-button";
 import { LedgerAccountSelect } from "./ledger-account-select";
+import { AccountFundSelect } from "./account-fund-select";
 
 const ACCOUNT_TYPE_ORDER = ["depository", "credit", "loan", "investment", "other"];
 const ACCOUNT_TYPE_LABEL: Record<string, string> = {
@@ -24,6 +26,8 @@ const ACCOUNT_TYPE_LABEL: Record<string, string> = {
 export interface ConnectionBalance {
   connectionId: string;
   accounts: {
+    /** Plaid's account_id, the same id bank_transactions.plaid_account_id carries. */
+    accountId: string;
     name: string;
     mask: string | null;
     currentCents: number | null;
@@ -33,8 +37,14 @@ export interface ConnectionBalance {
   error?: string;
   /** The bank wants the person to sign in again — show Reconnect, not an error. */
   needsReconnect?: boolean;
-  /** "live" = real-time Balance product; "last_sync" = Plaid's cached balance as of its last update. */
-  source?: "live" | "last_sync";
+  /**
+   * "live" = real-time Balance product; "last_sync" = Plaid's cached balance as
+   * of its last update; "stored" = the last balance Walkup heard (0063), for
+   * readers of the books who can't ask the bank themselves.
+   */
+  source?: "live" | "last_sync" | "stored";
+  /** When a stored balance was true. */
+  asOf?: string;
 }
 
 /**
@@ -52,13 +62,34 @@ export async function getConnectionBalance(
 ): Promise<ConnectionBalance> {
   const { token: accessToken, error: tokenError } = await readBankToken(supabase, connectionId);
   if (tokenError || !accessToken) {
+    // Only a board admin can ask the bank directly. Everyone else who can read
+    // the books sees the last balance Walkup heard, the same one Home shows.
+    const { data: stored } = await supabase
+      .from("bank_account_balances")
+      .select("plaid_account_id, name, mask, account_type, current_balance, as_of")
+      .eq("bank_connection_id", connectionId);
+    if (stored && stored.length > 0) {
+      return {
+        connectionId,
+        source: "stored",
+        asOf: stored.map((r) => r.as_of as string).sort()[0],
+        accounts: stored.map((r) => ({
+          accountId: r.plaid_account_id as string,
+          name: r.name as string,
+          mask: (r.mask as string | null) ?? null,
+          type: r.account_type as string,
+          currentCents: r.current_balance === null ? null : Math.round(Number(r.current_balance) * 100),
+        })),
+      };
+    }
     return { connectionId, accounts: [], error: tokenError?.message ?? "No access token on file." };
   }
 
   const toAccounts = (
-    accounts: { name: string; mask?: string | null; type: unknown; balances: { current?: number | null } }[],
+    accounts: { account_id: string; name: string; mask?: string | null; type: unknown; balances: { current?: number | null } }[],
   ) =>
     accounts.map((a) => ({
+      accountId: a.account_id,
       name: a.name,
       mask: a.mask ?? null,
       type: String(a.type),
@@ -68,7 +99,9 @@ export async function getConnectionBalance(
 
   // The Plaid half is remembered for a few minutes per connection: this page
   // re-renders on every click, and the balance does not change between them.
-  return rememberBalance(connectionId, async () => {
+  // A fresh answer is also stored (0063) so Home, the statements and every
+  // reader of the books show the very same figure.
+  const result = await rememberBalance<ConnectionBalance>(connectionId, async () => {
     try {
       const response = await plaidClient().accountsBalanceGet({ access_token: accessToken });
       return { connectionId, accounts: toAccounts(response.data.accounts), source: "live" };
@@ -89,7 +122,12 @@ export async function getConnectionBalance(
       }
     }
   });
+  if (!result.error && !result.needsReconnect && result.accounts.length > 0 && result.source !== "stored") {
+    await storeBankBalances(supabase, connectionId, result.accounts, result.source ?? "live");
+  }
+  return result;
 }
+
 
 
 interface ActiveConnection {
@@ -147,6 +185,8 @@ export async function BankAccountsSection({
   cashAccounts,
   checkingIds = [],
   flow,
+  fundChoices = [],
+  accountFunds = {},
 }: {
   balancesPromise: Promise<ConnectionBalance[]>;
   active: ActiveConnection[];
@@ -156,8 +196,13 @@ export async function BankAccountsSection({
   checkingIds?: string[];
   /** In and out for the period, shown under the total; left out when nothing has synced for it. */
   flow?: MoneyFlow;
+  /** For "Counts as" on each cash account (board admins): the funds to choose from. */
+  fundChoices?: { id: string; label: string }[];
+  /** Choices already made, keyed "connectionId:plaidAccountId" (0063 bank_account_funds). */
+  accountFunds?: Record<string, string>;
 }) {
   const balances = await balancesPromise;
+  const accountFund = new Map(Object.entries(accountFunds));
   const balanceByConnection = new Map(balances.map((b) => [b.connectionId, b]));
   // Cash the association can spend: depository accounts only. A credit card is
   // money owed and a retirement/brokerage account isn't operating cash.
@@ -166,7 +211,7 @@ export async function BankAccountsSection({
     0,
   );
   const hasCash = balances.some((b) => b.accounts.some((a) => a.type === "depository"));
-  const anyCached = balances.some((b) => b.source === "last_sync");
+  const anyCached = balances.some((b) => b.source === "last_sync" || b.source === "stored");
   return (
     <section className="divide-y divide-line rounded-xl border border-line bg-paper">
       <header className="flex flex-wrap items-end justify-between gap-x-6 gap-y-2 rounded-t-[7px] band bg-ink px-5 py-5">
@@ -202,6 +247,10 @@ export async function BankAccountsSection({
                 <p className="mb-2 text-[11px] text-mute-soft">
                   Balances are as of the bank&rsquo;s last update, not real-time.
                 </p>
+              ) : balance?.source === "stored" && balance.asOf ? (
+                <p className="mb-2 text-[11px] text-mute-soft">
+                  Balances from the last time Walkup checked with the bank ({syncedAgo(balance.asOf)}).
+                </p>
               ) : null}
               <ul className="divide-y divide-line overflow-hidden rounded-lg border border-line">
                 {accts.map((a, i) => (
@@ -221,6 +270,15 @@ export async function BankAccountsSection({
                     <span className="figures w-28 shrink-0 text-right text-[14px] text-ink">
                       {a.currentCents !== null ? money(a.currentCents / 100) : "—"}
                     </span>
+                    {canEdit && a.type === "depository" && fundChoices.length > 1 ? (
+                      <AccountFundSelect
+                        connectionId={c.id}
+                        plaidAccountId={a.accountId}
+                        accountName={a.name}
+                        funds={fundChoices}
+                        current={accountFund.get(`${c.id}:${a.accountId}`) ?? ""}
+                      />
+                    ) : null}
                     <div className="flex shrink-0 items-start gap-x-4">
                       <SyncButton connectionId={c.id} />
                       {canEdit && c.cash_account_id ? <ManageLink /> : null}

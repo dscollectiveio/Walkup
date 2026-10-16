@@ -46,7 +46,7 @@ export default async function ImportPage({ searchParams }: { searchParams: Promi
         <p className="mt-1 text-mute">Declarations pages, renewal packages or quotes. PDFs, Word documents (.docx) and photos all work.</p>
       </div>
 
-      <Card title="Upload">
+      <Card navy title="Upload">
         <ImportScreen
           aiOn={aiConfigured()}
           manualCoverage={coverage}
@@ -58,7 +58,7 @@ export default async function ImportPage({ searchParams }: { searchParams: Promi
       </Card>
 
       {rows.length > 0 ? (
-        <Card title="Reading now and recently">
+        <Card navy title="Reading now and recently">
           <ul className="divide-y divide-line">
             {rows.map((r) => {
               const chip = readChip(r);

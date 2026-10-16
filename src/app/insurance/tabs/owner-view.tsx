@@ -34,7 +34,7 @@ export async function OwnerView({ supabase, ctx }: { supabase: Supabase; ctx: In
         <OwnerSummaryView content={summary} publishedAt={publishedAt} todayIso={ctx.todayIso} askCard={ask} />
       ) : (
         <>
-          <Card title="The building's insurance">
+          <Card navy title="The building's insurance">
             <p className="text-[13px] text-ink">The board hasn&rsquo;t published an insurance summary yet.</p>
           </Card>
           {ask}

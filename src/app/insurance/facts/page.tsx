@@ -52,7 +52,7 @@ export default async function FactsPage({ searchParams }: { searchParams: Promis
       </div>
 
       {!onlyMode ? (
-        <Card title="From Building Info">
+        <Card navy title="From Building Info">
           <div className="space-y-4">
             <BuildingBasics
               canEdit={ctx.isBoard}

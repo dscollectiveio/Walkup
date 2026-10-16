@@ -60,10 +60,10 @@ function Rule({
 
   return (
     <div className="rounded-xl border border-line bg-paper">
-      <header className="flex flex-wrap items-center justify-between gap-2 border-b border-line px-5 py-4">
+      <header className="band flex flex-wrap items-center justify-between gap-2 rounded-t-[7px] bg-ink px-5 py-4">
         <div>
-          <h3 className="font-bold text-ink">{heading}</h3>
-          <p className="mt-0.5 text-[13px] text-mute">{plainQuestion}</p>
+          <h3 className="eyebrow text-paper">{heading}</h3>
+          <p className="mt-1.5 text-[13px] text-ondark-mute">{plainQuestion}</p>
         </div>
         <span
           className={`rounded-full border px-3 py-1 text-[13px] font-medium ${
@@ -704,39 +704,42 @@ export default async function TaxPage({ searchParams }: { searchParams: Promise<
         onStart={startForm}
       />
 
-      <section id="forms" className="space-y-3">
-        <h2 className="text-[16px] font-bold tracking-tight text-ink">Your forms</h2>
-        <div className="grid gap-3 md:grid-cols-2">
-          {cards.map((v) => (
-            <FormCard key={v.key} view={v} canWrite={canWrite}>
-              {v.formCode === "il_sos_annual_report" && isIllinois ? (
-                <SosFileNumber current={ctx.settings.ilSosFileNumber} canWrite={canWrite} />
-              ) : v.formCode === "irs_1096" && v.determination === "ask_cpa" ? (
-                <a href="#filing-method" className="text-[12px] text-ink underline underline-offset-2">
-                  Say how you file 1099s ↓
+      <section id="forms" className="scroll-mt-20">
+        <Card navy title="Your forms" hint="What this association files, soonest first.">
+          <div className="space-y-3">
+            <div className="grid gap-3 md:grid-cols-2">
+              {cards.map((v) => (
+                <FormCard key={v.key} view={v} canWrite={canWrite}>
+                  {v.formCode === "il_sos_annual_report" && isIllinois ? (
+                    <SosFileNumber current={ctx.settings.ilSosFileNumber} canWrite={canWrite} />
+                  ) : v.formCode === "irs_1096" && v.determination === "ask_cpa" ? (
+                    <a href="#filing-method" className="text-[12px] text-ink underline underline-offset-2">
+                      Say how you file 1099s ↓
+                    </a>
+                  ) : null}
+                </FormCard>
+              ))}
+            </div>
+            <p className="text-[12px] text-mute">Other filings may apply. Ask your CPA.</p>
+            {!isIllinois ? (
+              <Answer
+                status="neutral"
+                headline="Walkup only knows Illinois' state filings so far"
+                detail={`Your building is in ${ctx.association.state_code}. The federal forms above still apply; ask your CPA which ${ctx.association.state_code} filings do.`}
+              />
+            ) : !ctx.association.incorporated_on ? (
+              <Answer
+                status="attention"
+                headline="Add your incorporation date so Walkup can list the Illinois annual report"
+                detail="The Secretary of State's annual report is due around the anniversary of incorporation. Add the date in Building Info and the report appears above with an estimated date."
+              >
+                <a href="/building" className="inline-flex min-h-[44px] items-center rounded-md border border-line-strong bg-paper px-4 text-[13px] font-medium text-ink hover:bg-fill">
+                  Open Building Info
                 </a>
-              ) : null}
-            </FormCard>
-          ))}
-        </div>
-        <p className="text-[12px] text-mute">Other filings may apply. Ask your CPA.</p>
-        {!isIllinois ? (
-          <Answer
-            status="neutral"
-            headline="Walkup only knows Illinois' state filings so far"
-            detail={`Your building is in ${ctx.association.state_code}. The federal forms above still apply; ask your CPA which ${ctx.association.state_code} filings do.`}
-          />
-        ) : !ctx.association.incorporated_on ? (
-          <Answer
-            status="attention"
-            headline="Add your incorporation date so Walkup can list the Illinois annual report"
-            detail="The Secretary of State's annual report is due around the anniversary of incorporation. Add the date in Building Info and the report appears above with an estimated date."
-          >
-            <a href="/building" className="inline-flex min-h-[44px] items-center rounded-md border border-line-strong bg-paper px-4 text-[13px] font-medium text-ink hover:bg-fill">
-              Open Building Info
-            </a>
-          </Answer>
-        ) : null}
+              </Answer>
+            ) : null}
+          </div>
+        </Card>
       </section>
 
       <div id="accountant">
@@ -747,7 +750,7 @@ export default async function TaxPage({ searchParams }: { searchParams: Promise<
         />
       </div>
 
-      <Card
+      <Card navy
         title="Your income, classified"
         hint="The 1120-H tests depend on which income is from members (dues, assessments) and which isn't (interest, rentals). Walkup suggests a classification; a board member confirms each one once."
       >
@@ -839,7 +842,7 @@ export default async function TaxPage({ searchParams }: { searchParams: Promise<
             />
           </div>
 
-          <Card
+          <Card navy
             title="What you might owe (estimate, before deductions)"
             hint="Owner fees are not taxed. Only other income — bank interest, laundry, renting out common space — is."
           >
@@ -876,7 +879,7 @@ export default async function TaxPage({ searchParams }: { searchParams: Promise<
       <ProvenancePanel rows={provenanceRows} lineIndex={lineIndex} />
 
       <div className="grid gap-4 lg:grid-cols-2">
-        <Card title="Money you collected" hint="What Rule 1 is worked out from.">
+        <Card navy title="Money you collected" hint="What Rule 1 is worked out from.">
           <ul className="divide-y divide-line text-[13px]">
             {(receipts ?? []).map((r) => (
               <li key={r.account_name} className="py-2.5">
@@ -906,7 +909,7 @@ export default async function TaxPage({ searchParams }: { searchParams: Promise<
           </ul>
         </Card>
 
-        <Card title="Money you spent" hint="What Rule 2 is worked out from.">
+        <Card navy title="Money you spent" hint="What Rule 2 is worked out from.">
           <ul className="divide-y divide-line text-[13px]">
             {(disbursements ?? []).map((d) => (
               <li key={d.account_name} className="py-2.5">
@@ -942,7 +945,7 @@ export default async function TaxPage({ searchParams }: { searchParams: Promise<
         </Card>
       </div>
 
-      <Card
+      <Card navy
         title="Where these tax rules come from"
         hint={`Every rate and threshold is stored with the dates it applies to and its source, so an out-of-date figure is visible rather than silent. "This year" marks the rows in force for a fiscal year ending ${dateWords(ctx.fiscalYear.ends_on)} and for payments made in ${ctx.contractorYear}.`}
       >
@@ -1019,7 +1022,7 @@ export default async function TaxPage({ searchParams }: { searchParams: Promise<
         </div>
 
         <div className="mt-4">
-          <Card
+          <Card navy
             title="Everyone paid for services"
             hint={
               thresholdParam && thresholdCents !== null
@@ -1097,7 +1100,7 @@ export default async function TaxPage({ searchParams }: { searchParams: Promise<
         </p>
       </div>
 
-      <Card title="Past years" hint="Forms marked as filed, with their proof.">
+      <Card navy title="Past years" hint="Forms marked as filed, with their proof.">
         {pastForms.length === 0 ? (
           <Empty>Nothing marked as filed yet.</Empty>
         ) : (

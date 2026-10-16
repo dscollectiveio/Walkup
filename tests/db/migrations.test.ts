@@ -62,7 +62,9 @@ describe("migrations", () => {
     // carries association_id without a foreign key so it outlives its subject.
     // platform_admins, insurance_partners (0041), tax_form_templates (0042)
     // and tax_form_links (0048) are global by design and writable only by a
-    // platform admin.
+    // platform admin. billing_webhook_events (0062) is Stripe's event-id log:
+    // global because an event can arrive before its association is known; it
+    // carries a nullable association_id, so it passes without an entry here.
     const { rows } = await db.query<{ table_name: string }>(
       `select t.table_name
          from information_schema.tables t

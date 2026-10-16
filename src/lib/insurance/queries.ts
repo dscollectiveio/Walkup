@@ -1,4 +1,5 @@
 import "server-only";
+import { loadBankCash } from "@/lib/bank/position";
 import type { createClient } from "@/lib/supabase/server";
 import { todayIso } from "@/lib/dates";
 import { fromCents, toCents } from "@/lib/money/cents";
@@ -182,8 +183,14 @@ export async function loadFacts(supabase: Supabase, associationId: string): Prom
   return { ...emptyFacts(associationId), ...(data as unknown as Partial<BuildingFacts>) };
 }
 
-/** Sum of positive fund cash balances, as money text; null when the books have no cash lines. */
+/**
+ * The association's cash, as money text: the bank's balance when a bank is
+ * connected (lib/bank/position, the figure every page shows), else the sum of
+ * positive fund cash balances in the books; null when there's neither.
+ */
 export async function fundsTotal(supabase: Supabase, associationId: string): Promise<string | null> {
+  const bank = await loadBankCash(supabase as unknown as Parameters<typeof loadBankCash>[0]);
+  if (bank) return fromCents(Math.max(0, bank.totalCents));
   const { data, error } = await supabase
     .from("fund_cash_balances")
     .select("cash_balance::text, visible_lines")

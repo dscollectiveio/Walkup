@@ -101,7 +101,7 @@ export async function OverviewTab({
   if (nonArchived.length === 0 && policies.length === 0) {
     if (!ctx.isBoard) {
       return (
-        <Card title="Policies">
+        <Card navy title="Policies">
           <Empty>No policies are recorded yet. A board member can add them.</Empty>
         </Card>
       );
@@ -111,7 +111,7 @@ export async function OverviewTab({
       : null;
     return (
       <div className="space-y-6">
-        <Card title="Start with your declarations page">
+        <Card navy title="Start with your declarations page">
           <div className="max-w-2xl space-y-4">
             <p className="text-[13px] text-ink">
               {aiOn
@@ -141,7 +141,7 @@ export async function OverviewTab({
             </div>
           </div>
         </Card>
-        <Card title="While you're here">
+        <Card navy title="While you're here">
           <p className="text-[13px] text-ink">
             Tell Walkup about the building so it can check your coverage.{" "}
             <Link href="/insurance/facts" className={linkClass}>
@@ -359,7 +359,7 @@ export async function OverviewTab({
         </p>
       </Card>
 
-      <Card title="Cost">
+      <Card navy title="Cost">
         <div className="space-y-4">
           <div className="grid gap-3 sm:grid-cols-3">
             <Stat label="Premiums a year" value={formatMoney(total) ?? "$0"} />
@@ -418,7 +418,7 @@ export async function OverviewTab({
         </div>
       </Card>
 
-      <Card title="Coverage check">
+      <Card navy title="Coverage check">
         {top.length > 0 ? (
           <div className="space-y-3">
             {top.map((f) => (
@@ -449,7 +449,7 @@ export async function OverviewTab({
         )}
       </Card>
 
-      <Card title="Your agent">
+      <Card navy title="Your agent">
         <div className="space-y-3">
           {master && claimsPhone ? (
             <p className="text-[13px] text-ink">
@@ -497,7 +497,7 @@ export async function OverviewTab({
       </Card>
 
       {ctx.isBoard ? (
-        <Card title="For owners">
+        <Card navy title="For owners">
           <div className="space-y-3">
             <p className="text-[13px] text-ink">
               {ownersText ??

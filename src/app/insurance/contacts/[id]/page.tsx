@@ -139,7 +139,7 @@ export default async function ContactPage({ params }: { params: Promise<{ id: st
         />
       ) : null}
 
-      <Card title="Quote requests">
+      <Card navy title="Quote requests">
         {requests.length === 0 ? (
           <Empty>No quote requests to {contact.name} yet.</Empty>
         ) : (
@@ -147,7 +147,7 @@ export default async function ContactPage({ params }: { params: Promise<{ id: st
         )}
       </Card>
 
-      <Card title="Quotes">
+      <Card navy title="Quotes">
         {quotes.length === 0 ? (
           <Empty>No quotes from {contact.name} yet.</Empty>
         ) : (
@@ -155,14 +155,14 @@ export default async function ContactPage({ params }: { params: Promise<{ id: st
         )}
       </Card>
 
-      <Card title="Emails">
+      <Card navy title="Emails">
         <div className="space-y-3">
           {canEdit && contact.email && !archived ? <WriteEmailMenu contactId={contact.id} /> : null}
           <MessageList messages={messages} canEdit={canEdit} todayIso={ctx.todayIso} openId={null} />
         </div>
       </Card>
 
-      <Card title="Policies">
+      <Card navy title="Policies">
         {agentOf.length === 0 ? (
           <Empty>{contact.name} isn&rsquo;t the agent on any saved policy.</Empty>
         ) : (

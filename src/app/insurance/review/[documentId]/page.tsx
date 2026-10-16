@@ -61,7 +61,7 @@ export default async function LegacyReviewShim({
   return (
     <div className="space-y-4">
       <BackLink href="/insurance">Insurance</BackLink>
-      <Card title="Read this document">
+      <Card navy title="Read this document">
         {category?.slug === "insurance" ? (
           <div className="space-y-3">
             <p className="text-[13px] text-ink">{doc.filename}</p>

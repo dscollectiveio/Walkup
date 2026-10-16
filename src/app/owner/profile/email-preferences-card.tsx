@@ -17,7 +17,7 @@ export function EmailPreferencesCard({
   const [stopAll, setStopAll] = useState(initial.unsubscribed_all);
 
   return (
-    <Card title="Email from your association">
+    <Card navy title="Email from your association">
       <form action={action} className="space-y-3">
         <p className="text-[13px] text-mute">
           Choose which emails your board can send you through Walkup. They go to <span className="break-all text-ink">{email}</span>.

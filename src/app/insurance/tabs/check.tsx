@@ -42,7 +42,7 @@ export async function CheckTab({
   if (nonArchived.length === 0) {
     return (
       <div className="space-y-6">
-        <Card title="Coverage check">
+        <Card navy title="Coverage check">
           <div className="space-y-3">
             <p className="text-[13px] text-ink">
               {illinois
@@ -158,13 +158,13 @@ export async function CheckTab({
       {answer}
 
       {check.legalChecks === "not_illinois" ? (
-        <Card title="Legal checks">
+        <Card navy title="Legal checks">
           <p className="text-[13px] text-ink">Walkup&rsquo;s legal checks cover Illinois only. The other checks still apply.</p>
         </Card>
       ) : null}
 
       {missing.length > 0 && !answerAskedFacts ? (
-        <Card title="Facts needed">
+        <Card navy title="Facts needed">
           <div className="space-y-3">
             <p className="text-[13px] text-ink">Walkup needs {missing.length} more facts to check everything.</p>
             <ul className="flex flex-wrap gap-2">

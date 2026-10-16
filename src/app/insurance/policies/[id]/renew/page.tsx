@@ -46,7 +46,7 @@ export default async function RenewPolicyPage({ params }: { params: Promise<{ id
         <p className="mt-1 text-mute">Choose how to add the new term. The current policy stays active until the new one starts.</p>
       </div>
 
-      <Card title="Upload the renewal declarations">
+      <Card navy title="Upload the renewal declarations">
         <div className="space-y-3">
           <p className="text-[13px] text-ink">
             {aiOn
@@ -62,7 +62,7 @@ export default async function RenewPolicyPage({ params }: { params: Promise<{ id
       </Card>
 
       {quotes.length > 0 ? (
-        <Card title="Start from a quote you received">
+        <Card navy title="Start from a quote you received">
           <ul className="divide-y divide-line">
             {quotes.map((q) => (
               <li key={q.id} className="flex flex-wrap items-center justify-between gap-3 py-3">
@@ -81,7 +81,7 @@ export default async function RenewPolicyPage({ params }: { params: Promise<{ id
         </Card>
       ) : null}
 
-      <Card title="Copy last term and edit">
+      <Card navy title="Copy last term and edit">
         <div className="space-y-3">
           <p className="text-[13px] text-ink">
             Last term&rsquo;s details are filled in, with the dates moved on a year. You enter the new premium.

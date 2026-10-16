@@ -272,7 +272,7 @@ export default async function PolicyPage({
       {onlyQuoteDocument ? <IssuedDeclarationsBanner policyId={id} aiOn={aiOn} /> : null}
       {switching.length > 0 ? <SwitchingChecklist policyId={id} items={switching} /> : null}
 
-      <Card title="Summary">
+      <Card navy title="Summary">
         <SummaryCard
           policyId={id}
           text={summaryText}
@@ -337,7 +337,7 @@ export default async function PolicyPage({
       </div>
 
       {lists.endorsements.length > 0 ? (
-        <Card title="Endorsements">
+        <Card navy title="Endorsements">
           <ul className="space-y-1 text-[13px] text-ink">
             {lists.endorsements.map((e, i) => (
               <li key={i}>
@@ -350,7 +350,7 @@ export default async function PolicyPage({
         </Card>
       ) : null}
       {lists.exclusions.length > 0 ? (
-        <Card title="Exclusions">
+        <Card navy title="Exclusions">
           <ul className="space-y-1 text-[13px] text-ink">
             {lists.exclusions.map((e, i) => (
               <li key={i}>
@@ -362,7 +362,7 @@ export default async function PolicyPage({
         </Card>
       ) : null}
       {lists.premium.length > 0 ? (
-        <Card title="Premium breakdown">
+        <Card navy title="Premium breakdown">
           <ul className="divide-y divide-line text-[13px]">
             {lists.premium.map((l, i) => (
               <li key={i} className="flex justify-between gap-3 py-2">
@@ -374,7 +374,7 @@ export default async function PolicyPage({
         </Card>
       ) : null}
 
-      <Card title="Premium and bill">
+      <Card navy title="Premium and bill">
         <div className="space-y-3 text-[13px]">
           <div>
             <span className="figures text-[22px] text-ink">{formatMoney(policy.annual_premium)}</span>
@@ -407,7 +407,7 @@ export default async function PolicyPage({
         </div>
       </Card>
 
-      <Card title="Agent">
+      <Card navy title="Agent">
         {agent ? (
           <ContactCard contact={agent}>
             {canEdit && agent.id ? (
@@ -424,7 +424,7 @@ export default async function PolicyPage({
         )}
       </Card>
 
-      <Card title="Claims" hint="Anything filed against this policy.">
+      <Card navy title="Claims" hint="Anything filed against this policy.">
         <ClaimsPanel
           policyId={id}
           claims={claimRows}
@@ -436,11 +436,11 @@ export default async function PolicyPage({
         />
       </Card>
 
-      <Card title="Documents">
+      <Card navy title="Documents">
         <EntityDocuments targetTable="insurance_policies" targetId={id} documents={documents} canWrite={canEdit} />
       </Card>
 
-      <Card title="History">
+      <Card navy title="History">
         <div className="space-y-3">
           {successorId ? (
             <p className="text-[13px]">

@@ -1,5 +1,6 @@
 import "server-only";
 import type { SupabaseClient } from "@supabase/supabase-js";
+import { storeBankBalances, type StoredAccountInput } from "@/lib/bank/balances-store";
 import {
   plaidClient,
   plaidErrorLog,
@@ -74,6 +75,9 @@ export async function syncOneConnection(
   let pages = 0;
   let restarts = 0;
   let more = false;
+  // transactions/sync answers with every account's balance on each page; the
+  // last page's are the freshest. Kept (0063) so the cron run updates cash too.
+  let latestAccounts: StoredAccountInput[] = [];
 
   for (;;) {
     let page;
@@ -110,6 +114,16 @@ export async function syncOneConnection(
     }
 
     const data = page.data;
+    const pageAccounts = (data as { accounts?: { account_id: string; name: string; mask?: string | null; type: unknown; balances: { current?: number | null } }[] }).accounts;
+    if (pageAccounts && pageAccounts.length > 0) {
+      latestAccounts = pageAccounts.map((a) => ({
+        accountId: a.account_id,
+        name: a.name,
+        mask: a.mask ?? null,
+        type: String(a.type),
+        currentCents: a.balances.current !== null && a.balances.current !== undefined ? Math.round(a.balances.current * 100) : null,
+      }));
+    }
     const batch = await applyBatch(
       supabase,
       connection,
@@ -140,6 +154,8 @@ export async function syncOneConnection(
       break;
     }
   }
+
+  if (latestAccounts.length > 0) await storeBankBalances(supabase, connection.id, latestAccounts, "sync");
 
   // A sync that got this far means the login works: clear a stale 'error'.
   await supabase

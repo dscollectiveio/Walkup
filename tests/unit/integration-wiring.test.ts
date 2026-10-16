@@ -167,12 +167,12 @@ describe("cron and environment configuration", () => {
   });
   it("documents every secret the new features read in .env.local.example, with no value", () => {
     const env = readFileSync(path.join(ROOT, ".env.local.example"), "utf8");
-    for (const name of ["RESEND_API_KEY", "RESEND_WEBHOOK_SECRET", "EMAIL_FROM_ADDRESS", "EMAIL_SENDING_DISABLED", "PLAID_WEBHOOK_URL", "CRON_SECRET", "SUPABASE_SERVICE_ROLE_KEY", "BANK_TOKEN_KEY"]) {
+    for (const name of ["RESEND_API_KEY", "RESEND_WEBHOOK_SECRET", "EMAIL_FROM_ADDRESS", "EMAIL_SENDING_DISABLED", "PLAID_WEBHOOK_URL", "CRON_SECRET", "SUPABASE_SERVICE_ROLE_KEY", "BANK_TOKEN_KEY", "BILLING_ENABLED", "BILLING_ENFORCE", "STRIPE_SECRET_KEY", "STRIPE_WEBHOOK_SECRET"]) {
       expect(env, name).toMatch(new RegExp(`^${name}=$`, "m"));
     }
   });
   it("makes the public routes the providers call reachable signed out", () => {
     const proxy = read("src/lib/supabase/proxy.ts");
-    for (const p of ["/api/cron", "/api/email/webhook", "/api/plaid/webhook", "/unsubscribe"]) expect(proxy, p).toContain(`"${p}"`);
+    for (const p of ["/api/cron", "/api/email/webhook", "/api/plaid/webhook", "/api/stripe/webhook", "/unsubscribe"]) expect(proxy, p).toContain(`"${p}"`);
   });
 });

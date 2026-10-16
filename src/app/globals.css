@@ -370,3 +370,28 @@ html[data-sidebar="rail"] {
   from { opacity: 0; transform: translateY(4px); }
   to   { opacity: 1; transform: translateY(0); }
 }
+
+/* Landing hero slideshow (components/landing/hero-slideshow.tsx): the active
+   slide's rows rise in one after another, and the active dot fills over the
+   time to the next slide. Reduced motion keeps the fade and drops the rise
+   (the blanket rule above shortens every animation to nothing). */
+@keyframes hero-rise {
+  from { opacity: 0; transform: translateY(6px); }
+  to { opacity: 1; transform: none; }
+}
+@keyframes hero-progress {
+  from { transform: scaleX(0); }
+  to { transform: scaleX(1); }
+}
+.hero-slide[data-active="true"] .hero-stagger > *,
+.hero-slide[data-active="true"] .hero-stagger li {
+  animation: hero-rise 560ms cubic-bezier(0.22, 1, 0.36, 1) both;
+}
+.hero-slide[data-active="true"] .hero-stagger > :nth-child(2),
+.hero-slide[data-active="true"] .hero-stagger li:nth-child(2) { animation-delay: 80ms; }
+.hero-slide[data-active="true"] .hero-stagger > :nth-child(3),
+.hero-slide[data-active="true"] .hero-stagger li:nth-child(3) { animation-delay: 160ms; }
+.hero-slide[data-active="true"] .hero-stagger li:nth-child(4) { animation-delay: 240ms; }
+.hero-slide[data-active="true"] .hero-stagger li:nth-child(5) { animation-delay: 320ms; }
+.hero-slide[data-active="true"] .hero-stagger li:nth-child(6) { animation-delay: 400ms; }
+.hero-progress { animation-name: hero-progress; animation-timing-function: linear; animation-fill-mode: both; }

@@ -100,7 +100,7 @@ export async function QuotesTab({
         </Answer>
       ) : null}
 
-      <Card title="Quote requests">
+      <Card navy title="Quote requests">
         <div className="space-y-4">
           {ctx.isBoard ? (
             <div className="flex flex-wrap gap-2">
@@ -120,7 +120,7 @@ export async function QuotesTab({
         </div>
       </Card>
 
-      <Card title="Quotes received">
+      <Card navy title="Quotes received">
         {quotes.length === 0 ? (
           <Empty>No quotes yet. When one arrives, upload it or enter it here.</Empty>
         ) : (
@@ -129,7 +129,7 @@ export async function QuotesTab({
       </Card>
 
       <div id="emails" className="scroll-mt-4">
-        <Card title="Emails">
+        <Card navy title="Emails">
           <div className="space-y-3">
             {ctx.isBoard ? (
               <div className="flex flex-wrap gap-2">

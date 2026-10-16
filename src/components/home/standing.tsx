@@ -25,6 +25,8 @@ export function Standing({
   reserveTarget, // display-only: drives a meter, not a ledger figure
   canSetTarget,
   tiles = [],
+  source = "books",
+  booksGap = null,
 }: {
   totalCents: number;
   operatingCents: number;
@@ -33,10 +35,17 @@ export function Standing({
   canSetTarget: boolean;
   /** "Right now" tiles — real figures, or a nudge to set the thing up. */
   tiles?: SnapshotTile[];
+  /** Where the balances come from: the bank (the source of truth), or the books when no bank is connected. */
+  source?: "bank" | "books";
+  /** Books cash minus bank cash, when they differ, and how many bank transactions are still waiting. */
+  booksGap?: { cents: number; waiting: number } | null;
 }) {
   const targetCents = reserveTarget ? Math.round(reserveTarget * 100) : null;
+  // Between 0 and 1. Rounded down for the label, so 99.6% never reads as
+  // "100% of the target" while money is still to go.
   const funded =
-    targetCents && targetCents > 0 ? Math.min(1, reserveCents / targetCents) : null;
+    targetCents && targetCents > 0 ? Math.max(0, Math.min(1, reserveCents / targetCents)) : null;
+  const fundedPct = funded === null ? 0 : reserveCents >= (targetCents ?? 0) ? 100 : Math.floor(funded * 100);
   const remainingCents = targetCents ? Math.max(0, targetCents - reserveCents) : 0;
 
   return (
@@ -47,7 +56,9 @@ export function Standing({
         <div className="flex items-center justify-between gap-3">
           <div>
             <h2 className="eyebrow text-paper">Where the association stands</h2>
-            <p className="mt-0.5 text-[12px] text-ondark-mute">Balance across all accounts</p>
+            <p className="mt-0.5 text-[12px] text-ondark-mute">
+              {source === "bank" ? "Your bank's balance across all accounts" : "Balance across all accounts, from the books"}
+            </p>
           </div>
           <div className="figures text-[24px] leading-none text-paper">{formatMoney(totalCents)}</div>
         </div>
@@ -70,7 +81,7 @@ export function Standing({
             <>
               <div className="flex items-baseline justify-between gap-3">
                 <span className="text-[12px] font-medium text-ink">
-                  Reserve is {Math.round(funded * 100)}% of the target
+                  Reserve is {fundedPct}% of the target
                 </span>
                 <span className="figures text-[12px] text-mute">
                   {remainingCents > 0 ? `${formatMoney(remainingCents)} to go` : "target met"}
@@ -79,7 +90,7 @@ export function Standing({
               <div className="mt-1.5 h-2 overflow-hidden rounded-full bg-fill">
                 <div
                   className="h-full rounded-full bg-moss"
-                  style={{ width: `${Math.round(funded * 100)}%` }}
+                  style={{ width: `${fundedPct}%` }}
                 />
               </div>
             </>
@@ -92,6 +103,18 @@ export function Standing({
             </div>
           ) : null}
         </div>
+
+        {booksGap && booksGap.cents !== 0 ? (
+          <a
+            href="/bank-feed"
+            className="mb-4 block rounded-lg border border-warning-line bg-warning-tint px-3 py-2 text-[12px] text-warning-text hover:brightness-[0.98]"
+          >
+            Your books are {formatMoney(Math.abs(booksGap.cents))} {booksGap.cents > 0 ? "above" : "below"} the bank.
+            {booksGap.waiting > 0
+              ? ` Categorize the ${booksGap.waiting} transaction${booksGap.waiting === 1 ? "" : "s"} waiting in the Bank Feed to close the gap →`
+              : " Check the opening balance and any entries made outside the Bank Feed →"}
+          </a>
+        ) : null}
 
         {tiles.length > 0 ? (
           <div className="mt-auto flex flex-col">

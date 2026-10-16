@@ -120,7 +120,7 @@ export async function MarketTab({
   if (!ctx.isBoard) {
     return (
       <div className="space-y-6">
-        <Card title="Marketplace">
+        <Card navy title="Marketplace">
           <p className="text-[13px] text-ink">{MARKET_COPY.boardOnly}</p>
         </Card>
         <ContactsCard contacts={contacts} todayIso={ctx.todayIso} canEdit={false} />
@@ -241,7 +241,7 @@ export async function MarketTab({
       ) : null;
 
     return (
-      <Card title={title}>
+      <Card navy title={title}>
         <div className="space-y-4">
           {state}
           {list}
@@ -256,7 +256,7 @@ export async function MarketTab({
         Agencies and insurers found for your building, with links to where Walkup found them. Walkup isn&rsquo;t an insurance broker and doesn&rsquo;t rank companies.
       </p>
 
-      <Card title="What you'd ask for">
+      <Card navy title="What you'd ask for">
         <div className="space-y-3">
           {wanted.length === 0 ? (
             <p className="text-[13px] text-mute">No policies are recorded yet. You can still ask for quotes and choose the coverage.</p>
@@ -282,7 +282,7 @@ export async function MarketTab({
       {searchCard("insurers")}
 
       {partnerRows.length > 0 ? (
-        <Card title="Listed with Walkup" hint={`Brokers who asked to be listed for associations in ${stateName}. Listing isn't an endorsement.`}>
+        <Card navy title="Listed with Walkup" hint={`Brokers who asked to be listed for associations in ${stateName}. Listing isn't an endorsement.`}>
           <ul className="divide-y divide-line">
             {partnerRows.map((p) => {
               const tel = p.phone ? telHref(p.phone) : null;
@@ -303,7 +303,7 @@ export async function MarketTab({
         </Card>
       ) : null}
 
-      <Card title="What insurance costs you">
+      <Card navy title="What insurance costs you">
         <div className="space-y-3 text-[13px]">
           {total ? (
             <p className="text-ink">
@@ -335,7 +335,7 @@ export async function MarketTab({
 
 function ContactsCard({ contacts, todayIso, canEdit }: { contacts: ContactRow[]; todayIso: string; canEdit: boolean }) {
   return (
-    <Card title="Your contacts">
+    <Card navy title="Your contacts">
       <div className="space-y-3">
         {contacts.length === 0 ? (
           <Empty>No contacts yet. Save one from the results below, or add your agent.</Empty>

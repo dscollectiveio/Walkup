@@ -127,6 +127,41 @@ export async function createUpdateLinkToken(
 }
 
 /**
+ * Which fund one bank account's money belongs to (0063 bank_account_funds):
+ * the checking account for day-to-day, the savings for the reserve, even at
+ * the same bank. An empty fundId goes back to the connection's own fund.
+ * Board admin only (RLS).
+ */
+export async function setBankAccountFund(
+  connectionId: string,
+  plaidAccountId: string,
+  fundId: string,
+): Promise<{ ok?: true; error?: string }> {
+  const supabase = await createClient();
+  const { data: conn } = await supabase.from("bank_connections").select("association_id").eq("id", connectionId).limit(1);
+  const associationId = conn?.[0]?.association_id as string | undefined;
+  if (!associationId) return { error: "That bank connection isn't available." };
+  const { error } = fundId
+    ? await supabase.from("bank_account_funds").upsert({
+        bank_connection_id: connectionId,
+        plaid_account_id: plaidAccountId,
+        association_id: associationId,
+        fund_id: fundId,
+        updated_at: new Date().toISOString(),
+      })
+    : await supabase
+        .from("bank_account_funds")
+        .delete()
+        .eq("bank_connection_id", connectionId)
+        .eq("plaid_account_id", plaidAccountId);
+  if (error) return { error: error.code === "42501" ? "Only a board admin can change this." : "Couldn't save that. Try again." };
+  revalidatePath("/bank-feed");
+  revalidatePath("/");
+  revalidatePath("/financial-statements");
+  return { ok: true };
+}
+
+/**
  * One-off for a bank connected before PLAID_WEBHOOK_URL existed: tells Plaid
  * where to post this Item's webhooks. Board admin only (the token comes
  * through the same RLS-gated path as a manual sync); never a bulk read of

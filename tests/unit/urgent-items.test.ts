@@ -25,7 +25,12 @@ describe("urgentItems — Worth a minute today", () => {
   it("gives one unit behind its own item", () => {
     const items = urgentItems({ ...quiet, aging: [unit("Unit 2", 0, 450)] });
     expect(items).toHaveLength(1);
-    expect(items[0]).toMatchObject({ key: "delinquent", tone: "bad", title: "Unit 2 is 2+ months behind: $450" });
+    expect(items[0]).toMatchObject({ key: "delinquent", tone: "bad", title: "Unit 2 is over a month behind: $450" });
+  });
+
+  it("words lateness by its aging bucket, never rounding a few days up to a month", () => {
+    expect(urgentItems({ ...quiet, aging: [unit("Unit 1", 200)] })[0].title).toBe("Unit 1 is past due: $200");
+    expect(urgentItems({ ...quiet, aging: [unit("Unit 3", 0, 0, 900)] })[0].title).toBe("Unit 3 is 2+ months behind: $900");
   });
 
   it("groups several units behind into one item, biggest first", () => {

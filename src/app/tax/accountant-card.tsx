@@ -39,7 +39,7 @@ export function AccountantCard({
   const showForm = canWrite && (editing || !accountant);
 
   return (
-    <Card
+    <Card navy
       title="Your accountant"
       hint="Walkup drafts the emails and you send them from your own email app, so their replies come back to you."
     >

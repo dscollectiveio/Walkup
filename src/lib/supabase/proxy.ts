@@ -34,6 +34,10 @@ const PUBLIC_PATHS = [
   // route verifies the Svix signature over the raw body itself and 400s on
   // anything else (src/app/api/email/webhook/route.ts); exact path.
   "/api/email/webhook",
+  // Stripe posts billing events (Walkup's own subscription) with no session.
+  // The route verifies the Stripe-Signature HMAC over the raw body itself and
+  // 400s on anything else (src/app/api/stripe/webhook/route.ts); exact path.
+  "/api/stripe/webhook",
   // An owner's unsubscribe link works signed out: the 48-byte token in it is the
   // whole credential, and the page only ever changes that person's email
   // preferences (src/app/unsubscribe, DECISIONS #36).

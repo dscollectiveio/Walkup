@@ -53,7 +53,7 @@ export function OwnerSummaryView({
         </p>
       ) : null}
 
-      <Card title="The master policy">
+      <Card navy title="The master policy">
         {m ? (
           <div className="space-y-2 text-[13px] text-ink">
             <p>
@@ -66,7 +66,7 @@ export function OwnerSummaryView({
         )}
       </Card>
 
-      <Card title="If there's damage">
+      <Card navy title="If there's damage">
         <div className="space-y-2 text-[13px] text-ink">
           <p>
             <Link href="/repairs" className="font-medium underline underline-offset-2">
@@ -100,7 +100,7 @@ export function OwnerSummaryView({
         </section>
       ) : null}
 
-      <Card title="What the master policy usually leaves to owners">
+      <Card navy title="What the master policy usually leaves to owners">
         <div className="space-y-3 text-[13px] text-ink">
           {content.left_to_owners.length ? (
             <ul className="list-disc space-y-1 pl-5">
@@ -122,7 +122,7 @@ export function OwnerSummaryView({
         </div>
       </Card>
 
-      <Card title="Proof of insurance for your lender">
+      <Card navy title="Proof of insurance for your lender">
         <div className="space-y-3 text-[13px] text-ink">
           <p>{content.certificate_instructions}</p>
           {cc && (cc.email || cc.phone) ? (
@@ -148,7 +148,7 @@ export function OwnerSummaryView({
       {askCard}
 
       {content.board_note ? (
-        <Card title="A note from the board">
+        <Card navy title="A note from the board">
           <p className="whitespace-pre-line text-[13px] text-ink">{content.board_note}</p>
         </Card>
       ) : null}

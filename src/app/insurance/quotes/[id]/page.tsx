@@ -169,7 +169,7 @@ export default async function QuotePage({
       </div>
 
       {lists.endorsements.length > 0 ? (
-        <Card title="Endorsements">
+        <Card navy title="Endorsements">
           <ul className="space-y-1 text-[13px] text-ink">
             {lists.endorsements.map((e, i) => (
               <li key={i}>
@@ -181,7 +181,7 @@ export default async function QuotePage({
         </Card>
       ) : null}
       {lists.exclusions.length > 0 ? (
-        <Card title="Exclusions">
+        <Card navy title="Exclusions">
           <ul className="space-y-1 text-[13px] text-ink">
             {lists.exclusions.map((e, i) => (
               <li key={i}>{e.title}</li>
@@ -190,7 +190,7 @@ export default async function QuotePage({
         </Card>
       ) : null}
       {lists.premium.length > 0 ? (
-        <Card title="Premium breakdown">
+        <Card navy title="Premium breakdown">
           <ul className="divide-y divide-line text-[13px]">
             {lists.premium.map((l, i) => (
               <li key={i} className="flex justify-between gap-3 py-2">
@@ -202,7 +202,7 @@ export default async function QuotePage({
         </Card>
       ) : null}
 
-      <Card title="About this quote">
+      <Card navy title="About this quote">
         <dl className="space-y-2 text-[13px]">
           <div className="flex flex-wrap justify-between gap-2">
             <dt className="text-mute">From</dt>
@@ -241,7 +241,7 @@ export default async function QuotePage({
         </dl>
       </Card>
 
-      <Card title="Documents">
+      <Card navy title="Documents">
         <EntityDocuments targetTable="insurance_quotes" targetId={id} documents={documents} canWrite={canEdit} />
       </Card>
 

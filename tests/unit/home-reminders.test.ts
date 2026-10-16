@@ -62,4 +62,16 @@ describe("Coming up: Repairs & Upkeep (repairs-spec §18.3)", () => {
     });
     expect(r.filter((x) => x.kind === "Bill to pay by hand").map((x) => x.name)).toEqual(["Water"]);
   });
+
+  it("keeps a hand-paid bill whose date has passed, flagged overdue, instead of dropping it", () => {
+    const r = assembleReminders({
+      ...base,
+      bills: [
+        { name: "Snow removal contract", next_due_on: "2026-08-01", autopay_arranged: false, paused_at: null },
+        { name: "Gas", next_due_on: "2026-08-01", autopay_arranged: true, paused_at: null },
+      ],
+    });
+    const bills = r.filter((x) => x.kind === "Bill to pay by hand");
+    expect(bills.map((x) => [x.name, x.overdue === true])).toEqual([["Snow removal contract", true]]);
+  });
 });
