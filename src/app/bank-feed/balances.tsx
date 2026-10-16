@@ -9,6 +9,7 @@ import { ReconnectButton } from "./reconnect-button";
 import { SyncButton } from "./sync-button";
 import { BankCardActions, ManageLink } from "./bank-card-actions";
 import { DisconnectButton } from "./disconnect-button";
+import { BankAlertsButton } from "./bank-alerts-button";
 import { LedgerAccountSelect } from "./ledger-account-select";
 
 const ACCOUNT_TYPE_ORDER = ["depository", "credit", "loan", "investment", "other"];
@@ -234,6 +235,7 @@ export async function BankAccountsSection({
           canEdit && c.cash_account_id ? (
             <div className="flex flex-wrap items-center gap-3">
               <LedgerAccountSelect connectionId={c.id} cashAccounts={cashAccounts} currentId={c.cash_account_id} />
+              {process.env.PLAID_WEBHOOK_URL ? <BankAlertsButton connectionId={c.id} /> : null}
               <DisconnectButton connectionId={c.id} />
             </div>
           ) : null;
