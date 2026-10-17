@@ -161,9 +161,11 @@ export default async function BuildingPage() {
   const personOptions = (persons ?? []).map((p) => ({ id: p.id, full_name: p.full_name }));
 
   const rolesByPerson = new Map<string, string[]>();
+  const accountantUntil = new Map<string, string>();
   for (const g of roleGrantRows ?? []) {
     if (g.revoked_at) continue;
     if (g.expires_on && g.expires_on < todayIso) continue;
+    if (g.role === "accountant" && g.expires_on) accountantUntil.set(g.person_id, g.expires_on);
     const list = rolesByPerson.get(g.person_id) ?? [];
     list.push(g.role);
     rolesByPerson.set(g.person_id, list);
@@ -286,6 +288,7 @@ export default async function BuildingPage() {
       roles={rolesByPerson.get(p.id) ?? []}
       canEdit={isBoard}
       canEditRoles={isBoardAdmin}
+      accountantUntil={accountantUntil.get(p.id) ?? null}
       invite={
         isBoard && !p.auth_user_id && ((rolesByPerson.get(p.id) ?? []).includes("owner") || currentOwnerIds.has(p.id))
           ? { associationName: association.display_name, boardContactName: association.board_contact_name ?? null }
@@ -446,7 +449,7 @@ export default async function BuildingPage() {
                 summary="Send a link; the person sets their own password and joins at the role you pick."
                 badge={pendingInvites > 0 ? `${pendingInvites} waiting` : null}
               >
-                <GenerateInviteForm people={(persons ?? []).filter((p) => !p.auth_user_id).map((p) => ({ id: p.id, full_name: p.full_name }))} />
+                <GenerateInviteForm canGiveAnyRole={isBoardAdmin} people={(persons ?? []).filter((p) => !p.auth_user_id).map((p) => ({ id: p.id, full_name: p.full_name }))} />
                 {invites.length === 0 ? (
                   <Empty>No invites yet.</Empty>
                 ) : (

@@ -526,7 +526,7 @@ export function Landing({ nonce }: { nonce?: string }) {
             {[
               [
                 "Founding offer",
-                `Free for the first ${FOUNDING.associations} associations`,
+                `Free for your first year, for the first ${FOUNDING.associations} associations`,
               ],
               ["Free setup with a real person", "One 15-minute call and your board is live: owners, bank link and dues."],
             ].map(([t, b]) => (
@@ -605,7 +605,7 @@ export function Landing({ nonce }: { nonce?: string }) {
           <div className="max-w-xl">
             <h2 className="text-[26px] font-bold tracking-tight text-ink sm:text-[30px]">Give your board its evenings back.</h2>
             <p className="mt-2 text-[15px] text-mute">
-              {words.finalLine}. The first {FOUNDING.associations} associations get Walkup free.
+              {words.finalLine}. The first {FOUNDING.associations} associations get their first year free.
             </p>
             <p className="mt-3 text-[13px] text-mute">No card. Read-only bank access. Your records stay yours.</p>
           </div>

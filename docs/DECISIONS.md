@@ -1961,7 +1961,7 @@ and `src/lib/billing/`; tested end to end in Stripe's sandbox on 2026-10-16.
   from `PLANS` in `site-config.ts` (2 to 6, 7 to 12, 13 to 20 units), monthly
   or yearly; above 20 units is "email sales". The tier follows the unit count
   and changes at renewal, never mid-term. Every plan has every feature.
-- **Trial.** 30 days for a new association, no card. Tracked by Walkup, so a
+- **Trial.** 14 days for a new association (changed from 30 on 2026-10-16, 0064; a trial already running keeps its date), no card. Choosing a plan during the trial keeps the free days: Stripe takes the first payment when the trial ends. Tracked by Walkup, so a
   building that never picks a plan never becomes a Stripe customer.
 - **Free access.** A platform admin can comp any association from
   `/admin/billing`, with a required reason and an optional end date; the
@@ -1982,3 +1982,70 @@ and `src/lib/billing/`; tested end to end in Stripe's sandbox on 2026-10-16.
 
 Still open, for Doug: final prices and the founding offer, sales tax (CPA,
 Chicago lease tax), refunds, and the date early-access buildings start paying.
+
+## 43. Access control: roles, positions and outside helpers
+
+**Approved by Doug, 2026-10-16** ("use your recommendations"). The full
+plan, tables and build order are in `docs/specs/access-control-plan.md`.
+Builds on #6, #26, #30 and #33.
+
+- **Phase 1, built in 0065.** An accountant who joins by invite link gets 90
+  days, like one ticked on Building Info; existing accountants with no end date
+  were given one. A building can never be left without a board admin who can
+  sign in (a trigger; system clean-up is exempt). A board admin can extend an
+  accountant by 90 days in one click.
+- **Roles stay four, plus three outside roles to build:** property manager,
+  attorney, observer. All outside roles must have an end date. Defaults:
+  accountant 90 days, attorney 90 days, property manager 1 year, observer 30
+  days. All renewable.
+- **Property manager:** a board member without the admin steps (no roles, bank
+  connection, posting, email approval, Walkup billing, deleting).
+- **Attorney:** governing documents, minutes, legal notices, contracts,
+  correspondence, and statements and contact details only for units the board
+  shares with them. Read only.
+- **Positions** (President, Vice President, Treasurer, Secretary, Director) are
+  titles with start and optional term end dates. They grant nothing. A term
+  ending reminds the board admins and removes nothing.
+- **Only board admins add outside helpers or give roles.**
+- **Owners' finances page:** to build, off by default, switched on by the board.
+- **One login for several associations:** later, when a manager asks (#11).
+
+## 44. Terms of Service, section 7: the business choices behind the wording
+
+**Decided 2026-10-17** (Doug: "make decisions for the terms"; the choices below
+are proposals he accepted by asking for them to be made). They replace every
+`LAWYER:` note in `src/app/terms/page.tsx`. The Terms are still not reviewed by
+a lawyer, and the page says so.
+
+- **Customer.** The association. The board administrator who chooses a plan
+  confirms they are authorized to act for it.
+- **Never holds or moves the association's money.** Section 3 now says exactly
+  that, and that Walkup receives only its own fee, through Stripe.
+- **Tier changes.** At least 30 days' email to the board administrators before
+  a renewal moves to a different tier. *To build:* tier changes at renewal and
+  this notice are not implemented (see docs/HOW-WALKUP-WORKS.md A2).
+- **Automatic renewal.** Stated plainly, shown on Stripe's checkout page,
+  cancellable online in one step, and a yearly plan gets an email about 30 days
+  before it renews. *To set in Stripe:* Settings, Billing, Subscriptions and
+  emails, upcoming-renewal reminders for annual plans at 30 days.
+- **Refunds.** A full refund of a yearly charge (first payment or renewal) on
+  request within 14 days. Monthly payments are not refundable. No partial
+  refunds for unused time, unless the law requires. Refunds are made by hand in
+  Stripe.
+- **Read-only.** After the 14-day grace period, at least 7 days' email and
+  in-app notice before it starts. Enforcement is still off.
+- **Price changes.** 30 days, by email to the board administrators and a notice
+  in Walkup.
+- **Sales tax.** Unchanged and general. Still pending with the CPA.
+- **Complimentary access.** At least 90 days' email notice before early-access
+  free use ends.
+- **Founding offer.** The first 25 associations, counting those already in
+  early access, get their first 12 months free (`FOUNDING` in site-config), then
+  the plan for their size with 30 days' email before the first charge. There is
+  no counter yet; Doug grants it by hand as a comp with the reason "Founding
+  offer".
+- **Survival.** Amounts owed under section 7 survive an account ending.
+
+Every promise of notice above is a promise Doug keeps by hand until the
+notices are built. Do not turn on `BILLING_ENFORCE` before they are.
+

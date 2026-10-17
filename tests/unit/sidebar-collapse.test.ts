@@ -98,6 +98,13 @@ describe("Sidebar: expanded and rail", () => {
     expect(pageTitleFor("/contractors/abc")).toBe("Contractor");
   });
 
+  it("keeps Building Info out of the accountant's sidebar, since that page is the board's", () => {
+    const labels = (role: "accountant" | "board_member") => navFor(role).groups.flatMap((g) => g.items.map((i) => i.label));
+    expect(labels("accountant")).not.toContain("Building Info");
+    expect(labels("accountant")).toContain("Financial Statements");
+    expect(labels("board_member")).toContain("Building Info");
+  });
+
   it("calls it Building insurance for owners, and Insurance for the board and the accountant", () => {
     expect(insuranceNavLabel("board_admin")).toBe("Insurance");
     expect(insuranceNavLabel("board_member")).toBe("Insurance");

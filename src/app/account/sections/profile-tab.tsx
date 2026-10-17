@@ -42,10 +42,10 @@ export function ProfileTab({
               <Link href="/building" className={linkClass}>
                 Building Info
               </Link>
-              . A new email is also the one you sign in with.
+              .
             </>
           ) : (
-            <>Name or email wrong? Ask {contact.name ?? "the board"} to change it. A new email is also the one you sign in with.</>
+            <>Name or email wrong? Ask {contact.name ?? "the board"} to change it.</>
           )}
         </p>
         <div className="mt-5 border-t border-line pt-5">

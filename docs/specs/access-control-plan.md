@@ -1,7 +1,7 @@
 # Access control plan: who can see and do what
 
-Status: **proposal, waiting on Doug's answers in Part 6.** Nothing here is
-built yet. It starts from how access works today (Part 1), so every change is a
+Status: **approved 2026-10-16 with every Part 6 recommendation (DECISIONS #43).**
+Phase 1 is built (0065); phases 2 to 5 are next. It starts from how access works today (Part 1), so every change is a
 step from the real system, not a rewrite.
 
 ---
@@ -186,7 +186,7 @@ Phase 1 can ship on its own any time and closes the Plaid-promise gap.
 
 ---
 
-## Part 6. Decisions for Doug
+## Part 6. Decisions (all approved as recommended)
 
 1. **Property manager power.** Recommended: like a board member minus the
    admin steps (no roles, bank connection, posting, email approval, billing).

@@ -5,12 +5,20 @@ import { createInvite } from "./actions";
 
 const ROLES = [
   { value: "board_admin", label: "Board admin: full read/write" },
-  { value: "board_member", label: "Board member: full read, limited write" },
-  { value: "accountant", label: "Accountant: financials, time-boxed" },
+  { value: "board_member", label: "Board member: full read, most write" },
+  { value: "accountant", label: "Accountant: read-only, ends after 90 days" },
   { value: "owner", label: "Owner: read-only, own unit" },
 ];
 
-export function GenerateInviteForm({ people = [] }: { people?: { id: string; full_name: string }[] }) {
+/** A board admin can invite any role; any other board member can invite owners only (0060). */
+export function GenerateInviteForm({
+  people = [],
+  canGiveAnyRole = false,
+}: {
+  people?: { id: string; full_name: string }[];
+  canGiveAnyRole?: boolean;
+}) {
+  const roles = canGiveAnyRole ? ROLES : ROLES.filter((r) => r.value === "owner");
   const [role, setRole] = useState("");
   const [open, setOpen] = useState(false);
   const [state, action, pending] = useActionState(createInvite, null);
@@ -51,7 +59,7 @@ export function GenerateInviteForm({ people = [] }: { people?: { id: string; ful
             <option value="" disabled>
               Choose…
             </option>
-            {ROLES.map((r) => (
+            {roles.map((r) => (
               <option key={r.value} value={r.value}>
                 {r.label}
               </option>

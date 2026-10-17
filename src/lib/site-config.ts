@@ -74,7 +74,8 @@ export const PLANS: { name: string; units: string; month: number; year: number; 
 /** Annual plans: two months free (each `year` above is 10 × `month`). */
 export const ANNUAL_NOTE = "2 months free";
 
-export const FOUNDING = { associations: 25 } as const;
+/** The founding offer (DECISIONS #44): free for the first year, for the first 25 associations. */
+export const FOUNDING = { associations: 25, months: 12 } as const;
 
 // ---- FAQ: the page and the FAQPage structured data both render this -------------
 // Written the way treasurers search. Each answer stands alone so search and AI

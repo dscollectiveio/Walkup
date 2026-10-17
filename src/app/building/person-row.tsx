@@ -1,9 +1,10 @@
 "use client";
 
 import { useActionState, useState, useTransition } from "react";
-import { redactPerson, updatePerson } from "./actions";
+import { extendAccountantAccess, redactPerson, updatePerson } from "./actions";
 import { PhoneInput } from "@/components/phone-input";
 import { InviteToSignIn } from "./invite-to-sign-in";
+import { longDate } from "@/lib/dates";
 
 export interface PersonRecord {
   id: string;
@@ -34,6 +35,7 @@ export function PersonRow({
   canEditRoles,
   canRedact = false,
   invite = null,
+  accountantUntil = null,
 }: {
   person: PersonRecord;
   roles: string[];
@@ -46,7 +48,11 @@ export function PersonRow({
    * offers "Invite to sign in" (owner-portal-spec 5.3).
    */
   invite?: { associationName: string; boardContactName: string | null } | null;
+  /** The day an accountant's access ends (yyyy-mm-dd), when this person is one. */
+  accountantUntil?: string | null;
 }) {
+  const [extending, startExtend] = useTransition();
+  const [extendError, setExtendError] = useState<string | null>(null);
   const [editing, setEditing] = useState(false);
   const [confirmingRedact, setConfirmingRedact] = useState(false);
   const [redacting, startRedact] = useTransition();
@@ -175,6 +181,31 @@ export function PersonRow({
         </div>
         {person.mailing_address ? (
           <div className="text-[11px] text-mute-soft">{person.mailing_address}</div>
+        ) : null}
+        {accountantUntil ? (
+          <div className="mt-1 text-[11px] text-mute">
+            Accountant access ends {longDate(accountantUntil)}.
+            {canEditRoles ? (
+              <>
+                {" "}
+                <button
+                  type="button"
+                  disabled={extending}
+                  onClick={() =>
+                    startExtend(async () => {
+                      setExtendError(null);
+                      const r = await extendAccountantAccess(person.id);
+                      if (r.error) setExtendError(r.error);
+                    })
+                  }
+                  className="font-medium text-ink underline underline-offset-2"
+                >
+                  {extending ? "Extending…" : "Extend 90 days"}
+                </button>
+              </>
+            ) : null}
+            {extendError ? <span className="ml-1 text-bad-text">{extendError}</span> : null}
+          </div>
         ) : null}
         {invite ? (
           <div className="mt-2">

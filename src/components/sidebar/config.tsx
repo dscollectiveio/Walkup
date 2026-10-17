@@ -144,7 +144,11 @@ export function navGroupsFor(role: NavRole | null | undefined): NavGroupConfig[]
   const boardRole = role === "board_admin" || role === "board_member";
   return NAV_GROUPS.map((g) => ({
     ...g,
-    items: g.items.filter((i) => boardRole || i.href !== "/repairs/find").map((i) => (i.href === "/insurance" ? { ...i, label: insuranceNavLabel(role) } : i)),
+    items: g.items
+      .filter((i) => boardRole || i.href !== "/repairs/find")
+      // The Building Info page is the board's; an accountant would only see "Restricted".
+      .filter((i) => role !== "accountant" || i.href !== "/building")
+      .map((i) => (i.href === "/insurance" ? { ...i, label: insuranceNavLabel(role) } : i)),
   }));
 }
 

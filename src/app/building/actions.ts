@@ -11,6 +11,15 @@ import { saveBuildingFacts } from "@/app/insurance/facts-actions";
 
 const ROLES = ["board_admin", "board_member", "accountant", "owner"] as const;
 
+/** An accountant's access runs this many days, then ends unless a board admin extends it. */
+const ACCOUNTANT_DAYS = 90;
+
+function inDays(n: number): string {
+  const d = new Date();
+  d.setDate(d.getDate() + n);
+  return d.toISOString().slice(0, 10);
+}
+
 async function currentAssociationId(supabase: Awaited<ReturnType<typeof createClient>>) {
   const { data: associations } = await supabase.from("associations").select("id").order("created_at").order("id").limit(1);
   return associations?.[0]?.id ?? null;
@@ -571,12 +580,7 @@ async function syncPersonRoles(
 
     // "accountant grants expire; default 90d set in app" — see the comment
     // on role_grants.expires_on in 0001_core_schema.sql.
-    let expiresOn: string | null = null;
-    if (role === "accountant") {
-      const d = new Date();
-      d.setDate(d.getDate() + 90);
-      expiresOn = d.toISOString().slice(0, 10);
-    }
+    const expiresOn = role === "accountant" ? inDays(ACCOUNTANT_DAYS) : null;
 
     const { error } = await supabase.from("role_grants").upsert(
       {
@@ -803,13 +807,30 @@ export async function createInvite(_prev: unknown, formData: FormData) {
   return { ok: true };
 }
 
+/** Gives an accountant another 90 days from today. Board admins only (role_grants RLS). */
+export async function extendAccountantAccess(personId: string): Promise<{ ok?: true; error?: string }> {
+  if (!/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(personId)) return { error: "Missing person." };
+  const supabase = await createClient();
+  const { data, error } = await supabase
+    .from("role_grants")
+    .update({ expires_on: inDays(ACCOUNTANT_DAYS) })
+    .eq("person_id", personId)
+    .eq("role", "accountant")
+    .is("revoked_at", null)
+    .select("id");
+  if (error) return { error: "Couldn't extend that. Try again." };
+  if (!data || data.length === 0) return { error: "Only a board admin can extend access." };
+  revalidateBuilding();
+  return { ok: true };
+}
+
 export async function deleteInvite(inviteId: string): Promise<{ ok?: true; error?: string }> {
   const supabase = await createClient();
   const { data, error } = await supabase.from("invites").delete().eq("id", inviteId).select("id");
 
   if (error) return { error: error.message };
   if (!data || data.length === 0) {
-    return { error: "Only a board admin can revoke an invite." };
+    return { error: "That invite is already gone, or you can't remove it." };
   }
 
   revalidateBuilding();
