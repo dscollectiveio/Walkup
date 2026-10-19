@@ -14,6 +14,8 @@ export interface UnitOption {
   label: string;
   ownerName: string | null;
   ownerEmail: string | null;
+  /** Who a draft is addressed to when that is not the owner (the property manager as main contact). */
+  contactName?: string | null;
 }
 
 export type NeedsYouItem =
@@ -342,7 +344,7 @@ function BehindLine({
   const label = unit?.label ?? "A unit";
   const subject = `${label}: dues balance of ${money(item.owedCents)}`;
   const body =
-    `Hi ${unit?.ownerName?.split(" ")[0] ?? "there"},\n\n` +
+    `Hi ${(unit?.contactName ?? unit?.ownerName)?.split(" ")[0] ?? "there"},\n\n` +
     `A quick reminder that ${label} has ${money(item.overdueCents)} in dues past due` +
     (item.owedCents > item.overdueCents ? ` (${money(item.owedCents)} owed in total)` : "") +
     `. Payment details are on the Dues page in Walkup.\n\nThanks,\nThe ${associationName} board`;

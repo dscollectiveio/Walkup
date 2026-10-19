@@ -43,7 +43,7 @@ export function BoardOnly({ what, why }: { what: string; why: string }) {
       <p className="text-ink">{what} is for the board.</p>
       <p className="mt-2 text-[13px] text-mute">{why}</p>
       <Link href="/building" className={`${BTN_SECONDARY} mt-4`}>
-        Back to Building Info
+        Back to Building & Owners
       </Link>
     </div>
   );

@@ -2,13 +2,14 @@
 
 import { useRef, useState } from "react";
 import { PhoneInput } from "@/components/phone-input";
+import { AddressInput } from "@/components/address-input";
 import { todayIso } from "@/lib/dates";
 import { ROLE_OPTIONS } from "./person-row";
 
 const input = "mt-1 w-full rounded-lg border border-line-strong bg-paper px-3 py-2 text-[13px] text-ink";
 const label = "block text-[12px] font-medium text-ink";
 const optional = <span className="ml-1 font-normal text-mute-soft">optional</span>;
-const ghost = "rounded-md border border-line-strong px-3 py-1.5 text-[12px] text-ink hover:bg-fill";
+const ghost = "rounded-md bg-ink px-3 py-1.5 text-[12px] font-medium text-paper hover:bg-ink-mid";
 
 /** Someone already in the unit, with the values to edit. */
 export interface ResidentValue {
@@ -133,7 +134,7 @@ export function PeopleFields({
                     <label htmlFor={id("addr")} className={label}>
                       Mailing address{optional}
                     </label>
-                    <input id={id("addr")} name={`p.${k}.mailing_address`} defaultValue={r.mailingAddress ?? ""} className={input} />
+                    <AddressInput id={id("addr")} name={`p.${k}.mailing_address`} defaultValue={r.mailingAddress} className={input} />
                   </div>
                 </div>
                 {canEditRoles ? <RoleBoxes prefix={`p.${k}`} selected={r.roles} /> : null}
@@ -202,7 +203,7 @@ export function PeopleFields({
                     <label htmlFor={id("addr")} className={label}>
                       Mailing address{optional}
                     </label>
-                    <input id={id("addr")} name={`p.${k}.mailing_address`} className={input} />
+                    <AddressInput id={id("addr")} name={`p.${k}.mailing_address`} className={input} />
                   </div>
                 </div>
                 {canEditRoles ? (

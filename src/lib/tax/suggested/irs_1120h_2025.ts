@@ -33,7 +33,7 @@ const S3 = "3. Gross income (lines 1–8)";
 const S4 = "4. Deductions (lines 9–17)";
 const S5 = "5. Tax and payments (lines 19–26)";
 
-/** A header box filled from Building Info. */
+/** A header box filled from Building & Owners. */
 const setting = (label: string, rule: string, citation: string, flags: Partial<MapEntry> = {}): MapEntry => ({
   label,
   section: S1,

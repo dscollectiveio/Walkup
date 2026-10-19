@@ -84,9 +84,9 @@ describe("figuresPack", () => {
     ]);
     const bare = ctx({ association: { ...ctx().association, ein: null, street_address: null, city: null, postal_code: null, incorporated_on: null } });
     const rows = section(figuresPack(bare, form1120h), "About the association").rows;
-    expect(rows.find((r) => r.label === "EIN")!.value).toBe("Not on file — add it in Building Info");
+    expect(rows.find((r) => r.label === "EIN")!.value).toBe("Not on file — add it in Building & Owners");
     expect(rows.find((r) => r.label === "Address")!.value).toBe("IL");
-    expect(rows.find((r) => r.label === "Incorporated on")!.value).toBe("Not on file — add it in Building Info");
+    expect(rows.find((r) => r.label === "Incorporated on")!.value).toBe("Not on file — add it in Building & Owners");
   });
 
   it("gives the five cash-basis figures with their transaction counts, and the non-exempt income by account", () => {

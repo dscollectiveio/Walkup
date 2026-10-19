@@ -46,7 +46,7 @@ export async function createBuilding(_prev: unknown, formData: FormData) {
 
   // The new board admin can edit their own association (associations_update).
   // The address is a convenience: if saving it fails the building still exists
-  // and it can be added under Building Info, so don't block the sign-up on it.
+  // and it can be added under Building & Owners, so don't block the sign-up on it.
   if (associationId) {
     await supabase
       .from("associations")

@@ -134,7 +134,7 @@ export function homeTaxDeadlines(rows: HomeTaxRows): HomeTaxDeadlines {
     if (a.stateCode === "IL") outcomes.push({ formCode: "il_1120", taxYear, determination: "ask_cpa", name: FORM_LABEL.il_1120 });
   }
   // Without the incorporation date the annual report can't be dated either;
-  // the Taxes tab asks for it in Building Info.
+  // the Taxes tab asks for it in Building & Owners.
   if (a.stateCode === "IL" && a.incorporatedOn) {
     outcomes.push({ formCode: "il_sos_annual_report", taxYear, determination: "ask_cpa", name: FORM_LABEL.il_sos_annual_report });
   }

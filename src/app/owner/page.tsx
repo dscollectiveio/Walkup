@@ -52,7 +52,7 @@ export default async function OwnerHomePage() {
           <Card title="No unit is linked to your account yet">
             <p className="text-[14px] leading-relaxed text-ink">
               The board hasn&rsquo;t linked your sign-in to a unit. That usually means an invite was used that wasn&rsquo;t made for you. Ask{" "}
-              {viewer.boardContact.name ?? "a board member"} to send you a new invite from Building Info.
+              {viewer.boardContact.name ?? "a board member"} to send you a new invite from Building & Owners.
             </p>
             <div className="mt-3">
               <ContactLine contact={viewer.boardContact} />

@@ -1,13 +1,15 @@
 import Link from "next/link";
 import { redirect } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
-import { Card, Empty, Restricted, UnitLink, money } from "@/components/ui";
+import { Card, Empty, HEADER_BUTTON, Restricted, money } from "@/components/ui";
+import { bankFeedHref } from "@/app/bank-feed/href";
 import { PaymentForm } from "@/app/delinquency/payment-form";
 import { PaymentInstructionsForm } from "./payment-instructions-form";
 import { DuesScheduleCard, type ScheduleView } from "./dues-schedule-card";
 import { NeedsYou, type NeedsYouItem, type UnitOption } from "./needs-you";
 import { LateFeeRuleForm, OneOffChargeForm } from "./charge-forms";
-import { UnitDuesEditor, type UnitPlan } from "./unit-dues-editor";
+import { UnitCard, type UnitPlan } from "./unit-card";
+import { additionalProgress, duesPaidCents, rolledOverCents } from "@/lib/dues/year";
 import { annualFromPeriodCents, nextPeriodStartFor } from "@/lib/dues/plan";
 import { currentPeriodStart, periodLabel, perUnitAmount, type DuesFrequency } from "@/lib/dues/period";
 import {
@@ -146,6 +148,164 @@ export default async function DuesPage() {
     if (p.unit_id && !lastPaymentByUnit.has(p.unit_id)) lastPaymentByUnit.set(p.unit_id, { on: p.received_on, cents: cents(p.amount) });
   }
   const reports = (reportRows ?? []).map((r) => ({ ...r, amountCents: cents(r.amount) }));
+
+  // ---- This calendar year's dues and reserve contributions, per unit ----
+  // Dues paid counts, for each unit, (1) every deposit labeled "HOA dues" for
+  // it, posted to the books or not (a deposit with no open charge is booked
+  // straight to income and leaves no payment record), plus (2) payments
+  // recorded by hand, which have no bank row. A payment the bank feed made is
+  // skipped in (2) because (1) already has it. Money that went to a late fee or
+  // one-off charge is taken off. Reserve contributions are income lines on
+  // account 4010 tagged to the unit.
+  const yearKey = todayKey.slice(0, 4);
+  const yearStart = `${yearKey}-01-01`;
+  const yearEnd = `${yearKey}-12-31`;
+  const feeChargeIds = chargeLines.filter((c) => c.charge_type === "late_fee" || c.charge_type === "other").map((c) => c.id);
+  const specialChargeIds = chargeLines.filter((c) => c.charge_type === "special_assessment").map((c) => c.id);
+  const [{ data: yearPayments }, { data: duesDeposits }, { data: contributionLines }] =
+    scopeUnits.length > 0
+      ? await Promise.all([
+          supabase
+            .from("payments")
+            .select("id, unit_id, amount, journal_entry_id")
+            .in("unit_id", scopeUnits)
+            .gte("received_on", yearStart)
+            .lte("received_on", yearEnd)
+            .limit(5000),
+          supabase
+            .from("bank_transactions")
+            .select("matched_unit_id, amount, journal_entry_id")
+            .eq("posting_kind", "dues")
+            .is("removed_at", null)
+            .gt("amount", 0)
+            .gte("posted_on", yearStart)
+            .lte("posted_on", yearEnd)
+            .in("matched_unit_id", scopeUnits)
+            .limit(5000),
+          supabase
+            .from("journal_lines")
+            .select("unit_id, debit, credit, accounts!inner(code), journal_entries!inner(entry_date, is_posted, source)")
+            .eq("accounts.code", "4010")
+            .eq("journal_entries.is_posted", true)
+            // Only money given voluntarily. A required assessment's own charge also credits 4010,
+            // but that is "assessment" source, and what pays it is counted from the payments.
+            .eq("journal_entries.source", "manual")
+            .gte("journal_entries.entry_date", yearStart)
+            .lte("journal_entries.entry_date", yearEnd)
+            .in("unit_id", scopeUnits)
+            .limit(5000),
+        ])
+      : [{ data: [] }, { data: [] }, { data: [] }];
+  const bankEntryIds = new Set((duesDeposits ?? []).map((d) => d.journal_entry_id as string | null).filter((x): x is string => !!x));
+  const yearPaymentById = new Map((yearPayments ?? []).map((p) => [p.id as string, p]));
+  const toFees = new Map<string, number>(); // unit id -> cents of this year's payments applied to fees / one-offs
+  const toSpecial = new Map<string, number>(); // unit id -> cents applied to a required Additional Agreed Assessment
+  for (const [ids, into] of [
+    [feeChargeIds, toFees],
+    [specialChargeIds, toSpecial],
+  ] as const) {
+    for (let i = 0; i < ids.length; i += 150) {
+      const { data: allocs } = await supabase
+        .from("payment_allocations")
+        .select("payment_id, amount")
+        .in("charge_id", ids.slice(i, i + 150));
+      for (const a of allocs ?? []) {
+        const pay = yearPaymentById.get(a.payment_id as string);
+        if (pay?.unit_id) into.set(pay.unit_id as string, (into.get(pay.unit_id as string) ?? 0) + cents(a.amount));
+      }
+    }
+  }
+  const { data: pledgeRows } =
+    scopeUnits.length > 0
+      ? await supabase
+          .from("assessment_schedules")
+          .select("unit_id, annual_amount, total_amount")
+          .eq("is_special", true)
+          .not("unit_id", "is", null)
+          .or(`ends_on.is.null,ends_on.gte.${todayKey}`)
+          .in("unit_id", scopeUnits)
+      : { data: [] as { unit_id: string | null; annual_amount: number | null; total_amount: number | null }[] };
+  const pledgeByUnit = new Map<string, number>();
+  for (const r of pledgeRows ?? []) {
+    if (r.unit_id && !pledgeByUnit.has(r.unit_id)) pledgeByUnit.set(r.unit_id, cents(r.annual_amount ?? r.total_amount));
+  }
+  // The reconciliation status beside the Reconcile Transactions button: deposits still waiting for a
+  // category or a unit, and deposits already labeled dues that are waiting to be posted to the books.
+  const [unmatchedRes, readyRes] = isBoard
+    ? await Promise.all([
+        supabase
+          .from("bank_transactions")
+          .select("id", { count: "exact", head: true })
+          .is("posting_kind", null)
+          .is("removed_at", null)
+          .eq("pending", false)
+          .gt("amount", 0),
+        supabase
+          .from("bank_transactions")
+          .select("id", { count: "exact", head: true })
+          .eq("posting_kind", "dues")
+          .is("journal_entry_id", null)
+          .is("removed_at", null),
+      ])
+    : [null, null];
+  const unmatchedDeposits = unmatchedRes?.count ?? 0;
+  const readyToPostDeposits = readyRes?.count ?? 0;
+
+  // Each unit's property manager and who Walkup's email goes to for it (0066).
+  const { data: managerRows } =
+    scopeUnits.length > 0
+      ? await supabase
+          .from("unit_property_managers")
+          .select("unit_id, company, main_contact, persons(full_name, email, phone)")
+          .in("unit_id", scopeUnits)
+      : { data: [] as never[] };
+  const managerByUnit = new Map<
+    string,
+    { name: string; email: string | null; phone: string | null; company: string | null; main: "owner" | "manager" }
+  >();
+  for (const m of (managerRows ?? []) as unknown as {
+    unit_id: string;
+    company: string | null;
+    main_contact: "owner" | "manager";
+    persons: { full_name: string; email: string | null; phone: string | null } | null;
+  }[]) {
+    if (m.persons) {
+      managerByUnit.set(m.unit_id, {
+        name: m.persons.full_name,
+        email: m.persons.email,
+        phone: m.persons.phone,
+        company: m.company,
+        main: m.main_contact,
+      });
+    }
+  }
+  /** The address a draft for this unit opens to: the manager when they are the main contact and have one. */
+  const contactEmailFor = (unitId: string): string | null => {
+    const m = managerByUnit.get(unitId);
+    return m && m.main === "manager" && (m.email ?? "").trim() !== "" ? m.email : (ownerByUnit.get(unitId)?.email ?? null);
+  };
+  const yearPaidByUnit = new Map<
+    string,
+    { paidCents: number; pendingCents: number; contributedCents: number; appliedToAdditionalCents: number }
+  >();
+  for (const id of scopeUnits) {
+    const deposits = (duesDeposits ?? []).filter((d) => d.matched_unit_id === id);
+    const byHand = (yearPayments ?? []).filter((p) => p.unit_id === id && !bankEntryIds.has(p.journal_entry_id as string));
+    const contributed = (contributionLines ?? [])
+      .filter((l) => l.unit_id === id)
+      .reduce((s, l) => s + cents(l.credit) - cents(l.debit), 0);
+    yearPaidByUnit.set(id, {
+      paidCents: duesPaidCents({
+        bankCents: deposits.map((d) => cents(d.amount)),
+        otherPaymentCents: byHand.map((p) => cents(p.amount)),
+        appliedToFeesCents: toFees.get(id) ?? 0,
+        appliedToAdditionalCents: toSpecial.get(id) ?? 0,
+      }),
+      pendingCents: deposits.filter((d) => !d.journal_entry_id).reduce((s, d) => s + cents(d.amount), 0),
+      contributedCents: Math.max(contributed, 0),
+      appliedToAdditionalCents: toSpecial.get(id) ?? 0,
+    });
+  }
 
   const standingByUnit = new Map(
     unitList.map((u) => [
@@ -356,7 +516,11 @@ export default async function DuesPage() {
     id: u.id,
     label: u.label,
     ownerName: ownerByUnit.get(u.id)?.name ?? null,
-    ownerEmail: ownerByUnit.get(u.id)?.email ?? null,
+    ownerEmail: contactEmailFor(u.id),
+    contactName: (() => {
+      const m = managerByUnit.get(u.id);
+      return m && m.main === "manager" && (m.email ?? "").trim() !== "" ? m.name : null;
+    })(),
   }));
   const outstandingCents = [...standingByUnit.values()].reduce((s, v) => s + v.owedCents, 0);
   const hasPaymentInfo = Boolean(
@@ -463,6 +627,28 @@ export default async function DuesPage() {
       <Card
         navy
         title="Where every unit stands"
+        action={
+          isBoard ? (
+            <div className="flex flex-wrap items-center justify-end gap-2">
+              <span
+                role="status"
+                className={`whitespace-nowrap rounded-full px-2.5 py-1 text-[12px] font-medium ${
+                  unmatchedDeposits > 0 ? "bg-warning-tint text-warning-text" : readyToPostDeposits > 0 ? "bg-info-tint text-info-text" : "bg-good-tint text-good-text"
+                }`}
+              >
+                {unmatchedDeposits > 0
+                  ? `${unmatchedDeposits} deposit${unmatchedDeposits === 1 ? "" : "s"} to match`
+                  : readyToPostDeposits > 0
+                    ? `${readyToPostDeposits} ready to post`
+                    : "All deposits matched"}
+                {unmatchedDeposits > 0 && readyToPostDeposits > 0 ? ` · ${readyToPostDeposits} ready to post` : ""}
+              </span>
+              <Link href={bankFeedHref({ range: "all", status: "needs", sort: "date_desc" })} className={HEADER_BUTTON}>
+                Reconcile Transactions
+              </Link>
+            </div>
+          ) : null
+        }
         hint={
           unitList.length === 0
             ? "Add the building's units first."
@@ -496,7 +682,7 @@ export default async function DuesPage() {
             <Empty>
               No units yet.{" "}
               <Link href="/building" className="underline underline-offset-2">
-                Add them on Building Info →
+                Add them on Building & Owners →
               </Link>
               <br />
               Set each unit&rsquo;s dues, or{" "}
@@ -507,72 +693,92 @@ export default async function DuesPage() {
             </Empty>
           </div>
         ) : (
-          <div className="mt-4 overflow-x-auto">
-            <table className="w-full text-[13px]">
-              <thead>
-                <tr className="border-b border-line text-left text-[12px] text-mute">
-                  <th className="pb-2 font-medium">Unit</th>
-                  <th className="pb-2 font-medium">Owner</th>
-                  <th className="pb-2 font-medium">Standing</th>
-                  <th className="pb-2 text-right font-medium">Owed</th>
-                  <th className="hidden pb-2 text-right font-medium sm:table-cell">Next charge</th>
-                  <th className="pb-2" />
-                  <th className="pb-2 text-right font-medium">Dues plan</th>
-                </tr>
-              </thead>
-              <tbody className="divide-y divide-line">
-                {unitList.map((u) => {
-                  const s = standingByUnit.get(u.id)!;
-                  const owner = ownerByUnit.get(u.id);
-                  const last = lastPaymentByUnit.get(u.id);
-                  const credit = creditByUnit.get(u.id) ?? 0;
-                  const plan = planByUnit.get(u.id);
-                  return (
-                    <tr key={u.id} className="align-top">
-                      <td className="py-2.5 pr-3 font-medium">
-                        <UnitLink id={u.id} label={u.label} />
-                      </td>
-                      <td className="py-2.5 pr-3 text-ink">
-                        {owner?.name ?? <span className="text-mute-soft">no owner on file</span>}
-                        {owner && !owner.email ? <span className="ml-1 text-[11px] text-warning-text">· no email</span> : null}
-                      </td>
-                      <td className="py-2.5 pr-3">
-                        <span className={`whitespace-nowrap rounded-full px-2 py-0.5 text-[11px] ${STANDING_TONE[s.standing]}`}>
-                          {STANDING_WORDS[s.standing]}
-                          {s.standing === "ahead" && credit > 0 ? ` ${dollars(credit)}` : ""}
-                        </span>
-                      </td>
-                      <td className={`figures py-2.5 pr-3 text-right ${s.overdueCents > 0 ? "text-bad-text" : "text-ink"}`}>
-                        {s.owedCents > 0 ? dollars(s.owedCents) : "—"}
-                        {last ? (
-                          <div className="text-[11px] font-normal text-mute-soft">
-                            last paid {dollars(last.cents)} · {shortDate(last.on, todayKey)}
-                          </div>
-                        ) : null}
-                      </td>
-                      <td className="figures hidden py-2.5 pr-3 text-right text-mute sm:table-cell">
-                        {plan?.nextCharge ? (
-                          <>
-                            {shortDate(plan.nextCharge, todayKey)}
-                            {plan.periodStart && !plan.charged ? <div className="text-[11px] text-warning-text">not charged yet</div> : null}
-                          </>
-                        ) : (
-                          "—"
-                        )}
-                      </td>
-                      <td className="py-2.5 text-right">
+          <div className="mt-5 space-y-4 border-t border-line pt-5">
+            {unitList.map((u) => {
+              const s = standingByUnit.get(u.id)!;
+              const owner = ownerByUnit.get(u.id);
+              const last = lastPaymentByUnit.get(u.id);
+              const credit = creditByUnit.get(u.id) ?? 0;
+              const plan = planByUnit.get(u.id);
+              const year = yearPaidByUnit.get(u.id);
+              // Additional Agreed Assessments: required means a charge exists for this year.
+              const requiredCharge = chargeLines.find(
+                (c) => c.unit_id === u.id && c.charge_type === "special_assessment" && c.period_start === `${yearKey}-01-01`,
+              );
+              const agreedCents = requiredCharge ? requiredCharge.amountCents : (pledgeByUnit.get(u.id) ?? null);
+              const rolled = rolledOverCents(year?.paidCents ?? 0, plan?.plan.annualCents ?? 0);
+              const additional = agreedCents
+                ? additionalProgress(agreedCents, {
+                    contributedCents: year?.contributedCents ?? 0,
+                    appliedToChargeCents: year?.appliedToAdditionalCents ?? 0,
+                    rolledOverCents: rolled,
+                  })
+                : null;
+              return (
+                <UnitCard
+                  key={u.id}
+                  unitId={u.id}
+                  plan={plan?.plan ?? null}
+                  canEdit={isBoard}
+                  year={yearKey}
+                  todayKey={todayKey}
+                  paidCents={year?.paidCents ?? 0}
+                  pendingCents={year?.pendingCents ?? 0}
+                  isAdmin={isBoardAdmin}
+                  manager={managerByUnit.get(u.id) ?? null}
+                  ownerEmail={owner?.email ?? null}
+                  additional={{
+                    agreedCents,
+                    required: !!requiredCharge,
+                    dueOn: requiredCharge?.due_on ?? null,
+                    givenCents: additional?.givenCents ?? (year?.contributedCents ?? 0),
+                    pct: additional?.pct ?? 0,
+                    rolledOverCents: rolled,
+                    voluntaryGivenCents: year?.contributedCents ?? 0,
+                  }}
+                  label={u.label}
+                  ownerName={owner?.name ?? null}
+                  ownerNoEmail={!!owner && !owner.email}
+                  standingLabel={`${STANDING_WORDS[s.standing]}${s.standing === "ahead" && credit > 0 ? ` ${dollars(credit)}` : ""}`}
+                  standingTone={STANDING_TONE[s.standing]}
+                  owedLabel={s.owedCents > 0 ? dollars(s.owedCents) : "Paid up"}
+                  overdue={s.overdueCents > 0}
+                  details={
+                    <dl className="grid grid-cols-2 gap-x-4 gap-y-3 text-[13px]">
+                      <div>
+                        <dt className="text-[11px] font-medium uppercase tracking-wide text-mute">Owed</dt>
+                        <dd className={`figures ${s.overdueCents > 0 ? "text-bad-text" : "text-ink"}`}>
+                          {s.owedCents > 0 ? dollars(s.owedCents) : "—"}
+                          {last ? (
+                            <div className="text-[11px] font-normal text-mute-soft">
+                              last paid {dollars(last.cents)} · {shortDate(last.on, todayKey)}
+                            </div>
+                          ) : null}
+                        </dd>
+                      </div>
+                      <div>
+                        <dt className="text-[11px] font-medium uppercase tracking-wide text-mute">Next charge</dt>
+                        <dd className="figures text-mute">
+                          {plan?.nextCharge ? (
+                            <>
+                              {shortDate(plan.nextCharge, todayKey)}
+                              {plan.periodStart && !plan.charged ? <div className="text-[11px] text-warning-text">not charged yet</div> : null}
+                            </>
+                          ) : (
+                            "—"
+                          )}
+                        </dd>
+                      </div>
+                      <div className="col-span-2">
                         <Link href={`/units/${u.id}`} className="text-[12px] text-mute underline-offset-2 hover:text-ink hover:underline">
                           Statement
                         </Link>
-                      </td>
-                      <td className="py-2.5 pl-3 text-right">
-                        <UnitDuesEditor unitId={u.id} plan={plan?.plan ?? null} canEdit={isBoard} />
-                      </td>
-                    </tr>
-                  );
-                })}
-              </tbody>
-            </table>
+                      </div>
+                    </dl>
+                  }
+                />
+              );
+            })}
           </div>
         )}
 
@@ -584,13 +790,13 @@ export default async function DuesPage() {
         ) : null}
 
         {isBoard && unitList.length > 0 ? (
-          <div className="mt-4 flex flex-wrap items-center gap-3 border-t border-line pt-4">
+          <div className="mt-4 flex flex-wrap items-center justify-between gap-3 border-t border-line pt-4">
+            <span className="text-[12px] text-mute">
+              Record a payment for a check or cash handed to you. Bank deposits are confirmed below as they arrive.
+            </span>
             <PaymentForm
               units={unitList.map((u) => ({ id: u.id, label: u.label, owed: (standingByUnit.get(u.id)?.owedCents ?? 0) / 100 }))}
             />
-            <span className="text-[12px] text-mute">
-              For a check or cash handed to you. Bank deposits are confirmed below as they arrive.
-            </span>
           </div>
         ) : null}
       </Card>

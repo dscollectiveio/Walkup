@@ -327,7 +327,7 @@ async function PreviewStep({
 
 const DONE_LINKS: Record<ImportKind, { href: string; label: string }[]> = {
   units_owners: [
-    { href: "/building", label: "Review Building Info" },
+    { href: "/building", label: "Review Building & Owners" },
     { href: "/building/import/new?kind=transactions", label: "Import transactions" },
   ],
   contractors: [{ href: "/contractors", label: "See contractors" }],
@@ -382,7 +382,7 @@ async function DonePage({ batch, supabase, associationId }: { batch: Batch; supa
   }
 
   const sentence: Record<ImportKind, string> = {
-    units_owners: "Units, owners and dues plans are on Building Info. No one was charged and no logins were made.",
+    units_owners: "Units, owners and dues plans are on Building & Owners. No one was charged and no logins were made.",
     contractors: "They are in your contractors list. Contractors that were already there were left alone.",
     opening_accounts: "One balanced entry now starts your books.",
     opening_units: "Each unit's carried-forward balance shows on its statement.",

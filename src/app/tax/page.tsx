@@ -731,10 +731,10 @@ export default async function TaxPage({ searchParams }: { searchParams: Promise<
               <Answer
                 status="attention"
                 headline="Add your incorporation date so Walkup can list the Illinois annual report"
-                detail="The Secretary of State's annual report is due around the anniversary of incorporation. Add the date in Building Info and the report appears above with an estimated date."
+                detail="The Secretary of State's annual report is due around the anniversary of incorporation. Add the date in Building & Owners and the report appears above with an estimated date."
               >
                 <a href="/building" className="inline-flex min-h-[44px] items-center rounded-md border border-line-strong bg-paper px-4 text-[13px] font-medium text-ink hover:bg-fill">
-                  Open Building Info
+                  Open Building & Owners
                 </a>
               </Answer>
             ) : null}

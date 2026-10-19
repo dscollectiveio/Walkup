@@ -1,6 +1,7 @@
 "use client";
 
 import { useActionState, useState } from "react";
+import { AddressInput } from "@/components/address-input";
 import { addPerson } from "./actions";
 import { PhoneInput } from "@/components/phone-input";
 import { todayIso } from "@/lib/dates";
@@ -62,7 +63,7 @@ export function AddPersonForm({
           <label htmlFor="ap-addr" className={label}>
             Mailing address{optional}
           </label>
-          <input id="ap-addr" name="mailing_address" className={input} />
+          <AddressInput id="ap-addr" name="mailing_address" className={input} />
         </div>
       </div>
 

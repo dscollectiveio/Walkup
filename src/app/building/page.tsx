@@ -10,6 +10,7 @@ import type { UnitRecord } from "./unit-fields";
 import { PersonRow } from "./person-row";
 import { OwnershipAmendmentForm } from "./ownership-amendment-form";
 import { AmendmentHistory, type AmendmentHistoryEntry } from "./amendment-history";
+import { OwnerRecordsHistory, type OwnershipRecord } from "./owner-records";
 import { GenerateInviteForm } from "./generate-invite-form";
 import { InviteRow, type InviteRecord } from "./invite-row";
 import { AccessReviewCard, type AccessReviewRecord } from "./access-review-card";
@@ -42,7 +43,7 @@ export default async function BuildingPage() {
     if (await viewerIsOwnerOnly()) {
       return (
         <BoardOnly
-          what="Building Info"
+          what="Building & Owners"
           why="It is where the board manages units, owners and who can sign in."
           alternative={{ label: "See your building", href: "/owner/building" }}
         />
@@ -134,6 +135,27 @@ export default async function BuildingPage() {
       .select("id, coverage, carrier_name, policy_number, building_limit::text, valuation, annual_premium::text, effective_from, effective_to, renewal_reminder_days, archived_at, replaced_by_policy_id, replaced_at")
       .is("archived_at", null),
   ]);
+
+  // Owners whose time in a unit has ended, so the whole ownership history can be shown (and, for a
+  // board admin, a mistaken record deleted). The current ones are in unitOwnerRows already.
+  const { data: pastOwnerRows } = await supabase
+    .from("unit_owners")
+    .select("id, unit_id, effective_from, effective_to, persons(full_name)")
+    .lt("effective_to", todayIso)
+    .order("effective_from", { ascending: false });
+  const historyByUnit = new Map<string, OwnershipRecord[]>();
+  for (const row of [...(unitOwnerRows ?? []), ...(pastOwnerRows ?? [])]) {
+    const p = row.persons as unknown as { full_name: string } | null;
+    const list = historyByUnit.get(row.unit_id) ?? [];
+    list.push({
+      rowId: row.id,
+      name: p?.full_name ?? "Former member",
+      from: row.effective_from,
+      to: row.effective_to && row.effective_to >= todayIso ? null : row.effective_to,
+    });
+    historyByUnit.set(row.unit_id, list);
+  }
+  for (const list of historyByUnit.values()) list.sort((a, b) => (a.from < b.from ? 1 : a.from > b.from ? -1 : 0));
 
   const profile: AssociationProfile = {
     legal_name: association.legal_name,
@@ -280,7 +302,13 @@ export default async function BuildingPage() {
 
   const pendingInvites = invites.filter((i) => !i.redeemedAt && i.expiresAt.slice(0, 10) >= todayIso).length;
   const personById = new Map(personRecords.map((p) => [p.id, p]));
-  const otherPeople = personRecords.filter((p) => !currentOwnerIds.has(p.id));
+  // "Others on file" is board members, accountants and anyone else who is not in a unit. Owners belong
+  // to their units, so anyone in a unit, or whose only role is Owner, is not listed here.
+  const isOwnerOnly = (personId: string) => {
+    const roles = rolesByPerson.get(personId) ?? [];
+    return roles.length > 0 && roles.every((r) => r === "owner");
+  };
+  const otherPeople = personRecords.filter((p) => !currentOwnerIds.has(p.id) && !isOwnerOnly(p.id));
   const renderPerson = (p: (typeof personRecords)[number], key: string) => (
     <PersonRow
       key={key}
@@ -299,6 +327,13 @@ export default async function BuildingPage() {
         (rolesByPerson.get(p.id) ?? []).length === 0 &&
         !currentOwnerIds.has(p.id) &&
         !(p.full_name === "Former member" && !p.email)
+      }
+      canDeleteFormer={
+        isBoardAdmin &&
+        p.full_name === "Former member" &&
+        !p.email &&
+        (rolesByPerson.get(p.id) ?? []).length === 0 &&
+        !currentOwnerIds.has(p.id)
       }
     />
   );
@@ -437,7 +472,11 @@ export default async function BuildingPage() {
                 <div>
                   <h4 className="text-[12px] font-medium text-mute">History</h4>
                   <div className="mt-2">
-                    <AmendmentHistory amendments={amendments} />
+                    <AmendmentHistory amendments={amendments} canDelete={isBoardAdmin} />
+                    <OwnerRecordsHistory
+                      units={unitList.map((u) => ({ id: u.id, label: u.label, records: historyByUnit.get(u.id) ?? [] }))}
+                      canDelete={isBoardAdmin}
+                    />
                   </div>
                 </div>
               </DetailsPanel>

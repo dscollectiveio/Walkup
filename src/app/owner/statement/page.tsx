@@ -27,7 +27,7 @@ export default async function OwnerStatementIndex() {
         <Card title="No unit is linked to your account yet">
           <p className="text-[14px] leading-relaxed text-ink">
             The board hasn&rsquo;t linked your sign-in to a unit, so there&rsquo;s no statement to show. Ask{" "}
-            {viewer.boardContact.name ?? "a board member"} to send you a new invite from Building Info.
+            {viewer.boardContact.name ?? "a board member"} to send you a new invite from Building & Owners.
           </p>
           <div className="mt-3">
             <ContactLine contact={viewer.boardContact} />

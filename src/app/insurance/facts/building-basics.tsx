@@ -8,7 +8,7 @@ import { btnGhost, errorBlock, inputClass, labelClass } from "../components/styl
 import { Toast } from "../components/toast";
 
 /**
- * "From Building Info" (§9.8 item 0): year built, construction, stories and
+ * "From Building & Owners" (§9.8 item 0): year built, construction, stories and
  * roof year, which board members edit here through a narrow RPC. Accountants
  * see them read-only.
  */
@@ -82,7 +82,7 @@ export function BuildingBasics({
           <input id="basics-roof" name="roof_replaced_year" inputMode="numeric" defaultValue={initial.roofReplacedYear ?? ""} className={`${inputClass} figures`} />
         </div>
       </fieldset>
-      <p className="text-[12px] text-mute">Also shown in Building Info.</p>
+      <p className="text-[12px] text-mute">Also shown in Building & Owners.</p>
       {error ? <p className={errorBlock}>{error}</p> : null}
       {canEdit ? (
         <button type="submit" className={btnGhost} disabled={pending}>

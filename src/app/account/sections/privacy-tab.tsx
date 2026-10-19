@@ -47,7 +47,7 @@ export function PrivacyTab({ viewer }: { viewer: Viewer }) {
       <Card navy title="Close your account">
         <p className="text-[13px] leading-relaxed text-ink">
           {viewer.isBoardAdmin
-            ? "Before you go, make sure another board admin is set up under Building Info, so the association isn't left without one. "
+            ? "Before you go, make sure another board admin is set up under Building & Owners, so the association isn't left without one. "
             : ""}
           To close your account or have your details removed, email{" "}
           <a href={`mailto:${SUPPORT_EMAIL}?subject=${closeSubject}`} className={linkClass}>

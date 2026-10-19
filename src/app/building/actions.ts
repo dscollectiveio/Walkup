@@ -1,6 +1,7 @@
 "use server";
 
 import { revalidatePath } from "next/cache";
+import { snapBathrooms, splitBathrooms } from "@/lib/building/bathrooms";
 import { createClient, getUser } from "@/lib/supabase/server";
 import { geocode } from "@/lib/google/places";
 import { validateBoardContact } from "@/lib/owner/board-contact";
@@ -10,6 +11,13 @@ import { parseUnitType } from "@/lib/building/unit-types";
 import { saveBuildingFacts } from "@/app/insurance/facts-actions";
 
 const ROLES = ["board_admin", "board_member", "accountant", "owner"] as const;
+
+/** The day before a yyyy-mm-dd date. */
+function dayBefore(iso: string): string {
+  const d = new Date(`${iso}T00:00:00Z`);
+  d.setUTCDate(d.getUTCDate() - 1);
+  return d.toISOString().slice(0, 10);
+}
 
 /** An accountant's access runs this many days, then ends unless a board admin extends it. */
 const ACCOUNTANT_DAYS = 90;
@@ -194,6 +202,7 @@ function unitFields(formData: FormData) {
     const raw = String(formData.get(key) ?? "").trim();
     return raw === "" ? null : Number(raw);
   };
+  const baths = snapBathrooms(String(formData.get("bathrooms") ?? ""));
   const rawFloor = int("floor");
   const floor = rawFloor !== null && Number.isInteger(rawFloor) && rawFloor >= -5 && rawFloor <= 200 ? rawFloor : null;
   return {
@@ -205,8 +214,9 @@ function unitFields(formData: FormData) {
     ...(floor !== null ? { sort_order: floor } : {}),
     square_footage: int("square_footage"),
     bedroom_count: int("bedroom_count"),
-    full_bathrooms: int("full_bathrooms"),
-    half_bathrooms: int("half_bathrooms"),
+    // One "Bathrooms" box (2.5 is two full baths and a half); kept in the two columns the database has.
+    full_bathrooms: baths === null ? null : splitBathrooms(baths).full,
+    half_bathrooms: baths === null ? null : splitBathrooms(baths).half,
   };
 }
 
@@ -366,7 +376,12 @@ export async function saveUnitAndPeople(_prev: unknown, formData: FormData) {
     if (e.remove) {
       const { data: row } = await supabase.from("unit_owners").select("effective_from").eq("id", e.ownerRowId).single();
       if (row && row.effective_from < e.endDate) {
-        const { data, error } = await supabase.from("unit_owners").update({ effective_to: e.endDate }).eq("id", e.ownerRowId).select("id");
+        // effective_to is the LAST day they were in the unit, and the unit's people are everyone whose
+        // effective_to is today or later. A past date is kept as typed (a sale last month is last month)
+        // and a future one too (they are leaving next week). But "left today" must end YESTERDAY: ending
+        // it today kept them in the unit all day, which looked like the removal had been undone.
+        const endsOn = e.endDate === today ? dayBefore(today) : e.endDate;
+        const { data, error } = await supabase.from("unit_owners").update({ effective_to: endsOn }).eq("id", e.ownerRowId).select("id");
         if (error || !data || data.length === 0) return stop(`${e.fields.full_name || "a person"} couldn't be removed from the unit: ${error?.message ?? "only the board can change ownership."}`);
       } else {
         // They were only recorded from that date on (or later), so there is nothing to end-date: the record has to be deleted, which only a board admin may do.
@@ -719,6 +734,42 @@ export async function deleteUnitOwner(rowId: string, unitId: string) {
   revalidatePath("/delinquency");
   if (unitId) revalidatePath(`/units/${unitId}`);
   return { ok: true as const };
+}
+
+/**
+ * Deletes a former member: a person whose details were already removed, when no
+ * payment, ownership, email, repair or document still refers to them (0067).
+ * Board admin only; the database says why when it can't.
+ */
+export async function deleteFormerMember(personId: string): Promise<{ ok: true } | { error: string }> {
+  if (!/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(personId)) return { error: "Choose someone to delete." };
+  const supabase = await createClient();
+  const { error } = await supabase.rpc("delete_former_member", { p_person_id: personId });
+  if (error) {
+    if (error.code === "42501") return { error: "Only a board admin can delete a former member." };
+    if (error.code === "22023" && error.message) return { error: error.message };
+    console.error("[building] delete_former_member", error.code ?? "-");
+    return { error: "Couldn't delete that. Try again." };
+  }
+  revalidateBuilding();
+  return { ok: true };
+}
+
+/**
+ * Deletes one ownership percentage change (an amendment and its lines). Board
+ * admin only (the database allows nobody else). The units' shares go back to
+ * the previous recorded split, or to none if this was the only one. The audit
+ * log keeps a record that it was deleted.
+ */
+export async function deleteOwnershipAmendment(id: string): Promise<{ ok: true } | { error: string }> {
+  if (!/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(id)) return { error: "Choose a change to delete." };
+  const supabase = await createClient();
+  const { data, error } = await supabase.from("ownership_amendments").delete().eq("id", id).select("id");
+  if (error) return { error: "Couldn't delete that. Try again." };
+  if (!data || data.length === 0) return { error: "Only a board admin can delete an ownership change." };
+  revalidateBuilding();
+  revalidatePath("/tax");
+  return { ok: true };
 }
 
 // ============================================================================

@@ -235,13 +235,14 @@ export async function saveLateFeeRule(_prev: unknown, formData: FormData) {
 
 /**
  * Adds one charge to one unit through record_assessment_charge — a late fee
- * (income 4020) or a one-off charge (income 4000). Always a person's click;
+ * (income 4020), a one-off charge (income 4000) or a required Additional Agreed
+ * Assessment (income 4010). Always a person's click;
  * the Dues page proposes, it never applies.
  */
 export async function addUnitCharge(input: {
   unitId: string;
   amount: number;
-  kind: "late_fee" | "other";
+  kind: "late_fee" | "other" | "special_assessment";
   /** The period the charge belongs to (for a late fee, the overdue assessment's period). */
   periodStart: string;
   dueOn?: string;
@@ -277,7 +278,7 @@ export async function addUnitCharge(input: {
   }
 
   const dueOn = input.dueOn ?? new Date().toISOString().slice(0, 10);
-  const incomeCode = input.kind === "late_fee" ? "4020" : "4000";
+  const incomeCode = input.kind === "late_fee" ? "4020" : input.kind === "special_assessment" ? "4010" : "4000";
   const [{ data: fiscalYears }, { data: accounts }, { data: funds }] = await Promise.all([
     supabase.from("fiscal_years").select("id").lte("starts_on", dueOn).gte("ends_on", dueOn).limit(1),
     supabase.from("accounts").select("id, code").in("code", ["1200", incomeCode]).eq("is_active", true),
@@ -606,4 +607,328 @@ export async function chargeDueNow() {
   revalidatePath("/ledger");
   if (charged === 0 && errors.length > 0) return { error: errors[0] };
   return { ok: true, charged, skipped, errors };
+}
+
+// ---------------------------------------------------------------------------
+// Additional Agreed Assessments: an extra yearly amount a unit agrees to put
+// toward the reserve, on top of regular dues.
+//
+// Voluntary (the default): nothing is owed, so no due date, no late fee, and it
+// never changes the unit's standing. Each unit may have an agreed amount (an
+// assessment_schedules row with is_special = true, kept apart from the dues
+// plan, which every dues query already filters to is_special = false). Money
+// given is an income line on account 4010 (Special Assessments), tagged to the
+// unit, source "manual".
+//
+// Required (a board admin's choice): the amount is charged to the unit like any
+// other charge (type special_assessment, income 4010), so it is owed, shows in
+// the unit's standing and statement, and payments apply to it. Once charged it
+// is a ledger fact and is not switched back here.
+// ---------------------------------------------------------------------------
+
+/** Sets, changes or ends a unit's agreed amount (voluntary). A blank or zero amount ends it. */
+async function setAgreedAmount(unitId: string, amount: number) {
+  const supabase = await createClient();
+  const associationId = await currentAssociationId(supabase);
+  if (!associationId) return { error: "No association is visible to you." };
+  const todayKey = buildingTodayIso();
+  const yearStart = `${todayKey.slice(0, 4)}-01-01`;
+
+  const [{ data: funds }, { data: units }, { data: existing }] = await Promise.all([
+    supabase.from("funds").select("id").eq("kind", "reserve").limit(1),
+    supabase.from("units").select("label").eq("id", unitId).limit(1),
+    supabase
+      .from("assessment_schedules")
+      .select("id, starts_on")
+      .eq("unit_id", unitId)
+      .eq("is_special", true)
+      .is("ends_on", null)
+      .order("starts_on", { ascending: false })
+      .limit(1),
+  ]);
+  const row = existing?.[0];
+
+  if (amount === 0) {
+    if (!row) return { ok: true as const };
+    // Ending it keeps the history: the row stays, with an end date.
+    const yesterday = new Date(`${todayKey}T00:00:00Z`);
+    yesterday.setUTCDate(yesterday.getUTCDate() - 1);
+    const endsOn = yesterday.toISOString().slice(0, 10);
+    const { error } = await supabase
+      .from("assessment_schedules")
+      .update({ ends_on: endsOn < row.starts_on ? row.starts_on : endsOn })
+      .eq("id", row.id);
+    if (error) return { error: friendly(error) };
+    return { ok: true as const };
+  }
+
+  const fundId = funds?.[0]?.id;
+  if (!fundId) return { error: "No reserve fund is set up yet." };
+  const label = units?.[0]?.label ?? "Unit";
+
+  const { error } = row
+    ? await supabase.from("assessment_schedules").update({ total_amount: amount, annual_amount: amount }).eq("id", row.id)
+    : await supabase.from("assessment_schedules").insert({
+        association_id: associationId,
+        unit_id: unitId,
+        name: `${label} additional agreed assessment`,
+        frequency: "annual",
+        fund_id: fundId,
+        allocation_method: "fixed_per_unit",
+        starts_on: yearStart,
+        is_special: true,
+        total_amount: amount,
+        annual_amount: amount,
+      });
+  if (error) {
+    return { error: error.code === "42501" ? "Only a board member can set a unit's agreed assessment." : friendly(error) };
+  }
+  return { ok: true as const };
+}
+
+/**
+ * Saves a unit's Additional Agreed Assessment. "voluntary" sets the agreed
+ * amount (any board member). "required" is a board admin's choice: it charges
+ * the amount to the unit for this calendar year, due on the date given.
+ */
+export async function saveAdditionalAssessment(_prev: unknown, formData: FormData) {
+  const unitId = String(formData.get("unit_id") ?? "");
+  const amount = Number(String(formData.get("agreed_amount") ?? "").replace(/[^0-9.]/g, "") || "0");
+  const mode = String(formData.get("mode") ?? "voluntary");
+  if (!unitId) return { error: "Choose the unit." };
+  if (!Number.isFinite(amount) || amount < 0) return { error: "Enter a dollar amount." };
+
+  if (mode !== "required") {
+    const result = await setAgreedAmount(unitId, amount);
+    if ("error" in result) return result;
+    revalidatePath("/dues");
+    return { ok: true as const };
+  }
+
+  // Required: a board admin only, and it is charged now.
+  if (amount <= 0) return { error: "Enter the amount that is required." };
+  const dueOn = String(formData.get("due_on") ?? "");
+  const todayKey = buildingTodayIso();
+  const year = todayKey.slice(0, 4);
+  if (!/^\d{4}-\d{2}-\d{2}$/.test(dueOn)) return { error: "Choose the date it is due." };
+  if (dueOn.slice(0, 4) !== year) return { error: `It must be due in ${year}.` };
+
+  const supabase = await createClient();
+  const associationId = await currentAssociationId(supabase);
+  if (!associationId) return { error: "No association is visible to you." };
+  const { data: isAdmin } = await supabase.rpc("has_role_in", { assoc: associationId, roles: ["board_admin"] });
+  if (isAdmin !== true) return { error: "Only a board admin can make an assessment required." };
+
+  const periodStart = `${year}-01-01`;
+  const yearEnd = `${year}-12-31`;
+  const [{ data: already }, { data: given }] = await Promise.all([
+    supabase
+      .from("assessment_charges")
+      .select("id")
+      .eq("unit_id", unitId)
+      .eq("charge_type", "special_assessment")
+      .eq("period_start", periodStart)
+      .is("waived_at", null)
+      .is("written_off_at", null)
+      .limit(1),
+    supabase
+      .from("journal_lines")
+      .select("id, accounts!inner(code), journal_entries!inner(entry_date, is_posted, source)")
+      .eq("accounts.code", "4010")
+      .eq("unit_id", unitId)
+      .eq("journal_entries.is_posted", true)
+      .eq("journal_entries.source", "manual")
+      .gte("journal_entries.entry_date", periodStart)
+      .lte("journal_entries.entry_date", yearEnd)
+      .limit(1),
+  ]);
+  if (already?.length) return { error: "This unit's assessment is already required for this year." };
+  if (given?.length) {
+    return { error: "This unit already gave voluntarily this year. Make it required next year, so the two don't overlap." };
+  }
+
+  const saved = await setAgreedAmount(unitId, amount);
+  if ("error" in saved) return saved;
+  const charged = await addUnitCharge({
+    unitId,
+    amount,
+    kind: "special_assessment",
+    periodStart,
+    dueOn,
+    memo: "Additional agreed assessment",
+  });
+  if (charged.error) return { error: charged.error as string };
+  revalidatePath("/dues");
+  return { ok: true as const };
+}
+
+/**
+ * Records money a unit gave toward a voluntary Additional Agreed Assessment:
+ * debit Reserve Cash (1010), credit Special Assessments (4010), both in the
+ * reserve fund and tagged to the unit. One balanced entry, in the fiscal year
+ * that covers the date. Use it for a check or cash, or money already in the
+ * reserve account. A deposit that is also in the bank feed must not be
+ * recorded twice. For a required assessment, record a payment instead: it
+ * applies to the charge.
+ */
+export async function recordReserveContribution(_prev: unknown, formData: FormData) {
+  const unitId = String(formData.get("unit_id") ?? "");
+  const amount = Number(String(formData.get("contribution_amount") ?? "").replace(/[^0-9.]/g, ""));
+  const receivedOn = String(formData.get("received_on") ?? "") || buildingTodayIso();
+  if (!unitId) return { error: "Choose the unit." };
+  if (!Number.isFinite(amount) || amount <= 0) return { error: "Enter the amount given." };
+  if (!/^\d{4}-\d{2}-\d{2}$/.test(receivedOn)) return { error: "Enter the date it was received." };
+
+  const supabase = await createClient();
+  const associationId = await currentAssociationId(supabase);
+  if (!associationId) return { error: "No association is visible to you." };
+
+  const [{ data: accounts }, { data: funds }, { data: years }, { data: units }, { data: required }] = await Promise.all([
+    supabase.from("accounts").select("id, code").in("code", ["1010", "4010"]).eq("is_active", true),
+    supabase.from("funds").select("id").eq("kind", "reserve").limit(1),
+    supabase.from("fiscal_years").select("id").lte("starts_on", receivedOn).gte("ends_on", receivedOn).limit(1),
+    supabase.from("units").select("label").eq("id", unitId).limit(1),
+    supabase
+      .from("assessment_charges")
+      .select("id")
+      .eq("unit_id", unitId)
+      .eq("charge_type", "special_assessment")
+      .eq("period_start", `${receivedOn.slice(0, 4)}-01-01`)
+      .is("waived_at", null)
+      .is("written_off_at", null)
+      .limit(1),
+  ]);
+  if (required?.length) return { error: "This unit's assessment is required this year. Record the money as a payment, so it applies to the charge." };
+  const cash = accounts?.find((a) => a.code === "1010")?.id;
+  const income = accounts?.find((a) => a.code === "4010")?.id;
+  const fundId = funds?.[0]?.id;
+  const fiscalYearId = years?.[0]?.id;
+  if (!cash || !income) return { error: "The Reserve Cash (1010) or Special Assessments (4010) account is missing from the chart of accounts." };
+  if (!fundId) return { error: "No reserve fund is set up yet." };
+  if (!fiscalYearId) return { error: "No fiscal year covers that date." };
+
+  const label = units?.[0]?.label ?? "Unit";
+  const cents = Math.round(amount * 100);
+  const { error } = await supabase.rpc("post_journal_entry", {
+    p_association_id: associationId,
+    p_fiscal_year_id: fiscalYearId,
+    p_entry_date: receivedOn,
+    p_memo: `Additional agreed assessment · ${label}`,
+    p_source: "manual",
+    p_lines: [
+      { account_id: cash, fund_id: fundId, unit_id: unitId, debit: cents / 100 },
+      { account_id: income, fund_id: fundId, unit_id: unitId, credit: cents / 100 },
+    ],
+  });
+  if (error) return { error: friendly(error) };
+  revalidatePath("/dues");
+  revalidatePath("/");
+  return { ok: true as const };
+}
+
+// ---------------------------------------------------------------------------
+// Property manager and main contact for a unit (0066).
+//
+// A unit can have one property manager: a person record (no login) linked to
+// the unit. The main contact is who Walkup's own email goes to by default for
+// that unit. It starts as the owner, and only becomes the manager when a board
+// member says so. Walkup's email to a unit's manager covers that unit only.
+// ---------------------------------------------------------------------------
+
+const EMAIL_OK = /^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/;
+
+/** Adds or updates a unit's property manager. A board member's action. */
+export async function savePropertyManager(_prev: unknown, formData: FormData) {
+  const unitId = String(formData.get("unit_id") ?? "");
+  const name = String(formData.get("manager_name") ?? "").trim();
+  const email = String(formData.get("manager_email") ?? "").trim().toLowerCase();
+  const phone = String(formData.get("manager_phone") ?? "").trim();
+  const company = String(formData.get("manager_company") ?? "").trim();
+  if (!unitId) return { error: "Choose the unit." };
+  if (!name) return { error: "Enter the manager's name." };
+  if (name.length > 120) return { error: "That name is too long." };
+  if (email && !EMAIL_OK.test(email)) return { error: "Enter a valid email address, or leave it blank." };
+  if (phone.length > 40) return { error: "That phone number is too long." };
+  if (company.length > 120) return { error: "That company name is too long." };
+
+  const supabase = await createClient();
+  const associationId = await currentAssociationId(supabase);
+  if (!associationId) return { error: "No association is visible to you." };
+
+  const { data: existing } = await supabase
+    .from("unit_property_managers")
+    .select("person_id, main_contact")
+    .eq("unit_id", unitId)
+    .limit(1);
+  const current = existing?.[0];
+
+  let personId = current?.person_id as string | undefined;
+  if (personId) {
+    const { error } = await supabase
+      .from("persons")
+      .update({ full_name: name, email: email || null, phone: phone || null })
+      .eq("id", personId);
+    if (error) return { error: error.code === "42501" ? "Only a board member can change a manager." : friendly(error) };
+    const { error: linkError } = await supabase
+      .from("unit_property_managers")
+      // With no email the manager cannot be the main contact, so it goes back to the owner.
+      .update({ company: company || null, ...(email ? {} : { main_contact: "owner" }) })
+      .eq("unit_id", unitId);
+    if (linkError) return { error: friendly(linkError) };
+  } else {
+    const { data: created, error } = await supabase
+      .from("persons")
+      .insert({ association_id: associationId, full_name: name, email: email || null, phone: phone || null })
+      .select("id")
+      .limit(1);
+    if (error || !created?.[0]) {
+      return { error: error?.code === "42501" ? "Only a board member can add a manager." : error ? friendly(error) : "Couldn't add the manager." };
+    }
+    personId = created[0].id as string;
+    const { error: linkError } = await supabase.from("unit_property_managers").insert({
+      unit_id: unitId,
+      association_id: associationId,
+      person_id: personId,
+      company: company || null,
+      main_contact: "owner",
+    });
+    if (linkError) return { error: friendly(linkError) };
+  }
+
+  revalidatePath("/dues");
+  revalidatePath("/building");
+  return { ok: true as const };
+}
+
+/** Chooses who Walkup's email goes to for this unit: the owner (the default) or the property manager. */
+export async function setMainContact(unitId: string, main: "owner" | "manager"): Promise<{ ok: true } | { error: string }> {
+  if (!unitId || (main !== "owner" && main !== "manager")) return { error: "Choose the owner or the property manager." };
+  const supabase = await createClient();
+  const { data } = await supabase
+    .from("unit_property_managers")
+    .select("persons(email)")
+    .eq("unit_id", unitId)
+    .limit(1);
+  const manager = data?.[0] as { persons: { email: string | null } | null } | undefined;
+  if (!manager) return { error: "Add a property manager first." };
+  if (main === "manager" && !(manager.persons?.email ?? "").trim()) {
+    return { error: "Add the manager's email address first. Without it Walkup has nowhere to send." };
+  }
+  const { error } = await supabase.from("unit_property_managers").update({ main_contact: main }).eq("unit_id", unitId);
+  if (error) return { error: error.code === "42501" ? "Only a board member can change the main contact." : friendly(error) };
+  revalidatePath("/dues");
+  revalidatePath("/delinquency");
+  return { ok: true };
+}
+
+/** Removes the property manager from a unit. The person stays on the Building & Owners list. */
+export async function removePropertyManager(unitId: string): Promise<{ ok: true } | { error: string }> {
+  if (!unitId) return { error: "Choose the unit." };
+  const supabase = await createClient();
+  const { data, error } = await supabase.from("unit_property_managers").delete().eq("unit_id", unitId).select("unit_id");
+  if (error) return { error: friendly(error) };
+  if (!data || data.length === 0) return { error: "Only a board member can remove a manager." };
+  revalidatePath("/dues");
+  revalidatePath("/delinquency");
+  return { ok: true };
 }

@@ -30,7 +30,7 @@ export type SourceState =
   | { state: "error"; message: string };
 
 export const GOOGLE_DOWN = "Google didn't answer. Try again in a minute.";
-export const NEEDS_CITY = "Add your building's city or ZIP code in Building Info to search the web.";
+export const NEEDS_CITY = "Add your building's city or ZIP code in Building & Owners to search the web.";
 
 export function fresh(fetchedAt: string | null | undefined, maxAgeMs: number, now: Date = new Date()): boolean {
   if (!fetchedAt) return false;

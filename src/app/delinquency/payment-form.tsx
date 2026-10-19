@@ -2,6 +2,7 @@
 
 import { useActionState, useState } from "react";
 import { recordPayment } from "./actions";
+import { MoneyInput } from "@/components/money-input";
 
 export function PaymentForm({
   units,
@@ -26,7 +27,7 @@ export function PaymentForm({
   }
 
   return (
-    <form action={action} className="space-y-4 rounded-xl border border-line bg-paper p-5">
+    <form action={action} className="w-full basis-full space-y-4 rounded-xl border border-line bg-paper p-5">
       <div className="grid gap-4 sm:grid-cols-2">
         <div>
           <label htmlFor="unit_id" className="block text-[12px] font-medium text-ink">
@@ -54,14 +55,11 @@ export function PaymentForm({
           <label htmlFor="amount" className="block text-[12px] font-medium text-ink">
             Amount received
           </label>
-          <input
+          <MoneyInput
             id="amount"
             name="amount"
-            type="number"
-            min="0.01"
-            step="0.01"
             required
-            placeholder="0.00"
+            placeholder="$0"
             className="mt-1 w-full rounded-lg border border-line-strong px-3 py-2 text-[13px] text-ink"
           />
         </div>

@@ -1,6 +1,7 @@
 "use client";
 
 import { useActionState, useState } from "react";
+import { AddressInput } from "@/components/address-input";
 import { updateAssociationProfile } from "./actions";
 
 export interface AssociationProfile {
@@ -91,11 +92,14 @@ export function AssociationProfileForm({ profile }: { profile: AssociationProfil
             Street address
             <span className="ml-1 font-normal text-mute-soft">used to find contractors nearby</span>
           </label>
-          <input
+          <AddressInput
             id="street_address"
             name="street_address"
             placeholder="2158 N. Damen Ave"
-            defaultValue={profile.street_address ?? ""}
+            defaultValue={profile.street_address}
+            streetOnly
+            withUnit={false}
+            fillNames={{ city: "city", state: "state_code", postalCode: "postal_code", county: "county" }}
             className="mt-1 w-full rounded-lg border border-line-strong px-3 py-2 text-[13px] text-ink"
           />
         </div>

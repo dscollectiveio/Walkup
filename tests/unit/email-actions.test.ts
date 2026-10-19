@@ -79,7 +79,7 @@ describe("mapDbError", () => {
   it("maps each code to its sentence", () => {
     expect(mapDbError({ code: "42501" })).toBe("Only a board admin can do that.");
     expect(mapDbError({ code: "22023", hint: "sending_off" })).toBe("Turn on sending first.");
-    expect(mapDbError({ code: "22023", hint: "no_reply_to" })).toBe("Add the board contact email on Building Info first. Replies go there.");
+    expect(mapDbError({ code: "22023", hint: "no_reply_to" })).toBe("Add the board contact email on Building & Owners first. Replies go there.");
     expect(mapDbError({ code: "53400", hint: "weekly_cap" })).toBe("This person already got this kind of email this week.");
     expect(mapDbError({ code: "22023", message: "that late fee is not charged or is already settled" })).toBe("that late fee is not charged or is already settled");
   });

@@ -1,5 +1,6 @@
 "use client";
 
+import { CARD_HEADER, SECTION_HEADER } from "./section-header";
 import Link from "next/link";
 import { useActionState, useState, type ReactNode } from "react";
 import { HEADER_BUTTON } from "@/components/ui";
@@ -174,6 +175,13 @@ export function AssociationSummary({
   const [expanded, setExpanded] = useState(false);
   const [uploading, setUploading] = useState(false);
   const [photo, setPhoto] = useState<"loading" | "ok" | "none">("loading");
+  /** "More info": opens the full details and brings the Building section into view. */
+  const showMoreInfo = () => {
+    setExpanded(true);
+    requestAnimationFrame(() =>
+      requestAnimationFrame(() => document.getElementById("building-details")?.scrollIntoView({ behavior: "smooth", block: "start" })),
+    );
+  };
   const startEdit = (focusId?: string) => {
     setExpanded(true);
     setEditing(true);
@@ -264,19 +272,19 @@ export function AssociationSummary({
   const section = (
     title: string,
     children: ReactNode,
-    opts: { action?: ReactNode; note?: ReactNode } = {},
+    opts: { action?: ReactNode; note?: ReactNode; id?: string } = {},
   ) => (
-    <div className="rounded-lg border border-line bg-fill/40 p-4">
-      <div className="flex flex-wrap items-start justify-between gap-2">
-        <h3 className="text-[12px] font-bold uppercase tracking-wide text-ink">
-          {title}
-        </h3>
+    <div id={opts.id} className="scroll-mt-24 overflow-hidden rounded-lg border border-line bg-fill/40">
+      <div className={`${SECTION_HEADER} flex flex-wrap items-center justify-between gap-2`}>
+        <h3>{title}</h3>
         {opts.action}
       </div>
-      {opts.note}
-      <dl className="mt-2 grid gap-x-6 sm:grid-cols-2 lg:grid-cols-3 [&>div]:border-line">
-        {children}
-      </dl>
+      <div className="p-4">
+        {opts.note}
+        <dl className="grid gap-x-6 sm:grid-cols-2 lg:grid-cols-3 [&>div]:border-line">
+          {children}
+        </dl>
+      </div>
     </div>
   );
 
@@ -378,46 +386,62 @@ export function AssociationSummary({
                 {address || "No address yet"}
               </p>
               <dl className="mt-3 grid grid-cols-2 gap-3 text-[13px] lg:grid-cols-4">
+                <div className="col-span-2 min-w-0 overflow-hidden rounded-lg border border-line bg-paper">
+                  <div className={`${CARD_HEADER} flex items-center justify-between gap-2`}>
+                    <dt>Building details</dt>
+                    <button
+                      type="button"
+                      onClick={showMoreInfo}
+                      aria-expanded={expanded}
+                      className="shrink-0 text-[11px] font-medium normal-case tracking-normal text-ink underline underline-offset-2 hover:text-ink-mid"
+                    >
+                      More info <span aria-hidden="true">&rarr;</span>
+                    </button>
+                  </div>
+                  <dd className="grid grid-cols-3 gap-2 px-3 py-2.5">
+                    {[
+                      ["Year built", profile.year_built ? String(profile.year_built) : null],
+                      ["Units", String(unitCount)],
+                      ["Roof replaced", profile.roof_replaced_year ? String(profile.roof_replaced_year) : null],
+                    ].map(([label, value]) => (
+                      <div key={label} className="min-w-0">
+                        <div className="text-[11px] text-mute">{label}</div>
+                        <div className={`text-[14px] font-semibold ${value ? "text-ink" : "font-normal text-mute-soft"}`}>{value || "Not set"}</div>
+                      </div>
+                    ))}
+                  </dd>
+                </div>
                 {[
-                  [
-                    "Year built",
-                    profile.year_built ? String(profile.year_built) : null,
-                    null,
-                    null,
-                  ],
                   [
                     "Insurance policy",
                     master ? master.carrier : null,
                     master ? `Renews ${day(master.renews)}` : null,
                     "/insurance",
                   ],
-                  ["Number of units", String(unitCount), null, null],
                   ["Owner", owner?.name ?? null, owner?.title ?? null, null],
                 ].map(([label, value, sub, href]) => (
                   <div
                     key={label}
-                    className={`relative min-w-0 rounded-lg border border-line bg-paper px-3 py-2.5 ${
+                    className={`relative min-w-0 overflow-hidden rounded-lg border border-line bg-paper ${
                       href ? "transition-colors hover:border-line-strong hover:bg-fill focus-within:outline focus-within:outline-2 focus-within:outline-ink" : ""
                     }`}
                   >
-                    <dt className="text-[11px] font-medium uppercase tracking-wide text-mute">
+                    <dt className={CARD_HEADER}>
                       {href ? (
                         <Link href={href} className="after:absolute after:inset-0 after:content-[''] focus:outline-none">
                           {label}
-                          <span aria-hidden="true" className="ml-1 normal-case">&rarr;</span>
+                          <span aria-hidden="true" className="ml-1">&rarr;</span>
                         </Link>
                       ) : (
                         label
                       )}
                     </dt>
-                    <dd
-                      className={`mt-0.5 break-words text-[14px] font-semibold ${value ? "text-ink" : "font-normal text-mute-soft"}`}
-                    >
-                      {value || "Not set"}
+                    <dd className="px-3 py-2.5">
+                      <div className={`break-words text-[14px] font-semibold ${value ? "text-ink" : "font-normal text-mute-soft"}`}>
+                        {value || "Not set"}
+                      </div>
+                      {value && sub ? <p className="text-[12px] text-mute">{sub}</p> : null}
                     </dd>
-                    {value && sub ? (
-                      <p className="text-[12px] text-mute">{sub}</p>
-                    ) : null}
                   </div>
                 ))}
               </dl>
@@ -602,6 +626,7 @@ export function AssociationSummary({
                     P,
                   )}
                 </>,
+                { id: "building-details" },
               )}
 
               {section(

@@ -373,7 +373,7 @@ export default async function TaxFormPage({ params }: { params: Promise<{ formId
           <p className="mt-1 text-mute">{FORM_PLAIN[formCode] ?? ""}</p>
         </div>
         <div className="rounded-xl border border-line bg-paper px-5 py-4 text-[13px] text-ink">
-          Walkup can&rsquo;t find the fiscal year this form belongs to, so it can&rsquo;t show its figures. Check the fiscal years in Building Info,
+          Walkup can&rsquo;t find the fiscal year this form belongs to, so it can&rsquo;t show its figures. Check the fiscal years in Building & Owners,
           or ask your CPA.
         </div>
         <p className="text-[11px] text-mute">{TAX_FOOTER}</p>

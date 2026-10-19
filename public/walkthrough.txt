@@ -49,7 +49,7 @@ step ticks itself off when the information exists — there is nothing to
 check off by hand. You can skip it and come back; it stays on the Dashboard until
 it's done.
 
-STEP 1 — BUILDING INFO  (Sidebar: Building Info)
+STEP 1 — BUILDING & OWNERS  (Sidebar: Building & Owners)
    a. Fill in the association's details: EIN, city, county, date
       incorporated. The EIN is needed for the tax return; the date
       incorporated is what the Illinois annual-report reminder is worked

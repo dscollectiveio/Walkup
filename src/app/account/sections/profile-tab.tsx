@@ -7,7 +7,7 @@ import { ROLE_WORDS, dtClass, ddClass, linkClass } from "./shared";
 /**
  * Profile: the person's record and what their roles let them do. Name and
  * email are the board's record (owner-portal-spec 6.8), so a board member
- * fixes them under Building Info and anyone else asks the board; phone and
+ * fixes them under Building & Owners and anyone else asks the board; phone and
  * mailing address are the person's own to change here.
  */
 export function ProfileTab({
@@ -40,7 +40,7 @@ export function ProfileTab({
             <>
               Name or email wrong? Edit yourself under{" "}
               <Link href="/building" className={linkClass}>
-                Building Info
+                Building & Owners
               </Link>
               .
             </>
@@ -71,7 +71,7 @@ export function ProfileTab({
             <>
               You give and take away roles under{" "}
               <Link href="/building" className={linkClass}>
-                Building Info
+                Building & Owners
               </Link>
               .
             </>

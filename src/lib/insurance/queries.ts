@@ -72,8 +72,8 @@ export async function adminNames(supabase: Supabase, associationId: string): Pro
 /** §7.3.1: what a board member sees when the building's city or state is missing. */
 export function addressMissingCopy(isAdmin: boolean, admins: string): string {
   return isAdmin
-    ? "Add the building's city and state in Building Info to search."
-    : `Only ${admins} can add the building's address. Ask them to add the city and state in Building Info.`;
+    ? "Add the building's city and state in Building & Owners to search."
+    : `Only ${admins} can add the building's address. Ask them to add the city and state in Building & Owners.`;
 }
 
 export async function unitCount(supabase: Supabase, associationId: string): Promise<number> {

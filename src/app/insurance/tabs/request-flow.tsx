@@ -284,7 +284,7 @@ export function RequestFlow({
           </Link>
           {data.isAdmin ? (
             <Link href="/building" className={linkClass}>
-              Edit in Building Info
+              Edit in Building & Owners
             </Link>
           ) : (
             <span className="text-mute">Only {data.adminNames} can change the address.</span>

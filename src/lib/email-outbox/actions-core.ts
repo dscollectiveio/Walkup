@@ -56,7 +56,7 @@ export function mapDbError(error: DbError, where = "email"): string {
   const hint = error.hint ?? "";
   if (code === "42501") return ADMIN_ONLY;
   if (code === "22023" && hint === "sending_off") return "Turn on sending first.";
-  if (code === "22023" && hint === "no_reply_to") return "Add the board contact email on Building Info first. Replies go there.";
+  if (code === "22023" && hint === "no_reply_to") return "Add the board contact email on Building & Owners first. Replies go there.";
   if (code === "53400" && hint === "weekly_cap") return "This person already got this kind of email this week.";
   if (code === "22023" && error.message) return error.message;
   console.error(`[walkup-email] ${where}`, code || "-", hint || "-");

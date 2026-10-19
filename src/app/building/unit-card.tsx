@@ -7,6 +7,7 @@ import { PeopleFields, type ResidentValue } from "./people-fields";
 import { unitTypeLabel } from "@/lib/building/unit-types";
 import { AddPersonForm } from "./add-person-form";
 import { UnitFields, specsLine, type UnitRecord } from "./unit-fields";
+import { SECTION_HEADER } from "./section-header";
 
 const ROLE_LABEL: Record<string, string> = {
   board_admin: "Board admin",
@@ -107,19 +108,23 @@ export function UnitCard({
         </div>
         <form id={formId} action={action} className={`space-y-5 bg-paper p-4 ${fieldsHidden ? "hidden" : ""}`}>
           <input type="hidden" name="unit_id" value={unit.id} />
-          <div>
-            <h4 className="mb-3 text-[13px] font-bold text-ink">The unit</h4>
-            <UnitFields unit={unit} idPrefix={`u-${unit.id}`} />
-          </div>
-          <div className="border-t border-line pt-5">
-            <h4 className="mb-3 text-[13px] font-bold text-ink">People in this unit</h4>
-            <PeopleFields
-              idPrefix={`u-${unit.id}`}
-              residents={residents}
-              people={people}
-              canEditRoles={canEditRoles}
-            />
-          </div>
+          <section className="overflow-hidden rounded-lg border border-line">
+            <h4 className={SECTION_HEADER}>The unit</h4>
+            <div className="p-4">
+              <UnitFields unit={unit} idPrefix={`u-${unit.id}`} />
+            </div>
+          </section>
+          <section className="overflow-hidden rounded-lg border border-line">
+            <h4 className={SECTION_HEADER}>People in this unit</h4>
+            <div className="p-4">
+              <PeopleFields
+                idPrefix={`u-${unit.id}`}
+                residents={residents}
+                people={people}
+                canEditRoles={canEditRoles}
+              />
+            </div>
+          </section>
           {state && "error" in state && state.error ? (
             <p className="border-l-[3px] border-bad bg-bad-tint px-3 py-2 text-[13px] text-bad-text">{state.error}</p>
           ) : null}
@@ -159,7 +164,10 @@ export function UnitCard({
           </span>
           <span className="hidden shrink-0 text-[12px] text-mute md:inline">{specsLine(unit)}</span>
           {share !== null ? (
-            <span className="shrink-0 rounded-full border border-line bg-paper px-2 py-0.5 text-[11px] font-medium text-ink">
+            <span
+              title="This unit's ownership share"
+              className="shrink-0 rounded-full border border-brass/40 bg-brass/20 px-2.5 py-0.5 text-[11px] font-semibold text-ink backdrop-blur-sm"
+            >
               {`${+share.toFixed(2)}%`}
             </span>
           ) : null}
@@ -173,7 +181,7 @@ export function UnitCard({
               setFieldsHidden(false);
               setEditing(true);
             }}
-            className="inline-flex min-h-[28px] shrink-0 items-center rounded-md border border-line-strong bg-paper px-3 text-[12px] font-medium text-ink hover:bg-fill"
+            className="inline-flex min-h-[28px] shrink-0 items-center rounded-md bg-ink px-3 text-[12px] font-medium text-paper hover:bg-ink-mid"
           >
             Edit
           </button>
@@ -184,7 +192,7 @@ export function UnitCard({
           onClick={() => onToggle()}
           aria-expanded={expanded}
           aria-label={`${expanded ? "Collapse" : "Expand"} ${unit.label} details`}
-          className="inline-flex min-h-[28px] shrink-0 items-center gap-1 rounded-md border border-line-strong bg-paper px-3 text-[12px] font-medium text-ink hover:bg-fill"
+          className="inline-flex min-h-[28px] shrink-0 items-center gap-1 rounded-md bg-ink px-3 text-[12px] font-medium text-paper transition-colors hover:bg-ink-mid focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-brass"
         >
           {expanded ? "Collapse" : "Expand"}
           <svg width="10" height="10" viewBox="0 0 12 12" aria-hidden="true" className={`transition-transform ${expanded ? "rotate-90" : ""}`}>
@@ -207,19 +215,21 @@ export function UnitCard({
           ) : (
             <ul className="divide-y divide-line border-t border-line px-4">
               {residents.map((r) => (
-                <li key={r.ownerRowId} className="py-3">
-                  <div className="flex flex-wrap items-center gap-2">
-                    <span className="text-[13px] font-medium text-ink">{r.fullName}</span>
-                    {r.roles.map((role) => (
-                      <span key={role} className="rounded-full border border-line bg-fill px-2 py-0.5 text-[10px] text-mute">
-                        {ROLE_LABEL[role] ?? role}
-                      </span>
-                    ))}
+                <li key={r.ownerRowId} className="flex flex-wrap items-start justify-between gap-x-4 gap-y-2 py-3">
+                  <div className="min-w-0 flex-1">
+                    <div className="flex flex-wrap items-center gap-2">
+                      <span className="text-[13px] font-medium text-ink">{r.fullName}</span>
+                      {r.roles.map((role) => (
+                        <span key={role} className="rounded-full border border-line bg-fill px-2 py-0.5 text-[10px] text-mute">
+                          {ROLE_LABEL[role] ?? role}
+                        </span>
+                      ))}
+                    </div>
+                    <div className="mt-1 text-[12px] text-mute">{[r.email, r.phone].filter(Boolean).join(" · ") || "No contact info on file"}</div>
+                    {r.mailingAddress ? <div className="text-[11px] text-mute-soft">{r.mailingAddress}</div> : null}
                   </div>
-                  <div className="mt-1 text-[12px] text-mute">{[r.email, r.phone].filter(Boolean).join(" · ") || "No contact info on file"}</div>
-                  {r.mailingAddress ? <div className="text-[11px] text-mute-soft">{r.mailingAddress}</div> : null}
                   {r.invite ? (
-                    <div className="mt-2">
+                    <div className="ml-auto shrink-0">
                       <InviteToSignIn personId={r.personId} associationName={r.invite.associationName} boardContactName={r.invite.boardContactName} />
                     </div>
                   ) : null}

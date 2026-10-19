@@ -1,4 +1,7 @@
 import { UNIT_TYPES } from "@/lib/building/unit-types";
+import { IntegerInput } from "@/components/integer-input";
+import { BathroomsInput } from "@/components/bathrooms-input";
+import { bathroomsValue, formatBathrooms } from "@/lib/building/bathrooms";
 
 export interface UnitRecord {
   id: string;
@@ -16,13 +19,10 @@ export interface UnitRecord {
 /** "850 sq ft · 2 beds · 1.5 baths", or a note that nothing is on file. */
 export function specsLine(u: UnitRecord): string {
   const parts: string[] = [];
-  if (u.square_footage) parts.push(`${u.square_footage} sq ft`);
+  if (u.square_footage) parts.push(`${u.square_footage.toLocaleString("en-US")} sq ft`);
   if (u.bedroom_count !== null) parts.push(`${u.bedroom_count} bed${u.bedroom_count === 1 ? "" : "s"}`);
-  if (u.full_bathrooms !== null || u.half_bathrooms !== null) {
-    const full = u.full_bathrooms ?? 0;
-    const half = u.half_bathrooms ?? 0;
-    parts.push(`${full}${half > 0 ? `.5` : ""} bath${full === 1 && half === 0 ? "" : "s"}`);
-  }
+  const baths = bathroomsValue(u.full_bathrooms, u.half_bathrooms);
+  if (baths !== null) parts.push(`${formatBathrooms(baths)} bath${baths === 1 ? "" : "s"}`);
   return parts.length > 0 ? parts.join(" · ") : "No specs on file";
 }
 
@@ -64,7 +64,7 @@ export function UnitFields({ unit, idPrefix }: { unit?: UnitRecord; idPrefix: st
         <label htmlFor={id("sqft")} className={label}>
           Square footage{optional}
         </label>
-        <input id={id("sqft")} name="square_footage" type="number" min="1" step="1" defaultValue={unit?.square_footage ?? ""} className={input} />
+        <IntegerInput id={id("sqft")} name="square_footage" defaultValue={unit?.square_footage} placeholder="1,250" className={input} />
       </div>
       <div>
         <label htmlFor={id("bed")} className={label}>
@@ -73,16 +73,11 @@ export function UnitFields({ unit, idPrefix }: { unit?: UnitRecord; idPrefix: st
         <input id={id("bed")} name="bedroom_count" type="number" min="0" step="1" defaultValue={unit?.bedroom_count ?? ""} className={input} />
       </div>
       <div>
-        <label htmlFor={id("full")} className={label}>
-          Full bathrooms{optional}
+        <label htmlFor={id("baths")} className={label}>
+          Bathrooms{optional}
+          <span className="ml-1 font-normal text-mute-soft">.5 for a half bath</span>
         </label>
-        <input id={id("full")} name="full_bathrooms" type="number" min="0" step="1" defaultValue={unit?.full_bathrooms ?? ""} className={input} />
-      </div>
-      <div>
-        <label htmlFor={id("half")} className={label}>
-          Half bathrooms{optional}
-        </label>
-        <input id={id("half")} name="half_bathrooms" type="number" min="0" step="1" defaultValue={unit?.half_bathrooms ?? ""} className={input} />
+        <BathroomsInput id={id("baths")} name="bathrooms" defaultValue={unit ? bathroomsValue(unit.full_bathrooms, unit.half_bathrooms) : null} className={input} />
       </div>
       <div className="sm:col-span-2">
         <label htmlFor={id("notes")} className={label}>

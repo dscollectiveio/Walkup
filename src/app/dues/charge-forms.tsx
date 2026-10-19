@@ -2,6 +2,7 @@
 
 import { useActionState, useState } from "react";
 import { addOneOffCharge, saveLateFeeRule } from "./actions";
+import { MoneyInput } from "@/components/money-input";
 
 const inputClass = "mt-1 w-full rounded-lg border border-line-strong bg-paper px-3 py-2 text-[13px] text-ink";
 const btnPrimary = "rounded-md bg-ink px-4 py-2 text-[13px] font-medium text-paper hover:bg-ink-mid disabled:opacity-50";
@@ -60,7 +61,7 @@ export function LateFeeRuleForm({
             <label htmlFor="lf-amount" className="block text-[12px] font-medium text-ink">
               Fee amount
             </label>
-            <input id="lf-amount" name="amount" type="number" min="0" step="0.01" defaultValue={amount ?? ""} placeholder="25.00" className={inputClass} />
+            <MoneyInput id="lf-amount" name="amount" defaultValue={amount} placeholder="$25" className={inputClass} />
           </div>
           <div>
             <label htmlFor="lf-grace" className="block text-[12px] font-medium text-ink">
@@ -123,7 +124,7 @@ export function OneOffChargeForm({ units }: { units: { id: string; label: string
           <label htmlFor="oo-amount" className="block text-[12px] font-medium text-ink">
             Amount
           </label>
-          <input id="oo-amount" name="amount" type="number" min="0.01" step="0.01" required className={inputClass} />
+          <MoneyInput id="oo-amount" name="amount" required placeholder="$100" className={inputClass} />
         </div>
         <div>
           <label htmlFor="oo-reason" className="block text-[12px] font-medium text-ink">

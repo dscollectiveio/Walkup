@@ -51,7 +51,7 @@ export default async function StatementsPage({ searchParams }: { searchParams: P
     return (
       <div className="space-y-6">
         {heading}
-        <Answer status="neutral" headline="Add units on Building Info first." detail="Statements are made for each unit once it exists." />
+        <Answer status="neutral" headline="Add units on Building & Owners first." detail="Statements are made for each unit once it exists." />
       </div>
     );
   }

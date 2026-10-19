@@ -1,5 +1,5 @@
 /**
- * Reads the "people in this unit" part of the Building Info forms.
+ * Reads the "people in this unit" part of the Building & Owners forms.
  *
  * One form can hold several people, so each person's fields are named
  * `p.<key>.<field>` (the key is anything without a dot). Three kinds:

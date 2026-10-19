@@ -16,7 +16,7 @@ describe("owner navigation (owner-portal-spec 7.1)", () => {
     for (const want of ["Home", "Statement", "How to pay", "Announcements", "Repairs", "Budget", "Building insurance", "Your building", "Documents", "Your account"]) {
       expect(labels).toContain(want);
     }
-    for (const never of ["Bank Feed", "Taxes", "HOA Dues", "Building Info", "Ledger", "Delinquency", "Financial Statements", "Contractors"]) {
+    for (const never of ["Bank Feed", "Taxes", "HOA Dues", "Building & Owners", "Ledger", "Delinquency", "Financial Statements", "Contractors"]) {
       expect(labels).not.toContain(never);
     }
   });

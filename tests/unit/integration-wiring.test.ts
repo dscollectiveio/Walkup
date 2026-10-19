@@ -12,7 +12,7 @@ import { validateBoardContact } from "@/lib/owner/board-contact";
 const ROOT = path.resolve(import.meta.dirname, "../..");
 const read = (rel: string) => readFileSync(path.join(ROOT, rel), "utf8").replace(/\s+/g, " ");
 
-describe("board contact (Building Info, 'Who owners write to')", () => {
+describe("board contact (Building & Owners, 'Who owners write to')", () => {
   const none = { name: null, email: null, phone: null };
   it("accepts nothing, or a sane name, email and phone", () => {
     expect(validateBoardContact(none)).toBeNull();
@@ -63,7 +63,7 @@ describe("BoardOnly guards (owner-portal-spec 2.4)", () => {
     },
     {
       file: "src/app/building/page.tsx",
-      what: "Building Info",
+      what: "Building & Owners",
       why: "It is where the board manages units, owners and who can sign in.",
       label: "See your building",
       href: "/owner/building",
@@ -96,7 +96,7 @@ describe("BoardOnly guards (owner-portal-spec 2.4)", () => {
     }
   });
 
-  it("Building Info shows an owner BoardOnly in place of its Restricted settings page", () => {
+  it("Building & Owners shows an owner BoardOnly in place of its Restricted settings page", () => {
     const src = read("src/app/building/page.tsx");
     expect(src.indexOf("viewerIsOwnerOnly()")).toBeLessThan(src.indexOf('<Restricted what="building settings" />', src.indexOf("if (!isBoard)")));
   });
@@ -132,7 +132,7 @@ describe("reportOutsidePayment", () => {
   });
 });
 
-describe("entry points on Building Info and Announcements", () => {
+describe("entry points on Building & Owners and Announcements", () => {
   it("offers the import to board admins, with its sentence", () => {
     const src = read("src/app/building/page.tsx");
     expect(src).toContain('href="/building/import"');

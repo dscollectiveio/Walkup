@@ -1,9 +1,10 @@
 "use client";
 
 import { useActionState, useState, useTransition } from "react";
-import { extendAccountantAccess, redactPerson, updatePerson } from "./actions";
+import { deleteFormerMember, extendAccountantAccess, redactPerson, updatePerson } from "./actions";
 import { PhoneInput } from "@/components/phone-input";
 import { InviteToSignIn } from "./invite-to-sign-in";
+import { AddressInput } from "@/components/address-input";
 import { longDate } from "@/lib/dates";
 
 export interface PersonRecord {
@@ -34,6 +35,7 @@ export function PersonRow({
   canEdit,
   canEditRoles,
   canRedact = false,
+  canDeleteFormer = false,
   invite = null,
   accountantUntil = null,
 }: {
@@ -43,6 +45,8 @@ export function PersonRow({
   canEditRoles: boolean;
   /** Board admin viewing someone with no access and no current unit. */
   canRedact?: boolean;
+  /** Board admin viewing a "Former member" (details already removed): the row itself can be deleted. */
+  canDeleteFormer?: boolean;
   /**
    * Set for a person with no login who has an owner role or a unit: the row
    * offers "Invite to sign in" (owner-portal-spec 5.3).
@@ -51,6 +55,9 @@ export function PersonRow({
   /** The day an accountant's access ends (yyyy-mm-dd), when this person is one. */
   accountantUntil?: string | null;
 }) {
+  const [confirmingDelete, setConfirmingDelete] = useState(false);
+  const [deleting, startDelete] = useTransition();
+  const [deleteError, setDeleteError] = useState<string | null>(null);
   const [extending, startExtend] = useTransition();
   const [extendError, setExtendError] = useState<string | null>(null);
   const [editing, setEditing] = useState(false);
@@ -111,10 +118,10 @@ export function PersonRow({
               <label htmlFor={`addr-${person.id}`} className="block text-[12px] font-medium text-ink">
                 Mailing address
               </label>
-              <input
+              <AddressInput
                 id={`addr-${person.id}`}
                 name="mailing_address"
-                defaultValue={person.mailing_address ?? ""}
+                defaultValue={person.mailing_address}
                 className="mt-1 w-full rounded-lg border border-line-strong px-3 py-2 text-[13px] text-ink"
               />
             </div>
@@ -264,6 +271,40 @@ export function PersonRow({
             </button>
           )
         ) : null}
+        {canDeleteFormer ? (
+          confirmingDelete ? (
+            <span className="flex items-center gap-2">
+              <button
+                type="button"
+                disabled={deleting}
+                onClick={() =>
+                  startDelete(async () => {
+                    setDeleteError(null);
+                    const result = await deleteFormerMember(person.id);
+                    if ("error" in result) setDeleteError(result.error);
+                    else setConfirmingDelete(false);
+                  })
+                }
+                className="rounded-md border border-bad-line bg-bad-tint px-2.5 py-1 text-[11px] font-medium text-bad-text"
+              >
+                {deleting ? "Deleting…" : "Delete for good"}
+              </button>
+              <button type="button" onClick={() => setConfirmingDelete(false)} className="text-[11px] text-mute underline-offset-2 hover:underline">
+                Cancel
+              </button>
+            </span>
+          ) : (
+            <button
+              type="button"
+              onClick={() => setConfirmingDelete(true)}
+              title="Deletes this former member. It only works when no payment, ownership, email, repair or document still refers to them."
+              className="text-[11px] text-bad-text underline-offset-2 hover:underline"
+            >
+              Delete former member
+            </button>
+          )
+        ) : null}
+        {deleteError ? <p className="max-w-[16rem] text-right text-[11px] text-bad-text">{deleteError}</p> : null}
         {redactError ? <p className="max-w-[16rem] text-right text-[11px] text-bad-text">{redactError}</p> : null}
       </div>
     </li>

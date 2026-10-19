@@ -58,7 +58,7 @@ export interface FiguresForm {
   vendorId: string | null;
 }
 
-const NOT_ON_FILE = "Not on file — add it in Building Info";
+const NOT_ON_FILE = "Not on file — add it in Building & Owners";
 const NOT_CHECKED = "not yet checked against this year's instructions";
 const money = formatMoney;
 const plural = (n: number, word: string) => `${n} ${word}${n === 1 ? "" : "s"}`;

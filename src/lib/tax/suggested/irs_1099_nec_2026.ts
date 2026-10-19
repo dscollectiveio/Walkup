@@ -25,7 +25,7 @@ const S1 = "1. Your association (payer)";
 const S2 = "2. Contractor (recipient)";
 const S3 = "3. Amounts";
 
-/** A payer box filled from Building Info. */
+/** A payer box filled from Building & Owners. */
 const payer = (label: string, rule: string, box: string): MapEntry => ({
   label,
   section: S1,

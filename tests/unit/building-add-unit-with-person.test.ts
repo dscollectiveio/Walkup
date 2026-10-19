@@ -1,3 +1,4 @@
+import { buildingTodayIso } from "@/lib/dates";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
 vi.mock("server-only", () => ({}));
@@ -174,6 +175,21 @@ describe("saveUnitAndPeople (the single Edit)", () => {
     ownerRow = { effective_from: "2020-01-01" };
     await saveUnitAndPeople(null, form([...base, ["p.r0.owner_row_id", "row-1"], ["p.r0.person_id", "per-1"], ["p.r0.remove", "1"], ["p.r0.end_date", "2026-09-01"]]));
     expect(calls[1].row).toEqual({ effective_to: "2026-09-01" });
+  });
+
+  it("ends the ownership yesterday when someone is taken off today, so they leave the unit today", async () => {
+    ownerRow = { effective_from: "2020-01-01" };
+    // No end date typed: the form defaults to today. Ending it today would keep them in the unit until midnight.
+    await saveUnitAndPeople(null, form([...base, ["p.r0.owner_row_id", "row-1"], ["p.r0.person_id", "per-1"], ["p.r0.remove", "1"]]));
+    const yesterday = new Date(`${buildingTodayIso()}T00:00:00Z`);
+    yesterday.setUTCDate(yesterday.getUTCDate() - 1);
+    expect(calls[1].row).toEqual({ effective_to: yesterday.toISOString().slice(0, 10) });
+  });
+
+  it("keeps a future end date as typed, since they are still there until then", async () => {
+    ownerRow = { effective_from: "2020-01-01" };
+    await saveUnitAndPeople(null, form([...base, ["p.r0.owner_row_id", "row-1"], ["p.r0.person_id", "per-1"], ["p.r0.remove", "1"], ["p.r0.end_date", "2999-01-01"]]));
+    expect(calls[1].row).toEqual({ effective_to: "2999-01-01" });
   });
 
   it("deletes the record instead when the ownership starts today or later", async () => {

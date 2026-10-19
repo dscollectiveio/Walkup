@@ -106,7 +106,7 @@ const STEPS: Record<string, TourStep> = {
   building: {
     id: "building",
     target: "building",
-    title: "Building Info",
+    title: "Building & Owners",
     body: "Units, owners, the board and the association's details. Import them from a spreadsheet, or invite the rest of the board from here.",
   },
   repairsBoard: {

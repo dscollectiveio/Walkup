@@ -98,11 +98,11 @@ describe("Sidebar: expanded and rail", () => {
     expect(pageTitleFor("/contractors/abc")).toBe("Contractor");
   });
 
-  it("keeps Building Info out of the accountant's sidebar, since that page is the board's", () => {
+  it("keeps Building & Owners out of the accountant's sidebar, since that page is the board's", () => {
     const labels = (role: "accountant" | "board_member") => navFor(role).groups.flatMap((g) => g.items.map((i) => i.label));
-    expect(labels("accountant")).not.toContain("Building Info");
+    expect(labels("accountant")).not.toContain("Building & Owners");
     expect(labels("accountant")).toContain("Financial Statements");
-    expect(labels("board_member")).toContain("Building Info");
+    expect(labels("board_member")).toContain("Building & Owners");
   });
 
   it("calls it Building insurance for owners, and Insurance for the board and the accountant", () => {
@@ -152,7 +152,7 @@ describe("Sidebar: expanded and rail", () => {
     for (const label of ["Home", "Statement", "How to pay", "Announcements", "Repairs", "Budget", "Your building", "Documents", "Your account"]) {
       expect(html, label).toContain(`>${label}<`);
     }
-    for (const never of ["Dashboard", "Bank Feed", "Financial Statements", "HOA Dues", "Taxes", "Building Info", "Find a Contractor"]) {
+    for (const never of ["Dashboard", "Bank Feed", "Financial Statements", "HOA Dues", "Taxes", "Building & Owners", "Find a Contractor"]) {
       expect(html, never).not.toContain(never.replace("&", "&amp;"));
     }
     expect(html).toContain('href="/owner"');
@@ -197,6 +197,6 @@ describe("Sidebar: expanded and rail", () => {
     expect(pageTitleFor("/dues")).toBe("HOA Dues");
     expect(pageTitleFor("/building/import")).toBe("Import");
     expect(pageTitleFor("/building/import/new")).toBe("Import");
-    expect(pageTitleFor("/building")).toBe("Building Info");
+    expect(pageTitleFor("/building")).toBe("Building & Owners");
   });
 });

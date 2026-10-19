@@ -170,9 +170,9 @@ export function FindResults(props: {
             </p>
           ) : googleResult?.source.state === "no_address" ? (
             <p className="text-mute">
-              Add your building&rsquo;s street address in Building Info to search nearby.{" "}
+              Add your building&rsquo;s street address in Building & Owners to search nearby.{" "}
               <Link href="/building" className={linkClass}>
-                Open Building Info
+                Open Building & Owners
               </Link>
             </p>
           ) : googleResult?.source.state === "quota" ? (

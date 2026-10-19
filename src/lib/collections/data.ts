@@ -21,7 +21,7 @@ export interface CollectionsData {
 }
 
 export async function loadCollections(supabase: Supabase, associationId: string, todayIso: string, opts: { board: boolean }): Promise<CollectionsData | null> {
-  const [unitsRes, chargesRes, ownersRes] = await Promise.all([
+  const [unitsRes, chargesRes, ownersRes, managersRes] = await Promise.all([
     supabase.from("units").select("id, label, sort_order").order("sort_order"),
     supabase
       .from("charge_balances")
@@ -31,6 +31,11 @@ export async function loadCollections(supabase: Supabase, associationId: string,
       .from("unit_owners")
       .select("unit_id, person_id, effective_to, persons(full_name, email)")
       .or(`effective_to.is.null,effective_to.gte.${todayIso}`),
+    // The unit's property manager, when the board made them the main contact (0066).
+    supabase
+      .from("unit_property_managers")
+      .select("unit_id, person_id, persons(full_name, email)")
+      .eq("main_contact", "manager"),
   ]);
   if (unitsRes.error || chargesRes.error) {
     console.error("[collections] load", unitsRes.error?.code ?? chargesRes.error?.code ?? "-");
@@ -45,10 +50,24 @@ export async function loadCollections(supabase: Supabase, associationId: string,
     due_on: c.due_on as string,
     balanceCents: centsFromNumeric(c.balance as number | string),
   }));
-  const owners: RawOwner[] = (ownersRes.data ?? []).flatMap((o) => {
+  const ownerRows: RawOwner[] = (ownersRes.data ?? []).flatMap((o) => {
     const p = o.persons as unknown as { full_name: string; email: string | null } | null;
     return p ? [{ unit_id: o.unit_id as string, person_id: o.person_id as string, full_name: p.full_name, email: p.email }] : [];
   });
+  // Walkup's email for a unit goes to its manager, not its owners, when the manager is the main
+  // contact and has an email. The database makes the same choice (email_contact_person), so this
+  // only keeps what the page predicts in step with what is sent.
+  const managerFor = new Map<string, RawOwner>();
+  for (const m of managersRes.data ?? []) {
+    const p = m.persons as unknown as { full_name: string; email: string | null } | null;
+    if (p && (p.email ?? "").trim() !== "" && ownerRows.some((o) => o.unit_id === (m.unit_id as string))) {
+      managerFor.set(m.unit_id as string, { unit_id: m.unit_id as string, person_id: m.person_id as string, full_name: p.full_name, email: p.email });
+    }
+  }
+  const owners: RawOwner[] = [
+    ...ownerRows.filter((o) => !managerFor.has(o.unit_id)),
+    ...managerFor.values(),
+  ];
 
   let messages: RawMessage[] = [];
   const suppressed = new Map<string, "bounce" | "complaint">();

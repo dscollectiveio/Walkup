@@ -89,7 +89,7 @@ export const NAV_GROUPS: NavGroupConfig[] = [
   {
     label: "Building",
     items: [
-      { href: "/building", label: "Building Info", icon: Building2, tourId: "building" },
+      { href: "/building", label: "Building & Owners", icon: Building2, tourId: "building" },
       {
         href: "/repairs",
         label: "Repairs & Upkeep",
@@ -146,7 +146,7 @@ export function navGroupsFor(role: NavRole | null | undefined): NavGroupConfig[]
     ...g,
     items: g.items
       .filter((i) => boardRole || i.href !== "/repairs/find")
-      // The Building Info page is the board's; an accountant would only see "Restricted".
+      // The Building & Owners page is the board's; an accountant would only see "Restricted".
       .filter((i) => role !== "accountant" || i.href !== "/building")
       .map((i) => (i.href === "/insurance" ? { ...i, label: insuranceNavLabel(role) } : i)),
   }));

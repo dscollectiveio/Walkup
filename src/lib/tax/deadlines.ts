@@ -102,7 +102,7 @@ const JUNE_30_NOTE =
   "Fiscal years ending June 30 have their own rule (the 3rd month, not the 4th), so Walkup doesn't estimate this date — ask your CPA.";
 const NO_1120_ESTIMATE_NOTE = "Walkup doesn't estimate Form 1120's due date — ask your CPA.";
 const NO_INCORPORATION_DATE_NOTE =
-  "Walkup needs your incorporation date to estimate this one — add it in Building Info, or ask your CPA.";
+  "Walkup needs your incorporation date to estimate this one — add it in Building & Owners, or ask your CPA.";
 
 // Mirrors FORM_LABEL in determine.ts. Only the FormCode *type* is imported
 // from there: determine.ts re-exports nextDeadline from this file, and a value

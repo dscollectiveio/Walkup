@@ -3,7 +3,7 @@
 // Every step is derived from real rows — a step is "done" because the thing
 // exists (a unit, a policy, a budget line), never because someone ticked a
 // box. That means it can't drift from reality, and it re-ticks itself if the
-// data is fixed later. Order matters: Building Info first, because units,
+// data is fixed later. Order matters: Building & Owners first, because units,
 // people and the EIN feed everything after it.
 
 export type SetupSectionKey = "building" | "money" | "taxes_insurance" | "upkeep";
@@ -102,7 +102,7 @@ function onOrAfter(dateIso: string, today: Date): boolean {
 export function buildSetupGuide(input: SetupInputs): SetupSection[] {
   const { today, association: a } = input;
 
-  // ---- Building Info -------------------------------------------------------
+  // ---- Building & Owners -------------------------------------------------------
   const profileDone = Boolean(a.ein && a.city && a.county && a.incorporated_on);
 
   const unitsDone = input.units.length > 0;
@@ -184,7 +184,7 @@ export function buildSetupGuide(input: SetupInputs): SetupSection[] {
   return [
     {
       key: "building",
-      title: "Building Info",
+      title: "Building & Owners",
       blurb: "Start here. Units, owners and the association's details feed every other section.",
       steps: [
         {
@@ -195,7 +195,7 @@ export function buildSetupGuide(input: SetupInputs): SetupSection[] {
           done: profileDone,
           doneOn: null,
           instructions: [
-            "Open Building Info and click “Edit details” on the Association profile card.",
+            "Open Building & Owners and click “Edit details” on the Association profile card.",
             "The EIN is on the IRS letter (CP 575) or last year's 1120-H. The tax center needs it.",
             "Incorporation date and county are on the Illinois Secretary of State record.",
           ],
@@ -210,7 +210,7 @@ export function buildSetupGuide(input: SetupInputs): SetupSection[] {
           done: contactDone,
           doneOn: null,
           instructions: [
-            "On Building Info, open the association profile and fill in Who owners write to.",
+            "On Building & Owners, open the association profile and fill in Who owners write to.",
             "Owners see it on their home page and your reminder emails reply to it.",
           ],
         },
@@ -223,7 +223,7 @@ export function buildSetupGuide(input: SetupInputs): SetupSection[] {
           doneOn: null,
           informational: true,
           instructions: [
-            "On Building Info, open Import from a spreadsheet and download the template.",
+            "On Building & Owners, open Import from a spreadsheet and download the template.",
             "Fill it in, upload it, check the preview, and import.",
           ],
         },
@@ -237,7 +237,7 @@ export function buildSetupGuide(input: SetupInputs): SetupSection[] {
           done: unitsDone,
           doneOn: null,
           instructions: [
-            "On Building Info, use “Add a unit” once per unit, and add the owner in the same step. Label units the way owners say them (“Unit 2”, “Garden”).",
+            "On Building & Owners, use “Add a unit” once per unit, and add the owner in the same step. Label units the way owners say them (“Unit 2”, “Garden”).",
             "Get the count right now; adding one later is easy, but every dues charge is per unit.",
           ],
         },
@@ -273,7 +273,7 @@ export function buildSetupGuide(input: SetupInputs): SetupSection[] {
           done: invitesDone,
           doneOn: null,
           instructions: [
-            "On Building Info, press “Invite to sign in” next to a person, or generate a link under Sign-in invites in Units and people. Send it yourself: Walkup does not email invites.",
+            "On Building & Owners, press “Invite to sign in” next to a person, or generate a link under Sign-in invites in Units and people. Send it yourself: Walkup does not email invites.",
             "Everyone who signs in must set up two-factor authentication on first login.",
           ],
         },
@@ -303,7 +303,7 @@ export function buildSetupGuide(input: SetupInputs): SetupSection[] {
           doneOn: null,
           informational: true,
           instructions: [
-            "On Building Info, open Import from a spreadsheet and choose opening balances.",
+            "On Building & Owners, open Import from a spreadsheet and choose opening balances.",
             "Check the preview. Nothing is posted until you press Import.",
           ],
         },
@@ -355,7 +355,7 @@ export function buildSetupGuide(input: SetupInputs): SetupSection[] {
           doneOn: null,
           informational: true,
           instructions: [
-            "On Building Info, open Import from a spreadsheet and choose transactions.",
+            "On Building & Owners, open Import from a spreadsheet and choose transactions.",
             "Match each category to an account, check the preview, then import. You can undo an import afterwards.",
           ],
         },
@@ -401,7 +401,7 @@ export function buildSetupGuide(input: SetupInputs): SetupSection[] {
           doneOn: null,
           informational: true,
           instructions: [
-            "Add the board contact email on Building Info first; replies go there.",
+            "Add the board contact email on Building & Owners first; replies go there.",
             "On Email & reminders, turn sending on. Nothing is sent until a board admin approves it.",
           ],
         },
@@ -427,11 +427,11 @@ export function buildSetupGuide(input: SetupInputs): SetupSection[] {
         {
           key: "ein",
           name: "EIN on file",
-          detail: "Required on the 1120-H. Set on Building Info.",
+          detail: "Required on the 1120-H. Set on Building & Owners.",
           href: "/building",
           done: einDone,
           doneOn: null,
-          instructions: ["Edit the Association profile on Building Info and enter the EIN."],
+          instructions: ["Edit the Association profile on Building & Owners and enter the EIN."],
         },
         {
           key: "tax",

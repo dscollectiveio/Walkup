@@ -22,7 +22,7 @@ export const DECLARATION_COVERAGE_FORMS = [
   { value: "unknown", label: "Not sure" },
 ] as const;
 
-/** associations.construction_type (0041) and the labels Building Info shows. */
+/** associations.construction_type (0041) and the labels Building & Owners shows. */
 export const CONSTRUCTION_TYPES = [
   { value: "frame", label: "Frame (wood)" },
   { value: "joisted_masonry", label: "Brick or block walls, wood floors" },

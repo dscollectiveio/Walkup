@@ -31,7 +31,8 @@ export function UnitsCard({
   children: React.ReactNode;
 }) {
   const [open, setOpen] = useState(false);
-  const [expanded, setExpanded] = useState<Set<string>>(new Set());
+  // One unit open at a time: opening another closes the one that was open.
+  const [openId, setOpenId] = useState<string | null>(null);
   return (
     <section className="rounded-xl border border-line bg-paper">
       <header className="rounded-t-[7px] band bg-ink px-5 py-4">
@@ -56,15 +57,9 @@ export function UnitsCard({
         {roster.length > 0 ? (
           <UnitsRoster
             units={roster}
-            open={expanded}
-            onToggle={(id) =>
-              setExpanded((prev) => {
-                const next = new Set(prev);
-                if (!next.delete(id)) next.add(id);
-                return next;
-              })
-            }
-            onOpen={(id) => setExpanded((prev) => new Set(prev).add(id))}
+            open={new Set(openId ? [openId] : [])}
+            onToggle={(id) => setOpenId((current) => (current === id ? null : id))}
+            onOpen={(id) => setOpenId(id)}
             people={people}
             canEdit={canAdd}
             canDelete={canDelete}

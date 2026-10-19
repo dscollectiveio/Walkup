@@ -184,7 +184,7 @@ export default async function HomePage() {
     supabase.from("role_grants").select("person_id, role, granted_on, revoked_at, expires_on"),
     supabase.from("invites").select("id", { count: "exact", head: true }),
     supabase.from("budget_lines").select("id, budgets(fiscal_year_id)"),
-    supabase.from("assessment_schedules").select("id", { count: "exact", head: true }),
+    supabase.from("assessment_schedules").select("id", { count: "exact", head: true }).eq("is_special", false),
     supabase.from("tax_filings").select("fiscal_year_id, computed_at, locked_at").eq("form", "1120-H"),
     supabase
       .from("bank_transactions")

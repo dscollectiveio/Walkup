@@ -74,7 +74,7 @@ describe("pages render without throwing", () => {
     expect(past).toContain("Undo");
     expect(past).toContain("bank.csv");
     expect(html(h(Unfinished, { batches: [{ id: "b", kind: "units_owners", filename: "u.csv", when: "2026-10-01T10:00:00Z" }], uploads: [{ documentId: "d", filename: "t.csv", when: "2026-10-01T10:00:00Z" }] }))).toContain("Continue");
-    expect(html(h(BoardOnly, { what: "Importing", why: "Only a board admin can bring in spreadsheets." }))).toContain("Back to Building Info");
+    expect(html(h(BoardOnly, { what: "Importing", why: "Only a board admin can bring in spreadsheets." }))).toContain("Back to Building &amp; Owners");
   });
 
   it("upload and mapping steps", () => {

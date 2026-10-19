@@ -2049,3 +2049,41 @@ a lawyer, and the page says so.
 Every promise of notice above is a promise Doug keeps by hand until the
 notices are built. Do not turn on `BILLING_ENFORCE` before they are.
 
+## 45. Additional Agreed Assessments, and property managers with a main contact
+
+**Built 2026-10-19 at Doug's request** (migration 0066 and `src/app/dues/`).
+
+- **Additional Agreed Assessments.** An extra yearly amount a unit agrees to put
+  toward the reserve, on top of regular dues. Per unit, per calendar year, on
+  its own bar (a different color from the dues bar), never part of the dues bar.
+  - *Voluntary* (the default): nothing is owed, no due date, no late fee, it
+    never changes a unit's standing. The agreed amount is an `assessment_schedules`
+    row with `is_special = true`. Money given is recorded by a board member as
+    an income line on account 4010 in the reserve fund, tagged to the unit,
+    source `manual`.
+  - *Required* (a board admin only): charged to the unit now as a
+    `special_assessment` charge (income 4010), due on a date the admin picks in
+    the current year. It is owed, shows in the standing and statement, and
+    payments apply to it oldest first like any charge. Once charged it is a ledger
+    fact and is not switched back to voluntary in the app. Not allowed if the unit
+    already gave voluntarily that year.
+  - *Roll-over:* whatever a unit pays toward regular dues beyond its yearly plan
+    counts toward its Additional Agreed Assessment. For a voluntary one this is a
+    display only (the books keep it as dues income); for a required one the
+    unapplied credit already reduces what is owed. Money applied to a required
+    charge is counted there, not in the dues bar.
+  - Tax treatment of a voluntary contribution (exempt function income or not) is
+    a CPA question, as for all income (open question A).
+- **Property manager per unit.** A person record (no login) linked to one unit,
+  with an optional company. The board adds, edits and removes it.
+- **Main contact.** Per unit, owner (the default) or property manager. Walkup's
+  own email for that unit (reminders, statements, late-fee notices, announcements
+  and the standing reminder rules) goes to the main contact, and so do the dues
+  drafts that open in the board's own mail app. It only changes when a board
+  member chooses the manager, and only if the manager has an email; with no
+  email it falls back to the owner. The manager is a normal recipient: own
+  unsubscribe link, bounce and complaint blocking, weekly and daily limits. If the
+  manager unsubscribes, the owner is not emailed instead.
+- A manager's contact details are visible to the board, the accountant and that
+  unit's owner only.
+

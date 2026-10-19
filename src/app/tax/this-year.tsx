@@ -79,7 +79,7 @@ export function thisYearAnswer(input: ThisYearInput): ThisYearAnswer {
     return {
       status: "attention",
       headline: "Needs you: add your EIN",
-      detail: "Every federal form asks for the association's employer identification number. Add it in Building Info.",
+      detail: "Every federal form asks for the association's employer identification number. Add it in Building & Owners.",
       step: { label: "Add your EIN", href: "/building" },
     };
   }

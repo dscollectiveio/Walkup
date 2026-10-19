@@ -67,7 +67,10 @@ export function UnitsRoster({
   const drawable = units.length >= 2 && units.length <= 6;
   const rows = drawable ? buildingRows(units) : [];
   const H = FLOORS_TOP + rows.length * ROW_H + STOOP_H + 2;
-  const active = units.find((u) => u.unit.id === activeId) ?? null;
+  // The unit that is open in the list is "selected": it stays lit on the building and fills the
+  // panel below until another floor is hovered.
+  const selectedId = units.find((u) => open.has(u.unit.id))?.unit.id ?? null;
+  const active = units.find((u) => u.unit.id === (activeId ?? selectedId)) ?? null;
 
   function jumpTo(id: string) {
     onOpen(id);
@@ -111,6 +114,7 @@ export function UnitsRoster({
             return row.map((r, j) => {
               const x = 20 + j * (cellW + gap);
               const lit = activeId === r.unit.id;
+              const selected = selectedId === r.unit.id;
               const owners = r.residents.map((p) => p.fullName).join(", ");
               const chars = Math.max(4, Math.floor((cellW - 18) / (narrow ? 4.6 : 5.4)));
               return (
@@ -137,9 +141,17 @@ export function UnitsRoster({
                     y={y}
                     width={cellW}
                     height={ROW_H - 3}
-                    fill={lit ? "var(--color-fill)" : "var(--color-paper)"}
-                    stroke={lit ? "var(--color-slate)" : "var(--color-line)"}
-                    strokeWidth={lit ? 2 : 1}
+                    style={{
+                      // Selected: a soft wash of the brand's gold with a gold edge. Hovered: the quiet grey it always had.
+                      fill: selected
+                        ? "color-mix(in srgb, var(--color-brass) 20%, var(--color-paper))"
+                        : lit
+                          ? "var(--color-fill)"
+                          : "var(--color-paper)",
+                      stroke: selected ? "var(--color-brass)" : lit ? "var(--color-slate)" : "var(--color-line)",
+                      strokeWidth: selected || lit ? 2 : 1,
+                      transition: "fill 300ms ease, stroke 300ms ease",
+                    }}
                   />
                   <rect x={x} y={y} width="5" height={ROW_H - 3} fill={r.residents.length ? "var(--color-moss)" : "var(--color-line-strong)"} />
                   <text x={x + 13} y={y + ROW_H / 2 - 4} fontSize={narrow ? 10 : 11} fontWeight="500" fill="var(--color-ink)">

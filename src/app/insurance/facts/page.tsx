@@ -52,7 +52,7 @@ export default async function FactsPage({ searchParams }: { searchParams: Promis
       </div>
 
       {!onlyMode ? (
-        <Card navy title="From Building Info">
+        <Card navy title="From Building & Owners">
           <div className="space-y-4">
             <BuildingBasics
               canEdit={ctx.isBoard}
@@ -68,7 +68,7 @@ export default async function FactsPage({ searchParams }: { searchParams: Promis
               <p className="mt-1 text-ink">{address || "Not recorded"}</p>
               {ctx.isAdmin ? (
                 <Link href="/building" className={`${linkClass} mt-1 inline-flex min-h-[44px] items-center`}>
-                  Edit in Building Info
+                  Edit in Building & Owners
                 </Link>
               ) : ctx.isBoard ? (
                 <p className="mt-1 text-mute">Only {admins} can change the address. Ask them to add it.</p>

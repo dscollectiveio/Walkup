@@ -4,6 +4,7 @@ import { useActionState, useState } from "react";
 import { addUnitWithPerson } from "./actions";
 import { PeopleFields } from "./people-fields";
 import { UnitFields } from "./unit-fields";
+import { SECTION_HEADER } from "./section-header";
 
 /**
  * Adds a unit and everyone in it in one step: the unit's details, then any
@@ -35,17 +36,19 @@ export function AddUnitForm({
 
   return (
     <form action={action} className="space-y-6 rounded-xl border border-line bg-paper p-5">
-      <fieldset className="space-y-4">
-        <legend className="mb-3 text-[13px] font-bold text-ink">The unit</legend>
-        <UnitFields idPrefix="new-unit" />
-      </fieldset>
+      <section className="overflow-hidden rounded-lg border border-line">
+        <h4 className={SECTION_HEADER}>The unit</h4>
+        <div className="p-4">
+          <UnitFields idPrefix="new-unit" />
+        </div>
+      </section>
 
-      <div className="border-t border-line pt-5">
-        <fieldset>
-          <legend className="mb-3 text-[13px] font-bold text-ink">People in this unit</legend>
+      <section className="overflow-hidden rounded-lg border border-line">
+        <h4 className={SECTION_HEADER}>People in this unit</h4>
+        <div className="p-4">
           <PeopleFields idPrefix="new-unit" people={people} canEditRoles={canEditRoles} startWithNew />
-        </fieldset>
-      </div>
+        </div>
+      </section>
 
       {state && "error" in state && state.error ? (
         <p className="border-l-[3px] border-bad bg-bad-tint px-3 py-2 text-[13px] text-bad-text">{state.error}</p>

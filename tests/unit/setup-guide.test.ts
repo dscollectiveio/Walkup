@@ -88,7 +88,7 @@ function fullyDone(): SetupInputs {
 }
 
 describe("setup guide", () => {
-  it("puts Building Info first with nothing done on a fresh signup", () => {
+  it("puts Building & Owners first with nothing done on a fresh signup", () => {
     const sections = buildSetupGuide(freshSignup());
     expect(sections[0].key).toBe("building");
     expect(sections[0].steps.every((s) => !s.done)).toBe(true);
