@@ -51,6 +51,7 @@ const PHONEONLY = "44444444-4444-4444-8444-444444444444";
 const NOPE = "55555555-5555-4555-8555-555555555555";
 const KEY = "66666666-6666-4666-8666-666666666666";
 const BILL = "77777777-7777-4777-8777-777777777777";
+const PAYMENT = "bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbbb";
 
 let db: FakeDb;
 let board = true;
@@ -487,16 +488,22 @@ describe("upkeep and bills", () => {
     expect(r).toEqual({ ok: true, nextDueOn: "2027-09-30", logId: "log-1", reviewPrompt: { vendorId: ACME, vendorName: "Acme Plumbing" } });
   });
 
+  it("will not mark a bill paid without a transaction to tie it to", async () => {
+    expect(await markBillPaid(BILL, { due_on: "2026-10-15", paid_on: "2026-10-14", amount: null, note: null, expense_id: "" })).toEqual({
+      error: "Pick the transaction in the books that paid it.",
+    });
+  });
+
   it("maps a second mark-paid to 'Already marked paid' with the current due date", async () => {
     db.tables.recurring_bills = [{ id: BILL, next_due_on: "2026-11-15" }];
     db.rpcHandlers.mark_bill_paid = () => ({ data: null, error: { code: "23505", message: "that due date is already marked paid" } });
-    const r = await markBillPaid(BILL, { due_on: "2026-10-15", paid_on: "2026-10-14", amount: null, note: null });
+    const r = await markBillPaid(BILL, { due_on: "2026-10-15", paid_on: "2026-10-14", amount: null, note: null, expense_id: PAYMENT });
     expect(r).toMatchObject({ nextDueOn: "2026-11-15" });
     expect((r as { error: string }).error).toMatch(/^Already marked paid for /);
     db.rpcHandlers.mark_bill_paid = () => ({ data: null, error: { code: "22023", message: "this bill is paused; resume it first" } });
-    expect(await markBillPaid(BILL, { due_on: "2026-11-15", paid_on: "2026-10-14", amount: null, note: null })).toEqual({ error: "This bill is paused; resume it first." });
+    expect(await markBillPaid(BILL, { due_on: "2026-11-15", paid_on: "2026-10-14", amount: null, note: null, expense_id: PAYMENT })).toEqual({ error: "This bill is paused; resume it first." });
     db.rpcHandlers.mark_bill_paid = () => ({ data: [{ payment_id: "p1", bill_next_due_on: "2026-12-15" }], error: null });
-    expect(await markBillPaid(BILL, { due_on: "2026-11-15", paid_on: "2026-11-14", amount: "$80", note: null })).toEqual({ ok: true, nextDueOn: "2026-12-15" });
+    expect(await markBillPaid(BILL, { due_on: "2026-11-15", paid_on: "2026-11-14", amount: "$80", note: null, expense_id: PAYMENT })).toEqual({ ok: true, nextDueOn: "2026-12-15" });
   });
 });
 

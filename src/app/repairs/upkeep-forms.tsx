@@ -246,7 +246,7 @@ export function TaskDialog(props: { open: boolean; onClose: () => void; task: Ta
   );
 }
 
-export function AddTaskButton({ vendors, todayIso, label = "Add a job", primary = false }: { vendors: VendorOption[]; todayIso: string; label?: string; primary?: boolean }) {
+export function AddTaskButton({ vendors, todayIso, label = "Add a job", primary = false, buttonClass }: { vendors: VendorOption[]; todayIso: string; label?: string; primary?: boolean; buttonClass?: string }) {
   const [open, setOpen] = useState(false);
   const [key, setKey] = useState(0);
   return (
@@ -257,7 +257,7 @@ export function AddTaskButton({ vendors, todayIso, label = "Add a job", primary 
           setKey((k) => k + 1);
           setOpen(true);
         }}
-        className={primary ? btnPrimary : btnSecondary}
+        className={buttonClass ?? (primary ? btnPrimary : btnSecondary)}
       >
         {label}
       </button>
@@ -291,7 +291,7 @@ export function EditTaskButton({ task, vendors, todayIso, className }: { task: T
 // ---------------------------------------------------------------------------
 
 /** The usual checklist: common jobs ticked, "Only if your building has one" unticked. */
-export function TemplatePicker({ existingNames, primary = false }: { existingNames: string[]; primary?: boolean }) {
+export function TemplatePicker({ existingNames, primary = false, buttonClass }: { existingNames: string[]; primary?: boolean; buttonClass?: string }) {
   const router = useRouter();
   const have = new Set(existingNames.map((n) => n.toLowerCase()));
   const available = UPKEEP_TEMPLATES.filter((t) => !have.has(t.name.toLowerCase()));
@@ -300,6 +300,8 @@ export function TemplatePicker({ existingNames, primary = false }: { existingNam
   const [pending, start] = useTransition();
   const [error, setError] = useState<string | null>(null);
   if (available.length === 0) return null;
+  // Only what is still on offer counts: names added on an earlier visit are gone from the list.
+  const chosen = [...picked].filter((n) => available.some((t) => t.name === n));
 
   const common = available.filter((t) => t.defaultChecked);
   const optional = available.filter((t) => !t.defaultChecked);
@@ -329,24 +331,25 @@ export function TemplatePicker({ existingNames, primary = false }: { existingNam
 
   return (
     <>
-      <button type="button" onClick={() => setOpen(true)} className={primary ? btnPrimary : btnSecondary}>
+      <button type="button" onClick={() => setOpen(true)} className={buttonClass ?? (primary ? btnPrimary : btnSecondary)}>
         Add from the usual checklist
       </button>
       <Sheet
         open={open}
         onClose={() => setOpen(false)}
         wide
+        closeOnOutsideClick
         title="The usual checklist"
         description="The jobs most small buildings do on a calendar. Untick anything that doesn't apply; you can edit each one after."
         footer={
           <>
             <button
               type="button"
-              disabled={pending || picked.size === 0}
+              disabled={pending || chosen.length === 0}
               onClick={() =>
                 start(async () => {
                   setError(null);
-                  const r = await addUpkeepTemplates([...picked]);
+                  const r = await addUpkeepTemplates(chosen);
                   if ("error" in r) setError(r.error);
                   else {
                     setOpen(false);
@@ -356,7 +359,7 @@ export function TemplatePicker({ existingNames, primary = false }: { existingNam
               }
               className={btnPrimary}
             >
-              {pending ? "Adding…" : `Add ${picked.size} ${picked.size === 1 ? "job" : "jobs"}`}
+              {pending ? "Adding…" : `Add ${chosen.length} ${chosen.length === 1 ? "job" : "jobs"}`}
             </button>
             <button type="button" onClick={() => setOpen(false)} className={btnSecondary}>
               Cancel

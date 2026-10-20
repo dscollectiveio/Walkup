@@ -37,7 +37,7 @@ export function AnnouncementsStrip({
       aria-labelledby="home-announcements-title"
       className={`${hang} overflow-hidden border-x border-b-[3px] border-x-warning-line border-b-brass bg-warning-tint`}
     >
-      <header className="flex flex-wrap items-center justify-between gap-x-4 gap-y-0.5 px-6 pt-1.5 min-[900px]:px-8">
+      <header className="flex flex-wrap items-center justify-between gap-x-4 gap-y-0.5 px-6 pb-1 pt-2 min-[900px]:px-8">
         <div className="flex min-w-0 items-center gap-2.5">
           <span className="flex h-5 w-5 shrink-0 items-center justify-center rounded-full bg-brass text-on-brass">
             <CircleAlert size={13} strokeWidth={2.4} aria-hidden="true" />

@@ -341,7 +341,7 @@ export function assembleReminders({
       name: `Contractor visit: ${v.title} (#${v.reference})`,
       kind: "Repair visit",
       due: on,
-      href: "/repairs?view=today",
+      href: "/repairs?view=problems",
     });
   }
   for (const c of contractorExpiries) {

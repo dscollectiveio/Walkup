@@ -23,7 +23,7 @@ export function WriteToContractor(props: {
   /** Start with this choice and skip the form (the profile's "Email", "Ask for a W-9" ...). */
   preset?: { kind: DraftKind; ticketId?: string | null };
   label?: string;
-  variant?: "primary" | "secondary";
+  variant?: "primary" | "secondary" | "link";
 }) {
   const fid = useId();
   const [open, setOpen] = useState(false);
@@ -64,7 +64,17 @@ export function WriteToContractor(props: {
 
   return (
     <>
-      <button type="button" onClick={openIt} className={props.variant === "primary" ? btnPrimary : btnSecondary}>
+      <button
+        type="button"
+        onClick={openIt}
+        className={
+          props.variant === "primary"
+            ? btnPrimary
+            : props.variant === "link"
+              ? "inline-flex min-h-[28px] items-center whitespace-nowrap text-[12px] font-medium text-ink underline underline-offset-2 hover:text-ink-mid"
+              : btnSecondary
+        }
+      >
         {props.label ?? "Write to a contractor"}
       </button>
       <Sheet

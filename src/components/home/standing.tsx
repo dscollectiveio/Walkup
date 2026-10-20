@@ -1,4 +1,4 @@
-import { TriangleAlert } from "lucide-react";
+import { ChevronRight, TriangleAlert } from "lucide-react";
 import { formatMoney } from "@/lib/tax/form1120h";
 import { ReserveTargetForm } from "./reserve-target-form";
 import type { SnapshotTile } from "@/lib/home/snapshot";
@@ -59,9 +59,9 @@ export function Standing({
 
   return (
     <section
-      className={`flex flex-col rounded-xl border border-line bg-paper `}
+      className="flex min-h-0 flex-col overflow-hidden rounded-xl border border-line bg-paper"
     >
-      <header className="flex min-h-[4rem] flex-col justify-center rounded-t-[7px] band bg-ink px-5 py-3">
+      <header className="flex min-h-[4rem] shrink-0 flex-col justify-center rounded-t-[7px] band bg-ink px-5 py-3">
         <div className="flex items-center justify-between gap-3">
           <div>
             <h2 className="eyebrow text-paper">Where the association stands</h2>
@@ -73,7 +73,7 @@ export function Standing({
         </div>
       </header>
 
-      <div className="flex flex-1 flex-col justify-between gap-2.5 px-5 py-2.5">
+      <div className="flex min-h-0 flex-1 flex-col gap-3 overflow-y-auto px-5 py-3">
         {booksGap && booksGap.cents !== 0 ? (
           <a
             href="/bank-feed"
@@ -96,12 +96,12 @@ export function Standing({
         <div className="grid grid-cols-2 gap-4">
           <div>
             <p className="text-[12px] font-semibold text-ink">Day-to-day</p>
-            <div className="figures mt-0.5 text-[22px] leading-tight text-ink">{formatMoney(operatingCents)}</div>
+            <div className="figures mt-0.5 text-[19px] leading-tight text-ink">{formatMoney(operatingCents)}</div>
             <p className="text-[11px] text-mute">bills and running costs</p>
           </div>
           <div>
             <p className="text-[12px] font-semibold text-ink">Reserve</p>
-            <div className="figures mt-0.5 text-[22px] leading-tight text-ink">{formatMoney(reserveCents)}</div>
+            <div className="figures mt-0.5 text-[19px] leading-tight text-ink">{formatMoney(reserveCents)}</div>
             <p className="text-[11px] text-mute">set aside for big repairs</p>
           </div>
         </div>
@@ -126,56 +126,57 @@ export function Standing({
         ) : null}
 
         <div className="border-t border-line pt-3">
-          {funded !== null ? (
-            <>
-              <div className="flex items-baseline justify-between gap-3">
-                <span className="text-[12px] font-medium text-ink">
-                  Reserve is {fundedPct}% of the target
-                </span>
+          {(() => {
+            const label =
+              funded !== null ? (
+                <span className="text-[12px] font-medium text-ink">Reserve is {fundedPct}% of the target</span>
+              ) : (
+                <span className="text-[12px] text-mute">No reserve target set.</span>
+              );
+            const status =
+              funded !== null ? (
                 <span className="figures text-[12px] text-mute">
                   {remainingCents > 0 ? `${formatMoney(remainingCents)} to go` : "target met"}
                 </span>
+              ) : null;
+            return canSetTarget ? (
+              <ReserveTargetForm currentTarget={reserveTarget} label={label} status={status} />
+            ) : (
+              <div className="flex items-baseline justify-between gap-3">
+                {label}
+                {status}
               </div>
-              <div className="mt-1.5 h-2.5 overflow-hidden rounded-full bg-fill">
-                <div
-                  className="h-full rounded-full bg-moss"
-                  style={{ width: `${fundedPct}%` }}
-                />
-              </div>
-            </>
-          ) : (
-            <p className="text-[12px] text-mute">No reserve target set.</p>
-          )}
-          {canSetTarget ? (
-            <div className="mt-2">
-              <ReserveTargetForm currentTarget={reserveTarget} />
+            );
+          })()}
+          {funded !== null ? (
+            <div className="mt-1.5 h-2.5 overflow-hidden rounded-full bg-fill">
+              <div className="h-full rounded-full bg-moss" style={{ width: `${fundedPct}%` }} />
             </div>
           ) : null}
         </div>
 
-
-
         {tiles.length > 0 ? (
-          <div className="flex flex-col">
+          <div className="mt-auto flex flex-col border-t border-line pt-3">
             <h3 className="text-[11px] font-medium uppercase tracking-[0.07em] text-section-label">Right now</h3>
             <ul className="mt-1 flex flex-col gap-1">
               {tiles.map((tile) => (
                 <li key={tile.key}>
                   <a
                     href={tile.href}
-                    className={`flex min-h-[2.25rem] items-center justify-between gap-3 rounded-md border px-3 py-1 transition-colors ${TILE_TONE[tile.tone]}`}
+                    className={`flex min-h-[2rem] items-center justify-between gap-3 rounded-md border px-3 py-1 transition-colors ${TILE_TONE[tile.tone]}`}
                   >
                     <span className="min-w-0">
                       <span className="block truncate text-[12px] font-medium text-ink">{tile.label}</span>
                       {tile.value !== null ? <span className="block truncate text-[11px] text-mute">{tile.note}</span> : null}
                     </span>
-                    {tile.value !== null ? (
-                      <span className={`figures shrink-0 text-right text-[14px] font-bold ${TILE_TEXT[tile.tone]}`}>{tile.value}</span>
-                    ) : (
-                      <span className="shrink-0 text-right text-[11px] font-bold text-ink underline underline-offset-2">
-                        {tile.note} →
-                      </span>
-                    )}
+                    <span className="flex shrink-0 items-center gap-1.5">
+                      {tile.value !== null ? (
+                        <span className={`figures text-right text-[14px] font-bold ${TILE_TEXT[tile.tone]}`}>{tile.value}</span>
+                      ) : (
+                        <span className="text-right text-[11px] font-bold text-ink underline underline-offset-2">{tile.note}</span>
+                      )}
+                      <ChevronRight size={14} strokeWidth={2} aria-hidden="true" className="-mr-1 text-mute-soft" />
+                    </span>
                   </a>
                 </li>
               ))}

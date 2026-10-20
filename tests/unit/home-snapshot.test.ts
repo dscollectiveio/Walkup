@@ -6,8 +6,8 @@ const empty: SnapshotInput = {
   today,
   bankConnections: [],
   uncategorizedCount: 0,
-  insuranceRenewal: null,
-  nextFiling: null,
+  insuranceInfo: { policyRecorded: false, ownerSummaryPublished: false },
+  taxInfo: { einOnFile: false, reviewed: false },
   contractors: [],
 };
 const tile = (t: ReturnType<typeof buildSnapshot>, key: string) => t.find((x) => x.key === key)!;
@@ -15,10 +15,9 @@ const tile = (t: ReturnType<typeof buildSnapshot>, key: string) => t.find((x) =>
 describe("buildSnapshot", () => {
   it("is exactly four tiles, and on a brand-new account every one is a nudge, no invented numbers", () => {
     const tiles = buildSnapshot(empty);
-    expect(tiles.map((t) => t.key)).toEqual(["bank", "insurance", "filing", "contractors"]);
+    expect(tiles.map((t) => t.key)).toEqual(["bank", "insurance", "tax", "contractors"]);
     expect(tiles.every((t) => t.value === null)).toBe(true);
     expect(tile(tiles, "bank").note).toBe("Not linked yet");
-    expect(tile(tiles, "filing").href).toBe("/tax");
   });
 
   describe("bank", () => {
@@ -53,57 +52,45 @@ describe("buildSnapshot", () => {
     });
   });
 
-  describe("insurance", () => {
-    const renewal = (effective_to: string, daysToEnd: number, withinReminder: boolean, renewed = false) => ({
-      policy: { effective_to },
-      daysToEnd,
-      withinReminder,
-      renewed,
+  describe("insurance information", () => {
+    it("nudges to record a policy when none is on file", () => {
+      expect(tile(buildSnapshot(empty), "insurance")).toMatchObject({ value: null, note: "No policy recorded yet", href: "/insurance", tone: "neutral" });
     });
 
-    it("counts days to the renewal and flags it inside the policy's own reminder window", () => {
-      expect(tile(buildSnapshot({ ...empty, insuranceRenewal: renewal("2026-11-15", 46, true) }), "insurance")).toMatchObject({
-        value: "Nov 15", note: "in 46 days", tone: "attention",
-      });
-      expect(tile(buildSnapshot({ ...empty, insuranceRenewal: renewal("2027-06-01", 244, false) }), "insurance")).toMatchObject({
-        value: "Jun 1, 2027", tone: "neutral",
-      });
+    it("asks for the owner summary once a policy is recorded", () => {
+      expect(
+        tile(buildSnapshot({ ...empty, insuranceInfo: { policyRecorded: true, ownerSummaryPublished: false } }), "insurance"),
+      ).toMatchObject({ value: "Policy recorded", note: "Owner summary not published yet", tone: "attention" });
     });
 
-    it("does not flag a renewal inside 60 days when the policy's lead time is shorter", () => {
-      expect(tile(buildSnapshot({ ...empty, insuranceRenewal: renewal("2026-11-15", 46, false) }), "insurance")).toMatchObject({
-        note: "in 46 days", tone: "neutral",
-      });
-    });
-
-    it("says the renewal is saved, quietly, when it is", () => {
-      expect(tile(buildSnapshot({ ...empty, insuranceRenewal: renewal("2026-10-20", 20, false, true) }), "insurance")).toMatchObject({
-        value: "Oct 20", note: "renewal saved", tone: "neutral",
-      });
-    });
-
-    it("nudges to record a policy when none is in force", () => {
-      expect(tile(buildSnapshot(empty), "insurance")).toMatchObject({ value: null, note: "No active policy recorded", href: "/insurance" });
+    it("is complete, quietly green, with the policy and the owner summary both in place", () => {
+      expect(
+        tile(buildSnapshot({ ...empty, insuranceInfo: { policyRecorded: true, ownerSummaryPublished: true } }), "insurance"),
+      ).toMatchObject({ value: "Complete", tone: "good" });
     });
   });
 
-  it("shows the next filing, labels an unverified date as estimated, and flags one inside 30 days", () => {
-    expect(
-      tile(buildSnapshot({ ...empty, nextFiling: { name: "Form 1120-H", dueOn: "2027-04-15", estimated: true } }), "filing"),
-    ).toMatchObject({ value: "Apr 15, 2027", note: "Form 1120-H (estimated) · in 197 days", tone: "neutral" });
-    expect(
-      tile(buildSnapshot({ ...empty, nextFiling: { name: "2 1099-NECs to contractors", dueOn: "2026-10-20", estimated: false } }), "filing"),
-    ).toMatchObject({ note: "2 1099-NECs to contractors · in 20 days", tone: "attention" });
+  describe("tax information", () => {
+    it("points at Building & Owners when there is no EIN", () => {
+      expect(tile(buildSnapshot(empty), "tax")).toMatchObject({ value: null, note: "EIN not on file yet", href: "/building" });
+    });
+
+    it("asks for the tax review once the EIN is on file", () => {
+      expect(tile(buildSnapshot({ ...empty, taxInfo: { einOnFile: true, reviewed: false } }), "tax")).toMatchObject({
+        value: "EIN on file", note: "Tax review not started yet", href: "/tax", tone: "attention",
+      });
+    });
+
+    it("is set up with the EIN and the review done", () => {
+      expect(tile(buildSnapshot({ ...empty, taxInfo: { einOnFile: true, reviewed: true } }), "tax")).toMatchObject({
+        value: "Set up", tone: "good",
+      });
+    });
   });
 
-  it("says overdue for a filing whose date has passed, and due today on the day", () => {
-    // lib/tax/deadlines keeps an overdue deadline for 120 days rather than rolling it forward.
-    expect(
-      tile(buildSnapshot({ ...empty, nextFiling: { name: "Illinois annual report", dueOn: "2026-09-20", estimated: true } }), "filing"),
-    ).toMatchObject({ value: "Sep 20", note: "Illinois annual report (estimated) · overdue", tone: "attention" });
-    expect(
-      tile(buildSnapshot({ ...empty, nextFiling: { name: "Form 1096", dueOn: "2026-09-30", estimated: false } }), "filing"),
-    ).toMatchObject({ note: "Form 1096 · due today", tone: "attention" });
+  it("has no dated tiles: renewals and filing deadlines are Coming up's job", () => {
+    const keys = buildSnapshot(empty).map((t) => t.key);
+    expect(keys).not.toContain("filing");
   });
 
   describe("contractor paperwork", () => {

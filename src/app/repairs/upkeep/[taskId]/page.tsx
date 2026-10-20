@@ -67,7 +67,7 @@ export default async function UpkeepTaskPage({ params }: { params: Promise<{ tas
       id: l.id as string,
       doneOn: l.done_on as string,
       cost: seesMoney ? ((l.cost as string | null) ?? null) : null,
-      vendorId: (l.vendor_id as string | null) ?? null,
+      vendorId: seesMoney ? ((l.vendor_id as string | null) ?? null) : null,
       vendorName: seesMoney ? (one(l.vendors as { name: string } | { name: string }[] | null)?.name ?? null) : null,
       note: (l.note as string | null) ?? null,
       ticket: ticket ? { id: ticket.id, reference: ticket.reference } : null,

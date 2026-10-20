@@ -1,31 +1,54 @@
 import Link from "next/link";
-import { Answer, Card, Restricted, Stat } from "@/components/ui";
+import { Card, Restricted } from "@/components/ui";
+import { BillMetrics } from "./bill-metrics";
+import { billTotals, monthIndex } from "@/lib/upkeep/bill-totals";
 import { AddBill, BillsList, type BillRowView } from "@/app/bills/bill-form";
+import { BILL_COLUMNS, BILL_LINES } from "@/app/bills/table";
+import { BillFilters, type BillParams } from "./bill-filters";
+import { DismissibleOnceAnswer } from "./dismissible-answer";
 import { coverageShort } from "@/lib/insurance/coverage";
 import { periodLabel } from "@/lib/insurance/format";
 import { humanDate, moneyText } from "@/lib/repairs/format";
 import type { RepairsViewer } from "@/lib/repairs/page-data";
 import type { Supabase } from "@/lib/repairs/server";
 import type { BillFrequency } from "@/lib/upkeep/bills";
-import { billsAnswer, billShowFilter, FREQUENCY_WORDS, monthlyTotal, nextDueText, parseBillShow, type BillLike, type BillShow } from "@/lib/upkeep/bills-view";
+import { billsAnswer, billShowFilter, FREQUENCY_WORDS, nextDueText, parseBillShow, type BillLike, type BillShow } from "@/lib/upkeep/bills-view";
 
 const one = <T,>(v: T | T[] | null | undefined): T | null => (Array.isArray(v) ? (v[0] ?? null) : (v ?? null));
-
-const SHOWS: { key: BillShow; label: string }[] = [
-  { key: "active", label: "Active" },
-  { key: "paused", label: "Paused" },
-  { key: "archived", label: "Archived" },
-];
 
 /**
  * Bills (repairs-spec §13.2): the regular bills the building pays, who
  * pays which by hand, and a record of each payment. Walkup reminds; it
  * never pays. Financial readers see it; the board changes it.
  */
-export async function BillsView({ supabase, viewer, show: showRaw }: { supabase: Supabase; viewer: RepairsViewer; show?: string }) {
+export async function BillsView({
+  supabase,
+  viewer,
+  show: showRaw,
+  q: qRaw,
+  pay: payRaw,
+  freq: freqRaw,
+  sort: sortRaw,
+}: {
+  supabase: Supabase;
+  viewer: RepairsViewer;
+  show?: string;
+  q?: string;
+  pay?: string;
+  freq?: string;
+  sort?: string;
+}) {
   if (!viewer.canReadFinancials) return <Restricted what="the bills list" />;
   const today = viewer.todayIso;
   const show = parseBillShow(showRaw);
+  const params: BillParams = {
+    show,
+    q: (qRaw ?? "").trim().slice(0, 100),
+    pay: payRaw === "hand" || payRaw === "autopay" ? payRaw : null,
+    freq: freqRaw === "monthly" || freqRaw === "quarterly" || freqRaw === "semiannual" || freqRaw === "annual" ? freqRaw : null,
+    sort: sortRaw === "name" || sortRaw === "amount" ? sortRaw : "next",
+  };
+  const filtered = Boolean(params.q || params.pay || params.freq || params.sort !== "next" || show !== "active");
   const isBoard = viewer.isBoard;
 
   const [{ data: bills, error }, { data: accounts }, { data: vendors }, { data: persons }] = await Promise.all([
@@ -56,7 +79,22 @@ export async function BillsView({ supabase, viewer, show: showRaw }: { supabase:
     paused_at: (b.paused_at as string | null) ?? null,
   }));
   const like: BillLike[] = all;
-  const shown = all.filter((b) => billShowFilter(b, show));
+  const needle = params.q.toLowerCase();
+  const vendorNameOf = (b: (typeof all)[number]) => one(b.vendors as { name: string } | { name: string }[] | null)?.name ?? "";
+  const accountNameOf = (b: (typeof all)[number]) => one(b.accounts as { name: string } | { name: string }[] | null)?.name ?? "";
+  const amountOf = (b: (typeof all)[number]) => (b.typical_amount ? Number(b.typical_amount) : -1);
+  const shown = all
+    .filter((b) => billShowFilter(b, show))
+    .filter((b) => (params.pay === "autopay" ? b.autopay_arranged : params.pay === "hand" ? !b.autopay_arranged : true))
+    .filter((b) => !params.freq || b.frequency === params.freq)
+    .filter((b) => !needle || `${b.name} ${vendorNameOf(b)} ${accountNameOf(b)}`.toLowerCase().includes(needle))
+    .sort((a, b) =>
+      params.sort === "name"
+        ? (a.name as string).localeCompare(b.name as string)
+        : params.sort === "amount"
+          ? amountOf(b) - amountOf(a)
+          : (a.next_due_on ?? "9999-12-31").localeCompare(b.next_due_on ?? "9999-12-31"),
+    );
 
   const { data: payments } =
     shown.length > 0
@@ -99,9 +137,11 @@ export async function BillsView({ supabase, viewer, show: showRaw }: { supabase:
       autopay_arranged: b.autopay_arranged,
       autopay_note: (b.autopay_note as string | null) ?? null,
       notes: [(b.notes as string | null) ?? null, b.paused_at && b.paused_note ? `Paused: ${b.paused_note as string}` : null].filter(Boolean).join(" · ") || null,
+      rawNotes: (b.notes as string | null) ?? null,
       is_active: b.is_active,
       paused: b.paused_at !== null,
-      line: [FREQUENCY_WORDS[b.frequency] ?? b.frequency, vendor?.name, account?.name].filter(Boolean).join(" · "),
+      line: [vendor?.name, account?.name].filter(Boolean).join(" · "),
+      frequencyText: FREQUENCY_WORDS[b.frequency] ?? b.frequency,
       amountText: b.typical_amount ? `about ${moneyText(b.typical_amount)}` : "amount varies",
       nextText: b.is_active ? nextDueText(b, today) : null,
       lastPaidText: b.last_paid_on ? `last paid ${humanDate(b.last_paid_on as string, today)}` : null,
@@ -128,6 +168,20 @@ export async function BillsView({ supabase, viewer, show: showRaw }: { supabase:
   });
 
   const answer = billsAnswer(like, today);
+
+  // What the active bills add up to this month and this year, from their own schedules.
+  const [ty, tm] = today.split("-").map(Number);
+  const activeForTotals = all
+    .filter((b) => b.is_active && b.paused_at === null)
+    .map((b) => ({
+      frequency: b.frequency,
+      next_due_on: b.next_due_on,
+      typical_amount: b.typical_amount,
+      category: accountNameOf(b) || "Uncategorized",
+    }));
+  const monthTotals = billTotals(activeForTotals, monthIndex(ty, tm), monthIndex(ty, tm));
+  const yearTotals = billTotals(activeForTotals, monthIndex(ty, 1), monthIndex(ty, 12));
+  const monthLabel = new Date(Date.UTC(ty, tm - 1, 1)).toLocaleDateString("en-US", { month: "long", year: "numeric", timeZone: "UTC" });
   const categories = (accounts ?? []).map((a) => ({ id: a.id as string, name: a.name as string }));
   const contractors = (vendors ?? []).map((v) => ({ id: v.id as string, name: v.name as string }));
   const counts: Record<BillShow, number> = {
@@ -138,42 +192,76 @@ export async function BillsView({ supabase, viewer, show: showRaw }: { supabase:
 
   return (
     <div className="space-y-6">
-      {all.length > 0 ? <Answer status={answer.status} headline={answer.headline} detail={answer.detail} /> : null}
-      {all.length > 0 ? (
-        <div className="grid gap-4 sm:grid-cols-2">
-          <Stat label="Regular bills" value={`About ${monthlyTotal(like)} a month`} note="Recurring bills only" />
+      {all.length > 0 ? <DismissibleOnceAnswer status={answer.status} headline={answer.headline} detail={answer.detail} /> : null}
+      {all.length > 0 ? <BillMetrics month={monthTotals} year={yearTotals} monthLabel={monthLabel} /> : null}
+
+      {/* A quiet rule between the totals above and the bills below. */}
+      <hr className="border-line" />
+
+      <section aria-labelledby="bills-card-title" className="rounded-xl border border-line bg-paper">
+        {/* On desktop everything down to the column headers stays put while the rows scroll under it. */}
+        <div className="z-20 rounded-t-xl bg-paper xl:sticky xl:top-[56px]">
+          <header className="flex flex-wrap items-start justify-between gap-x-4 gap-y-2 rounded-t-[11px] band bg-ink px-5 py-3">
+            <div className="min-w-0">
+              <h2 id="bills-card-title" className="eyebrow text-paper">
+                Regular bills
+              </h2>
+              <p className="mt-0.5 text-[12px] text-ondark-mute">
+                What the building pays, how often, and whether autopay is set up at the provider. Walkup never pays anything.
+              </p>
+            </div>
+            {isBoard ? <AddBill categories={categories} contractors={contractors} todayIso={today} variant="header" /> : null}
+          </header>
+
+          {/* Search and filters, set apart from the list by a hard line. */}
+          {all.length > 0 ? (
+            <div className="border-b-2 border-line-strong bg-fill/40">
+              <BillFilters
+                key={`${params.show}|${params.pay}|${params.freq}|${params.sort}|${params.q}`}
+                params={params}
+                clearHref={filtered ? "/repairs?view=bills" : null}
+                counts={{ paused: counts.paused, archived: counts.archived }}
+              />
+            </div>
+          ) : null}
+
+          {rows.length > 0 ? (
+            <div className="hidden px-5 pt-3 xl:block">
+              <div className="relative isolate">
+                {BILL_LINES.map((c) => (
+                  <span key={c} aria-hidden="true" className={`pointer-events-none absolute inset-y-0 -z-10 hidden w-px bg-line xl:block ${c}`} />
+                ))}
+                <div aria-hidden="true" className={`${BILL_COLUMNS} border-b border-line pb-2 text-[11px] font-bold uppercase tracking-wide text-ink xl:pl-9`}>
+                  <span className="text-center">Bill</span>
+                  <span className="text-center">Amount</span>
+                  <span className="text-center">Next due</span>
+                  <span className="text-center">Last paid</span>
+                  <span className="text-center">Status</span>
+                </div>
+              </div>
+            </div>
+          ) : null}
         </div>
-      ) : null}
 
-      {isBoard ? <AddBill categories={categories} contractors={contractors} todayIso={today} /> : null}
-
-      {all.length > 0 ? (
-        <nav aria-label="Show" className="inline-flex rounded-full border border-line bg-paper p-0.5">
-          {SHOWS.map((s) => (
-            <Link
-              key={s.key}
-              href={s.key === "active" ? "/repairs?view=bills" : `/repairs?view=bills&show=${s.key}`}
-              aria-current={show === s.key ? "page" : undefined}
-              className={`inline-flex min-h-[44px] items-center gap-1 rounded-full px-4 text-[13px] font-medium ${show === s.key ? "bg-ink text-paper" : "text-mute hover:text-ink"}`}
-            >
-              {s.label}
-              {s.key !== "active" && counts[s.key] > 0 ? <span className="text-[11px] opacity-80">({counts[s.key]})</span> : null}
-            </Link>
-          ))}
-        </nav>
-      ) : null}
-
-      <Card navy title="Regular bills" hint="What the building pays, how often, and whether autopay is set up at the provider. Walkup never pays anything.">
-        {all.length === 0 ? (
-          <p className="text-[13px] text-mute">
-            No regular bills recorded yet: a utility, the insurance premium, a cleaning contract. Once they&rsquo;re here, Home reminds you before each one is due.
-          </p>
-        ) : rows.length === 0 ? (
-          <p className="text-[13px] text-mute">{show === "paused" ? "No paused bills." : show === "archived" ? "No archived bills." : "No active bills."}</p>
-        ) : (
-          <BillsList bills={rows} isBoard={isBoard} categories={categories} contractors={contractors} todayIso={today} />
-        )}
-      </Card>
+        <div className="px-5 pb-3 pt-1">
+          {all.length === 0 ? (
+            <p className="py-2 text-[13px] text-mute">
+              No regular bills recorded yet: a utility, the insurance premium, a cleaning contract. Once they&rsquo;re here, Home reminds you before each one is due.
+            </p>
+          ) : rows.length === 0 ? (
+            <p className="py-2 text-[13px] text-mute">
+              {filtered ? "No bills match." : show === "paused" ? "No paused bills." : show === "archived" ? "No archived bills." : "No active bills."}{" "}
+              {filtered ? (
+                <Link href="/repairs?view=bills" className="text-ink underline underline-offset-2">
+                  Clear the search or filters.
+                </Link>
+              ) : null}
+            </p>
+          ) : (
+            <BillsList bills={rows} isBoard={isBoard} categories={categories} contractors={contractors} todayIso={today} />
+          )}
+        </div>
+      </section>
 
       <Card navy title="What Walkup does and doesn't do here">
         <p className="text-[13px] leading-relaxed text-mute">

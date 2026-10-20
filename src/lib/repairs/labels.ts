@@ -18,9 +18,9 @@ export const STATUS_LABEL: Record<TicketStatus, string> = {
   closed: "Closed",
 };
 export const PRIORITY_LABEL: Record<TicketPriority, string> = {
-  low: "Can wait",
-  normal: "Should be looked at",
-  urgent: "Needs attention now",
+  low: "Low",
+  normal: "Normal",
+  urgent: "Urgent",
 };
 export const PRIORITY_RANK: Record<TicketPriority, number> = { urgent: 0, normal: 1, low: 2 };
 export const DONE_STATUSES: readonly TicketStatus[] = ["resolved", "closed"];

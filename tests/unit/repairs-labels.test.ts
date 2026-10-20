@@ -14,7 +14,7 @@ const CY: Actor = { kind: "name", name: "Cy Board" };
 describe("labels", () => {
   it("names statuses and urgency", () => {
     expect(STATUS_LABEL.resolved).toBe("Fixed");
-    expect(PRIORITY_LABEL.urgent).toBe("Needs attention now");
+    expect(PRIORITY_LABEL.urgent).toBe("Urgent");
     expect(PRIORITY_RANK.urgent).toBeLessThan(PRIORITY_RANK.low);
     expect(isDone("resolved")).toBe(true);
     expect(isDone("closed")).toBe(true);
@@ -38,7 +38,7 @@ describe("eventSentence", () => {
     ["status_changed", { to_value: "in_progress" }, BOARD, "The board marked it being worked on."],
     ["status_changed", { to_value: "resolved" }, CY, "Cy Board marked it fixed."],
     ["reopened", {}, { kind: "owner" }, "Another owner reopened it."],
-    ["priority_changed", { to_value: "low" }, BOARD, 'The board changed the urgency to "Can wait".'],
+    ["priority_changed", { to_value: "low" }, BOARD, 'The board changed the urgency to "Low".'],
     ["contractor_assigned", { data: { contractor_name: "Acme Plumbing" } }, BOARD, "The board chose Acme Plumbing for this job."],
     ["contractor_assigned", {}, BOARD, "The board chose a contractor for this job."],
     ["contractor_removed", {}, BOARD, "The board took the contractor off this."],

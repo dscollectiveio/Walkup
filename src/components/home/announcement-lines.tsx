@@ -109,7 +109,7 @@ export function AnnouncementLines({
   return (
     <>
       <div
-        className="relative px-3 pb-3.5 min-[900px]:px-5"
+        className="flex items-center gap-3 px-3 pb-3 pt-1 min-[900px]:px-5"
         onMouseEnter={() => setHolding(true)}
         onMouseLeave={() => setHolding(false)}
         onFocusCapture={() => setHolding(true)}
@@ -117,8 +117,8 @@ export function AnnouncementLines({
         aria-roledescription={rows.length > 1 ? "carousel" : undefined}
         aria-label="Announcements"
       >
-        {/* The same height the three-line list had, so the banner doesn't change size. */}
-        <div className="h-[5.75rem]">
+        {/* One slim card at a time; the dots sit beside it, never on it. */}
+        <div className="h-[3.75rem] min-w-0 flex-1">
           {current ? (
             <button
               key={current.id}
@@ -126,9 +126,9 @@ export function AnnouncementLines({
               onClick={() => show(current.id)}
               aria-haspopup="dialog"
               aria-live={rotating && !holding ? "off" : "polite"}
-              className={`flex h-full w-full flex-col justify-center gap-0.5 rounded-md px-4 py-2 pr-16 text-left transition-colors focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-brass ${LINE[current.importance].row} ${slid ? "announce-in" : ""}`}
+              className={`flex h-full w-full flex-col justify-center gap-0.5 rounded-md px-4 py-2 text-left transition-colors focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-brass ${LINE[current.importance].row} ${slid ? "announce-in" : ""}`}
             >
-              <span className={`flex items-center gap-2 text-[15px] ${LINE[current.importance].text}`}>
+              <span className={`flex items-center gap-2.5 text-[14px] leading-5 ${LINE[current.importance].text}`}>
                 <span
                   aria-hidden="true"
                   className={`h-2 w-2 shrink-0 rounded-full ${isUnread(current.id) ? LINE[current.importance].dot : "bg-transparent"}`}
@@ -143,18 +143,18 @@ export function AnnouncementLines({
                   {current.title}
                   {isUnread(current.id) ? <span className="sr-only"> (unread)</span> : null}
                 </span>
-                <span className={`ml-auto shrink-0 text-[12px] font-normal ${LINE[current.importance].muted}`}>
+                <span className={`ml-auto shrink-0 pl-2 text-[12px] font-normal ${LINE[current.importance].muted}`}>
                   {shortDate((current.published_at ?? current.created_at).slice(0, 10), todayIso)}
                 </span>
               </span>
-              <span className={`line-clamp-2 pl-4 text-[13px] leading-snug ${LINE[current.importance].muted}`}>
+              <span className={`line-clamp-1 pl-[1.125rem] text-[12.5px] leading-4 ${LINE[current.importance].muted}`}>
                 {announcementPreview(current.body, 220)}
               </span>
             </button>
           ) : null}
         </div>
         {rows.length > 1 ? (
-          <div className="absolute bottom-4 right-6 flex items-center gap-1.5 min-[900px]:right-8">
+          <div className="flex shrink-0 items-center gap-1">
             {rows.map((r, i) => (
               <button
                 key={r.id}

@@ -342,10 +342,10 @@ export function SetupGuidePanel({
 
   return (
     <>
-    <section id="setup-guide" aria-labelledby="setup-guide-title" className="scroll-mt-20 border-t border-line">
+    <section id="setup-guide" aria-labelledby="setup-guide-title" className="flex min-h-0 flex-1 scroll-mt-20 flex-col border-t border-line">
       <div
         onClick={() => setFolded((f) => !f)}
-        className={`flex cursor-pointer flex-wrap items-center justify-between gap-x-3 gap-y-1 hover:bg-ink/[0.11] ${SECTION_HEADER}`}
+        className={`flex shrink-0 cursor-pointer flex-wrap items-center justify-between gap-x-3 gap-y-1 hover:bg-ink/[0.11] ${SECTION_HEADER}`}
       >
         <button
           type="button"
@@ -398,7 +398,7 @@ export function SetupGuidePanel({
       </div>
 
       {/* Folded, this row stays: the ring, the count, and the one thing to do next. */}
-      <div className={`flex flex-wrap items-center gap-x-5 gap-y-2 px-5 py-2.5 ${folded ? "" : "border-b border-line"}`}>
+      <div className={`flex shrink-0 flex-wrap items-center gap-x-5 gap-y-2 px-5 py-2.5 ${folded ? "" : "border-b border-line"}`}>
         <div className="flex min-w-0 items-center gap-4">
           <CompletionRing pct={pct} />
           <div className="min-w-0">
@@ -422,7 +422,7 @@ export function SetupGuidePanel({
         {error ? <p className="w-full text-[12px] text-bad-text">{error}</p> : null}
       </div>
 
-      <div id="setup-guide-body" hidden={folded} className="max-h-[19rem] divide-y divide-line overflow-y-auto">
+      <div id="setup-guide-body" hidden={folded} className="max-h-[22rem] min-h-0 flex-1 divide-y divide-line overflow-y-auto lg:max-h-none">
         {sections.map((section, i) => {
           const counts = sectionCounts(section);
           const complete = counts.done === counts.total;

@@ -1,6 +1,6 @@
 "use client";
 
-import { useId, useState } from "react";
+import { useEffect, useId, useState } from "react";
 import { ChevronDown } from "lucide-react";
 
 /**
@@ -12,6 +12,21 @@ import { ChevronDown } from "lucide-react";
 export function MoreAbout({ children, defaultOpen = false }: { children: React.ReactNode; defaultOpen?: boolean }) {
   const [open, setOpen] = useState(defaultOpen);
   const id = useId();
+
+  // A link to something inside it (the Problems tab's "Add documents" goes to #documents) opens it first,
+  // then scrolls there, since the section is closed and the target is hidden until it opens.
+  useEffect(() => {
+    const check = () => {
+      const target = window.location.hash.slice(1);
+      if (!target) return;
+      setOpen(true);
+      requestAnimationFrame(() => document.getElementById(target)?.scrollIntoView({ block: "start" }));
+    };
+    check();
+    window.addEventListener("hashchange", check);
+    return () => window.removeEventListener("hashchange", check);
+  }, []);
+
   return (
     <section className="rounded-xl border border-line bg-paper">
       <button

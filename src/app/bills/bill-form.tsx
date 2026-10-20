@@ -3,12 +3,14 @@
 import Link from "next/link";
 import { useId, useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
-import { ChevronDown } from "lucide-react";
+import { ChevronRight } from "lucide-react";
 import { Pill } from "@/components/repairs/pills";
 import { Sheet } from "@/components/repairs/sheet";
+import { HEADER_BUTTON } from "@/components/ui";
 import { btnPrimary, btnSecondary, errorClass, hintClass, inputClass, labelClass, textareaClass } from "@/components/repairs/styles";
 import { humanDate, moneyText } from "@/lib/repairs/format";
-import { archiveBill, addBill, markBillPaid, restoreBill, setBillPaused, updateBill, type BillInput } from "./actions";
+import { BILL_COLUMNS, BILL_LINES } from "./table";
+import { addBill, archiveBill, deleteBill, markBillPaid, recentExpensesForBill, restoreBill, setBillPaused, updateBill, type BillInput } from "./actions";
 
 /**
  * Bills (repairs-spec §13.2): add and edit, mark paid (or, for autopay,
@@ -29,10 +31,14 @@ export interface BillRecord {
   notes: string | null;
   is_active: boolean;
   paused: boolean;
+  /** The notes as saved, without the paused note `notes` may have appended. Preferred when editing. */
+  rawNotes?: string | null;
 }
 
 export interface BillRowView extends BillRecord {
   line: string;
+  /** "Every month", "Once a year" ... for its own column. */
+  frequencyText: string;
   amountText: string;
   nextText: string | null;
   lastPaidText: string | null;
@@ -63,7 +69,7 @@ export function BillForm(props: { bill: BillRecord | null; categories: Option[];
     typical_amount: b?.typical_amount ?? "",
     autopay_arranged: b?.autopay_arranged ?? false,
     autopay_note: b?.autopay_note ?? "",
-    notes: b?.notes ?? "",
+    notes: b?.rawNotes ?? b?.notes ?? "",
   });
   const [error, setError] = useState<string | null>(null);
   const [pending, start] = useTransition();
@@ -202,8 +208,21 @@ export function BillForm(props: { bill: BillRecord | null; categories: Option[];
 }
 
 /** "Add a bill": the form as a full-width panel below the toolbar. */
-export function AddBill(props: { categories: Option[]; contractors: Option[]; todayIso: string; primary?: boolean }) {
+export function AddBill(props: { categories: Option[]; contractors: Option[]; todayIso: string; primary?: boolean; variant?: "solid" | "header" }) {
   const [open, setOpen] = useState(false);
+  // "solid": a navy button in a row of buttons; the form opens in a sheet instead of replacing it.
+  if (props.variant === "solid" || props.variant === "header") {
+    return (
+      <>
+        <button type="button" onClick={() => setOpen(true)} className={props.variant === "header" ? HEADER_BUTTON : btnPrimary}>
+          Add a bill
+        </button>
+        <Sheet open={open} onClose={() => setOpen(false)} wide title="Add a bill">
+          {open ? <BillForm bill={null} categories={props.categories} contractors={props.contractors} onDone={() => setOpen(false)} todayIso={props.todayIso} /> : null}
+        </Sheet>
+      </>
+    );
+  }
   if (!open) {
     return (
       <button type="button" onClick={() => setOpen(true)} className={props.primary === false ? btnSecondary : btnPrimary}>
@@ -217,10 +236,6 @@ export function AddBill(props: { categories: Option[]; contractors: Option[]; to
     </div>
   );
 }
-
-// ---------------------------------------------------------------------------
-// The list, with its sheets (client, so "Marked paid" survives the refresh)
-// ---------------------------------------------------------------------------
 
 export function BillsList(props: { bills: BillRowView[]; isBoard: boolean; categories: Option[]; contractors: Option[]; todayIso: string }) {
   const [notice, setNotice] = useState<string | null>(null);
@@ -240,73 +255,74 @@ export function BillsList(props: { bills: BillRowView[]; isBoard: boolean; categ
           </button>
         </div>
       ) : null}
-      <ul className="divide-y divide-line">
-        {props.bills.map((b) => (
-          <li key={b.id} className="py-3">
-            <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
-              <div className="min-w-0 space-y-1">
-                <div className="flex flex-wrap items-center gap-2">
-                  <span className="text-[14px] font-medium text-ink">{b.name}</span>
-                  {!b.is_active ? (
-                    <Pill tone="outline">Archived</Pill>
-                  ) : b.paused ? (
-                    <Pill tone="neutral">Paused</Pill>
-                  ) : b.autopay_arranged ? (
-                    <Pill tone="good">On autopay</Pill>
-                  ) : (
-                    <Pill tone="warning">You pay this one</Pill>
-                  )}
-                </div>
-                <p className="text-[12px] text-mute">{b.line}</p>
-                {b.policy ? (
-                  <p className="text-[12px]">
-                    <Link href={b.policy.href} className="text-ink underline underline-offset-2">
-                      {b.policy.text}
-                    </Link>
-                    {b.policy.retired ? <span className="text-mute"> · {RETIRED}</span> : null}
-                  </p>
-                ) : null}
-                {b.autopay_note || b.notes ? <p className="text-[12px] text-mute-soft">{[b.autopay_note, b.notes].filter(Boolean).join(" · ")}</p> : null}
-              </div>
-              <div className="shrink-0 space-y-0.5 text-[12px] text-mute sm:text-right">
-                <p className="figures text-[14px] text-ink">{b.amountText}</p>
-                {b.nextText ? <p>{b.nextText}</p> : null}
-                {b.lastPaidText ? <p>{b.lastPaidText}</p> : null}
-              </div>
-            </div>
-            {props.isBoard ? (
-              <div className="mt-2 flex flex-wrap gap-2 max-sm:[&>*]:flex-1">
-                {b.is_active && !b.paused ? (
+      <div className="relative isolate">
+        {BILL_LINES.map((c) => (
+          <span key={c} aria-hidden="true" className={`pointer-events-none absolute inset-y-0 -z-10 hidden w-px bg-line xl:block ${c}`} />
+        ))}
+        {/* Every other bill gets a faint blue band, edge to edge. */}
+        <ul className="divide-y divide-line [&>li:nth-child(even)]:bg-ink/[0.045]">
+          {props.bills.map((b) => {
+            const open = historyFor === b.id;
+            return (
+              <li key={b.id} className="-mx-5 px-5 py-3">
+                <div className="flex items-start gap-3">
                   <button
                     type="button"
-                    onClick={() => {
+                    aria-expanded={open}
+                    aria-label={`${open ? "Hide" : "Show"} details for ${b.name}`}
+                    onClick={() => setHistoryFor(open ? null : b.id)}
+                    className="mt-0.5 flex h-6 w-6 shrink-0 items-center justify-center rounded-md border border-line-strong bg-paper text-ink hover:bg-fill focus-visible:outline focus-visible:outline-2 focus-visible:outline-brass"
+                  >
+                    <ChevronRight size={15} strokeWidth={2.2} aria-hidden="true" className={`transition-transform ${open ? "rotate-90" : ""}`} />
+                  </button>
+                  <div className={`flex min-w-0 flex-1 flex-col gap-2 ${BILL_COLUMNS}`}>
+                    {/* Bill */}
+                    <div className="min-w-0 space-y-1">
+                      <div className="flex flex-wrap items-center gap-2">
+                        <span className="text-[14px] font-medium text-ink">{b.name}</span>
+                        {!b.is_active ? (
+                          <Pill tone="outline">Archived</Pill>
+                        ) : b.paused ? (
+                          <Pill tone="neutral">Paused</Pill>
+                        ) : b.autopay_arranged ? (
+                          <Pill tone="good">On autopay</Pill>
+                        ) : (
+                          <Pill tone="warning">You pay this one</Pill>
+                        )}
+                      </div>
+                      {b.line ? <p className="text-[12px] text-mute">{b.line}</p> : null}
+                    </div>
+                    <div className="xl:text-center">
+                      <p className="figures text-[13px] text-ink">{b.amountText}</p>
+                      <p className="text-[12px] text-mute">{b.frequencyText}</p>
+                    </div>
+                    <p className="text-[12px] text-mute xl:text-center">{b.nextText ?? (b.is_active ? "" : "Off the schedule")}</p>
+                    <p className="text-[12px] text-mute xl:text-center">{b.lastPaidText ? b.lastPaidText.replace(/^last paid /, "") : "Not paid yet"}</p>
+                    {/* Status: a dropdown, like Problems */}
+                    <div className="xl:text-center">
+                      <BillStatusSelect bill={b} canEdit={props.isBoard} />
+                    </div>
+                  </div>
+                </div>
+                {open ? (
+                  <BillQuickPanel
+                    key={`${b.id}|${b.next_due_on}|${b.frequency}|${b.typical_amount}|${b.autopay_arranged}|${b.rawNotes}|${b.autopay_note}`}
+                    bill={b}
+                    onNotice={setNotice}
+                    isBoard={props.isBoard}
+                    todayIso={props.todayIso}
+                    onFullEdit={() => setEditing(b)}
+                    onPay={() => {
                       setNotice(null);
                       setPaying(b);
                     }}
-                    className={b.autopay_arranged ? btnSecondary : btnPrimary}
-                  >
-                    {b.autopay_arranged ? "Confirm it went through" : "Mark paid"}
-                  </button>
+                  />
                 ) : null}
-                <button type="button" onClick={() => setEditing(b)} className={btnSecondary}>
-                  Edit
-                </button>
-                <BillMore bill={b} historyOpen={historyFor === b.id} onHistory={() => setHistoryFor(historyFor === b.id ? null : b.id)} />
-              </div>
-            ) : (
-              <button
-                type="button"
-                aria-expanded={historyFor === b.id}
-                onClick={() => setHistoryFor(historyFor === b.id ? null : b.id)}
-                className="mt-1 inline-flex min-h-[44px] items-center text-[13px] text-ink underline underline-offset-2"
-              >
-                Payment history
-              </button>
-            )}
-            {historyFor === b.id ? <PaymentHistory bill={b} todayIso={props.todayIso} /> : null}
-          </li>
-        ))}
-      </ul>
+              </li>
+            );
+          })}
+        </ul>
+      </div>
 
       {paying ? (
         <MarkPaidSheet
@@ -356,6 +372,16 @@ function PaymentHistory({ bill, todayIso }: { bill: BillRowView; todayIso: strin
   );
 }
 
+const RETIRED = "Last payment for this policy. The renewal has its own bill.";
+
+type PayOption = { id: string; paid_on: string; amount: string; memo: string | null; vendor_name: string | null };
+
+/**
+ * Marking a bill paid starts from the transaction in the books that paid it:
+ * pick it, and the date and amount follow (both can still be changed). A bill
+ * can't be marked paid without one; a payment that isn't in the books yet is
+ * categorized in the Bank Feed first.
+ */
 function MarkPaidSheet(props: { bill: BillRowView; todayIso: string; onClose: () => void; onPaid: (message: string) => void }) {
   const router = useRouter();
   const fid = useId();
@@ -364,13 +390,37 @@ function MarkPaidSheet(props: { bill: BillRowView; todayIso: string; onClose: ()
   const [paidOn, setPaidOn] = useState(props.todayIso);
   const [amount, setAmount] = useState(b.typical_amount ?? "");
   const [note, setNote] = useState("");
+  const [options, setOptions] = useState<PayOption[] | null>(null);
+  const [expenseId, setExpenseId] = useState("");
   const [error, setError] = useState<string | null>(null);
   const [pending, start] = useTransition();
+  const [started, setStarted] = useState(false);
+
+  // Load the choices when the sheet first opens (a transition from render is not an effect).
+  if (!started) {
+    setStarted(true);
+    start(async () => {
+      const r = await recentExpensesForBill(b.id);
+      if ("error" in r) {
+        setError(r.error);
+        setOptions([]);
+      } else setOptions(r.expenses);
+    });
+  }
+
+  function pick(id: string) {
+    setExpenseId(id);
+    const e = options?.find((o) => o.id === id);
+    if (e) {
+      setPaidOn(e.paid_on > props.todayIso ? props.todayIso : e.paid_on);
+      setAmount(e.amount);
+    }
+  }
 
   function save() {
     setError(null);
     start(async () => {
-      const r = await markBillPaid(b.id, { due_on: dueOn, paid_on: paidOn, amount: amount.trim() || null, note: note.trim() || null });
+      const r = await markBillPaid(b.id, { due_on: dueOn, paid_on: paidOn, amount: amount.trim() || null, note: note.trim() || null, expense_id: expenseId });
       if ("error" in r) {
         setError(r.error);
         // Already marked (another click or board member): show the bill's current due date.
@@ -394,10 +444,10 @@ function MarkPaidSheet(props: { bill: BillRowView; todayIso: string; onClose: ()
       open
       onClose={props.onClose}
       title={dueOn ? `Paid the bill due ${humanDate(dueOn, props.todayIso)}` : `Paid ${b.name}`}
-      description={b.autopay_arranged ? "Autopay is set up with the provider. Confirm the charge went through." : undefined}
+      description={b.autopay_arranged ? "Autopay is set up with the provider. Pick the charge in the books to confirm it went through." : "Pick the transaction in the books that paid it."}
       footer={
         <>
-          <button type="button" onClick={save} disabled={pending || !paidOn} className={btnPrimary}>
+          <button type="button" onClick={save} disabled={pending || !paidOn || !expenseId} className={btnPrimary}>
             {pending ? "Saving…" : "Save"}
           </button>
           <button type="button" onClick={props.onClose} className={btnSecondary}>
@@ -408,6 +458,36 @@ function MarkPaidSheet(props: { bill: BillRowView; todayIso: string; onClose: ()
       }
     >
       <div className="space-y-4">
+        <div>
+          <label htmlFor={`${fid}-tx`} className={labelClass}>
+            Transaction in the books
+          </label>
+          <select id={`${fid}-tx`} value={expenseId} onChange={(e) => pick(e.target.value)} disabled={options === null} className={inputClass}>
+            <option value="">{options === null ? "Loading…" : "Choose the payment"}</option>
+            {(options ?? []).map((o) => (
+              <option key={o.id} value={o.id}>
+                {humanDate(o.paid_on, props.todayIso)} · {moneyText(o.amount)} · {o.memo ?? o.vendor_name ?? "Payment"}
+              </option>
+            ))}
+          </select>
+          {options !== null && options.length === 0 ? (
+            <p className={hintClass}>
+              No payments to choose from yet. Categorize the payment in the{" "}
+              <Link href="/bank-feed" className="underline underline-offset-2">
+                Bank Feed
+              </Link>{" "}
+              first, then come back.
+            </p>
+          ) : (
+            <p className={hintClass}>
+              Not here? Categorize the payment in the{" "}
+              <Link href="/bank-feed" className="underline underline-offset-2">
+                Bank Feed
+              </Link>{" "}
+              and it will be.
+            </p>
+          )}
+        </div>
         <div>
           <label htmlFor={`${fid}-paid`} className={labelClass}>
             Paid on
@@ -431,55 +511,220 @@ function MarkPaidSheet(props: { bill: BillRowView; todayIso: string; onClose: ()
   );
 }
 
-/** A premium bill retired by the renewal (insurance_premium_bill_advance returned null). */
-const RETIRED = "Last payment for this policy. The renewal has its own bill.";
-
-const menuItem = "flex min-h-[44px] w-full items-center rounded-md px-3 text-left text-[13px] text-ink hover:bg-fill";
-
-function BillMore({ bill, historyOpen, onHistory }: { bill: BillRowView; historyOpen: boolean; onHistory: () => void }) {
+/**
+ * What opens under a bill: the short version (amount, how often, next due,
+ * autopay, notes) that the board can change right here, a link to the full
+ * form for everything else (name, category, who it is paid to), and the
+ * payment history. Everyone else reads the same facts.
+ */
+function BillQuickPanel({ bill, isBoard, todayIso, onFullEdit, onPay, onNotice }: { bill: BillRowView; isBoard: boolean; todayIso: string; onFullEdit: () => void; onPay: () => void; onNotice: (message: string) => void }) {
   const router = useRouter();
-  const menuId = useId();
-  const [open, setOpen] = useState(false);
-  const [error, setError] = useState<string | null>(null);
-  const [pending, start] = useTransition();
-  const run = (fn: () => Promise<{ ok: true } | { error: string }>) =>
-    start(async () => {
-      setError(null);
-      const r = await fn();
-      if ("error" in r) setError(r.error);
+  const fid = useId();
+  const start0 = {
+    amount: bill.typical_amount ?? "",
+    frequency: bill.frequency,
+    due: bill.next_due_on ?? "",
+    autopay: bill.autopay_arranged,
+    autopayNote: bill.autopay_note ?? "",
+    notes: bill.rawNotes ?? "",
+  };
+  const [saved, setSaved] = useState(start0);
+  const [f, setF] = useState(start0);
+  const [msg, setMsg] = useState<{ text: string; bad: boolean } | null>(null);
+  const [pending, startSave] = useTransition();
+  const [deleting, startDelete] = useTransition();
+  const set = <K extends keyof typeof f>(k: K, v: (typeof f)[K]) => setF((x) => ({ ...x, [k]: v }));
+  const dirty = (Object.keys(f) as (keyof typeof f)[]).some((k) => f[k] !== saved[k]);
+  const field =
+    "block min-h-[36px] w-full rounded-md border border-line-strong bg-paper px-2.5 text-[16px] text-ink sm:text-[13px] disabled:opacity-60";
+  const lab = "mb-1 block text-[11px] font-medium uppercase tracking-wide text-mute";
+
+  function remove() {
+    if (!window.confirm(`Delete "${bill.name}"? A bill with payments recorded is archived instead, so its history is kept.`)) return;
+    setMsg(null);
+    startDelete(async () => {
+      const r = await deleteBill(bill.id);
+      if ("error" in r) setMsg({ text: r.error, bad: true });
       else {
-        setOpen(false);
+        // The row leaves this list on refresh, so the message goes to the list-level notice.
+        onNotice(r.archivedInstead ? `${bill.name}: it has payment history, so it was archived instead of deleted.` : `${bill.name}: deleted.`);
         router.refresh();
       }
     });
+  }
+
+  function save() {
+    setMsg(null);
+    startSave(async () => {
+      const r = await updateBill(bill.id, {
+        name: bill.name,
+        account_id: bill.account_id,
+        vendor_id: bill.vendor_id,
+        frequency: f.frequency,
+        next_due_on: f.due,
+        typical_amount: f.amount.trim() || null,
+        autopay_arranged: f.autopay,
+        autopay_note: f.autopayNote.trim() || null,
+        notes: f.notes.trim() || null,
+      });
+      if ("error" in r) setMsg({ text: r.error, bad: true });
+      else {
+        setSaved(f);
+        setMsg({ text: "Saved.", bad: false });
+        router.refresh();
+      }
+    });
+  }
+
   return (
-    <div className="relative">
-      <button type="button" aria-expanded={open} aria-controls={menuId} onClick={() => setOpen((o) => !o)} className={`${btnSecondary} w-full gap-1`}>
-        More <ChevronDown size={14} aria-hidden="true" />
-      </button>
-      {open ? (
-        <div id={menuId} className="absolute right-0 z-20 mt-1 w-56 rounded-lg border border-line bg-paper p-1 shadow-lg">
-          {bill.is_active ? (
-            <button type="button" disabled={pending} onClick={() => run(() => setBillPaused(bill.id, !bill.paused))} className={menuItem}>
-              {bill.paused ? "Resume" : "Pause"}
+    <div className="ml-9 mt-2 space-y-3 rounded-lg border border-line bg-paper p-4">
+      {bill.line || bill.policy ? (
+        <p className="text-[13px] text-mute">
+          {bill.line}
+          {bill.policy ? (
+            <>
+              {bill.line ? " · " : ""}
+              <Link href={bill.policy.href} className="text-ink underline underline-offset-2">
+                {bill.policy.text}
+              </Link>
+              {bill.policy.retired ? ` · ${RETIRED}` : ""}
+            </>
+          ) : null}
+        </p>
+      ) : null}
+
+      <div className="grid gap-3 md:grid-cols-4">
+        <div>
+          <label htmlFor={`${fid}-amt`} className={lab}>
+            Usual amount
+          </label>
+          <input id={`${fid}-amt`} inputMode="decimal" value={f.amount} disabled={!isBoard} onChange={(e) => set("amount", e.target.value)} placeholder="$0" className={field} />
+        </div>
+        <div>
+          <label htmlFor={`${fid}-freq`} className={lab}>
+            How often
+          </label>
+          <select id={`${fid}-freq`} value={f.frequency} disabled={!isBoard} onChange={(e) => set("frequency", e.target.value as BillInput["frequency"])} className={field}>
+            {FREQUENCIES.map((o) => (
+              <option key={o.value} value={o.value}>
+                {o.label}
+              </option>
+            ))}
+          </select>
+        </div>
+        <div>
+          <label htmlFor={`${fid}-due`} className={lab}>
+            Next due
+          </label>
+          <input id={`${fid}-due`} type="date" value={f.due} disabled={!isBoard} onChange={(e) => set("due", e.target.value)} className={field} />
+        </div>
+        <label className="flex min-h-[36px] cursor-pointer items-center gap-2 self-end text-[13px] text-ink">
+          <input type="checkbox" checked={f.autopay} disabled={!isBoard} onChange={(e) => set("autopay", e.target.checked)} className="h-4 w-4 accent-[var(--color-ink)]" />
+          On autopay at the provider
+        </label>
+      </div>
+
+      <div className="grid gap-3 md:grid-cols-2">
+        {f.autopay ? (
+          <div>
+            <label htmlFor={`${fid}-ap`} className={lab}>
+              Autopay note
+            </label>
+            <input id={`${fid}-ap`} value={f.autopayNote} disabled={!isBoard} onChange={(e) => set("autopayNote", e.target.value)} placeholder="Which card or account pays it" className={field} />
+          </div>
+        ) : null}
+        <div className={f.autopay ? "" : "md:col-span-2"}>
+          <label htmlFor={`${fid}-notes`} className={lab}>
+            Notes
+          </label>
+          <input id={`${fid}-notes`} value={f.notes} disabled={!isBoard} onChange={(e) => set("notes", e.target.value)} placeholder="Account number, who to call, anything useful" className={field} />
+        </div>
+      </div>
+
+      {isBoard ? (
+        <div className="flex flex-wrap items-center gap-3 border-t border-line pt-3">
+          {bill.is_active && !bill.paused ? (
+            <button type="button" onClick={onPay} className="inline-flex min-h-[34px] items-center rounded-md border border-line-strong bg-paper px-3 text-[12px] font-medium text-ink hover:bg-fill">
+              {bill.autopay_arranged ? "Confirm it went through" : "Mark paid"}
             </button>
+          ) : null}
+          <button type="button" onClick={onFullEdit} className="text-[13px] font-medium text-ink underline underline-offset-2 hover:text-ink-mid">
+            Edit all details
+          </button>
+          <button type="button" disabled={deleting} onClick={remove} className="text-[13px] font-medium text-bad-text underline underline-offset-2 hover:brightness-75 disabled:opacity-60">
+            {deleting ? "Deleting…" : "Delete bill"}
+          </button>
+          {msg ? (
+            <p role={msg.bad ? "alert" : "status"} className={`text-[12px] ${msg.bad ? "text-bad-text" : "text-good-text"}`}>
+              {msg.text}
+            </p>
+          ) : dirty ? (
+            <p className="text-[12px] text-mute">You have changes that aren&rsquo;t saved yet.</p>
           ) : null}
           <button
             type="button"
-            aria-expanded={historyOpen}
-            onClick={() => {
-              setOpen(false);
-              onHistory();
-            }}
-            className={menuItem}
+            disabled={pending || !dirty}
+            onClick={save}
+            className="ml-auto inline-flex min-h-[34px] items-center justify-center rounded-md bg-ink px-4 text-[12px] font-medium text-paper hover:bg-ink-mid disabled:opacity-60"
           >
-            Payment history
+            {pending ? "Saving…" : "Save"}
           </button>
-          <button type="button" disabled={pending} onClick={() => run(() => (bill.is_active ? archiveBill(bill.id) : restoreBill(bill.id)))} className={menuItem}>
-            {bill.is_active ? "Archive" : "Restore"}
-          </button>
-          {error ? <p className={`px-3 py-2 ${errorClass}`}>{error}</p> : null}
         </div>
+      ) : null}
+
+      <PaymentHistory bill={bill} todayIso={todayIso} />
+    </div>
+  );
+}
+
+/**
+ * The Status dropdown on a bill (Active, Paused, Archived), like the status
+ * dropdown on Problems: pick one and it is set. Everyone else reads it.
+ */
+function BillStatusSelect({ bill, canEdit }: { bill: BillRowView; canEdit: boolean }) {
+  const router = useRouter();
+  const [error, setError] = useState<string | null>(null);
+  const [pending, start] = useTransition();
+  const current = !bill.is_active ? "archived" : bill.paused ? "paused" : "active";
+  const label = { active: "Active", paused: "Paused", archived: "Archived" }[current];
+  if (!canEdit) return <span className="text-[12px] text-mute">{label}</span>;
+
+  function change(next: string) {
+    if (next === current) return;
+    start(async () => {
+      setError(null);
+      // Archived to Paused goes through Restore first; Paused or Active to Archived is one step.
+      let r: { ok: true } | { error: string } = { ok: true };
+      if (next === "archived") r = await archiveBill(bill.id);
+      else {
+        if (current === "archived") r = await restoreBill(bill.id);
+        if ("ok" in r) r = await setBillPaused(bill.id, next === "paused");
+      }
+      if ("error" in r) setError(r.error);
+      // Refresh either way: a half-done change (restored, then the pause failed) must not leave the box lying.
+      router.refresh();
+    });
+  }
+  return (
+    <div>
+      <label className="sr-only" htmlFor={`bill-status-${bill.id}`}>
+        Status of {bill.name}
+      </label>
+      <select
+        id={`bill-status-${bill.id}`}
+        value={current}
+        disabled={pending}
+        onChange={(e) => change(e.target.value)}
+        className="min-h-[34px] w-full rounded-md border border-line-strong bg-paper px-1.5 text-[12px] font-medium text-ink hover:bg-fill disabled:opacity-60"
+      >
+        <option value="active">Active</option>
+        <option value="paused">Paused</option>
+        <option value="archived">Archived</option>
+      </select>
+      {error ? (
+        <p role="alert" className="mt-1 text-[12px] text-bad-text">
+          {error}
+        </p>
       ) : null}
     </div>
   );

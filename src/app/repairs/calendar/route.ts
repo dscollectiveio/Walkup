@@ -43,6 +43,7 @@ export async function GET(request: NextRequest) {
       .from("tickets")
       .select("id, reference, title, scheduled_for, scheduled_window, updated_at")
       .eq("association_id", association.id)
+      .not("status", "in", '("resolved","closed")')
       .gte("scheduled_for", today),
     financial === true
       ? supabase

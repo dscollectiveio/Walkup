@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { Answer, Card, Stat } from "@/components/ui";
+import { Card } from "@/components/ui";
 import { complianceFor } from "@/lib/contractors/compliance";
 import { tradeBySlug } from "@/lib/contractors/trades";
 import { moneyText, whereLabel } from "@/lib/repairs/format";
@@ -9,9 +9,8 @@ import {
   buildToday,
   recordedRepairCosts,
   TODAY_SECTION_TITLE,
-  TODAY_SECTIONS,
-  todayIsEmpty,
   type TodayItem,
+  type TodaySection,
   type TodayTicket,
 } from "@/lib/repairs/today";
 import { parseStoredTriage } from "@/lib/repairs/validate";
@@ -25,6 +24,9 @@ import { CloseAllButton } from "./board-pieces";
  * and fixed problems ready to close. The rules live in buildToday (pure,
  * tested); this file only loads rows.
  */
+
+/** The sections the Problems tab shows at the top. "Needs a decision", "Coming up" and "Ready to close" are left out. */
+const SHOWN_SECTIONS: readonly TodaySection[] = ["emergencies", "new", "visits", "overdue"];
 
 const one = <T,>(v: T | T[] | null | undefined): T | null => (Array.isArray(v) ? (v[0] ?? null) : (v ?? null));
 
@@ -177,32 +179,54 @@ export async function TodayView({ supabase, viewer, since }: { supabase: Supabas
     spending,
   });
 
+  const shownEmpty = SHOWN_SECTIONS.every((s) => sections[s].length === 0);
+
   return (
     <div className="space-y-6">
-      <div className="grid grid-cols-2 gap-3 lg:grid-cols-4">
-        <Stat label="Open problems" value={String(stats.open)} note={`${stats.urgent} urgent`} tone={stats.urgent > 0 ? "bad" : "neutral"} />
-        <Stat label="Upkeep overdue" value={String(stats.upkeepOverdue)} tone={stats.upkeepOverdue > 0 ? "bad" : "neutral"} />
-        <Stat label="Visits this week" value={String(stats.visitsThisWeek)} />
-        <Stat
-          label="Recorded repair costs this year"
-          value={moneyText(fromCents(stats.recordedCostsCents)) || "$0"}
-          note="From problems and upkeep. Not the same as payments in the books."
+      <section aria-label="Repairs at a glance" className="grid grid-cols-2 gap-3 lg:grid-cols-4">
+        <StatCell
+          label="Open problems"
+          value={String(stats.open)}
+          bad={stats.urgent > 0}
+          note={
+            stats.open > 0
+              ? `Reported and not yet fixed or closed.${stats.urgent > 0 ? ` ${stats.urgent} marked urgent.` : ""}`
+              : "Nothing open. When someone reports a problem, it shows up here."
+          }
         />
-      </div>
+        <StatCell
+          label="Upkeep overdue"
+          value={String(stats.upkeepOverdue)}
+          bad={stats.upkeepOverdue > 0}
+          note={
+            stats.upkeepOverdue > 0
+              ? "Regular upkeep jobs that are past their due date."
+              : "Nothing overdue. Upkeep is your calendar of regular jobs, like boiler service."
+          }
+          link={stats.upkeepOverdue > 0 ? undefined : { href: "/repairs?view=upkeep", label: "See or add upkeep" }}
+        />
+        <StatCell
+          label="Visits this week"
+          value={String(stats.visitsThisWeek)}
+          note={
+            stats.visitsThisWeek > 0
+              ? "Contractor visits planned in the next 7 days."
+              : "No visits planned. Pick a contractor and set a visit date on a problem to see it here."
+          }
+        />
+        <StatCell
+          label="Repair costs this year"
+          value={moneyText(fromCents(stats.recordedCostsCents)) || "$0"}
+          note={
+            stats.recordedCostsCents > 0
+              ? "Final costs recorded on finished problems and upkeep. Not the payments in the books."
+              : "Nothing recorded yet. Enter a final cost on a problem you finish, and it totals here."
+          }
+        />
+      </section>
 
-      {todayIsEmpty(sections) ? (
-        <Answer status="good" headline="All clear" detail="Nothing urgent, nothing new, nothing overdue and no visits this week.">
-          <div className="flex flex-wrap gap-x-4 text-[13px]">
-            <Link href="/repairs?view=problems" className="inline-flex min-h-[44px] items-center text-good-text underline underline-offset-2">
-              See all problems
-            </Link>
-            <Link href="/repairs?view=upkeep" className="inline-flex min-h-[44px] items-center text-good-text underline underline-offset-2">
-              Upkeep schedule
-            </Link>
-          </div>
-        </Answer>
-      ) : (
-        TODAY_SECTIONS.filter((s) => sections[s].length > 0).map((s) =>
+      {shownEmpty ? null : (
+        SHOWN_SECTIONS.filter((s) => sections[s].length > 0).map((s) =>
           s === "emergencies" ? (
             <section key={s} className="border-l-[3px] border-bad">
               <Card navy title={TODAY_SECTION_TITLE[s]}>
@@ -216,6 +240,37 @@ export async function TodayView({ supabase, viewer, since }: { supabase: Supabas
           ),
         )
       )}
+    </div>
+  );
+}
+
+function StatCell({
+  label,
+  value,
+  note,
+  bad = false,
+  link,
+}: {
+  label: string;
+  value: string;
+  note: string;
+  bad?: boolean;
+  link?: { href: string; label: string };
+}) {
+  return (
+    <div className="overflow-hidden rounded-xl border border-line bg-paper">
+      <div className="band bg-ink px-4 py-1.5 text-[11px] font-semibold uppercase tracking-wide text-paper">{label}</div>
+      <div className="px-4 py-2">
+        <div className="flex items-baseline justify-between gap-2">
+          <div className={`figures text-[22px] leading-tight ${bad ? "text-bad-text" : "text-ink"}`}>{value}</div>
+          {link ? (
+            <Link href={link.href} className="shrink-0 text-[11px] font-medium text-ink underline underline-offset-2">
+              {link.label}
+            </Link>
+          ) : null}
+        </div>
+        <p className="mt-0.5 text-[11px] leading-snug text-mute">{note}</p>
+      </div>
     </div>
   );
 }

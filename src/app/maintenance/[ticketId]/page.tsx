@@ -56,7 +56,9 @@ export default async function TicketPage({
 
   const reported = sp.reported === "1";
   const failed = Math.max(0, Math.min(20, Number(sp.failed) || 0));
-  const open = sp.open === "quotes" || sp.open === "fix" || sp.open === "go-ahead" ? sp.open : null;
+  const done = data.ticket.status === "resolved" || data.ticket.status === "closed";
+  // "Mark fixed" only makes sense on a problem that is still open.
+  const open = sp.open === "quotes" || (sp.open === "fix" && !done) || sp.open === "go-ahead" ? sp.open : null;
 
   if (!viewer.canReadFinancials) return <OwnerView data={data} viewer={viewer} reported={reported} failed={failed} />;
 
@@ -343,9 +345,11 @@ function BoardView(props: {
             policy={data.policy}
           />
           <MessagesCard messages={data.messages} todayIso={today} canWrite={canWrite} />
-          <Card navy title="Documents" hint="Quotes and other files for this problem. Photos are in their own card.">
-            <EntityDocuments targetTable="tickets" targetId={t.id} documents={data.documents} canWrite={canWrite} />
-          </Card>
+          <div id="documents" className="scroll-mt-20">
+            <Card navy title="Documents" hint="Quotes and other files for this problem. Photos are in their own card.">
+              <EntityDocuments targetTable="tickets" targetId={t.id} documents={data.documents} canWrite={canWrite} />
+            </Card>
+          </div>
           {canWrite ? (
             <TriageCard
               ticketId={t.id}

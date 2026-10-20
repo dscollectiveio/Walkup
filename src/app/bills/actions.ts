@@ -38,14 +38,17 @@ export interface BillInput {
   notes: string | null;
 }
 
-function parseBill(input: BillInput) {
+function parseBill(input: BillInput, allowNoDue = false) {
   const name = String(input?.name ?? "").trim();
   if (!name) return { error: 'Give the bill a name, like "ComEd" or "Water".' };
   if (name.length > 120) return { error: "Keep the name under 120 characters." };
   if (!isUuid(input?.account_id)) return { error: "Choose the category it's paid from." };
   if (!(FREQUENCIES as readonly string[]).includes(input?.frequency)) return { error: "Choose how often it's due." };
-  const due = isoDate.safeParse(input?.next_due_on ?? "");
-  if (!due.success) return { error: "Enter when it's next due." };
+  // A bill whose schedule has run out (a retired premium bill) has no next due date; saving it
+  // without one is allowed only when it already has none.
+  const noDue = allowNoDue && !String(input?.next_due_on ?? "").trim();
+  const due = noDue ? null : isoDate.safeParse(input?.next_due_on ?? "");
+  if (due && !due.success) return { error: "Enter when it's next due." };
   const vendorId = input?.vendor_id || null;
   if (vendorId !== null && !isUuid(vendorId)) return { error: "Choose who it's paid to." };
   const amount = moneyText.safeParse(input?.typical_amount ?? "");
@@ -60,7 +63,7 @@ function parseBill(input: BillInput) {
       account_id: input.account_id,
       vendor_id: vendorId,
       frequency: input.frequency,
-      next_due_on: due.data,
+      next_due_on: due ? due.data : null,
       typical_amount: amount.data,
       autopay_arranged: input.autopay_arranged === true,
       autopay_note: autopayNote,
@@ -90,7 +93,7 @@ export async function addBill(input: BillInput): Promise<Ok<{ billId: string }> 
       association_id: associationId,
       fund_id: fundId,
       ...parsed.fields,
-      due_day: Number(parsed.fields.next_due_on.slice(8, 10)),
+      due_day: Number((parsed.fields.next_due_on ?? "").slice(8, 10)),
     })
     .select("id");
   if (error) return { error: dbError(error, { denied: BOARD_ONLY, context: "addBill" }) };
@@ -102,17 +105,17 @@ export async function addBill(input: BillInput): Promise<Ok<{ billId: string }> 
 
 export async function updateBill(billId: string, input: BillInput): Promise<Ok | Err> {
   if (!isUuid(billId)) return { error: NOT_VISIBLE };
-  const parsed = parseBill(input);
-  if ("error" in parsed) return { error: parsed.error as string };
   const supabase = await createClient();
   const { data: rows } = await supabase.from("recurring_bills").select("id, next_due_on").eq("id", billId).limit(1);
   const current = rows?.[0];
   if (!current) return { error: NOT_VISIBLE };
+  const parsed = parseBill(input, current.next_due_on === null);
+  if ("error" in parsed) return { error: parsed.error as string };
   const dateChanged = current.next_due_on !== parsed.fields.next_due_on;
   // insurance_policy_id is never sent, so editing a premium bill keeps its policy link (insurance-spec §12 R-2).
   const { data, error } = await supabase
     .from("recurring_bills")
-    .update({ ...parsed.fields, ...(dateChanged ? { due_day: Number(parsed.fields.next_due_on.slice(8, 10)) } : {}) })
+    .update({ ...parsed.fields, ...(dateChanged && parsed.fields.next_due_on ? { due_day: Number(parsed.fields.next_due_on.slice(8, 10)) } : {}) })
     .eq("id", billId)
     .select("id");
   if (error) return { error: dbError(error, { denied: BOARD_ONLY, context: "updateBill" }) };
@@ -140,9 +143,11 @@ export async function setBillPaused(billId: string, paused: boolean, note?: stri
 
 export async function markBillPaid(
   billId: string,
-  input: { due_on: string | null; paid_on: string; amount: string | null; note: string | null },
+  input: { due_on: string | null; paid_on: string; amount: string | null; note: string | null; expense_id: string },
 ): Promise<Ok<{ nextDueOn: string | null }> | (Err & { nextDueOn?: string | null })> {
   if (!isUuid(billId)) return { error: NOT_VISIBLE };
+  // A bill is only marked paid against a transaction in the books.
+  if (!isUuid(input?.expense_id)) return { error: "Pick the transaction in the books that paid it." };
   const paid = isoDate.safeParse(input?.paid_on ?? "");
   if (!paid.success) return { error: "Pick the date it was paid." };
   const due = input?.due_on ? isoDate.safeParse(input.due_on) : null;
@@ -159,9 +164,13 @@ export async function markBillPaid(
     p_paid_on: paid.data,
     p_amount: amount.data,
     p_note: note,
+    p_expense_id: input.expense_id,
   });
   if (error) {
     if (error.code === "23505") {
+      // One transaction can pay only one bill payment: say so, rather than blaming the due date.
+      const { data: taken } = await supabase.from("recurring_bill_payments").select("id").eq("expense_id", input.expense_id).limit(1);
+      if (taken && taken.length > 0) return { error: "That transaction is already tied to another bill payment. Pick a different one." };
       // A second click, or another board member: say so and hand back the current due date for the sheet.
       const { data: rows } = await supabase.from("recurring_bills").select("next_due_on").eq("id", billId).limit(1);
       const shown = due?.data ?? null;
@@ -196,4 +205,71 @@ export async function archiveBill(billId: string): Promise<Ok | Err> {
 
 export async function restoreBill(billId: string): Promise<Ok | Err> {
   return setActive(billId, true);
+}
+
+/**
+ * Payments in the books to tie a bill's payment to: the bill's contractor's from
+ * the last 120 days when it has one, else the newest. Payments already tied to
+ * a bill are left out, so one transaction can't pay two bills.
+ */
+export async function recentExpensesForBill(billId: string): Promise<
+  Ok<{ expenses: { id: string; paid_on: string; amount: string; memo: string | null; vendor_name: string | null }[] }> | Err
+> {
+  if (!isUuid(billId)) return { error: NOT_VISIBLE };
+  const supabase = await createClient();
+  const { data: bills } = await supabase.from("recurring_bills").select("association_id, vendor_id").eq("id", billId).limit(1);
+  const bill = bills?.[0];
+  if (!bill) return { error: NOT_VISIBLE };
+
+  const { data: tied } = await supabase.from("recurring_bill_payments").select("expense_id").not("expense_id", "is", null);
+  const used = new Set((tied ?? []).map((t) => t.expense_id as string));
+
+  let q = supabase.from("expenses").select("id, paid_on, amount::text, memo, vendors(name)").eq("association_id", bill.association_id);
+  if (bill.vendor_id) {
+    const [y, m, d] = buildingTodayIso().split("-").map(Number);
+    const from = new Date(Date.UTC(y, m - 1, d - 120)).toISOString().slice(0, 10);
+    q = q.eq("vendor_id", bill.vendor_id).gte("paid_on", from);
+  }
+  const { data, error } = await q.order("paid_on", { ascending: false }).limit(60);
+  if (error) return { error: dbError(error, { denied: "Only the board and the accountant can see payments.", context: "recentExpensesForBill" }) };
+  return {
+    ok: true,
+    expenses: (data ?? [])
+      .filter((e) => !used.has(e.id as string))
+      .slice(0, 25)
+      .map((e) => ({
+        id: e.id as string,
+        paid_on: e.paid_on as string,
+        amount: e.amount as string,
+        memo: (e.memo as string | null) ?? null,
+        vendor_name: ((e.vendors as { name?: string } | null)?.name as string | undefined) ?? null,
+      })),
+  };
+}
+
+/**
+ * Deletes a bill. A bill with payments recorded (or an insurance premium) keeps
+ * its history, so it is archived instead and the answer says so. Deleting is
+ * the board admin's; the policy on recurring_bills decides.
+ */
+export async function deleteBill(billId: string): Promise<Ok<{ archivedInstead: boolean }> | Err> {
+  if (!isUuid(billId)) return { error: NOT_VISIBLE };
+  const supabase = await createClient();
+  const [{ count }, { data: rows }] = await Promise.all([
+    supabase.from("recurring_bill_payments").select("id", { count: "exact", head: true }).eq("bill_id", billId),
+    supabase.from("recurring_bills").select("id, insurance_policy_id").eq("id", billId).limit(1),
+  ]);
+  const bill = rows?.[0];
+  if (!bill) return { error: NOT_VISIBLE };
+
+  if ((count ?? 0) > 0 || bill.insurance_policy_id) {
+    const r = await setActive(billId, false);
+    if ("error" in r) return r;
+    return { ok: true, archivedInstead: true };
+  }
+  const { data, error } = await supabase.from("recurring_bills").delete().eq("id", billId).select("id");
+  if (error) return { error: dbError(error, { denied: "Only a board admin can delete a bill.", context: "deleteBill" }) };
+  if (!data || data.length === 0) return { error: "Only a board admin can delete a bill." };
+  revalidateRepairs();
+  return { ok: true, archivedInstead: false };
 }

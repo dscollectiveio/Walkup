@@ -9,8 +9,8 @@ import { WorthAMinute } from "./worth-a-minute";
  */
 export function TodoCard({ items, emptyNote, setup }: { items: UrgentItem[]; emptyNote: string; setup: ReactNode | null }) {
   return (
-    <section aria-labelledby="todo-card-title" className="flex flex-1 flex-col overflow-hidden rounded-xl border border-line bg-paper">
-      <header className="flex min-h-[4rem] flex-col justify-center band bg-ink px-5 py-3">
+    <section aria-labelledby="todo-card-title" className="flex min-h-0 flex-1 flex-col overflow-hidden rounded-xl border border-line bg-paper">
+      <header className="flex min-h-[4rem] shrink-0 flex-col justify-center band bg-ink px-5 py-3">
         <h2 id="todo-card-title" className="eyebrow text-paper">
           To-do and setup
         </h2>
@@ -18,7 +18,9 @@ export function TodoCard({ items, emptyNote, setup }: { items: UrgentItem[]; emp
           {setup ? "What needs a minute today, then what is left to set up." : "What most needs a board member today, most important first."}
         </p>
       </header>
-      <WorthAMinute items={items} emptyNote={emptyNote} />
+      <div className="shrink-0">
+        <WorthAMinute items={items} emptyNote={emptyNote} />
+      </div>
       {setup}
     </section>
   );

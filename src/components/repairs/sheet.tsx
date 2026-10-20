@@ -19,9 +19,12 @@ export function Sheet(props: {
   footer?: React.ReactNode;
   /** 640px instead of 520px on desktop. */
   wide?: boolean;
+  /** Clicking the dimmed area outside the sheet closes it. Off by default so a form is never lost to a stray click. */
+  closeOnOutsideClick?: boolean;
   children: React.ReactNode;
 }) {
   const ref = useRef<HTMLDialogElement>(null);
+  const pressedBackdrop = useRef(false);
   const titleId = useId();
   const { open, onClose } = props;
 
@@ -38,6 +41,15 @@ export function Sheet(props: {
       aria-labelledby={titleId}
       onClose={() => {
         if (open) onClose();
+      }}
+      onMouseDown={(e) => {
+        pressedBackdrop.current = e.target === e.currentTarget;
+      }}
+      onClick={(e) => {
+        // The backdrop is part of the dialog element itself; the content fills the rest. Both the press
+        // and the release must be on it, so selecting text and letting go outside never closes the sheet.
+        if (props.closeOnOutsideClick && e.target === e.currentTarget && pressedBackdrop.current) onClose();
+        pressedBackdrop.current = false;
       }}
       className={`m-auto max-h-[calc(100dvh-3rem)] overflow-hidden rounded-xl border border-line bg-paper p-0 text-ink shadow-2xl backdrop:bg-ink/50 max-sm:fixed max-sm:inset-0 max-sm:h-[100dvh] max-sm:max-h-none max-sm:w-full max-sm:max-w-none max-sm:rounded-none max-sm:border-0 ${
         props.wide ? "w-[min(640px,calc(100vw-2rem))]" : "w-[min(520px,calc(100vw-2rem))]"

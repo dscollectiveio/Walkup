@@ -180,7 +180,7 @@ describe("urgentItems — Worth a minute today", () => {
 
     it("sends several emergencies to Today", () => {
       const [item] = urgentItems({ ...quiet, repairsEmergency: { count: 2, firstTitle: "Gas smell", firstId: "x" } });
-      expect(item).toMatchObject({ title: "2 emergency problems open", action: { href: "/repairs?view=today" } });
+      expect(item).toMatchObject({ title: "2 emergency problems open", action: { href: "/repairs?view=problems" } });
     });
 
     it("words each repairs item from the spec", () => {
@@ -193,7 +193,7 @@ describe("urgentItems — Worth a minute today", () => {
         contractorPaperwork: { expired: 1, firstName: "Ace Plumbing" },
       });
       const byKey = Object.fromEntries(items.map((i) => [i.key, i]));
-      expect(byKey.repairs_possible_emergency).toMatchObject({ title: "2 reports may be an emergency", tone: "warning", action: { href: "/repairs?view=today" } });
+      expect(byKey.repairs_possible_emergency).toMatchObject({ title: "2 reports may be an emergency", tone: "warning", action: { href: "/repairs?view=problems" } });
       expect(byKey.repairs_urgent).toMatchObject({ title: "1 urgent problem open", tone: "bad", action: { href: "/repairs?view=problems&priority=urgent" } });
       expect(byKey.repairs_overdue).toMatchObject({ title: "3 problems past their target date", action: { href: "/repairs?view=problems&sort=due" } });
       expect(byKey.upkeep_overdue).toMatchObject({ title: "Gutter cleaning is overdue", action: { label: "Open upkeep", href: "/repairs?view=upkeep&show=overdue" } });

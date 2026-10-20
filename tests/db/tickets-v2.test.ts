@@ -551,7 +551,7 @@ describe("tickets v2", () => {
     expect([e.code, e.hint]).toEqual(["22023", "reason_required"]);
     await set(t.id, "low", "Checked it; it was a neighbour's barbecue.");
     const c = await one<{ body: string; is_internal: boolean }>(null, `select body, is_internal from public.ticket_comments where ticket_id = $1::uuid`, [t.id]);
-    expect(c).toEqual({ body: `Urgency changed to "Can wait": Checked it; it was a neighbour's barbecue.`, is_internal: false });
+    expect(c).toEqual({ body: `Urgency changed to "Low": Checked it; it was a neighbour's barbecue.`, is_internal: false });
     await set(t.id, "urgent", null);
     const board = await report(f.cyUser, "Repaint the stair rail", { priority: "urgent" });
     await set(board.id, "low", null);

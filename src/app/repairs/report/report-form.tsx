@@ -24,6 +24,7 @@ import {
 import { TicketPhotoPicker, type HeldPhoto } from "@/components/repairs/ticket-photo-picker";
 import { detectEmergency, type BuildingEmergencyInfo, type EmergencyKind } from "@/lib/repairs/emergency";
 import { PRIORITY_LABEL, type TicketPriority } from "@/lib/repairs/labels";
+import { PRIORITY_TONE } from "@/lib/repairs/priority-tone";
 import { uploadTicketPhotos } from "@/lib/repairs/photos";
 import { similarOpenTickets } from "@/lib/repairs/similar";
 
@@ -308,7 +309,10 @@ export function ReportForm(props: {
         <legend className={labelClass}>How urgent?</legend>
         <div className="mt-2 grid gap-2 sm:grid-cols-3">
           {PRIORITIES.map((p) => (
-            <label key={p} className={choiceRow}>
+            <label
+              key={p}
+              className={`flex min-h-[44px] cursor-pointer items-center gap-3 rounded-lg border px-3 py-2 text-[14px] font-medium ${PRIORITY_TONE[p].option}`}
+            >
               <input
                 type="radio"
                 name="priority"
@@ -352,7 +356,7 @@ export function ReportForm(props: {
       <div className="-mx-4 sm:mx-0">
         <StickyActions>
           <button type="submit" disabled={busy} className={btnPrimary}>
-            {busy ? "Sending…" : "Report it"}
+            {busy ? "Sending…" : "Submit Ticket"}
           </button>
           <Link href="/repairs" className={btnSecondary} aria-disabled={busy}>
             Cancel

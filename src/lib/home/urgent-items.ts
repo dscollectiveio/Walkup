@@ -113,7 +113,7 @@ export function urgentItems(input: UrgentInputs): UrgentItem[] {
       why: emergency.firstTitle
         ? `Reported as an emergency: ${emergency.firstTitle}. Check someone is on it.`
         : "Reported as an emergency. Check someone is on it.",
-      action: { label: "Open it", href: n === 1 && emergency.firstId ? `/maintenance/${emergency.firstId}` : "/repairs?view=today" },
+      action: { label: "Open it", href: n === 1 && emergency.firstId ? `/maintenance/${emergency.firstId}` : "/repairs?view=problems" },
       tone: "bad",
     });
   }
@@ -124,7 +124,7 @@ export function urgentItems(input: UrgentInputs): UrgentItem[] {
       severity: 1,
       title: `${plural(n, "report")} may be an emergency`,
       why: "Suggested by AI from the report. Check and mark it, or dismiss it.",
-      action: { label: "Check", href: "/repairs?view=today" },
+      action: { label: "Check", href: "/repairs?view=problems" },
       tone: "warning",
     });
   }
@@ -134,7 +134,7 @@ export function urgentItems(input: UrgentInputs): UrgentItem[] {
       key: "repairs_urgent",
       severity: 1,
       title: `${plural(n, "urgent problem")} open`,
-      why: `Marked "Needs attention now" by whoever reported ${n === 1 ? "it" : "them"}.`,
+      why: `Marked "Urgent" by whoever reported ${n === 1 ? "it" : "them"}.`,
       action: { label: n === 1 ? "See it" : "See them", href: "/repairs?view=problems&priority=urgent" },
       tone: "bad",
     });

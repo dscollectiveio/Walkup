@@ -37,14 +37,21 @@ export interface ProblemRow {
   estimatedCost: string | null;
   actualCost: string | null;
   expenseId: string | null;
+  /** The board's chosen tracker status (work-status.ts); null = none chosen. Board and accountant only. */
+  workStatus: string | null;
+  /** The assigned contractor's W-9 on file (what "W-9 collected" shows); null with no contractor. */
+  vendorW9: boolean | null;
+  /** The assigned contractor's email and phone, for the Contact link. Board and accountant only. */
+  contractorEmail: string | null;
+  contractorPhone: string | null;
   bids: BidCounts;
   stage: Stage;
 }
 
 const BASE =
   "id, reference, title, status, priority, emergency_kind, trade, unit_id, units(label), location_detail, opened_on, created_at, scheduled_for, scheduled_window, assigned_vendor_id, reported_by, resolved_at";
-const BOARD = `${BASE}, vendors(name), ticket_board_details(due_on, assignee_person_id, estimated_cost::text, actual_cost::text, expense_id), ticket_bids(status)`;
-const BOARD_MINE = `${BASE}, vendors(name), ticket_board_details!inner(due_on, assignee_person_id, estimated_cost::text, actual_cost::text, expense_id), ticket_bids(status)`;
+const BOARD = `${BASE}, vendors(name, w9_on_file, email, phone), ticket_board_details(due_on, assignee_person_id, estimated_cost::text, actual_cost::text, expense_id, work_status), ticket_bids(status)`;
+const BOARD_MINE = `${BASE}, vendors(name, w9_on_file, email, phone), ticket_board_details!inner(due_on, assignee_person_id, estimated_cost::text, actual_cost::text, expense_id, work_status), ticket_bids(status)`;
 
 const one = <T,>(v: T | T[] | null | undefined): T | null => (Array.isArray(v) ? (v[0] ?? null) : (v ?? null));
 
@@ -57,6 +64,15 @@ export async function loadProblems(
   p: ProblemParams,
   opts: { mode: "list" | "board"; status?: "open" | "done" | "all"; limit?: number },
 ): Promise<ProblemRow[]> {
+  // "All" in the list is two reads, not one: open and completed tickets would otherwise compete for the
+  // same newest-250 window, and an old open ticket could fall out of view.
+  if (opts.mode === "list" && (opts.status ?? p.status) === "all") {
+    const [open, done] = await Promise.all([
+      loadProblems(supabase, viewer, p, { mode: "list", status: "open" }),
+      loadProblems(supabase, viewer, p, { mode: "list", status: "done", limit: DONE_LIMIT }),
+    ]);
+    return [...open, ...done];
+  }
   const fin = viewer.canReadFinancials;
   const select = !fin ? BASE : p.mine && viewer.isBoard ? BOARD_MINE : BOARD;
   let q = supabase.from("tickets").select(select);
@@ -69,7 +85,7 @@ export async function loadProblems(
   } else if (status === "open") q = q.not("status", "in", '("resolved","closed")');
   else if (status === "done") q = q.in("status", ["resolved", "closed"]);
 
-  if (p.urgentOnly) q = q.eq("priority", "urgent");
+  if (p.urgency) q = q.eq("priority", p.urgency);
   if (p.where === "shared") q = q.is("unit_id", null);
   else if (p.where === "units") q = q.not("unit_id", "is", null);
   if (p.trades.length) q = q.in("trade", p.trades);
@@ -140,6 +156,10 @@ export async function loadProblems(
       estimatedCost: (bd?.estimated_cost as string | null) ?? null,
       actualCost: (bd?.actual_cost as string | null) ?? null,
       expenseId: (bd?.expense_id as string | null) ?? null,
+      workStatus: (bd?.work_status as string | null) ?? null,
+      vendorW9: fin && r.assigned_vendor_id ? ((one(r.vendors as { w9_on_file: boolean } | { w9_on_file: boolean }[] | null)?.w9_on_file as boolean | undefined) ?? false) : null,
+      contractorEmail: fin ? ((one(r.vendors as { email: string | null } | { email: string | null }[] | null)?.email as string | null | undefined) ?? null) : null,
+      contractorPhone: fin ? ((one(r.vendors as { phone: string | null } | { phone: string | null }[] | null)?.phone as string | null | undefined) ?? null) : null,
       bids,
     };
     return { ...row, stage: ticketStage({ status: row.status, assigned_vendor_id: row.assignedVendorId, scheduled_for: row.scheduledFor }, bids, today) };

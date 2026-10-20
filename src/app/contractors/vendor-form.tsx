@@ -4,6 +4,8 @@ import { useActionState, useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { PhoneInput } from "@/components/phone-input";
 import { btnLink, btnPrimary, btnSecondary } from "@/components/repairs/styles";
+import { Sheet } from "@/components/repairs/sheet";
+import { HEADER_BUTTON } from "@/components/ui";
 import { TRADE_GROUP_LABEL, TRADES, type TradeGroup } from "@/lib/contractors/trades";
 import { addVendor, updateVendor } from "./vendor-actions";
 
@@ -393,9 +395,22 @@ export function AddVendorButton({
 }: {
   initialTrade?: string | null;
   label?: string;
-  variant?: "primary" | "secondary" | "link";
+  variant?: "primary" | "secondary" | "link" | "header" | "solid";
 }) {
   const [open, setOpen] = useState(false);
+  // On a card header ("header") or in a row of buttons ("solid") the form opens in a sheet instead of replacing the button.
+  if (variant === "header" || variant === "solid") {
+    return (
+      <>
+        <button type="button" onClick={() => setOpen(true)} className={variant === "solid" ? btnPrimary : HEADER_BUTTON}>
+          {label}
+        </button>
+        <Sheet open={open} onClose={() => setOpen(false)} wide title="Add a contractor">
+          {open ? <VendorForm vendor={null} onClose={() => setOpen(false)} initialTrade={initialTrade} /> : null}
+        </Sheet>
+      </>
+    );
+  }
   if (open) return <VendorForm vendor={null} onClose={() => setOpen(false)} initialTrade={initialTrade} />;
   const cls =
     variant === "link"

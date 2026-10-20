@@ -2,7 +2,7 @@ import { createClient, getUser } from "@/lib/supabase/server";
 import { Empty, money, moneyRounded } from "@/components/ui";
 import { btnSecondary } from "@/components/repairs/styles";
 import { toCents } from "@/lib/tax/form1120h";
-import { assembleReminders, homeTaxDeadlines, nextFilingReminder, nextOccurrence } from "@/lib/home/reminders";
+import { assembleReminders, homeTaxDeadlines, nextOccurrence } from "@/lib/home/reminders";
 import { urgentItems } from "@/lib/home/urgent-items";
 import {
   applySetupOverrides,
@@ -330,10 +330,6 @@ export default async function HomePage() {
   }));
   const statuses = withStatus(policyRows, todayLocal);
   const renewal = renewalFor(policyRows, todayLocal);
-  // The snapshot tile shows the soonest end among policies in force, renewed or not.
-  const soonestActive = statuses
-    .filter((s) => s.status === "active")
-    .sort((a, b) => a.daysToEnd - b.daysToEnd || a.policy.id.localeCompare(b.policy.id))[0];
 
   // Tax deadlines: the one list the Taxes tab and the .ics download also read
   // (lib/tax/deadlines), built from rows alone. The 1099 threshold is the row
@@ -746,8 +742,11 @@ export default async function HomePage() {
     contractorsMissingW9: taxHome.contractorsMissingW9,
   });
 
-  // The soonest tax filing, picked by key rather than by its display name.
-  const nextFiling = nextFilingReminder(reminders);
+  // What the data says about a setup step, ignoring any manual tick on the setup guide.
+  const stepAuto = (key: string) => {
+    const step = setupSections.flatMap((sec) => sec.steps).find((st) => st.key === key);
+    return step ? (step.autoDone ?? step.done) : false;
+  };
 
   const snapshotTiles = buildSnapshot({
     today,
@@ -759,17 +758,11 @@ export default async function HomePage() {
         lastSyncedAt: c.last_synced_at,
       })),
     uncategorizedCount: uncategorizedCount ?? 0,
-    insuranceRenewal: soonestActive
-      ? {
-          policy: { effective_to: soonestActive.policy.effective_to },
-          daysToEnd: soonestActive.daysToEnd,
-          withinReminder: soonestActive.daysToEnd <= soonestActive.policy.renewal_reminder_days,
-          renewed: soonestActive.renewed,
-        }
-      : null,
-    nextFiling: nextFiling
-      ? { name: nextFiling.name, dueOn: localIso(nextFiling.due), estimated: nextFiling.unverified === true }
-      : null,
+    insuranceInfo: {
+      policyRecorded: stepAuto("insurance"),
+      ownerSummaryPublished: stepAuto("insurance_owner_summary"),
+    },
+    taxInfo: { einOnFile: stepAuto("ein"), reviewed: stepAuto("tax") },
     contractors: contractorRows.map((c) => ({
       w9OnFile: c.v.w9_on_file === true,
       is1099Exempt: c.v.is_1099_exempt === true,
@@ -854,7 +847,7 @@ export default async function HomePage() {
       ) : null}
 
       {/* Where the association stands first, then To-do and setup (Worth a minute, then setup), half and half. */}
-      <div className="grid items-stretch gap-4 lg:grid-cols-2">
+      <div className="grid items-stretch gap-4 lg:h-[39rem] lg:grid-cols-2">
         <Standing
           totalCents={totalCents}
           operatingCents={operatingCents}
@@ -865,7 +858,7 @@ export default async function HomePage() {
           source={bankCash ? "bank" : "books"}
           booksGap={booksGap}
         />
-        <div className="flex min-w-0 flex-col gap-4">
+        <div className="flex min-h-0 min-w-0 flex-col gap-4">
           <TodoCard
             items={urgent}
             emptyNote={

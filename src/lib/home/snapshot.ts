@@ -4,9 +4,10 @@
 // testable.
 //
 // Four tiles, chosen for what a small self-managed HOA actually gets caught
-// out by: the bank feed quietly breaking or backing up, an insurance policy
-// lapsing, a filing deadline sneaking up, and a contractor without current
-// paperwork.
+// out by: the bank feed quietly breaking or backing up, the insurance
+// information and the tax information being incomplete, and a contractor
+// without current paperwork. Dated notices (an insurance renewal, a filing
+// deadline) live in Coming up, not here.
 
 export type SnapshotTone = "neutral" | "attention" | "good";
 
@@ -26,22 +27,16 @@ export interface SnapshotInput {
   bankConnections: { status: string; institutionName: string; lastSyncedAt: string | null }[];
   uncategorizedCount: number;
   /**
-   * The soonest-ending policy in force (lib/insurance/status): when it ends,
-   * whether it is inside its own renewal_reminder_days, and whether its
-   * renewal is already saved. Null with no active policy.
+   * How complete the insurance information is, from the same rows the setup
+   * guide reads: a policy recorded, and the summary of what it covers
+   * published to owners.
    */
-  insuranceRenewal: {
-    policy: { effective_to: string };
-    daysToEnd: number;
-    withinReminder: boolean;
-    renewed?: boolean;
-  } | null;
+  insuranceInfo: { policyRecorded: boolean; ownerSummaryPublished: boolean };
   /**
-   * The next tax or compliance filing (lib/tax/deadlines, via Home's
-   * reminders), if any, as an ISO date. May already be past: an overdue
-   * deadline keeps showing for a while rather than rolling forward.
+   * How complete the tax information is: the EIN on the association's profile,
+   * and whether the yearly tax review has been started (a filing computed).
    */
-  nextFiling: { name: string; dueOn: string; estimated: boolean } | null;
+  taxInfo: { einOnFile: boolean; reviewed: boolean };
   /**
    * Saved contractors not marked "do not use". Archived ones are dropped here;
    * paperwork only counts for contractors in use (lib/contractors/compliance).
@@ -63,14 +58,6 @@ const iso = (d: Date) =>
 
 function daysBetween(fromIso: string, toIso: string): number {
   return Math.round((new Date(`${toIso}T00:00:00`).getTime() - new Date(`${fromIso}T00:00:00`).getTime()) / 86_400_000);
-}
-
-function shortDate(dateIso: string, todayIso: string): string {
-  return new Date(`${dateIso}T00:00:00`).toLocaleDateString("en-US", {
-    month: "short",
-    day: "numeric",
-    ...(dateIso.slice(0, 4) !== todayIso.slice(0, 4) ? { year: "numeric" } : {}),
-  });
 }
 
 /** "synced today", "synced yesterday", "synced 4 days ago", or "not synced yet". */
@@ -122,36 +109,53 @@ export function buildSnapshot(input: SnapshotInput): SnapshotTile[] {
     });
   }
 
-  // ---- Insurance renewal ----------------------------------------------------------
-  const renewal = input.insuranceRenewal;
-  if (!renewal) {
-    tiles.push({ key: "insurance", label: "Building insurance policy", value: null, note: "No active policy recorded", href: "/insurance", tone: "neutral" });
-  } else {
-    const endsOn = renewal.policy.effective_to;
-    const days = renewal.daysToEnd;
+  // ---- Insurance information -------------------------------------------------------
+  // Dated notices (a renewal, a filing deadline) are Coming up's job; these two tiles say how
+  // complete the information itself is.
+  const ins = input.insuranceInfo;
+  if (!ins.policyRecorded) {
+    tiles.push({ key: "insurance", label: "Insurance information", value: null, note: "No policy recorded yet", href: "/insurance", tone: "neutral" });
+  } else if (!ins.ownerSummaryPublished) {
     tiles.push({
       key: "insurance",
-      label: "Building insurance renewal",
-      value: shortDate(endsOn, todayIso),
-      // A renewal already on file: nothing to chase, whatever the date.
-      note: renewal.renewed ? "renewal saved" : days <= 0 ? "today" : `in ${plural(days, "day")}`,
+      label: "Insurance information",
+      value: "Policy recorded",
+      note: "Owner summary not published yet",
       href: "/insurance",
-      tone: renewal.renewed ? "neutral" : renewal.withinReminder ? "attention" : "neutral",
+      tone: "attention",
+    });
+  } else {
+    tiles.push({
+      key: "insurance",
+      label: "Insurance information",
+      value: "Complete",
+      note: "Policy recorded · owner summary published",
+      href: "/insurance",
+      tone: "good",
     });
   }
 
-  // ---- Next filing ------------------------------------------------------------------
-  if (!input.nextFiling) {
-    tiles.push({ key: "filing", label: "Next tax filing due", value: null, note: "No deadline on file yet", href: "/tax", tone: "neutral" });
-  } else {
-    const days = daysBetween(todayIso, input.nextFiling.dueOn);
+  // ---- Tax information ---------------------------------------------------------------------
+  const tax = input.taxInfo;
+  if (!tax.einOnFile) {
+    tiles.push({ key: "tax", label: "Tax information", value: null, note: "EIN not on file yet", href: "/building", tone: "neutral" });
+  } else if (!tax.reviewed) {
     tiles.push({
-      key: "filing",
-      label: "Next tax filing due",
-      value: shortDate(input.nextFiling.dueOn, todayIso),
-      note: `${input.nextFiling.name}${input.nextFiling.estimated ? " (estimated)" : ""} · ${days < 0 ? "overdue" : days === 0 ? "due today" : `in ${plural(days, "day")}`}`,
+      key: "tax",
+      label: "Tax information",
+      value: "EIN on file",
+      note: "Tax review not started yet",
       href: "/tax",
-      tone: days <= 30 ? "attention" : "neutral",
+      tone: "attention",
+    });
+  } else {
+    tiles.push({
+      key: "tax",
+      label: "Tax information",
+      value: "Set up",
+      note: "EIN on file · tax review done",
+      href: "/tax",
+      tone: "good",
     });
   }
 

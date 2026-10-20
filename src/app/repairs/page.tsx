@@ -19,7 +19,6 @@ export const dynamic = "force-dynamic";
 export const maxDuration = 300;
 
 const LABEL: Record<RepairsView, string> = {
-  today: "Today",
   problems: "Problems",
   upkeep: "Upkeep",
   contractors: "Contractors",
@@ -27,7 +26,6 @@ const LABEL: Record<RepairsView, string> = {
 };
 
 const BLURB: Record<RepairsView, string> = {
-  today: "What needs you this week, in one place.",
   problems: "Anything broken in the building, who is fixing it, and where it stands.",
   upkeep: "The care the building needs on a calendar, whether or not anything is broken.",
   contractors: "Who you call, their paperwork, and how they have done.",
@@ -56,16 +54,16 @@ export default async function RepairsPage({ searchParams }: { searchParams: Prom
       <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
         <div>
           <h1 className="text-[20px] font-bold tracking-tight text-ink">Repairs &amp; Upkeep</h1>
-          <p className="mt-1 text-mute">{BLURB[view]}</p>
+          <p className="mt-1 text-mute">
+            {view === "problems" && viewer.isBoard
+              ? "What needs you this week, then every problem in the building and where it stands."
+              : BLURB[view]}
+          </p>
         </div>
-        {viewer.canReport ? (
-          <Link href="/repairs/report" className={`${btnPrimary} w-full shrink-0 sm:w-auto`}>
-            Report a problem
-          </Link>
-        ) : null}
       </div>
 
-      <nav aria-label="Repairs and upkeep" className="relative -mx-1 overflow-x-auto px-1">
+      <div className="flex flex-wrap items-center justify-between gap-3">
+      <nav aria-label="Repairs and upkeep" className="relative -mx-1 min-w-0 overflow-x-auto px-1">
         <div className="inline-flex rounded-full border border-line bg-paper p-0.5">
           {views.map((v) => {
             const b = badges[v];
@@ -95,25 +93,32 @@ export default async function RepairsPage({ searchParams }: { searchParams: Prom
           })}
         </div>
       </nav>
+      {viewer.canReport && view === "problems" ? (
+        <Link href="/repairs/report" className={`${btnPrimary} shrink-0`}>
+          Report a problem
+        </Link>
+      ) : null}
+      </div>
 
       {view === "problems" && viewer.canReadFinancials ? (
         <LayoutMemory layout={problemParams.layout} fromUrl={problemParams.layoutFromUrl} boardHref={problemsHref(problemParams, { layout: "board" })} />
       ) : null}
 
-      {view === "today" ? (
-        <TodayView supabase={supabase} viewer={viewer} since={since} />
-      ) : view === "problems" ? (
+      {view === "problems" ? (
         viewer.canReadFinancials ? (
-          <ProblemsView supabase={supabase} viewer={viewer} params={problemParams} />
+          <>
+            {viewer.isBoard ? <TodayView supabase={supabase} viewer={viewer} since={since} /> : null}
+            <ProblemsView supabase={supabase} viewer={viewer} params={problemParams} />
+          </>
         ) : (
           <OwnerProblemsView supabase={supabase} viewer={viewer} since={since} />
         )
       ) : view === "upkeep" ? (
-        <UpkeepView supabase={supabase} viewer={viewer} show={first(sp.show)} archived={first(sp.archived) === "1"} />
+        <UpkeepView supabase={supabase} viewer={viewer} show={first(sp.show)} archived={first(sp.archived) === "1"} layout={first(sp.layout)} month={first(sp.month)} />
       ) : view === "contractors" ? (
         <ContractorsView supabase={supabase} viewer={viewer} params={parseDirectoryParams(sp)} />
       ) : (
-        <BillsView supabase={supabase} viewer={viewer} show={first(sp.show)} />
+        <BillsView supabase={supabase} viewer={viewer} show={first(sp.show)} q={first(sp.q)} pay={first(sp.pay)} freq={first(sp.freq)} sort={first(sp.sort)} />
       )}
     </div>
   );

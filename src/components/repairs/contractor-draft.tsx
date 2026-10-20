@@ -68,7 +68,7 @@ export function ContractorDraft(props: {
               }
             })
           }
-          className="min-h-[44px] text-[13px] text-mute underline underline-offset-2 hover:text-ink"
+          className="min-h-[44px] text-[13px] text-bad-text underline underline-offset-2 hover:brightness-75"
         >
           {pending ? "Discarding…" : "Discard this draft"}
         </button>

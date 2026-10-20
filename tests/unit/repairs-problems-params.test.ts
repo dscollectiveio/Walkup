@@ -14,13 +14,13 @@ const OWNER = { isBoard: false, canReadFinancials: false };
 
 describe("views", () => {
   it("shows each viewer only the views they may use", () => {
-    expect(viewsFor(BOARD)).toEqual(["today", "problems", "upkeep", "contractors", "bills"]);
+    expect(viewsFor(BOARD)).toEqual(["problems", "upkeep", "contractors", "bills"]);
     expect(viewsFor(ACCOUNTANT)).toEqual(["problems", "upkeep", "contractors", "bills"]);
     expect(viewsFor(OWNER)).toEqual(["problems", "upkeep"]);
   });
 
-  it("defaults to Today for the board and Problems for everyone else", () => {
-    expect(resolveView(undefined, BOARD)).toBe("today");
+  it("defaults to Problems for everyone (Today now sits at the top of it for the board)", () => {
+    expect(resolveView(undefined, BOARD)).toBe("problems");
     expect(resolveView(undefined, OWNER)).toBe("problems");
     expect(resolveView(undefined, ACCOUNTANT)).toBe("problems");
   });
@@ -28,7 +28,8 @@ describe("views", () => {
   it("falls back instead of showing an owner a board page", () => {
     expect(resolveView("today", OWNER)).toBe("problems");
     expect(resolveView("bills", OWNER)).toBe("problems");
-    expect(resolveView("nonsense", BOARD)).toBe("today");
+    expect(resolveView("nonsense", BOARD)).toBe("problems");
+    expect(resolveView("today", BOARD)).toBe("problems");
     expect(resolveView("bills", ACCOUNTANT)).toBe("bills");
   });
 });
@@ -36,13 +37,13 @@ describe("views", () => {
 describe("parseProblemParams", () => {
   it("defaults", () => {
     const p = parseProblemParams({}, BOARD);
-    expect(p).toMatchObject({ layout: "list", layoutFromUrl: false, q: "", status: "open", stage: null, trades: [], where: null, urgentOnly: false, mine: false, sort: "priority", older: false });
+    expect(p).toMatchObject({ layout: "list", layoutFromUrl: false, q: "", status: "all", stage: null, trades: [], where: null, urgency: null, urgentOnly: false, mine: false, sort: "priority", older: false });
     expect(hasFilters(p)).toBe(false);
   });
 
   it("ignores invalid values", () => {
     const p = parseProblemParams({ status: "bogus", sort: "nope", where: "roof", stage: "maybe", trade: ["plumbing", "laser"], layout: "grid" }, BOARD);
-    expect(p.status).toBe("open");
+    expect(p.status).toBe("all");
     expect(p.sort).toBe("priority");
     expect(p.where).toBeNull();
     expect(p.stage).toBeNull();
@@ -67,6 +68,7 @@ describe("parseProblemParams", () => {
     const p = parseProblemParams({ trade: ["plumbing", "roofing", "plumbing"], priority: "urgent", mine: "1", q: "  leak " }, BOARD);
     expect(p.trades).toEqual(["plumbing", "roofing"]);
     expect(p.urgentOnly).toBe(true);
+    expect(p.urgency).toBe("urgent");
     expect(p.mine).toBe(true);
     expect(p.q).toBe("leak");
     expect(hasFilters(p)).toBe(true);

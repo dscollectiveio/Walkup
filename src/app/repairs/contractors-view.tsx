@@ -1,21 +1,22 @@
 import Link from "next/link";
-import { Answer, Card, Restricted } from "@/components/ui";
+import { ChevronRight } from "lucide-react";
+import { Card, Restricted } from "@/components/ui";
+import { ContractorFilters } from "./contractor-filters";
+import { DismissibleOnceAnswer } from "./dismissible-answer";
 import { Pill } from "@/components/repairs/pills";
 import { telHref } from "@/components/repairs/emergency-banner";
-import { btnLink, btnPrimary, btnSecondary, inputClass, labelClass, linkClass } from "@/components/repairs/styles";
+import { btnLink, btnPrimary, btnSecondary, linkClass } from "@/components/repairs/styles";
 import { AddVendorButton } from "@/app/contractors/vendor-form";
 import { DraftList, type DraftRow } from "@/app/contractors/emails-card";
 import { WriteToContractor } from "@/app/contractors/write-dialog";
 import { complianceFor, usedRecently, type ComplianceItem } from "@/lib/contractors/compliance";
 import {
-  CONTRACTOR_SORTS,
   DRAFT_KIND_LABEL,
   directoryHref,
   hasDirectoryFilters,
   matchesQuery,
   orderDrafts,
   paperworkSummary,
-  SORT_LABEL,
   sortDirectory,
   type DirectoryParams,
   type DirectoryRow,
@@ -37,6 +38,12 @@ type Row = DirectoryRow & {
   emergency: boolean;
   compliance: ComplianceItem[];
   inUse: boolean;
+  insuredUntil: string | null;
+  licenseNumber: string | null;
+  licenseExpiresOn: string | null;
+  w9OnFile: boolean;
+  exempt1099: boolean;
+  openProblems: number;
 };
 
 const one = <T,>(v: T | T[] | null | undefined): T | null => (Array.isArray(v) ? (v[0] ?? null) : (v ?? null));
@@ -86,6 +93,7 @@ export async function ContractorsView({ supabase, viewer, params }: { supabase: 
   // Usage: last used, and "in use" (an open problem, a usual upkeep job, or used in the last year).
   const last = new Map<string, string>();
   const openWork = new Set<string>();
+  const openCount = new Map<string, number>();
   const bump = (id: string | null, date: string | null) => {
     if (!id || !date) return;
     const d = date.slice(0, 10);
@@ -93,7 +101,10 @@ export async function ContractorsView({ supabase, viewer, params }: { supabase: 
   };
   for (const t of ticketsRes.data ?? []) {
     bump(t.assigned_vendor_id as string, t.opened_on as string);
-    if (t.status !== "resolved" && t.status !== "closed") openWork.add(t.assigned_vendor_id as string);
+    if (t.status !== "resolved" && t.status !== "closed") {
+      openWork.add(t.assigned_vendor_id as string);
+      openCount.set(t.assigned_vendor_id as string, (openCount.get(t.assigned_vendor_id as string) ?? 0) + 1);
+    }
   }
   for (const e of expensesRes.data ?? []) bump(e.vendor_id as string, e.paid_on as string);
   for (const u of upkeepRes.data ?? []) bump(u.vendor_id as string, u.done_on as string);
@@ -144,6 +155,12 @@ export async function ContractorsView({ supabase, viewer, params }: { supabase: 
       emergency: v.emergency_service === true,
       compliance: items,
       inUse,
+      insuredUntil: (v.insured_until as string | null) ?? null,
+      licenseNumber: str(v.license_number),
+      licenseExpiresOn: (v.license_expires_on as string | null) ?? null,
+      w9OnFile: v.w9_on_file === true,
+      exempt1099: v.is_1099_exempt === true,
+      openProblems: openCount.get(id) ?? 0,
     };
   });
 
@@ -163,7 +180,9 @@ export async function ContractorsView({ supabase, viewer, params }: { supabase: 
       .filter((r) => matchesQuery(r, params.q)),
     params.sort,
   );
-  const archivedCount = all.filter((r) => r.archived).length;
+  // Counted on its own: the list above leaves archived contractors out unless "Show archived" is on.
+  const { count: archivedTotal } = await supabase.from("vendors").select("id", { count: "exact", head: true }).not("archived_at", "is", null);
+  const archivedCount = archivedTotal ?? 0;
 
   const tradesInUse = new Set(all.flatMap((r) => r.trades));
   const mainTrades = TRADES.filter((t) => tradesInUse.has(t.slug) || params.trades.includes(t.slug));
@@ -193,6 +212,14 @@ export async function ContractorsView({ supabase, viewer, params }: { supabase: 
       <Card navy title="Your contractors">
         <div className="space-y-3 py-2">
           <p className="text-[13px] text-mute">No contractors saved yet. Add the ones you already use, or find someone for a job.</p>
+          {archivedCount > 0 ? (
+            <p className="text-[13px] text-mute">
+              You have {archivedCount} archived {archivedCount === 1 ? "contractor" : "contractors"}.{" "}
+              <Link href={directoryHref({ ...params, archived: true })} className={linkClass}>
+                Show archived
+              </Link>
+            </p>
+          ) : null}
           {isBoard ? (
             <div className="flex flex-wrap gap-2">
               <AddVendorButton />
@@ -214,7 +241,7 @@ export async function ContractorsView({ supabase, viewer, params }: { supabase: 
   return (
     <div className="space-y-6">
       {paperwork ? (
-        <Answer status={paperwork.status} headline={paperwork.headline}>
+        <DismissibleOnceAnswer status={paperwork.status} headline={paperwork.headline}>
           <ul className="space-y-1 text-[13px]">
             {paperwork.shown.map((p) => (
               <li key={p.id}>
@@ -226,111 +253,77 @@ export async function ContractorsView({ supabase, viewer, params }: { supabase: 
             ))}
             {paperwork.more > 0 ? <li>and {paperwork.more} more</li> : null}
           </ul>
-        </Answer>
+        </DismissibleOnceAnswer>
       ) : null}
 
       {isBoard ? (
-        <div className="flex flex-wrap gap-2 max-sm:[&>*]:flex-1">
-          <AddVendorButton />
-          <Link href="/repairs/find" className={btnSecondary}>
+        <div className="flex flex-wrap justify-end gap-2">
+          <AddVendorButton variant="solid" />
+          <Link href="/repairs/find" className={btnPrimary}>
             Find a contractor
           </Link>
         </div>
       ) : null}
 
-      <form method="get" action="/repairs" className="space-y-3">
-        <input type="hidden" name="view" value="contractors" />
-        <div className="flex flex-col gap-2 sm:flex-row sm:items-end">
-          <div className="flex-1">
-            <label htmlFor="contractor-search" className={labelClass}>
-              Search contractors
-            </label>
-            <input id="contractor-search" name="q" type="search" defaultValue={params.q} placeholder="Name, contact or kind of work" className={inputClass} />
-          </div>
-          <button type="submit" className={btnSecondary}>
-            Search
-          </button>
-        </div>
-        <details className="rounded-lg border border-line px-4" open={filtered || params.sort !== "status"}>
-          <summary className="flex min-h-[44px] cursor-pointer items-center text-[13px] font-medium text-ink">Filters and sort</summary>
-          <div className="space-y-4 pb-4 pt-2">
-            <fieldset>
-              <legend className={labelClass}>Kind of work</legend>
-              <div className="mt-2 flex flex-wrap gap-1.5">
-                {mainTrades.map((t) => (
-                  <TradeChip key={t.slug} slug={t.slug} label={t.label} checked={params.trades.includes(t.slug)} />
-                ))}
-              </div>
-              {moreTrades.length > 0 ? (
-                <details className="mt-2">
-                  <summary className="inline-flex min-h-[44px] cursor-pointer items-center text-[13px] text-mute">More…</summary>
-                  <div className="mt-1 flex flex-wrap gap-1.5">
-                    {moreTrades.map((t) => (
-                      <TradeChip key={t.slug} slug={t.slug} label={t.label} checked={params.trades.includes(t.slug)} />
-                    ))}
-                  </div>
-                </details>
-              ) : null}
-            </fieldset>
-            <div className="grid gap-3 sm:grid-cols-3">
-              <div>
-                <label htmlFor="contractor-status" className={labelClass}>
-                  Status
-                </label>
-                <select id="contractor-status" name="status" defaultValue={params.status ?? ""} className={inputClass}>
-                  <option value="">Any</option>
-                  <option value="preferred">Preferred</option>
-                  <option value="okay">Okay</option>
-                  <option value="do_not_use">Do not use</option>
-                </select>
-              </div>
-              <div>
-                <label htmlFor="contractor-sort" className={labelClass}>
-                  Sort
-                </label>
-                <select id="contractor-sort" name="sort" defaultValue={params.sort} className={inputClass}>
-                  {CONTRACTOR_SORTS.map((s) => (
-                    <option key={s} value={s}>
-                      {SORT_LABEL[s]}
-                    </option>
-                  ))}
-                </select>
-              </div>
-              <label className="flex min-h-[44px] cursor-pointer items-center gap-2 self-end text-[13px] text-ink">
-                <input type="checkbox" name="archived" value="1" defaultChecked={params.archived} className="h-5 w-5" />
-                Show archived{archivedCount > 0 && !params.archived ? ` (${archivedCount})` : ""}
-              </label>
-            </div>
-            <div className="flex flex-wrap gap-2">
-              <button type="submit" className={btnPrimary}>
-                Apply
-              </button>
-              {filtered || params.sort !== "status" ? (
-                <Link href={CONTRACTORS_HREF} className={btnSecondary}>
-                  Clear
-                </Link>
-              ) : null}
-            </div>
-          </div>
-        </details>
-      </form>
+      <section aria-labelledby="contractors-card-title" className="rounded-xl border border-line bg-paper">
+        {/* On desktop everything down to the column headers stays put while the rows scroll under it. */}
+        <div className="z-20 rounded-t-xl bg-paper xl:sticky xl:top-[56px]">
+          <header className="rounded-t-[11px] band bg-ink px-5 py-3">
+            <h2 id="contractors-card-title" className="eyebrow text-paper">
+              {params.archived ? "Your contractors, including archived" : "Your contractors"}
+            </h2>
+            <p className="mt-0.5 text-[12px] text-ondark-mute">Who you call, their paperwork, and how they&rsquo;ve done.</p>
+          </header>
 
-      <Card navy title={params.archived ? "Your contractors, including archived" : "Your contractors"} hint="Who you call, their paperwork, and how they've done.">
-        {shown.length === 0 ? (
-          <p className="text-[13px] text-mute">
-            No contractors match.{" "}
-            <Link href={directoryHref({ ...params, q: "", trades: [], status: null, archived: false })} className={linkClass}>
-              Clear the search or filters.
-            </Link>
-          </p>
-        ) : (
-          <ul className="divide-y divide-line">
-            {shown.map((r) => (
-              <ContractorRow key={r.id} r={r} isBoard={isBoard} />
-            ))}
-          </ul>
-        )}
-      </Card>
+          {/* Search and filters, set apart from the list by a hard line. */}
+          <div className="border-b-2 border-line-strong bg-fill/40">
+            <ContractorFilters
+              key={directoryHref(params)}
+              params={params}
+              mainTrades={mainTrades}
+              moreTrades={moreTrades}
+              archivedCount={archivedCount}
+              clearHref={filtered || params.sort !== "status" ? CONTRACTORS_HREF : null}
+            />
+          </div>
+
+          {shown.length > 0 ? (
+            <div className="hidden px-5 pt-3 xl:block">
+              <div className="relative isolate">
+                <ColumnLines />
+                <div aria-hidden="true" className={`${COLUMNS} border-b border-line pb-2 text-[11px] font-bold uppercase tracking-wide text-ink xl:pl-9`}>
+                  <span className="text-center">Contractor</span>
+                  <span className="text-center">Contact</span>
+                  <span className="text-center">Rating</span>
+                  <span className="text-center">Last used</span>
+                  <span className="text-center">Paperwork</span>
+                </div>
+              </div>
+            </div>
+          ) : null}
+        </div>
+
+        <div className="px-5 pb-3 pt-1">
+          {shown.length === 0 ? (
+            <p className="py-2 text-[13px] text-mute">
+              No contractors match.{" "}
+              <Link href={directoryHref({ ...params, q: "", trades: [], status: null, archived: false })} className={linkClass}>
+                Clear the search or filters.
+              </Link>
+            </p>
+          ) : (
+            <div className="relative isolate">
+              <ColumnLines />
+              {/* Every other contractor gets a faint blue band, edge to edge. */}
+              <ul className="divide-y divide-line [&>li:nth-child(even)]:bg-ink/[0.045]">
+                {shown.map((r) => (
+                  <ContractorRow key={r.id} r={r} isBoard={isBoard} todayIso={today} />
+                ))}
+              </ul>
+            </div>
+          )}
+        </div>
+      </section>
 
       {isBoard ? (
         <section id="emails" className="scroll-mt-4">
@@ -346,78 +339,160 @@ export async function ContractorsView({ supabase, viewer, params }: { supabase: 
   );
 }
 
-function TradeChip({ slug, label, checked }: { slug: string; label: string; checked: boolean }) {
-  return (
-    <label className="inline-flex min-h-[40px] cursor-pointer items-center rounded-full border border-line-strong px-3 text-[12px] text-ink has-[:checked]:border-ink has-[:checked]:bg-ink has-[:checked]:text-paper has-[:focus-visible]:outline has-[:focus-visible]:outline-2 has-[:focus-visible]:outline-brass">
-      <input type="checkbox" name="trade" value={slug} defaultChecked={checked} className="sr-only" />
-      {label}
-    </label>
-  );
-}
-
 const STATUS_PILL: Record<Row["status"], { label: string; tone: "good" | "outline" | "bad" }> = {
   preferred: { label: "Preferred", tone: "good" },
   okay: { label: "Okay", tone: "outline" },
   do_not_use: { label: "Do not use", tone: "bad" },
 };
 
-function ContractorRow({ r, isBoard }: { r: Row; isBoard: boolean }) {
+/** The contractors table's fixed columns, desktop only. Below that each row stacks into one block. */
+const COLUMNS = "xl:grid xl:grid-cols-[minmax(0,1fr)_13rem_9rem_7rem_11rem] xl:items-center xl:gap-x-3";
+
+/**
+ * Thin vertical rules between the columns, drawn once down the table at each
+ * column's fixed right-hand offset (the running width of the columns to its
+ * right plus half a 0.75rem gap). Desktop only.
+ */
+function ColumnLines() {
+  const lines = ["xl:right-[11.375rem]", "xl:right-[19.125rem]", "xl:right-[28.875rem]", "xl:right-[42.625rem]"];
+  return (
+    <>
+      {lines.map((c) => (
+        <span key={c} aria-hidden="true" className={`pointer-events-none absolute inset-y-0 -z-10 hidden w-px bg-line xl:block ${c}`} />
+      ))}
+    </>
+  );
+}
+
+function ContractorRow({ r, isBoard, todayIso }: { r: Row; isBoard: boolean; todayIso: string }) {
   const s = STATUS_PILL[r.status];
   const worst = r.compliance[0];
+  const lapsed = (d: string | null) => d !== null && d < todayIso;
+  const label = "text-[11px] font-medium uppercase tracking-wide text-mute";
   return (
-    <li className="flex flex-col gap-3 py-4 sm:flex-row sm:items-start sm:justify-between">
-      <div className="min-w-0 space-y-1.5">
-        <div className="flex flex-wrap items-center gap-2">
-          <Link href={`/contractors/${r.id}`} className="text-[15px] font-medium text-ink underline-offset-2 hover:underline">
-            {r.name}
-          </Link>
-          <Pill tone={s.tone}>{s.label}</Pill>
-          {r.archived ? <Pill tone="outline">Archived</Pill> : null}
-          {r.emergency ? <Pill tone="info">Your board says: takes emergency calls</Pill> : null}
+    <li className="-mx-5 px-5">
+      <details className="group py-3">
+        <summary className="flex cursor-pointer list-none items-start gap-3 [&::-webkit-details-marker]:hidden">
+          <span
+            aria-hidden="true"
+            className="mt-0.5 flex h-6 w-6 shrink-0 items-center justify-center rounded-md border border-line-strong bg-paper text-ink group-hover:bg-fill"
+          >
+            <ChevronRight size={15} strokeWidth={2.2} className="transition-transform group-open:rotate-90" />
+          </span>
+          <span className="sr-only">Show or hide more about {r.name}</span>
+          <div className={`flex min-w-0 flex-1 flex-col gap-2 ${COLUMNS}`}>
+            {/* Contractor */}
+            <div className="min-w-0 space-y-1.5">
+              <div className="flex flex-wrap items-center gap-2">
+                <Link href={`/contractors/${r.id}`} className="text-[15px] font-medium text-ink underline-offset-2 hover:underline">
+                  {r.name}
+                </Link>
+                <Pill tone={s.tone}>{s.label}</Pill>
+                {r.archived ? <Pill tone="outline">Archived</Pill> : null}
+                {r.emergency ? <Pill tone="info">Takes emergency calls</Pill> : null}
+              </div>
+              {r.trades.length > 0 ? (
+                <div className="flex flex-wrap gap-1">
+                  {r.trades.map((t) => (
+                    <span key={t} className="rounded-full bg-fill px-2 py-0.5 text-[11px] text-mute">
+                      {tradeLabel(t)}
+                    </span>
+                  ))}
+                </div>
+              ) : null}
+            </div>
+
+            {/* Contact */}
+            <div className="flex min-w-0 flex-wrap items-center gap-x-3 xl:flex-col xl:items-center xl:gap-x-0">
+              {r.phone ? (
+                <a href={telHref(r.phone)} className={`${btnLink} !min-h-[24px] text-[12px]`}>
+                  {r.phone}
+                </a>
+              ) : null}
+              {r.email ? (
+                <a href={mailtoLink(r.email)} title={r.email} className={`${btnLink} !min-h-[24px] max-w-full text-[12px] xl:truncate`}>
+                  {r.email}
+                </a>
+              ) : null}
+              {r.website ? (
+                <a href={safeHttpUrl(r.website) ?? undefined} target="_blank" rel="noopener noreferrer" className={`${btnLink} !min-h-[24px] text-[12px]`}>
+                  Website
+                </a>
+              ) : null}
+              {!r.phone && !r.email && !r.website ? <span className="text-[13px] text-mute">No phone, email or website</span> : null}
+            </div>
+
+            {/* Rating */}
+            <div className="space-y-0.5 text-[12px] text-mute xl:text-center">
+              {isBoard && r.boardCount > 0 && r.boardAverage !== null ? (
+                <div>
+                  Your board {r.boardAverage.toFixed(1)} ({r.boardCount})
+                </div>
+              ) : null}
+              {r.googleRating !== null ? (
+                <div>
+                  Google {r.googleRating.toFixed(1)}
+                  {r.googleCount !== null ? ` (${r.googleCount.toLocaleString("en-US")})` : ""}
+                </div>
+              ) : null}
+              {!(isBoard && r.boardCount > 0 && r.boardAverage !== null) && r.googleRating === null ? <div className="text-mute-soft">No ratings</div> : null}
+            </div>
+
+            {/* Last used */}
+            <div className="text-[12px] text-mute xl:text-center">{r.lastUsed ? monthYear(r.lastUsed) : "Not used yet"}</div>
+
+            {/* Paperwork */}
+            <div className="xl:flex xl:justify-center">
+              {worst ? <Pill tone={worst.tone === "bad" ? "bad" : "warning"}>{worst.text}</Pill> : <span className="text-[12px] text-good-text">In order</span>}
+            </div>
+          </div>
+        </summary>
+
+        {/* The short version of everything about them. The full profile has the rest. */}
+        <div className="ml-9 mt-3 rounded-lg border border-line bg-paper p-4">
+          <dl className="grid gap-x-6 gap-y-3 text-[13px] sm:grid-cols-2 lg:grid-cols-4">
+            <div>
+              <dt className={label}>Contact person</dt>
+              <dd className="text-ink">{r.contactName ?? "Not recorded"}</dd>
+            </div>
+            <div>
+              <dt className={label}>Insurance</dt>
+              <dd className={lapsed(r.insuredUntil) ? "font-medium text-bad-text" : "text-ink"}>
+                {r.insuredUntil ? `${lapsed(r.insuredUntil) ? "Expired" : "Through"} ${monthYear(r.insuredUntil)}` : "None on file"}
+              </dd>
+            </div>
+            <div>
+              <dt className={label}>License</dt>
+              <dd className={lapsed(r.licenseExpiresOn) ? "font-medium text-bad-text" : "text-ink"}>
+                {r.licenseNumber ? `${r.licenseNumber}${r.licenseExpiresOn ? `, ${lapsed(r.licenseExpiresOn) ? "expired" : "through"} ${monthYear(r.licenseExpiresOn)}` : ""}` : "None on file"}
+              </dd>
+            </div>
+            <div>
+              <dt className={label}>W-9</dt>
+              <dd className={r.w9OnFile || r.exempt1099 ? "text-good-text" : "text-ink"}>
+                {r.w9OnFile ? "On file" : r.exempt1099 ? "Not needed (exempt)" : "Not collected yet"}
+              </dd>
+            </div>
+            <div>
+              <dt className={label}>Open problems</dt>
+              <dd className="text-ink">{r.openProblems === 0 ? "None" : r.openProblems}</dd>
+            </div>
+            <div>
+              <dt className={label}>Last used</dt>
+              <dd className="text-ink">{r.lastUsed ? monthYear(r.lastUsed) : "Not used yet"}</dd>
+            </div>
+            <div>
+              <dt className={label}>Emergency calls</dt>
+              <dd className="text-ink">{r.emergency ? "Your board says yes" : "Not noted"}</dd>
+            </div>
+          </dl>
+          <div className="mt-3 border-t border-line pt-3">
+            <Link href={`/contractors/${r.id}`} className="text-[13px] font-medium text-ink underline underline-offset-2">
+              Open {isBoard ? "the full profile" : "their profile"}
+            </Link>
+          </div>
         </div>
-        {r.trades.length > 0 ? (
-          <div className="flex flex-wrap gap-1">
-            {r.trades.map((t) => (
-              <span key={t} className="rounded-full bg-fill px-2 py-0.5 text-[11px] text-mute">
-                {tradeLabel(t)}
-              </span>
-            ))}
-          </div>
-        ) : null}
-        <div className="flex flex-wrap items-center gap-x-4">
-          {r.phone ? (
-            <a href={telHref(r.phone)} className={btnLink}>
-              {r.phone}
-            </a>
-          ) : null}
-          {r.email ? (
-            <a href={mailtoLink(r.email)} className={`${btnLink} break-all`}>
-              {r.email}
-            </a>
-          ) : null}
-          {r.website ? (
-            <a href={safeHttpUrl(r.website) ?? undefined} target="_blank" rel="noopener noreferrer" className={btnLink}>
-              Website
-            </a>
-          ) : null}
-          {!r.phone && !r.email && !r.website ? <span className="text-[13px] text-mute">No phone, email or website</span> : null}
-        </div>
-      </div>
-      <div className="shrink-0 space-y-1 text-[12px] text-mute sm:text-right">
-        {isBoard && r.boardCount > 0 && r.boardAverage !== null ? (
-          <div>
-            Your board {r.boardAverage.toFixed(1)} ({r.boardCount})
-          </div>
-        ) : null}
-        {r.googleRating !== null ? (
-          <div>
-            Google {r.googleRating.toFixed(1)}
-            {r.googleCount !== null ? ` (${r.googleCount.toLocaleString("en-US")})` : ""}
-          </div>
-        ) : null}
-        <div className="text-mute-soft">{r.lastUsed ? `Last used ${monthYear(r.lastUsed)}` : "Not used yet"}</div>
-        {worst ? <Pill tone={worst.tone === "bad" ? "bad" : "warning"}>{worst.text}</Pill> : null}
-      </div>
+      </details>
     </li>
   );
 }
