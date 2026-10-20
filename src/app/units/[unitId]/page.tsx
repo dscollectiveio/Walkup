@@ -84,7 +84,7 @@ export default async function UnitStatementPage({
         </p>
       </div>
 
-      <Card title="Fees charged" hint="What this unit has been billed, and how much of it has been paid.">
+      <Card navy title="Fees charged" hint="What this unit has been billed, and how much of it has been paid.">
         <div className="overflow-x-auto">
           <table className="w-full min-w-[32rem] text-[13px]">
             <thead>
@@ -124,7 +124,7 @@ export default async function UnitStatementPage({
         </div>
       </Card>
 
-      <Card title="Payments received">
+      <Card navy title="Payments received">
         <div className="overflow-x-auto">
           <table className="w-full min-w-[24rem] text-[13px]">
             <tbody className="divide-y divide-line">
@@ -140,7 +140,7 @@ export default async function UnitStatementPage({
         </div>
       </Card>
 
-      <Card title="Documents" hint="Anything filed against this unit specifically.">
+      <Card navy title="Documents" hint="Anything filed against this unit specifically.">
         <EntityDocuments
           targetTable="units"
           targetId={unit.id}

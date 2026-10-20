@@ -50,7 +50,7 @@ export default async function OwnerBuildingPage() {
         <p className="mt-1 text-mute">Who to contact, and what to do in an emergency.</p>
       </div>
 
-      <Card title="The association">
+      <Card navy title="The association">
         <p className="text-[15px] font-medium text-ink">{a?.display_name ?? viewer.associationName}</p>
         {a?.street_address ? <p className="text-[14px] text-ink">{a.street_address}</p> : null}
         {cityLine ? <p className="text-[14px] text-ink">{cityLine}</p> : null}
@@ -59,7 +59,7 @@ export default async function OwnerBuildingPage() {
         ) : null}
       </Card>
 
-      <Card title="Who to contact">
+      <Card navy title="Who to contact">
         <ContactLine contact={viewer.boardContact} canEdit={viewer.isBoardAdmin} />
         {roster.length > 0 ? (
           <div className="mt-4 border-t border-line pt-3">
@@ -76,7 +76,7 @@ export default async function OwnerBuildingPage() {
         ) : null}
       </Card>
 
-      <Card title="In an emergency">
+      <Card navy title="In an emergency">
         <p className="text-[15px] font-bold text-bad-text">Call 911 first if anyone is in danger.</p>
         {nothingEntered ? (
           <p className="mt-2 text-[14px] text-mute">Your board hasn&rsquo;t added this building&rsquo;s emergency information yet.</p>
@@ -124,13 +124,13 @@ export default async function OwnerBuildingPage() {
         </p>
       </Card>
 
-      <Card title="Documents">
+      <Card navy title="Documents">
         <Link href="/documents" className="flex min-h-[44px] items-center text-[14px] text-ink underline underline-offset-2">
           Governing documents, minutes and statements the board shared
         </Link>
       </Card>
 
-      <Card title="Insurance">
+      <Card navy title="Insurance">
         <Link href="/insurance" className="flex min-h-[44px] items-center text-[14px] text-ink underline underline-offset-2">
           What the master policy means for you
         </Link>

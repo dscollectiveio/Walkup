@@ -5,7 +5,7 @@ import { WAITLIST_STATES } from "@/lib/site-config";
 import { joinWaitlist } from "./waitlist-actions";
 
 const field =
-  "min-h-[44px] rounded-md border border-line-strong bg-paper px-3 text-[14px] text-ink focus:border-[#1B2A41] focus:outline-none focus:ring-2 focus:ring-[#D9A441]/40";
+  "min-h-[44px] rounded-md border border-line-strong bg-paper px-3 text-[14px] text-ink focus:border-[#1B2A41] focus:outline-none focus:ring-2 focus:ring-brass/40";
 
 /** "Outside Illinois? Leave your email." A plain confirmation, nothing else happens. */
 export function WaitlistForm() {

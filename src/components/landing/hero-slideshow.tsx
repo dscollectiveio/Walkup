@@ -300,7 +300,7 @@ export function HeroSlideshow() {
                   <span aria-hidden="true" className="flex gap-1.5">
                     <span className="h-2.5 w-2.5 rounded-full bg-white/25" />
                     <span className="h-2.5 w-2.5 rounded-full bg-white/25" />
-                    <span className="h-2.5 w-2.5 rounded-full bg-[#D9A441]" />
+                    <span className="h-2.5 w-2.5 rounded-full bg-brass" />
                   </span>
                   <span className="font-semibold text-white">{s.screen}</span>
                   <span className="ml-auto truncate">1420 W. Example St.</span>
@@ -351,7 +351,7 @@ export function HeroSlideshow() {
                     // Fills over the time to the next slide; holds still while paused.
                     <span
                       key={index}
-                      className="hero-progress absolute inset-0 origin-left rounded-full bg-[#D9A441]"
+                      className="hero-progress absolute inset-0 origin-left rounded-full bg-brass"
                       style={{ animationDuration: `${ADVANCE_MS}ms`, animationPlayState: paused ? "paused" : "running" }}
                     />
                   ) : null}

@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
+import { btnSecondary } from "@/components/repairs/styles";
 
 /**
  * One payment detail with a Copy button (owner-portal-spec 4.6). The status
@@ -39,7 +40,7 @@ export function CopyField({ label, value, mono = true }: { label: string; value:
         type="button"
         onClick={copy}
         aria-label={`Copy ${label}`}
-        className="inline-flex min-h-[44px] shrink-0 items-center justify-center rounded-md border border-line-strong bg-paper px-4 py-2 text-[13px] font-medium text-ink hover:bg-fill"
+        className={`${btnSecondary} shrink-0`}
       >
         Copy
       </button>

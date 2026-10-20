@@ -122,7 +122,7 @@ describe("taxDeadlines — where a date comes from", () => {
     expect(d.daysLeft).toBeNull();
     expect(d.overdue).toBe(false);
     expect(d.note).toContain("June 30");
-    expect(d.note).toContain("ask your CPA");
+    expect(d.note).toContain("Ask your CPA");
     expect(d.milestones).toEqual([]);
   });
 
@@ -141,7 +141,7 @@ describe("taxDeadlines — where a date comes from", () => {
       const d = rows.get(key)!;
       expect(d).toMatchObject({ basis: "none", dueOn: null, citation: null, daysLeft: null, overdue: false, milestones: [] });
       expect(d.note).toContain("June 30");
-      expect(d.note).toContain("ask your CPA");
+      expect(d.note).toContain("Ask your CPA");
     }
   });
 
@@ -149,7 +149,7 @@ describe("taxDeadlines — where a date comes from", () => {
     const outcomes = [{ formCode: "irs_1120", taxYear: 2025, determination: "likely_required" }];
     const none = byKey(input({ outcomes })).get("irs_1120:2025")!;
     expect(none).toMatchObject({ basis: "none", dueOn: null });
-    expect(none.note).toContain("ask your CPA");
+    expect(none.note).toContain("Ask your CPA");
     const verified = byKey(
       input({ outcomes, templates: [template({ formCode: "irs_1120", taxYear: 2025, dueRule: "FY_END + 4 MONTHS, DAY 15", dueRuleCitation: "Form 1120 instructions" })] }),
     ).get("irs_1120:2025")!;

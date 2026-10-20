@@ -48,7 +48,7 @@ export async function GET(request: NextRequest) {
   sheet.getCell("A1").value = association.display_name;
   sheet.getCell("A1").font = { bold: true, size: 14 };
   sheet.mergeCells("A2:B2");
-  sheet.getCell("A2").value = `${title} — ${bounds.label}`;
+  sheet.getCell("A2").value = `${title}: ${bounds.label}`;
   sheet.getCell("A2").font = { size: 11, color: { argb: "FF6E7385" } };
   sheet.addRow([]);
 
@@ -185,7 +185,7 @@ export async function GET(request: NextRequest) {
   }
 
   const buffer = await workbook.xlsx.writeBuffer();
-  const filename = `${association.display_name} — ${yearEnd ? "Year-end package" : title} — ${bounds.label}.xlsx`.replace(/[/\\?%*:|"<>]/g, "-");
+  const filename = `${association.display_name} - ${yearEnd ? "Year-end package" : title} - ${bounds.label}.xlsx`.replace(/[/\\?%*:|"<>]/g, "-");
 
   return new NextResponse(buffer as unknown as BodyInit, {
     headers: {

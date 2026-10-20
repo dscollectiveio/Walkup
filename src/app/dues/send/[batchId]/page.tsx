@@ -243,6 +243,7 @@ export default async function ReviewPage({ params }: { params: Promise<{ batchId
         ) : (
           <>
             <Card
+              navy
               title="Send these from your own email"
               hint={blockedReason ?? undefined}
             >
@@ -263,7 +264,7 @@ export default async function ReviewPage({ params }: { params: Promise<{ batchId
       {!isDraftBatch && manualDrafts.length > 0 ? <ManualDrafts drafts={manualDrafts} /> : null}
 
       {leftOut.length > 0 ? (
-        <Card title="Left out">
+        <Card navy title="Left out">
           <ul className="divide-y divide-line text-[13px]">
             {leftOut.map((r) => (
               <li key={r.id} className="flex flex-wrap justify-between gap-x-4 gap-y-1 py-2">

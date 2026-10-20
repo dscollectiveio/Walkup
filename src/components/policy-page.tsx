@@ -23,8 +23,8 @@ export function PolicyPage({
         <Lockup />
       </Link>
 
-      <h1 className="mt-8 text-[22px] font-bold tracking-tight text-ink">{title}</h1>
-      <p className="mt-2 text-[13px] text-mute-soft">{subtitle}</p>
+      <h1 className="mt-8 text-[20px] font-bold tracking-tight text-ink">{title}</h1>
+      <p className="mt-1 text-[13px] text-mute">{subtitle}</p>
 
       {intro ? <p className="mt-6 text-[13px] leading-relaxed text-mute">{intro}</p> : null}
 

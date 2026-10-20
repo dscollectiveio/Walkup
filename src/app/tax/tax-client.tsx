@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useTransition } from "react";
+import { btnPrimary, btnSecondary } from "@/components/repairs/styles";
 import { confirmIncomeClassification, startForm } from "./form-actions";
 
 /** The determination pill. `eligible` is the 1120-H election: both tests pass, the board chooses to file it. */
@@ -68,9 +69,8 @@ export interface FormCardView {
   muted: boolean;
 }
 
-const btn = "inline-flex min-h-[44px] items-center rounded-md px-4 text-[13px] font-medium disabled:opacity-50";
-const primaryBtn = `${btn} bg-ink text-paper hover:bg-ink-mid`;
-const secondaryBtn = `${btn} border border-line-strong bg-paper text-ink hover:bg-fill`;
+const primaryBtn = btnPrimary;
+const secondaryBtn = btnSecondary;
 
 export function FormCard({ view, canWrite, children }: { view: FormCardView; canWrite: boolean; children?: React.ReactNode }) {
   const [pending, start] = useTransition();
@@ -139,7 +139,7 @@ export function FormCard({ view, canWrite, children }: { view: FormCardView; can
                   </a>
                 </span>
               ))}
-              {view.linksWords ? <span className="text-mute-soft"> — {view.linksWords}</span> : null}
+              {view.linksWords ? <span className="text-mute-soft">: {view.linksWords}</span> : null}
             </>
           )}
         </p>
@@ -201,7 +201,7 @@ export function ClassifyIncomeRow({
             </span>
           ) : (
             <span className="text-warning-text">
-              Suggested: {isExempt ? "member income (exempt)" : "not member income (taxable)"} — not yet confirmed
+              Suggested: {isExempt ? "member income (exempt)" : "not member income (taxable)"}, not yet confirmed
             </span>
           )}
         </div>
@@ -223,7 +223,7 @@ export function ClassifyIncomeRow({
       {error ? <p className="w-full text-[12px] text-bad-text">{error}</p> : null}
       {!confirmedAt && canWrite ? (
         <p className="w-full text-[11px] text-mute">
-          Member income is what owners pay as owners — dues, assessments, their late fees. Interest, rent from outsiders,
+          Member income is what owners pay as owners: dues, assessments, their late fees. Interest, rent from outsiders,
           and laundry or vending usually isn&rsquo;t. If unsure, ask your CPA.
         </p>
       ) : null}

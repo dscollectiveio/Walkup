@@ -126,7 +126,7 @@ export default async function StatementsPage({ searchParams }: { searchParams: P
         {sp.from && !custom ? <p className="w-full text-[12px] text-bad-text">Use a start date and an end date on or after it.</p> : null}
       </form>
 
-      <Card title={`Statements for ${periodLabel(from, to)}`} hint={isAnnual(from, to) ? "This is a full calendar year, so the emails go out as annual statements." : undefined}>
+      <Card navy title={`Statements for ${periodLabel(from, to)}`} hint={isAnnual(from, to) ? "This is a full calendar year, so the emails go out as annual statements." : undefined}>
         {noEmail ? <p className="mb-4 text-[13px] text-mute">No owner has an email address yet. You can still download each statement.</p> : null}
         <StatementsForm rows={rows} from={from} to={to} canPrepare={viewer.isBoard} annual={isAnnual(from, to)} />
       </Card>

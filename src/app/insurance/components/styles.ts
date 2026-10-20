@@ -8,11 +8,9 @@ export const labelClass = "block text-[12px] font-medium text-ink";
 
 export const helpClass = "mt-1 text-[12px] text-mute";
 
-export const btnPrimary =
-  "inline-flex min-h-[44px] items-center justify-center rounded-md bg-ink px-4 text-[13px] font-medium text-paper hover:bg-ink-mid disabled:opacity-50";
-
-export const btnGhost =
-  "inline-flex min-h-[44px] items-center justify-center rounded-md border border-line-strong bg-paper px-4 text-[13px] font-medium text-ink hover:bg-fill disabled:opacity-50";
+// The shared button classes (docs/DESIGN-SYSTEM.md section 6); btnGhost is the
+// secondary button under its older insurance name.
+export { btnPrimary, btnSecondary as btnGhost } from "@/components/repairs/styles";
 
 export const btnDanger =
   "inline-flex min-h-[44px] items-center justify-center rounded-md border border-bad-line bg-bad-tint px-4 text-[13px] font-medium text-bad-text hover:opacity-90 disabled:opacity-50";

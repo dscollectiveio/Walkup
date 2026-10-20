@@ -1,0 +1,253 @@
+<!doctype html>
+<html lang="en" data-theme="light">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Walkup design system</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Outfit:wght@400;500;600;700;900&display=swap" rel="stylesheet">
+<style>
+:root{--ink:#1b2a41;--ink-mid:#283b5a;--brass:#d9a441;--on-brass:#1b2a41;--bone:#f5efe3;--paper:#fff;--fill:#ece5d6;--line:#e3ded3;--line-strong:#cdc6b6;--mute:#5b6475;--mute-soft:#8e93a3;--ondark-mute:#a9b3c7;--moss:#2f7a5c;--rust:#a3432f;--slate:#2d4a7c;
+--good:#2f7a5c;--good-tint:#e8f1ec;--good-line:#c3ddd0;--good-text:#1e5540;--warning:#d9a441;--warning-tint:#f8efdb;--warning-line:#e4cea6;--warning-text:#8a5f22;--bad:#a3432f;--bad-tint:#f7ebe6;--bad-line:#e4c4bc;--bad-text:#7a2519;--info:#2d4a7c;--info-tint:#eaeff7;--info-line:#c6d3e8;--info-text:#1d3560;--neutral:#5b6475;--neutral-tint:#ece5d6;--neutral-text:#1b2a41;--band:#1b2a41;--band-text:#fff;--eyebrow:#8a5f12}
+[data-theme=dark]{--ink:#f5efe3;--ink-mid:#e6dfd0;--bone:#111b2c;--paper:#1b2a41;--fill:#2a3a54;--line:#36465f;--line-strong:#566680;--mute:#a3acbd;--mute-soft:#8a93a4;--slate:#8c9bb7;--moss:#86b2a0;--rust:#d0897e;
+--good:#86b2a0;--good-tint:#193143;--good-line:#2c4a4d;--good-text:#c1d7ce;--warning-tint:#3a3427;--warning-line:#5c4d32;--warning-text:#ecdcc5;--bad:#d0897e;--bad-tint:#31273a;--bad-line:#563a43;--bad-text:#eacac5;--info:#8c9bb7;--info-tint:#1a2b4d;--info-line:#2f4166;--info-text:#c4ccda;--neutral:#a3acbd;--neutral-tint:#2a3a54;--neutral-text:#f5efe3;--band:#263c62;--band-text:#f5efe3;--eyebrow:#d9a441}
+*{box-sizing:border-box}
+body{margin:0;background:var(--bone);color:var(--ink);font-family:Outfit,system-ui,sans-serif;font-size:14px;line-height:1.5}
+.wrap{max-width:980px;margin:0 auto;padding:24px 20px 80px}
+h1,h2,h3{letter-spacing:-.01em;margin:0}
+h1{font-size:28px;font-weight:700}
+h2{font-size:20px;font-weight:700;margin:48px 0 6px;scroll-margin-top:70px}
+h3{font-size:15px;font-weight:700;margin:22px 0 6px}
+p{margin:6px 0}.mute{color:var(--mute)}.soft{color:var(--mute-soft)}
+.top{position:sticky;top:0;z-index:5;background:var(--band);color:var(--band-text);display:flex;align-items:center;gap:14px;padding:0 20px;height:56px}
+.top b{font-weight:500;letter-spacing:-.03em;font-size:20px}
+.top a{color:var(--band-text);text-decoration:none;font-size:12px;opacity:.85}
+.top .sp{flex:1}
+.tbtn{background:var(--paper);color:var(--ink);border:0;border-radius:6px;padding:6px 12px;font:500 13px Outfit;cursor:pointer}
+nav.toc{display:flex;flex-wrap:wrap;gap:6px 14px;margin:18px 0 0;font-size:13px}
+nav.toc a{color:var(--ink);text-underline-offset:3px}
+.card{background:var(--paper);border:1px solid var(--line);border-radius:8px;margin:12px 0;overflow:hidden}
+.card>.body{padding:16px 20px}
+.band-h{background:var(--band);color:var(--band-text);padding:14px 20px}
+.eyebrow{font-size:13px;line-height:1.25;font-weight:900;letter-spacing:.07em;text-transform:uppercase;margin:0}
+.hint{font-size:13px;color:var(--ondark-mute);margin-top:6px}
+.sec-h{border-bottom:1px solid var(--line);border-left:3px solid var(--brass);background:color-mix(in srgb,var(--ink) 7%,transparent);padding:8px 16px;font-size:12px;font-weight:700;text-transform:uppercase;letter-spacing:.05em}
+.sec-h.strong{background:color-mix(in srgb,var(--ink) 14%,transparent)}
+.sec-h.sm{font-size:11px;padding:6px 12px}
+.grid{display:grid;gap:12px}.g2{grid-template-columns:repeat(2,1fr)}.g3{grid-template-columns:repeat(3,1fr)}.g4{grid-template-columns:repeat(4,1fr)}
+@media(max-width:760px){.g2,.g3,.g4{grid-template-columns:1fr 1fr}}
+.sw{border:1px solid var(--line);border-radius:8px;overflow:hidden;background:var(--paper)}
+.sw i{display:block;height:54px}.sw div{padding:6px 10px;font-size:12px}.sw code{font-size:11px;color:var(--mute)}
+code{font-family:ui-monospace,Menlo,monospace;font-size:12px;background:var(--fill);padding:1px 5px;border-radius:4px}
+table{width:100%;border-collapse:collapse;font-size:13px}th,td{text-align:left;padding:8px 10px;border-bottom:1px solid var(--line);vertical-align:top}th{font-size:11px;text-transform:uppercase;letter-spacing:.06em;color:var(--mute);font-weight:600}
+.figures{font-weight:600;font-variant-numeric:tabular-nums lining-nums;letter-spacing:-.01em}
+.btn{display:inline-flex;align-items:center;justify-content:center;gap:6px;border-radius:6px;font:500 13px Outfit;cursor:pointer;border:1px solid transparent;text-decoration:none;transition:background-color .3s,border-color .3s}
+.b44{min-height:44px;padding:8px 16px}.b32{min-height:32px;padding:4px 12px;font-size:12px}.b28{min-height:28px;padding:2px 12px;font-size:12px}
+.primary{background:var(--ink);color:var(--paper)}.primary:hover{background:var(--ink-mid)}
+.secondary{background:var(--paper);color:var(--ink);border-color:var(--line-strong)}.secondary:hover{background:var(--fill)}
+.danger{background:var(--paper);color:var(--bad-text);border-color:var(--bad-line)}.danger:hover{background:var(--bad-tint)}
+.linkb{background:none;color:var(--ink);text-decoration:underline;text-underline-offset:2px;padding:0;min-height:0}
+.onband{background:var(--paper);color:var(--ink);padding:6px 12px;font-size:13px}
+.disabled{opacity:.6;cursor:not-allowed}
+.active{box-shadow:0 0 0 2px var(--paper),0 0 0 4px var(--brass)}
+.row{display:flex;flex-wrap:wrap;gap:10px;align-items:center}
+.pill{display:inline-block;border-radius:999px;padding:2px 9px;font-size:11px;font-weight:600;white-space:nowrap}
+.p-good{background:var(--good-tint);color:var(--good-text)}.p-bad{background:var(--bad-tint);color:var(--bad-text)}.p-warn{background:var(--warning-tint);color:var(--warning-text)}.p-info{background:var(--info-tint);color:var(--info-text)}.p-neutral{background:var(--neutral-tint);color:var(--neutral-text)}.p-ink{background:var(--ink);color:var(--paper)}
+.bubble{background:color-mix(in srgb,var(--brass) 20%,transparent);border:1px solid color-mix(in srgb,var(--brass) 40%,transparent);color:var(--ink);font-weight:600}
+.answer{border-left:3px solid;padding:14px 20px;margin:8px 0}.answer h4{margin:0;font-size:17px;font-weight:700}.answer p{margin:3px 0 0;font-size:13px}
+.a-good{border-color:var(--good);background:var(--good-tint);color:var(--good-text)}.a-warn{border-color:var(--warning);background:var(--warning-tint);color:var(--warning-text)}.a-bad{border-color:var(--bad);background:var(--bad-tint);color:var(--bad-text)}.a-info{border-color:var(--info);background:var(--info-tint);color:var(--info-text)}
+label.l{display:block;font-size:13px;font-weight:500}.in{display:block;width:100%;min-height:44px;margin-top:4px;border:1px solid var(--line-strong);border-radius:8px;background:var(--paper);color:var(--ink);padding:8px 12px;font:14px Outfit}
+.help{font-size:12px;color:var(--mute);margin-top:4px}.err{font-size:13px;color:var(--bad-text)}
+.seg{display:inline-flex;border:1px solid var(--line);border-radius:999px;background:var(--paper);padding:2px}.seg span{padding:7px 16px;border-radius:999px;font-size:12px;font-weight:500;color:var(--mute)}.seg .on{background:var(--ink);color:var(--paper)}
+.bars{display:grid;grid-template-columns:repeat(4,1fr);gap:4px}.bars div{height:12px;border-radius:999px;background:var(--line);overflow:hidden}.bars div b{display:block;height:100%;border-radius:999px;background:var(--good)}
+.bars.thin div{height:6px}.bars .now{box-shadow:0 0 0 2px var(--paper),0 0 0 3px color-mix(in srgb,var(--brass) 70%,transparent)}
+.one{height:12px;border-radius:999px;background:var(--line);overflow:hidden}.one b{display:block;height:100%;border-radius:999px;background:var(--brass)}
+.qlab{display:grid;grid-template-columns:repeat(4,1fr);gap:4px;font-size:11px;color:var(--mute)}
+.unit{border:1px solid var(--line);border-radius:12px;background:var(--paper);overflow:hidden}
+.unit .uh{display:flex;flex-wrap:wrap;gap:10px 16px;align-items:center;padding:12px 16px;border-bottom:1px solid var(--line);border-left:3px solid var(--brass);background:color-mix(in srgb,var(--ink) 14%,transparent)}
+.unit .uf{background:color-mix(in srgb,var(--fill) 40%,transparent);padding:10px 16px}
+.dos li,.donts li{margin:4px 0}.dos{color:var(--good-text)}.donts{color:var(--bad-text)}
+.note{border:1px dashed var(--line-strong);border-radius:8px;padding:10px 14px;background:var(--paper);font-size:13px}
+.type-row{display:flex;gap:18px;align-items:baseline;padding:10px 0;border-bottom:1px solid var(--line)}.type-row .meta{width:190px;flex:none;font-size:12px;color:var(--mute)}
+footer{margin-top:60px;font-size:12px;color:var(--mute-soft)}
+</style>
+</head>
+<body>
+<div class="top"><b>Walkup</b><a href="#principles">Principles</a><a href="#color">Color</a><a href="#type">Type</a><a href="#layout">Layout</a><a href="#headers">Headers</a><a href="#buttons">Buttons</a><a href="#forms">Forms</a><a href="#status">Status</a><a href="#data">Data</a><a href="#patterns">Patterns</a><span class="sp"></span><button class="tbtn" onclick="var h=document.documentElement;h.dataset.theme=h.dataset.theme==='dark'?'light':'dark'">Light / dark</button></div>
+<div class="wrap">
+<h1>Walkup design package</h1>
+<p class="mute">Approved 2026-10-19. The written rules are in <code>docs/DESIGN-SYSTEM.md</code>. Values are taken from the app's own tokens (<code>globals.css</code>) and shared styles, so this describes the style the app already has. If the app and this page disagree, one of them is wrong and gets fixed.</p>
+
+<h2 id="principles">1. Principles</h2>
+<ul>
+<li><b>Plain English first, number second.</b> A sentence says what is true ("You're all paid up"), the figure supports it. The reader is a volunteer board member doing this in the evening.</li>
+<li><b>Calm and warm.</b> Cream ground, white cards, navy structure, gold as the single accent. No shadows on cards, no gradients, no decoration that carries no meaning.</li>
+<li><b>Show your work.</b> Every number can be traced. Status is never carried by color alone: it always has words.</li>
+<li><b>Never clever with money.</b> Walkup prepares and reminds; the board decides. Copy and controls must not imply Walkup moves money or sends email unapproved.</li>
+<li><b>Everyone can use it.</b> Contrast of 4.5:1 or better, a visible gold focus ring on everything, 44px touch targets on forms, motion that respects "reduce motion".</li>
+</ul>
+
+<h2 id="color">2. Color</h2>
+<p class="mute">Names are tokens, not hex values: always use the token so dark mode works. Light values shown; use the Light / dark switch above to see dark.</p>
+<div class="grid g4">
+<div class="sw"><i style="background:var(--ink)"></i><div><b>ink</b> navy<br><code>#1B2A41</code><br>text, primary buttons, headers</div></div>
+<div class="sw"><i style="background:var(--brass)"></i><div><b>brass</b> gold<br><code>#D9A441</code><br>the one accent: edges, focus, bars</div></div>
+<div class="sw"><i style="background:var(--bone)"></i><div><b>bone</b> cream<br><code>#F5EFE3</code><br>the page</div></div>
+<div class="sw"><i style="background:var(--paper)"></i><div><b>paper</b> white<br><code>#FFFFFF</code><br>cards</div></div>
+<div class="sw"><i style="background:var(--fill)"></i><div><b>fill</b><br><code>#ECE5D6</code><br>nested panels, bar tracks, hover</div></div>
+<div class="sw"><i style="background:var(--line)"></i><div><b>line</b><br><code>#E3DED3</code><br>hairlines, dividers</div></div>
+<div class="sw"><i style="background:var(--line-strong)"></i><div><b>line-strong</b><br><code>#CDC6B6</code><br>input borders, secondary buttons</div></div>
+<div class="sw"><i style="background:var(--mute)"></i><div><b>mute</b> slate<br><code>#5B6475</code><br>secondary text (6.1:1)</div></div>
+</div>
+<h3>Status families</h3>
+<p class="mute">Always a tint with its own text color. Never mix a tint from one family with text from another.</p>
+<div class="grid g3">
+<div class="answer a-good"><h4>Good</h4><p>Paid up, connected, done</p></div>
+<div class="answer a-warn"><h4>Attention</h4><p>Needs a look, not an emergency</p></div>
+<div class="answer a-bad"><h4>Bad</h4><p>Past due, broken, urgent</p></div>
+<div class="answer a-info"><h4>Info</h4><p>Neutral facts, ready to post</p></div>
+<div class="answer" style="border-color:var(--neutral);background:var(--neutral-tint);color:var(--neutral-text)"><h4>Neutral</h4><p>Not set, nothing yet</p></div>
+</div>
+<h3>Rules for gold</h3>
+<ul><li>Gold marks things that are <i>current or chosen</i>: the left edge of a header, the open unit, the current quarter, the focus ring, the Additional Agreed Assessments bar.</li><li>Gold is never body text on cream. For gold labels use <code>--eyebrow</code> (#8A5F12 light, gold in dark).</li><li>Text on a gold fill is always navy.</li></ul>
+<h3>Data series (charts, in order)</h3>
+<div class="row"><span class="pill" style="background:#2d4a7c;color:#fff">1 navy blue</span><span class="pill" style="background:#d9a441;color:#1b2a41">2 gold</span><span class="pill" style="background:#2f7a5c;color:#fff">3 green</span><span class="pill" style="background:#a3432f;color:#fff">4 brick</span><span class="pill" style="background:#5b6475;color:#fff">5 slate</span><span class="pill" style="background:#8fa3c4;color:#1b2a41">6 light blue</span><span class="pill" style="background:#7a5c99;color:#fff">7 violet</span><span class="pill" style="background:#3f8fa3;color:#fff">8 teal</span></div>
+
+<h2 id="type">3. Typography</h2>
+<p><b>One typeface: Outfit</b> (Google Fonts, bold-leaning, friendly and legible). The wordmark is Outfit Medium with -3% tracking. There is no serif and no monospace: money uses Outfit with tabular numbers so columns line up.</p>
+<div class="card"><div class="body">
+<div class="type-row"><div class="meta">Page title<br>20px bold, tight</div><div style="font-size:20px;font-weight:700;letter-spacing:-.01em">HOA Dues</div></div>
+<div class="type-row"><div class="meta">Section title (eyebrow)<br>13px black, caps, +7%</div><div class="eyebrow">Where every unit stands</div></div>
+<div class="type-row"><div class="meta">Headline answer<br>18px bold</div><div style="font-size:18px;font-weight:700">You're all paid up</div></div>
+<div class="type-row"><div class="meta">Body<br>14px (13px dense)</div><div>Walkup records, reminds and prepares. You decide.</div></div>
+<div class="type-row"><div class="meta">Secondary<br>12 to 13px, mute</div><div class="mute" style="font-size:13px">Last paid $475.00 on June 1</div></div>
+<div class="type-row"><div class="meta">Small label<br>11px caps, mute</div><div class="mute" style="font-size:11px;text-transform:uppercase;letter-spacing:.06em;font-weight:500">Owed</div></div>
+<div class="type-row"><div class="meta">Figures<br>600, tabular</div><div class="figures" style="font-size:22px">$12,450.00</div></div>
+</div></div>
+<ul><li>Form inputs are 16px on phones (so iOS does not zoom) and 14px on larger screens.</li><li>Sentence case everywhere except the eyebrow labels. Tab names are Title Case as named: Building &amp; Owners, Budget &amp; Spending, Insurance.</li><li>Big headline numbers are used sparingly. The Total bank balance matches its header height (22px).</li></ul>
+
+<h2 id="layout">4. Layout, spacing and shape</h2>
+<table><tr><th>Thing</th><th>Rule</th></tr>
+<tr><td>Sidebar</td><td>288px open, 72px rail (forced under 1024px), a drawer under 768px. White, selected tab is navy with white text. Collapse button is full width with a divider above it.</td></tr>
+<tr><td>Top bar</td><td>56px, navy band, sticky. Help and Sign out are underlined text links; the gold initials circle opens Your account.</td></tr>
+<tr><td>Page width</td><td>Content centered, usually up to 860px for forms and account pages and up to 1100px for dashboards. Footer and landing content cap at 1100px.</td></tr>
+<tr><td>Card</td><td>White, 1px line border, 8px radius (12px for unit cards), no shadow. Body padding 20px by 16px.</td></tr>
+<tr><td>Shape scale</td><td>Cards 8px, nested panels, buttons and inputs 6px to 8px, pills fully round.</td></tr>
+<tr><td>Depth</td><td>Only things that float (menus, dialogs, toasts) get the one soft shadow. An opened unit card gets a medium shadow to show it is active.</td></tr>
+<tr><td>Spacing</td><td>Vertical rhythm in steps of 4, 8, 12, 16, 20, 24. Sections inside a page are 24px apart. Cards inside a card are 16px apart.</td></tr>
+<tr><td>Dividers</td><td>Thin line between sections of one card. A summary row and the list under it are separated by a divider with 20px above and below.</td></tr></table>
+
+<h2 id="headers">5. Headers (four levels)</h2>
+<p class="mute">The rule: the page-level card gets the strong navy band; anything inside a card gets a soft tint with a gold edge.</p>
+<div class="card"><div class="band-h"><h2 class="eyebrow" style="margin:0">1. Page card header</h2><div class="hint">Navy band, cream or white eyebrow title, muted hint. Buttons on it are light. Keeps its navy in dark mode (a slightly bluer navy).</div></div><div class="body mute">Used for every top-level card: Where every unit stands, Transactions, Units and people, Plan and billing.</div></div>
+<div class="card"><div class="sec-h">2. Section header</div><div class="body mute">Soft navy tint (7%), gold left edge, 12px bold caps. For sections inside a card: The unit, People in this unit, Association, Location, Building, Insurance.</div></div>
+<div class="card"><div class="sec-h sm">3. Summary card header</div><div class="body mute">Same bar, smaller (11px). For small summary cards: Building details, Insurance policy, Owner.</div></div>
+<div class="card"><div class="sec-h strong">4. Item header (stronger tint, 14%)</div><div class="body mute">For a header that carries content and controls: each unit on the Dues tab (name, owner, standing, owed, plan, Expand).</div></div>
+
+<h2 id="buttons">6. Buttons</h2>
+<div class="card"><div class="body">
+<h3 style="margin-top:0">Variants</h3>
+<div class="row"><button class="btn b44 primary">Primary</button><button class="btn b44 secondary">Secondary</button><button class="btn b44 danger">Danger</button><button class="btn linkb">Link button</button><button class="btn b44 primary disabled">Disabled</button></div>
+<p class="help">Primary is navy with white text (cream in dark mode). One primary per area. Secondary is white with a strong border. Danger is white with a brick border and text, used for the confirm step of a delete.</p>
+<h3>Sizes</h3>
+<div class="row"><button class="btn b44 primary">Form / main action, 44px</button><button class="btn b32 primary">Dense row, 32px</button><button class="btn b28 primary">Card header row, 28px</button></div>
+<p class="help">44px for forms and anything a thumb must hit. 32px and 28px only inside dense cards such as unit rows, where the surrounding row is itself clickable.</p>
+<h3>On a navy band</h3>
+<div class="band-h" style="border-radius:8px"><div class="row"><button class="btn onband">Add a unit</button><button class="btn onband">Reconcile Transactions</button><span class="pill p-warn">3 deposits to match</span></div></div>
+<p class="help">Light button, navy text. A status pill can sit beside it.</p>
+<h3>Panel toggles (open one at a time)</h3>
+<div class="row"><button class="btn b32 primary">Edit dues plan</button><button class="btn b32 primary active">Property manager</button><button class="btn b32 primary">Additional Agreed Assessments</button></div>
+<p class="help">Navy buttons; the open one gets a gold ring. Opening one closes the others.</p>
+<h3>Expand / Collapse</h3>
+<div class="row"><button class="btn b28 primary">Expand &#9656;</button><button class="btn b28 primary">Collapse &#9662;</button></div>
+<h3>Destructive actions: two steps, inline</h3>
+<div class="row"><a class="soft" style="color:var(--bad-text);font-size:12px;text-decoration:underline">Delete</a> &rarr; <span class="mute" style="font-size:11px">Deletes the record as if it never happened.</span><button class="btn b28 danger">Confirm delete</button><a class="mute" style="font-size:11px;text-decoration:underline">Cancel</a></div>
+<p class="help">Delete starts as a small red text link. It turns into a plain-words warning plus a Confirm button, with Cancel beside it. Never a pop-up.</p>
+<ul class="dos"><li>Do: verbs the person would say (Record a payment, Take them off this unit).</li><li>Do: keep labels sentence case and short.</li></ul>
+<ul class="donts"><li>Don't: make two navy buttons compete for attention in one area.</li><li>Don't: show a bare "Submit". Say what happens.</li></ul>
+</div></div>
+
+<h2 id="forms">7. Forms and inputs</h2>
+<div class="card"><div class="body">
+<div class="grid g2">
+<div><label class="l">Dues for the year</label><input class="in" value="$5,400" style="text-align:right" readonly><div class="help">Dollar boxes format as you type: $5,400. Cents allowed ($1,234.50). The form saves the plain number.</div></div>
+<div><label class="l">Square footage <span class="soft" style="font-weight:400">optional</span></label><input class="in" value="1,250" readonly><div class="help">Whole numbers with commas.</div></div>
+<div><label class="l">Bathrooms <span class="soft" style="font-weight:400">.5 for a half bath</span></label><input class="in" value="2.5" readonly><div class="help">One decimal always shown: 1.0, 2.0, 2.5. Settles to the nearest half.</div></div>
+<div><label class="l">Mailing address</label><input class="in" value="2158 North Damen Avenue, Chicago, IL 60647" readonly><div class="help" style="color:var(--good-text)">USPS confirms this address.</div><div class="help">Suggestions as you type; a Unit / Apt box beside it; always overridable.</div></div>
+</div>
+<h3>Choice controls</h3>
+<div class="seg"><span class="on">Owner</span><span>Property manager</span></div>
+<p class="help">Two to four options that switch a mode: a pill-shaped segmented control, selected = navy. Radios and checkboxes use a full 44px row with a border that darkens when chosen.</p>
+<h3>Rules</h3>
+<ul><li>Label above the box, 13px medium. Help text 12px mute below it. Errors 13px in the bad color, next to the box, and focus moves to the first problem.</li><li>Optional fields say "optional" in soft text. Required ones are simply labeled.</li><li>Inputs have a 1px strong border, 8px radius, white fill.</li><li>Money and numbers are right-aligned inside boxes and use tabular figures.</li></ul>
+</div></div>
+
+<h2 id="status">8. Status and feedback</h2>
+<div class="answer a-good"><h4>You're all paid up</h4><p>Your last payment was $475.00 on June 1, 2026.</p></div>
+<div class="answer a-bad"><h4>You owe $700.00</h4><p>$700.00 of that was due on or before January 1, 2026.</p></div>
+<p class="help">The Answer banner: sentence first, a 3px status-colored left rule, square corners, tinted fill.</p>
+<h3>Pills and badges</h3>
+<div class="row"><span class="pill p-good">up to date</span><span class="pill p-bad">behind</span><span class="pill p-info">paid ahead</span><span class="pill p-neutral">not charged yet</span><span class="pill p-ink">Required</span><span class="pill p-neutral">Voluntary</span><span class="pill bubble">25%</span></div>
+<p class="help">Standing pills use the status tints. Required is a navy pill; Voluntary is neutral. A share or percentage is a translucent gold bubble.</p>
+<h3>Messages</h3>
+<div class="answer a-bad" style="padding:8px 12px"><span style="font-size:13px">Add the manager's email address first. Without it Walkup has nowhere to send.</span></div>
+<p class="help">An error is a bad-tinted bar with a left rule and a sentence that says how to fix it. Empty states are one calm sentence and one next step.</p>
+
+<h2 id="data">9. Data display</h2>
+<div class="card"><div class="body">
+<h3 style="margin-top:0">Dues year: four quarters (green)</h3>
+<div class="figures" style="display:flex;justify-content:space-between;font-size:12px"><span>2026 dues</span><span>$2,850 <span class="mute" style="font-weight:400">paid of $5,400</span></span></div>
+<div class="bars" style="margin-top:6px"><div><b style="width:100%"></b></div><div><b style="width:100%"></b></div><div><b style="width:11%"></b></div><div class="now"><b style="width:0"></b></div></div>
+<div class="qlab" style="margin-top:4px"><span>Q1 $1,350 / $1,350</span><span>Q2 $1,350 / $1,350</span><span>Q3 $150 / $1,350</span><span style="font-weight:600;color:var(--ink)">Q4 now $0 / $1,350</span></div>
+<p class="help">Money paid fills quarters in order, Q1 first. The current quarter has a gold ring. "Behind" only counts quarters that have fully passed.</p>
+<h3>Additional Agreed Assessments (gold, one bar)</h3>
+<div class="figures" style="display:flex;justify-content:space-between;font-size:12px"><span>2026 Additional Agreed Assessments</span><span>$750 <span class="mute" style="font-weight:400">of $1,500</span></span></div>
+<div class="one" style="margin-top:6px"><b style="width:50%"></b></div>
+<p class="help">Always a different color from the dues bar, so the two can never be confused. Never part of the dues bar.</p>
+<h3>Collapsed (condensed) version</h3>
+<div class="bars thin"><div><b style="width:100%"></b></div><div><b style="width:100%"></b></div><div><b style="width:11%"></b></div><div class="now"><b style="width:0"></b></div></div>
+<div class="qlab" style="margin-top:2px;font-size:10px"><span>Q1</span><span>Q2</span><span>Q3</span><span style="font-weight:600;color:var(--ink)">Q4</span></div>
+<h3>Tables and numbers</h3>
+<table><tr><th>Unit</th><th>Owner</th><th style="text-align:right">Owed</th></tr><tr><td>Unit 2</td><td>Josiah Housego</td><td style="text-align:right" class="figures">$700.00</td></tr><tr><td>Unit 3</td><td>Mintra Wilson</td><td style="text-align:right" class="figures">&mdash;</td></tr></table>
+<p class="help">Money is right-aligned with tabular figures. A zero in a table cell is a dash, not $0.00. Column headers are 11px caps in mute.</p>
+</div></div>
+
+<h2 id="patterns">10. Patterns</h2>
+<h3>Collapsible unit card (Dues tab)</h3>
+<div class="unit">
+<div class="uh"><span style="font-weight:700;font-size:15px">Unit 3</span><span class="mute" style="font-size:13px">Mintra Wilson</span><span style="flex:1"></span><span class="pill p-bad">behind</span><span style="font-size:13px"><span class="mute">Owed </span><b>$700</b></span><span class="mute" style="font-size:12px">$5,400 a year &middot; monthly</span><button class="btn b28 primary">Expand &#9656;</button></div>
+<div class="uf"><div class="figures" style="display:flex;justify-content:space-between;font-size:11px"><span>2026 dues</span><span>$2,850 <span class="mute" style="font-weight:400">of $5,400</span></span></div><div class="bars thin" style="margin-top:4px"><div><b style="width:100%"></b></div><div><b style="width:100%"></b></div><div><b style="width:11%"></b></div><div class="now"><b style="width:0"></b></div></div></div>
+</div>
+<p class="help">One per row, full width. Strong-tint header with gold edge, a condensed progress strip when closed. Opened, it shows owed and next charge on the left, panel buttons on the right, then the bars at the bottom.</p>
+<h3>Accordion</h3><p>When a list of items can be opened (units on Building &amp; Owners), only one is open at a time; opening another closes the first. The open item is also lit on the building graphic with a soft gold wash.</p>
+<h3>Two-step save and cancel</h3><p>Edit opens the form in place (the card grows taller). Save is navy, Cancel is plain text. Nothing saves until Save.</p>
+<h3>Where to find things</h3><p>Setting up and changing live on a tab's own page; Your account (the gold circle, top right) holds profile, plan, security and data. Walkup's own billing is never in the sidebar.</p>
+
+<h2>11. Motion</h2>
+<ul><li>Color and border changes 300ms. Bars grow over 500ms. The sidebar slides in 160ms. Landing sections fade and rise over 800ms as you scroll.</li><li>Animation helps you see what changed, never decorates. Everything respects the "reduce motion" setting (it drops to none).</li></ul>
+
+<h2>12. Dark mode</h2>
+<ul><li>Cream and navy swap roles. Page = deep navy, cards = navy, text = cream. Navy bands stay navy (a lighter, bluer navy) so headers still read as headers.</li><li>Status colors lighten until they pass contrast; every pair is documented in <code>docs/reference/signal-theme.md</code>.</li><li>Rule: never write a color value in a component; use a token and both themes work.</li></ul>
+
+<h2>13. Copy and content</h2>
+<ul><li><b>No em dashes</b> in anything a person reads. Use a period, comma or colon.</li><li>Plain words, short sentences, say what happens next. "Delete is for a record entered by mistake" beats "Records will be purged."</li><li>Say who: "a board admin can…", "only the board sees…".</li><li>Walkup never says it moves, holds or sends money. Email is "sent only after a board admin approves it"; everything else is a draft in your own mail app.</li><li>Money: dollars with a sign and commas ($5,400), cents only when they matter. Dates written out (June 1, 2026) in Chicago time.</li><li>Names: the product is <b>Walkup</b>. Tabs: Dashboard, Announcements, Bank Feed &amp; Transactions, Financial Statements, Budget &amp; Spending, HOA Dues, Taxes, Insurance, Building &amp; Owners, Repairs &amp; Upkeep, Find a Contractor, Documents.</li></ul>
+
+<h2>14. Accessibility checklist</h2>
+<ul><li>Visible 2px gold focus ring everywhere, never removed.</li><li>Contrast 4.5:1 for text, 3:1 for large text and component edges.</li><li>Touch targets 44px on forms and primary actions.</li><li>Every control has a label or aria-label; toggles use aria-expanded; segmented controls use radiogroup; status text is also readable by screen readers.</li><li>Nothing important by color alone: standing is a word, a quarter is a number.</li></ul>
+
+<h2>15. Marketing site (the exceptions)</h2>
+<ul><li>Landing page bands rotate: taupe hero, then blue, taupe, white down the page. Blue bands re-map the tokens so cards and text just work.</li><li>Yellow (gold) buttons have blue (navy) text. The header is sticky with a dividing line. Sections fade in on scroll.</li><li>Same typeface, same tokens, same plain voice as the app.</li></ul>
+
+<h2>Decisions recorded</h2>
+<ol>
+<li>Two header strengths: sections 7%, items 14%.</li>
+<li>Two button heights: 44px on forms, 28 to 32px inside dense cards.</li>
+<li>Expand / Collapse buttons are navy; Your account keeps its pill tab strip.</li>
+<li>Buttons on a navy band are light with navy text.</li>
+<li>Gold is the only accent; paid-progress bars are green.</li>
+<li>Older pages are brought in line with this document.</li>
+</ol>
+<footer>Walkup design system, approved 2026-10-19. Values copied from the app's own tokens; if the app and this document disagree, the app is right until this is approved.</footer>
+</div>
+</body>
+</html>

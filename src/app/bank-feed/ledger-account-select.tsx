@@ -84,7 +84,7 @@ export function LedgerAccountSelect({
         </span>
       ) : null}
       {!currentId && value !== NEW ? (
-        <span className="ml-2 text-warning-text">— pick one before posting</span>
+        <span className="ml-2 text-warning-text">Pick one before posting</span>
       ) : null}
       {error ? <p className="mt-1 text-bad-text">{error}</p> : null}
     </div>

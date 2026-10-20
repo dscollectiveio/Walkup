@@ -120,7 +120,7 @@ export function VisibilityForm({
           defaultValue={doc.restricted_to_unit_id ?? ""}
           className="mt-1 w-full max-w-[320px] rounded-lg border border-line-strong bg-paper px-3 py-2 text-[13px] text-ink"
         >
-          <option value="">No — it concerns the whole building</option>
+          <option value="">No: it concerns the whole building</option>
           {units.map((u) => (
             <option key={u.id} value={u.id}>
               {u.label}
@@ -128,7 +128,7 @@ export function VisibilityForm({
           ))}
         </select>
         <p className="mt-1 text-[11px] text-mute">
-          Naming a unit narrows this to that unit&rsquo;s owner and the board — use it for
+          Naming a unit narrows this to that unit&rsquo;s owner and the board. Use it for
           arrears letters and anything else addressed to one household. It never widens access.
         </p>
       </div>

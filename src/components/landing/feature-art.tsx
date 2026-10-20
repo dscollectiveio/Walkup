@@ -42,7 +42,7 @@ function Panel({ title, children }: { title: string; children: ReactNode }) {
         <span className="flex gap-1">
           <span className="h-1.5 w-1.5 rounded-full bg-white/25" />
           <span className="h-1.5 w-1.5 rounded-full bg-white/25" />
-          <span className="h-1.5 w-1.5 rounded-full bg-[#D9A441]" />
+          <span className="h-1.5 w-1.5 rounded-full bg-brass" />
         </span>
         {title}
       </div>

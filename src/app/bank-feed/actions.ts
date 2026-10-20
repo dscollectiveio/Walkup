@@ -675,7 +675,7 @@ export async function categorizeBankTransactionsBulk(input: {
 
   if (error) return { error: error.message };
   if (!data || data.length === 0) {
-    return { error: "None of those could be categorized — only a board admin can, and none can already be posted." };
+    return { error: "None of those could be categorized: only a board admin can, and none can already be posted." };
   }
 
   const { done: posted, errors } = input.postNow
@@ -741,7 +741,7 @@ export async function applyCategorizations(input: {
     const missing = ids.length - (data?.length ?? 0);
     if (missing > 0) {
       errors.push(
-        `${missing} transaction${missing === 1 ? "" : "s"} couldn't be changed — already posted, or you may not be a board admin.`,
+        `${missing} transaction${missing === 1 ? "" : "s"} couldn't be changed: already posted, or you may not be a board admin.`,
       );
     }
   }

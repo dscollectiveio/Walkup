@@ -70,7 +70,7 @@ export function PlannedAmount({
       <button
         type="button"
         onClick={open}
-        title={annualCents !== null ? `${dollars(annualCents)} ${label} — click to change` : "Set a plan for this category"}
+        title={annualCents !== null ? `${dollars(annualCents)} ${label}: click to change` : "Set a plan for this category"}
         className="rounded px-1 underline decoration-dotted decoration-line-strong underline-offset-4 hover:bg-fill hover:text-ink"
       >
         {annualCents !== null ? (

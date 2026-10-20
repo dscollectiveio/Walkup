@@ -2,6 +2,7 @@
 
 import { useActionState } from "react";
 import { redeemInvite } from "./actions";
+import { btnPrimary } from "@/components/repairs/styles";
 
 export function RedeemInviteForm({ token }: { token: string }) {
   const [state, action, pending] = useActionState(redeemInvite, null);
@@ -32,7 +33,7 @@ export function RedeemInviteForm({ token }: { token: string }) {
       <button
         type="submit"
         disabled={pending}
-        className="w-full rounded-md bg-ink px-3 py-2 text-[13px] font-medium text-paper transition hover:bg-ink-mid disabled:opacity-50"
+        className={`${btnPrimary} w-full`}
       >
         {pending ? "Joining…" : "Join"}
       </button>

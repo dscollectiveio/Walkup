@@ -204,7 +204,7 @@ export function ComposeForm(props: {
     >
       <div>
         <h1 className="text-[20px] font-bold tracking-tight text-ink">Write an email</h1>
-        <p className="mt-1 text-[13px] text-mute">Walkup drafts it. You read it, edit it and send it from your own email.</p>
+        <p className="mt-1 text-mute">Walkup drafts it. You read it, edit it and send it from your own email.</p>
       </div>
 
       {props.ownerRequest && kind === "certificate_request" ? <p className={infoBlock}>{props.ownerRequest.text}</p> : null}

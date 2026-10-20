@@ -47,9 +47,9 @@ export function emailDraft(report: Report, mode: ReportMode): string {
   const line = (r: MergedRow) => `  ${r.account_name}: ${cells(r.amounts, r.total)}`;
   const lines: string[] = [
     report.associationName,
-    `${title} — ${report.rangeLabel}`,
+    `${title}: ${report.rangeLabel}`,
     "",
-    "A PDF of this report is available from the Financial Statements page — download it and attach it here if you'd like to include it.",
+    "A PDF of this report is available from the Financial Statements page. Download it and attach it here if you'd like to include it.",
     "",
   ];
   if (mode === "full") {
@@ -66,7 +66,7 @@ export function emailDraft(report: Report, mode: ReportMode): string {
 
 export function emailHref(report: Report, mode: ReportMode): string {
   const title = mode === "full" ? "Profit & Loss" : "Expenses";
-  const subject = `${report.associationName} — ${title} — ${report.rangeLabel}`;
+  const subject = `${report.associationName}: ${title}, ${report.rangeLabel}`;
   return mailtoHref(null, subject, emailDraft(report, mode));
 }
 

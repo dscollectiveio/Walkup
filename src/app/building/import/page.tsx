@@ -87,11 +87,11 @@ export default async function ImportStartPage() {
         </p>
       )}
       {isAdmin && (unfinishedBatches.length > 0 || uploads.length > 0) ? (
-        <Card title="Unfinished uploads">
+        <Card navy title="Unfinished uploads">
           <Unfinished batches={unfinishedBatches} uploads={uploads} />
         </Card>
       ) : null}
-      <Card title="Past imports">
+      <Card navy title="Past imports">
         <History rows={history} canUndo={isAdmin} />
       </Card>
     </div>

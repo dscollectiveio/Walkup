@@ -34,7 +34,7 @@ export default async function InvitePage({
           You&rsquo;ve been invited
         </h1>
         <p className="mt-2 text-mute">
-          Create an account to join — it only takes a minute.
+          Create an account to join. It only takes a minute.
         </p>
         <InviteSignupForm token={token} />
       </div>
@@ -70,7 +70,7 @@ export default async function InvitePage({
       <h1 className="mt-4 text-[20px] font-bold tracking-tight text-ink">
         Join this building
       </h1>
-      <p className="mt-2 text-mute">One more step — confirm your name.</p>
+      <p className="mt-2 text-mute">One more step: confirm your name.</p>
       <RedeemInviteForm token={token} />
     </div>
   );

@@ -49,14 +49,14 @@ describe("headlineFor", () => {
       prior: { label: "Q2 2026", netIncome: 2500, hasActivity: true },
     });
     expect(h.status).toBe("good");
-    expect(h.headline).toBe("You took in $12,400.00 and spent $9,100.00 in Q3 2026 — $3,300.00 ahead.");
+    expect(h.headline).toBe("You took in $12,400.00 and spent $9,100.00 in Q3 2026: $3,300.00 ahead.");
     expect(h.detail).toBe("That's $800.00 better than Q2 2026.");
   });
 
   it("handles behind, break-even, and an empty period", () => {
     expect(headlineFor({ label: "May 2026", totalIncome: 100, totalExpenses: 250, hasActivity: true, prior: null })).toMatchObject({
       status: "bad",
-      headline: "You took in $100.00 and spent $250.00 in May 2026 — $150.00 behind.",
+      headline: "You took in $100.00 and spent $250.00 in May 2026: $150.00 behind.",
     });
     expect(headlineFor({ label: "May 2026", totalIncome: 100, totalExpenses: 100, hasActivity: true, prior: null }).headline).toContain(
       "broke even",

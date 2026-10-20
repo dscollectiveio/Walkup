@@ -12,6 +12,7 @@ import { MultiPeriodView } from "./multi-view";
 import { ReportActions } from "./report-actions";
 import { buildReport } from "./report";
 import { PeriodPicker } from "./period-picker";
+import { btnPrimary } from "@/components/repairs/styles";
 
 export const dynamic = "force-dynamic";
 
@@ -203,7 +204,7 @@ export default async function FinancialStatementsPage({
       <div>
         <h1 className="text-[20px] font-bold tracking-tight text-ink">Financial Statements</h1>
         <p className="mt-1 text-mute">
-          Built from bank transactions that have been posted to the books — the same numbers as your tax filing
+          Built from bank transactions that have been posted to the books: the same numbers as your tax filing
           and budget pages.
         </p>
       </div>
@@ -211,7 +212,7 @@ export default async function FinancialStatementsPage({
       {unpostedCount > 0 ? (
         <p className="border-l-[3px] border-warning bg-warning-tint px-3 py-2 text-[13px] text-warning-text">
           {unpostedCount} bank transaction{unpostedCount === 1 ? "" : "s"} in this period{" "}
-          {unpostedCount === 1 ? "hasn't" : "haven't"} been posted to the books yet — the figures below leave{" "}
+          {unpostedCount === 1 ? "hasn't" : "haven't"} been posted to the books yet: the figures below leave{" "}
           {unpostedCount === 1 ? "it" : "them"} out.{" "}
           <Link href="/bank-feed?status=needs" className="underline underline-offset-2">
             Categorize on the bank feed →
@@ -288,7 +289,7 @@ export default async function FinancialStatementsPage({
             <p className="text-[13px] text-mute">{headline?.headline}</p>
             <Link
               href="/bank-feed"
-              className="mt-3 inline-block rounded-md bg-ink px-4 py-2 text-[13px] font-medium text-paper hover:bg-ink-mid"
+              className={`mt-3 ${btnPrimary}`}
             >
               Categorize and post bank transactions →
             </Link>

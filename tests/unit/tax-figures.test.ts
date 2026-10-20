@@ -67,9 +67,9 @@ describe("figuresPack", () => {
       "Estimated tax (provisional)",
     ]);
     for (const s of pack) expect(s.rows.length, s.title).toBeGreaterThan(0);
-    expect(row(pack, "1120-H figures (cash basis)", "Gross income")).toMatchObject({ value: "$0.00", note: "0 receipts — owner fees plus everything else" });
+    expect(row(pack, "1120-H figures (cash basis)", "Gross income")).toMatchObject({ value: "$0.00", note: "0 receipts: owner fees plus everything else" });
     expect(section(pack, "Income that isn't owner fees, by account").rows).toEqual([{ label: "No income other than owner fees recorded this fiscal year", value: "$0.00" }]);
-    expect(row(pack, "1120-H tests", "Owner fees ÷ gross income (the income test)").value).toBe("n/a — no gross income recorded — passes (needs 60%)");
+    expect(row(pack, "1120-H tests", "Owner fees ÷ gross income (the income test)").value).toBe("n/a, no gross income recorded: passes (needs 60%)");
     expect(row(pack, "Estimated tax (provisional)", "Estimated tax before any deductions").value).toBe("$0.00");
   });
 
@@ -84,9 +84,9 @@ describe("figuresPack", () => {
     ]);
     const bare = ctx({ association: { ...ctx().association, ein: null, street_address: null, city: null, postal_code: null, incorporated_on: null } });
     const rows = section(figuresPack(bare, form1120h), "About the association").rows;
-    expect(rows.find((r) => r.label === "EIN")!.value).toBe("Not on file — add it in Building & Owners");
+    expect(rows.find((r) => r.label === "EIN")!.value).toBe("Not on file. Add it in Building & Owners");
     expect(rows.find((r) => r.label === "Address")!.value).toBe("IL");
-    expect(rows.find((r) => r.label === "Incorporated on")!.value).toBe("Not on file — add it in Building & Owners");
+    expect(rows.find((r) => r.label === "Incorporated on")!.value).toBe("Not on file. Add it in Building & Owners");
   });
 
   it("gives the five cash-basis figures with their transaction counts, and the non-exempt income by account", () => {
@@ -94,7 +94,7 @@ describe("figuresPack", () => {
     expect(section(pack, "1120-H figures (cash basis)").rows).toEqual([
       { label: "Owner fees (exempt function income)", value: "$48,000.00", note: "3 receipts" },
       { label: "Income that isn't owner fees", value: "$1,250.00", note: "2 receipts" },
-      { label: "Gross income", value: "$49,250.00", note: "5 receipts — owner fees plus everything else" },
+      { label: "Gross income", value: "$49,250.00", note: "5 receipts: owner fees plus everything else" },
       { label: "Spending on the building (exempt function expenditures)", value: "$41,000.00", note: "2 payments" },
       { label: "Total spending", value: "$42,500.00", note: "3 payments" },
     ]);
@@ -109,14 +109,14 @@ describe("figuresPack", () => {
     expect(tests).toHaveLength(2);
     expect(tests[0]).toEqual({
       label: "Owner fees ÷ gross income (the income test)",
-      value: "97.5% — passes (needs 60%)",
-      note: "Threshold 60% from https://www.irs.gov/instructions/i1120h — not yet checked against this year's instructions",
+      value: "97.5%: passes (needs 60%)",
+      note: "Threshold 60% from https://www.irs.gov/instructions/i1120h: not yet checked against this year's instructions",
     });
-    expect(tests[1].value).toBe("96.5% — passes (needs 90%)");
+    expect(tests[1].value).toBe("96.5%: passes (needs 90%)");
 
     const verified = PARAMETERS.map((p) => ({ ...p, verifiedOn: "2026-10-11" }));
     const failing = figuresPack(ctx({}, { parameters: verified, figures: { exemptIncomeCents: 5_000_00, grossIncomeCents: 10_000_00, exemptExpendituresCents: 1, totalExpendituresCents: 1 } }), form1120h);
-    expect(row(failing, "1120-H tests", "Owner fees ÷ gross income (the income test)")).toMatchObject({ value: "50% — fails (needs 60%)" });
+    expect(row(failing, "1120-H tests", "Owner fees ÷ gross income (the income test)")).toMatchObject({ value: "50%: fails (needs 60%)" });
     expect(row(failing, "1120-H tests", "Owner fees ÷ gross income (the income test)").note).toContain("checked by a person");
 
     const unclassified = figuresPack(ctx({}, { unconfirmedIncomeAccounts: ["Laundry Income"] }), form1120h);
@@ -136,9 +136,9 @@ describe("figuresPack", () => {
     expect(est[4].note).toContain("Ask your CPA");
 
     const none = figuresPack(ctx({}, { parameters: [] }), form1120h);
-    expect(section(none, "1120-H tests").rows[0]).toMatchObject({ value: "Can't be run", note: expect.stringContaining("ask your CPA") });
+    expect(section(none, "1120-H tests").rows[0]).toMatchObject({ value: "Can't be run", note: expect.stringContaining("Ask your CPA") });
     expect(section(none, "Estimated tax (provisional)").rows).toEqual([
-      { label: "Estimated tax", value: "Can't be estimated", note: "The rate or specific deduction isn't on file in Walkup — ask your CPA." },
+      { label: "Estimated tax", value: "Can't be estimated", note: "The rate or specific deduction isn't on file in Walkup. Ask your CPA." },
     ]);
   });
 
@@ -153,13 +153,13 @@ describe("figuresPack", () => {
       { label: "Total paid in 2026", value: "$2,400.00", note: "Every payment we recorded; card payments are reported by the processor instead." },
       { label: "Payments", value: "3" },
       { label: "W-9 on file", value: "Yes", note: undefined },
-      { label: "Taxpayer ID", value: "Not stored in Walkup — copy it from the W-9", note: "Walkup keeps only the last four digits, by design." },
+      { label: "Taxpayer ID", value: "Not stored in Walkup. Copy it from the W-9", note: "Walkup keeps only the last four digits, by design." },
     ]);
     const missing = figuresPack(ctx(), { ...form1099, vendorId: "nobody" });
     expect(section(missing, "Contractor").rows[0].value).toBe("Not found among this year's contractor payments");
     const noW9 = figuresPack(ctx({ contractorRows: [{ ...ctx().contractorRows[0], w9OnFile: false, address: null }] }), form1099);
     expect(row(noW9, "Contractor", "W-9 on file")).toEqual({ label: "W-9 on file", value: "No", note: "Ask for a W-9 before preparing the 1099." });
-    expect(row(noW9, "Contractor", "Address").value).toBe("Not on file — add it on the Contractors page");
+    expect(row(noW9, "Contractor", "Address").value).toBe("Not on file. Add it on the Contractors page");
   });
 
   it("never carries a contractor TIN — not even one typed into a name or address", () => {

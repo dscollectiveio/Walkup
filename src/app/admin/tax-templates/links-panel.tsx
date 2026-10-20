@@ -36,7 +36,7 @@ function checkWords(status: string | null, checkedAt: string | null): string {
   if (!status || !checkedAt) return "not checked automatically yet";
   const when = dateWords(checkedAt.slice(0, 10), "short");
   if (status === "200") return `answered ${when}`;
-  if (status === "blocked") return `blocked for non-browsers ${when} — open it yourself`;
+  if (status === "blocked") return `blocked for non-browsers ${when}, so open it yourself`;
   return `${status} (${when})`;
 }
 
@@ -50,7 +50,7 @@ function LinkRowView({ row, pending, onVerify, onToggle }: { row: AdminLinkRow; 
           </a>
           <span className={pill("mute")}>{LINK_KIND_LABEL[row.kind as LinkKind] ?? row.kind}</span>
           <span className={pill("mute")}>{row.state_code ?? "Federal"}</span>
-          {!row.active ? <span className={pill("warning")}>Inactive — boards don&rsquo;t see it</span> : null}
+          {!row.active ? <span className={pill("warning")}>Inactive: boards don&rsquo;t see it</span> : null}
         </p>
         <p className="mt-0.5 break-all font-mono text-[11px] text-mute-soft">{row.url}</p>
         <p className="mt-1 flex flex-wrap items-center gap-2 text-[12px] text-mute">
@@ -119,7 +119,7 @@ export function AddLinkForm() {
         <input id="k-state" name="state_code" maxLength={2} placeholder="IL" className={inputClass} />
       </div>
       {state?.error ? <p className="text-[12px] text-bad-text sm:col-span-2">{state.error}</p> : null}
-      {state?.ok ? <p className="text-[12px] text-good-text sm:col-span-2">Added — retrieved today, not yet checked by a person. Open it, then click “I opened this and it&rsquo;s current”.</p> : null}
+      {state?.ok ? <p className="text-[12px] text-good-text sm:col-span-2">Added. Retrieved today, not yet checked by a person. Open it, then click “I opened this and it&rsquo;s current”.</p> : null}
       <div className="sm:col-span-2">
         <button type="submit" disabled={pending} className={primary}>
           {pending ? "Adding…" : "Add the link"}
@@ -170,7 +170,7 @@ export function LinksPanel({ rows, formLabels, formOrder }: { rows: AdminLinkRow
           {pending ? "Checking…" : "Check all links"}
         </button>
         <span className="text-[12px] text-mute">
-          Opens each active address once, as a browser would, and records what answered. ilsos.gov refuses anything that isn&rsquo;t a browser — those read &ldquo;blocked&rdquo;, and a person opens them.
+          Opens each active address once, as a browser would, and records what answered. ilsos.gov refuses anything that isn&rsquo;t a browser. Those read &ldquo;blocked&rdquo;, and a person opens them.
         </span>
         {msg ? <span className="w-full text-[12px] text-mute">{msg}</span> : null}
       </div>

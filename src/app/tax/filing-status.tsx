@@ -29,7 +29,7 @@ export function FilingStatus({
     return (
       <div className="flex flex-wrap items-center justify-between gap-2 rounded-xl border border-line bg-paper px-5 py-4">
         <p className="text-[13px] text-ink">
-          Filed {filing.filed_on} — locked. These figures can&rsquo;t be changed or recomputed.
+          Filed {filing.filed_on}, locked. These figures can&rsquo;t be changed or recomputed.
         </p>
       </div>
     );
@@ -62,7 +62,7 @@ export function FilingStatus({
         <a href={formHref} className="underline underline-offset-2 hover:text-ink">
           1120-H form page
         </a>
-        {" "}— that saves these figures if you haven&rsquo;t yet, and locks them.
+        {". "}That saves these figures if you haven&rsquo;t yet, and locks them.
       </p>
     </div>
   );

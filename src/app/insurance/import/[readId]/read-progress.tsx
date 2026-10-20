@@ -185,7 +185,7 @@ export function ReadProgress({
     <div className="space-y-4">
       <div role="status" aria-live="polite">
         <p className="text-[13px] text-mute">{filename}</p>
-        <h1 className="mt-1 text-[18px] font-bold tracking-tight text-ink">{title}</h1>
+        <h1 className="mt-1 text-[20px] font-bold tracking-tight text-ink">{title}</h1>
       </div>
       {body}
       {actionError ? <p className={errorBlock}>{actionError}</p> : null}

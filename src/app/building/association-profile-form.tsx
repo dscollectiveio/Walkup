@@ -3,6 +3,7 @@
 import { useActionState, useState } from "react";
 import { AddressInput } from "@/components/address-input";
 import { updateAssociationProfile } from "./actions";
+import { btnPrimary } from "@/components/repairs/styles";
 
 export interface AssociationProfile {
   legal_name: string;
@@ -295,7 +296,7 @@ export function AssociationProfileForm({ profile }: { profile: AssociationProfil
         <button
           type="submit"
           disabled={pending}
-          className="rounded-md bg-ink px-4 py-2 text-[13px] font-medium text-paper hover:bg-ink-mid disabled:opacity-50"
+          className={btnPrimary}
         >
           {pending ? "Saving…" : "Save"}
         </button>

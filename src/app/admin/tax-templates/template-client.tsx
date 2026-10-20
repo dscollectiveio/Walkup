@@ -248,7 +248,7 @@ export function FieldMapForm({
         ) : null}
         <div className="sm:col-span-2">
           <label htmlFor="m-notes" className="block text-[12px] font-medium text-ink">
-            Notes <span className="font-normal text-mute-soft">shown to boards on the form card — e.g. which boxes are left blank on purpose</span>
+            Notes <span className="font-normal text-mute-soft">shown to boards on the form card, e.g. which boxes are left blank on purpose</span>
           </label>
           <textarea id="m-notes" name="notes" rows={3} defaultValue={meta.notes} className={inputClass} />
         </div>
@@ -267,7 +267,7 @@ export function FieldMapForm({
             />
           </div>
           <p className="mt-1 text-[12px] text-mute">
-            Leave a field&rsquo;s source empty to leave it unmapped — it prints blank. Every mapped field needs a citation.
+            Leave a field&rsquo;s source empty to leave it unmapped. It prints blank. Every mapped field needs a citation.
             Settings: {keys.setting.join(", ")}. Ledger: {keys.ledger.join(", ")}. Contractors: {keys.contractors.join(", ")}.
             Calculated: add(), sub(), mul(), max0() of field names, numbers, or param:&lt;tax_parameters key&gt;.
             Kind tells the form page how to show the line; Review caps confidence so a person always looks; Enter 0 offers that button on a money line.
@@ -310,7 +310,7 @@ export function FieldMapForm({
                     <td className="py-1.5 pr-2"><input name={`rule:${r.name}`} defaultValue={r.rule} disabled={locked} aria-label={`Rule for ${r.name}`} className={`${cell} w-48 font-mono`} /></td>
                     <td className="py-1.5 pr-2">
                       <select name={`kind:${r.name}`} defaultValue={r.kind} disabled={locked} aria-label={`Kind for ${r.name}`} className="rounded border border-line-strong bg-paper px-1 py-1">
-                        <option value="">—</option>
+                        <option value="">None</option>
                         <option value="money">Money</option>
                         <option value="text">Text</option>
                         <option value="date">Date</option>

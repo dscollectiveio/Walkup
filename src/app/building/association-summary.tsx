@@ -7,6 +7,7 @@ import { HEADER_BUTTON } from "@/components/ui";
 import { ImportUploader } from "@/app/insurance/components/insurance-uploader";
 import { saveAssociationSummary } from "./actions";
 import type { AssociationProfile } from "./association-profile-form";
+import { btnPrimary } from "@/components/repairs/styles";
 import {
   CONSTRUCTION_TYPES,
   FLOOD_ZONES,
@@ -423,7 +424,7 @@ export function AssociationSummary({
                   <div
                     key={label}
                     className={`relative min-w-0 overflow-hidden rounded-lg border border-line bg-paper ${
-                      href ? "transition-colors hover:border-line-strong hover:bg-fill focus-within:outline focus-within:outline-2 focus-within:outline-ink" : ""
+                      href ? "transition-colors hover:border-line-strong hover:bg-fill focus-within:outline focus-within:outline-2 focus-within:outline-brass" : ""
                     }`}
                   >
                     <dt className={CARD_HEADER}>
@@ -966,7 +967,7 @@ export function AssociationSummary({
               <button
                 type="submit"
                 disabled={pending}
-                className="rounded-md bg-ink px-4 py-2 text-[13px] font-medium text-paper hover:bg-ink-mid disabled:opacity-50"
+                className={btnPrimary}
               >
                 {pending ? "Saving…" : "Save"}
               </button>

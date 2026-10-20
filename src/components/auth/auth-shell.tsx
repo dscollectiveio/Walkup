@@ -20,10 +20,10 @@ import { BareMarker } from "@/components/app-frame";
 export const FIRST_RUN_STEPS = ["Create your account", "Secure it", "Set up your building"] as const;
 
 export const authInput =
-  "mt-1.5 w-full rounded-lg border border-line-strong bg-paper px-3.5 py-2.5 text-[15px] text-ink placeholder:text-mute-soft focus:border-[#1B2A41] focus:outline-none focus:ring-2 focus:ring-[#D9A441]/40";
+  "mt-1.5 w-full rounded-lg border border-line-strong bg-paper px-3.5 py-2.5 text-[15px] text-ink placeholder:text-mute-soft focus:border-ink focus:outline-none focus:ring-2 focus:ring-brass/40";
 export const authLabel = "block text-[13px] font-semibold text-ink";
 export const authButton =
-  "inline-flex min-h-[48px] w-full items-center justify-center rounded-lg bg-ink px-4 text-[15px] font-semibold text-paper transition-colors hover:bg-ink-mid focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#D9A441] disabled:opacity-60";
+  "inline-flex min-h-[48px] w-full items-center justify-center rounded-lg bg-ink px-4 text-[15px] font-semibold text-paper transition-colors hover:bg-ink-mid focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-brass disabled:opacity-60";
 export const authError = "rounded-lg border border-bad-line bg-bad-tint px-3.5 py-2.5 text-[13px] text-bad-text";
 
 const POINTS = [
@@ -49,7 +49,7 @@ function Steps({ current }: { current: number }) {
           <li key={label} className="flex min-w-0 flex-1 flex-col gap-1.5" aria-current={state === "now" ? "step" : undefined}>
             <span
               className={`h-1.5 rounded-full ${
-                state === "later" ? "bg-line" : "bg-[#D9A441]"
+                state === "later" ? "bg-line" : "bg-brass"
               }`}
             />
             <span className={`truncate text-[11px] font-medium ${state === "later" ? "text-mute-soft" : "text-ink"}`}>
@@ -96,7 +96,7 @@ export function AuthShell({
           <ul className="mt-8 space-y-3 text-[14px] text-white/85">
             {[...POINTS, pricingWords().authPoint].map((p) => (
               <li key={p} className="flex gap-3">
-                <svg viewBox="0 0 16 16" aria-hidden="true" className="mt-[3px] h-4 w-4 shrink-0 text-[#D9A441]">
+                <svg viewBox="0 0 16 16" aria-hidden="true" className="mt-[3px] h-4 w-4 shrink-0 text-brass">
                   <path d="M3 8.5l3 3 7-7" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
                 </svg>
                 {p}

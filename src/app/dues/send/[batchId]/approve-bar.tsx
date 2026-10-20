@@ -3,11 +3,9 @@
 import { useRouter } from "next/navigation";
 import { useState, useTransition } from "react";
 import { approveBatch, cancelBatch } from "@/app/dues/email-actions";
+import { btnPrimary, btnSecondary } from "@/components/repairs/styles";
 
-const btnPrimary =
-  "inline-flex min-h-[48px] items-center justify-center rounded-lg bg-ink px-5 py-2 text-[14px] font-semibold text-paper hover:bg-ink-mid disabled:opacity-50";
-const btnGhost =
-  "inline-flex min-h-[48px] items-center justify-center rounded-lg border border-line-strong bg-paper px-4 py-2 text-[14px] font-medium text-ink hover:bg-fill disabled:opacity-50";
+const btnGhost = btnSecondary;
 
 /**
  * The approval. Only a board admin sees the Send button; a board member is

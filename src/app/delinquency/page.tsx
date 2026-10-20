@@ -166,6 +166,7 @@ export default async function CollectionsPage({ searchParams }: { searchParams: 
           )}
 
           <Card
+            navy
             title="Overdue by unit"
             hint="Older balances are in the right-hand columns."
           >

@@ -24,7 +24,7 @@ export default async function OwnerStatementIndex() {
     return (
       <div className="mx-auto w-full max-w-[760px] space-y-6">
         <h1 className="text-[20px] font-bold tracking-tight text-ink">Statement</h1>
-        <Card title="No unit is linked to your account yet">
+        <Card navy title="No unit is linked to your account yet">
           <p className="text-[14px] leading-relaxed text-ink">
             The board hasn&rsquo;t linked your sign-in to a unit, so there&rsquo;s no statement to show. Ask{" "}
             {viewer.boardContact.name ?? "a board member"} to send you a new invite from Building & Owners.
@@ -45,7 +45,7 @@ export default async function OwnerStatementIndex() {
         <h1 className="text-[20px] font-bold tracking-tight text-ink">Statement</h1>
         <p className="mt-1 text-mute">Choose a unit to see what was charged, what was paid, and what is left.</p>
       </div>
-      <Card title="Choose a unit">
+      <Card navy title="Choose a unit">
         <ul className="divide-y divide-line">
           {units.map((u, i) => {
             const s = summaries[i];

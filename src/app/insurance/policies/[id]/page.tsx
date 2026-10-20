@@ -23,6 +23,7 @@ import { YEAR_SELECT, YearByYear, type YearRow } from "../../components/year-by-
 import { addDays } from "../../quote-helpers";
 import { storedProvenance } from "../../review-data";
 import { TrackPremium } from "../../track-premium";
+import { btnSecondary } from "@/components/repairs/styles";
 import { MoreMenu } from "./more-menu";
 import { SummaryCard } from "./summary-card";
 import { IssuedDeclarationsBanner, SwitchingChecklist } from "./switching";
@@ -257,7 +258,7 @@ export default async function PolicyPage({
       <header className="flex flex-wrap items-start justify-between gap-3">
         <div className="min-w-0">
           <h1 className="text-[20px] font-bold tracking-tight text-ink">{policy.carrier_name}</h1>
-          <p className="mt-1 text-[13px] text-mute">
+          <p className="mt-1 text-mute">
             {[coverageLabel(policy.coverage), number ? `Policy ${number}` : null, periodLabel(policy.effective_from, policy.effective_to)]
               .filter(Boolean)
               .join(" · ")}
@@ -413,7 +414,7 @@ export default async function PolicyPage({
             {canEdit && agent.id ? (
               <Link
                 href={`/insurance/emails/new?kind=certificate_request&contact=${agent.id}`}
-                className="inline-flex min-h-[44px] items-center rounded-md border border-line-strong bg-paper px-4 text-[13px] font-medium text-ink hover:bg-fill"
+                className={btnSecondary}
               >
                 Ask for a certificate
               </Link>

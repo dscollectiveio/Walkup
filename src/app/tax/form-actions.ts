@@ -481,7 +481,7 @@ export async function markFormFiled(_prev: unknown, formData: FormData) {
       filename: proof.name,
       mimeType: proof.type || "application/pdf",
       categorySlug: "tax_form",
-      title: `Proof of filing — ${form.form_code} ${form.tax_year}`,
+      title: `Proof of filing: ${form.form_code} ${form.tax_year}`,
       link: { targetTable: "tax_forms", targetId: formId, relation: "proof_of_filing" },
     });
     if ("error" in stored) return { error: stored.error };
@@ -510,7 +510,7 @@ export async function setAccountant(_prev: unknown, formData: FormData) {
   const firm = String(formData.get("firm") ?? "").trim() || null;
   const email = String(formData.get("email") ?? "").trim();
   if (!fullName) return { error: "Give your accountant a name." };
-  if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) return { error: "Enter your accountant's email address — the drafts are addressed to it." };
+  if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) return { error: "Enter your accountant's email address. The drafts are addressed to it." };
 
   const supabase = await createClient();
   const associationId = await currentAssociationId(supabase);

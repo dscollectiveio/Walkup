@@ -178,7 +178,7 @@ export function AddressField({
           </ul>
         ) : null}
         {unavailable && visible ? (
-          <p className="mt-1.5 text-[12px] text-mute">Suggestions aren&rsquo;t available right now — type the address in the boxes below.</p>
+          <p className="mt-1.5 text-[12px] text-mute">Suggestions aren&rsquo;t available right now. Type the address in the boxes below.</p>
         ) : null}
       </div>
 

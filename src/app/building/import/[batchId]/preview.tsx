@@ -81,7 +81,7 @@ function TransactionsPreview({
         <Stat label="Money out" value={amt(summary.money_out)} />
         <Stat label="Entries" value={num(summary.counts.ok)} note="Each one balanced: debits equal credits" />
       </div>
-      <Card title="By account">
+      <Card navy title="By account">
         {by.length === 0 ? (
           <p className="text-[13px] text-mute">Nothing yet.</p>
         ) : (
@@ -100,7 +100,7 @@ function TransactionsPreview({
           </ul>
         )}
       </Card>
-      <Card title={`The first ${entries.length} entries`}>
+      <Card navy title={`The first ${entries.length} entries`}>
         <ul className="divide-y divide-line">
           {entries.map(({ row, e }) =>
             e ? (
@@ -151,11 +151,11 @@ function OpeningAccountsPreview({ summary, rows, fyLabel, asOf }: { summary: Imp
   return (
     <div className="space-y-4">
       <div className="grid gap-4 md:grid-cols-2">
-        <Card title="Debits">
+        <Card navy title="Debits">
           {group(debits, "debit")}
           <p className="figures mt-2 border-t border-line pt-2 text-[13px] font-medium">{amt(summary.debits)}</p>
         </Card>
-        <Card title="Credits">
+        <Card navy title="Credits">
           {group(credits, "credit")}
           <p className="figures mt-2 border-t border-line pt-2 text-[13px] font-medium">{amt(summary.credits)}</p>
         </Card>
@@ -180,7 +180,7 @@ function OpeningUnitsPreview({
   const income = byId.get(String(options.income_account_id ?? ""));
   return (
     <div className="space-y-4">
-      <Card title="What each unit owed">
+      <Card navy title="What each unit owed">
         <ul className="divide-y divide-line">
           {rows.map((r) => (
             <li key={r.row_number} className="flex justify-between gap-3 py-2 text-[13px]">
@@ -237,7 +237,7 @@ function UnitsPreview({ summary, rows, options, funds }: { summary: ImportSummar
         </p>
       ) : null}
       {shares.size > 0 && !skipped ? (
-        <Card title="Ownership percentages">
+        <Card navy title="Ownership percentages">
           <ul className="divide-y divide-line">
             {[...shares.entries()].map(([unit, pct]) => (
               <li key={unit} className="flex justify-between gap-3 py-2 text-[13px]">
@@ -255,7 +255,7 @@ function UnitsPreview({ summary, rows, options, funds }: { summary: ImportSummar
         <p className="text-[13px] text-mute">Ownership percentages are being left out.</p>
       ) : null}
       {leftOut.length > 0 ? (
-        <Card title="Left out">
+        <Card navy title="Left out">
           <ul className="space-y-1 text-[13px] text-mute">
             {leftOut.slice(0, 20).map((r) => (
               <li key={r.row_number}>
@@ -275,7 +275,7 @@ function ContractorsPreview({ rows }: { rows: PRow[] }) {
   const there = rows.filter((r) => r.status === "duplicate");
   return (
     <div className="grid gap-4 md:grid-cols-2">
-      <Card title={`New contractors (${fresh.length})`}>
+      <Card navy title={`New contractors (${fresh.length})`}>
         {fresh.length === 0 ? (
           <p className="text-[13px] text-mute">None.</p>
         ) : (
@@ -289,7 +289,7 @@ function ContractorsPreview({ rows }: { rows: PRow[] }) {
           </ul>
         )}
       </Card>
-      <Card title={`Already there (${there.length})`}>
+      <Card navy title={`Already there (${there.length})`}>
         {there.length === 0 ? (
           <p className="text-[13px] text-mute">None.</p>
         ) : (

@@ -144,7 +144,7 @@ export function SetupGuidePanel({
     <section id="setup-guide" className="flex max-h-[34rem] scroll-mt-20 flex-col rounded-xl border border-line bg-paper lg:max-h-none">
       <header className="flex min-h-[4.75rem] flex-col justify-center rounded-t-[7px] band bg-ink px-5 py-4 text-paper">
         <h2 className="eyebrow text-paper">Set up your building</h2>
-        <p className="mt-0.5 text-[12px] text-ondark-mute">In order — each section builds on the last.</p>
+        <p className="mt-0.5 text-[12px] text-ondark-mute">In order, each section builds on the last.</p>
       </header>
 
       <div className="border-b border-line px-5 py-3">
@@ -248,7 +248,7 @@ export function SetupGuidePanel({
                 Set up your building
               </h2>
               <p className="mt-1 text-[13px] text-mute">
-                Every step, what it takes, and where to do it. Steps tick themselves as the records appear — there&rsquo;s
+                Every step, what it takes, and where to do it. Steps tick themselves as the records appear, so there&rsquo;s
                 nothing to check off by hand.
               </p>
             </div>

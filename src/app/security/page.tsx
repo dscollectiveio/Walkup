@@ -42,10 +42,10 @@ export default function SecurityPage() {
         <Lockup />
       </Link>
 
-      <h1 className="mt-8 text-[22px] font-bold tracking-tight text-ink">
+      <h1 className="mt-8 text-[20px] font-bold tracking-tight text-ink">
         Security &amp; Privacy
       </h1>
-      <p className="mt-2 text-[13px] text-mute-soft">
+      <p className="mt-1 text-[13px] text-mute">
         Last updated 2026-10-16. Reviewed at least every 6 months, and after
         any incident or new integration.
       </p>

@@ -97,7 +97,7 @@ export async function MultiPeriodView({
       <div>
         <h1 className="text-[20px] font-bold tracking-tight text-ink">Financial Statements</h1>
         <p className="mt-1 text-mute">
-          Built from bank transactions that have been posted to the books — the same numbers as your tax filing
+          Built from bank transactions that have been posted to the books: the same numbers as your tax filing
           and budget pages.
         </p>
       </div>
@@ -105,7 +105,7 @@ export async function MultiPeriodView({
       {unposted > 0 ? (
         <p className="border-l-[3px] border-warning bg-warning-tint px-3 py-2 text-[13px] text-warning-text">
           {unposted} bank transaction{unposted === 1 ? "" : "s"} in these periods haven&rsquo;t been posted to the
-          books yet — the figures below leave {unposted === 1 ? "it" : "them"} out.{" "}
+          books yet: the figures below leave {unposted === 1 ? "it" : "them"} out.{" "}
           <Link href="/bank-feed?status=needs" className="underline underline-offset-2">
             Categorize on the bank feed →
           </Link>

@@ -27,9 +27,9 @@ export default async function OnboardingPage() {
     <AuthShell
       step={2}
       title="Set up your building"
-      subtitle="You'll be the board admin — you can add units, owners and the rest of the board once you're in."
+      subtitle="You'll be the board admin. You can add units, owners and the rest of the board once you're in."
       aside={{
-        heading: "Last step — then you're in.",
+        heading: "Last step, then you're in.",
         body: "Walkup sets up your fiscal year, operating and reserve funds, and a chart of accounts for you. Your Dashboard will walk you through the rest, one step at a time.",
       }}
     >

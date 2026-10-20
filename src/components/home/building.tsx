@@ -96,10 +96,10 @@ export function Building({
                   key={u.id}
                   role="button"
                   tabIndex={0}
-                  aria-label={`${u.label}${u.ownerName ? `, ${u.ownerName}` : ""} — ${
+                  aria-label={`${u.label}${u.ownerName ? `, ${u.ownerName}` : ""}: ${
                     u.owedLabel ?? STATUS_WORD[u.status]
                   }`}
-                  className="cursor-pointer outline-none"
+                  className="cursor-pointer"
                   onClick={() => open(u.id)}
                   onKeyDown={(e) => {
                     if (e.key === "Enter" || e.key === " ") {

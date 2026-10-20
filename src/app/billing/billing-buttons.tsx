@@ -76,7 +76,7 @@ export function UpgradeToYearly({ planName, month, year, renewsOn }: { planName:
     );
   }
   return (
-    <div className="rounded-xl border border-[#D9A441]/60 bg-[#D9A441]/10 p-5">
+    <div className="rounded-xl border border-brass/60 bg-brass/10 p-5">
       <p className="text-[15px] font-semibold text-ink">
         Save ${savings} a year: switch to yearly
       </p>

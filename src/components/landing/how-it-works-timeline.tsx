@@ -117,7 +117,7 @@ export function HowItWorksTimeline() {
       <span aria-hidden="true" className="absolute bottom-0 left-[22px] top-0 w-0.5 rounded bg-line md:left-1/2 md:-translate-x-1/2" />
       <span
         aria-hidden="true"
-        className="absolute left-[22px] top-0 w-0.5 origin-top rounded bg-[#D9A441] md:left-1/2 md:-translate-x-1/2"
+        className="absolute left-[22px] top-0 w-0.5 origin-top rounded bg-brass md:left-1/2 md:-translate-x-1/2"
         style={{ height: `${progress * 100}%`, transition: animate ? "height 120ms linear" : undefined }}
       />
 
@@ -133,7 +133,7 @@ export function HowItWorksTimeline() {
               aria-hidden="true"
               className={`absolute left-0 top-1 flex h-11 w-11 items-center justify-center rounded-full border-2 transition-all duration-500 ease-out md:left-1/2 md:-translate-x-1/2 ${
                 lit
-                  ? "scale-100 border-[#D9A441] bg-[#D9A441] text-[#1B2A41] shadow-[0_0_0_6px_rgba(217,164,65,0.22)]"
+                  ? "scale-100 border-brass bg-brass text-on-brass shadow-[0_0_0_6px_rgba(217,164,65,0.22)]"
                   : "scale-90 border-line-strong bg-paper text-mute"
               }`}
             >
@@ -184,7 +184,7 @@ export function HowItWorksTimeline() {
                 <h3 className="mt-0.5 text-[17px] font-bold text-ink">{title}</h3>
                 <p className="mt-1.5 text-[14px] leading-relaxed text-mute">{body}</p>
                 {why ? (
-                  <p className="mt-2.5 rounded-lg bg-[#D9A441]/10 px-3 py-2 text-[13px] leading-relaxed text-ink">{why}</p>
+                  <p className="mt-2.5 rounded-lg bg-brass/10 px-3 py-2 text-[13px] leading-relaxed text-ink">{why}</p>
                 ) : null}
               </div>
             </div>

@@ -2,6 +2,7 @@
 
 import Link from "next/link";
 import { useEffect, useId, useState, useSyncExternalStore, type ReactNode } from "react";
+import { btnPrimary } from "@/components/repairs/styles";
 import { readableSize } from "@/lib/documents/format";
 import { MAX_DOCUMENTS_PER_BATCH, MAX_PHOTOS_PER_BATCH } from "@/lib/documents/upload-paths";
 import type { LinkableTable } from "@/app/documents/upload/link-targets";
@@ -277,7 +278,7 @@ export function DirectUpload(props: DirectUploadProps) {
   const button = (
     <label
       htmlFor={inputId}
-      className={`inline-flex min-h-[44px] w-full cursor-pointer items-center justify-center rounded-md bg-ink px-4 py-2 text-[13px] font-medium text-paper hover:bg-ink-mid has-[:focus-visible]:outline has-[:focus-visible]:outline-2 has-[:focus-visible]:outline-offset-2 has-[:focus-visible]:outline-ink sm:w-auto ${
+      className={`${btnPrimary} w-full cursor-pointer has-[:focus-visible]:outline has-[:focus-visible]:outline-2 has-[:focus-visible]:outline-offset-2 has-[:focus-visible]:outline-ink sm:w-auto ${
         busy || disabled ? "pointer-events-none opacity-50" : ""
       }`}
     >

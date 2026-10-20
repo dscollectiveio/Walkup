@@ -26,7 +26,7 @@ export function ReportActions({ report, pdfHref }: { report: Report; pdfHref: st
             <span className="block text-[11px] text-mute">Just the expense lines and total</span>
           </a>
           <p className="border-t border-line px-3 py-2 text-[11px] text-mute">
-            Opens a draft in your email app — nothing is sent. Attach the PDF yourself if you want it included.
+            Opens a draft in your email app. Nothing is sent. Attach the PDF yourself if you want it included.
           </p>
         </div>
       </details>

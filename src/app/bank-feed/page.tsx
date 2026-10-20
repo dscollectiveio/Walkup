@@ -523,7 +523,7 @@ export default async function BankFeedPage({
         <h1 className="text-[20px] font-bold tracking-tight text-ink">Bank feed</h1>
         <p className="mt-1 text-mute">
           What your bank reports is how the books get written. Categorize each transaction once
-          and post it — the ledger, budget, dues balances, and financial statements all follow.
+          and post it: the ledger, budget, dues balances, and financial statements all follow.
         </p>
       </div>
 
@@ -608,13 +608,13 @@ export default async function BankFeedPage({
           >
             {caughtUp ? (
               <div className="mb-4 rounded-lg border border-good-line bg-good-tint px-4 py-3">
-                <p className="text-[13px] font-medium text-good-text">Nothing waiting — you&rsquo;re caught up.</p>
+                <p className="text-[13px] font-medium text-good-text">Nothing waiting. You&rsquo;re caught up.</p>
                 <p className="mt-1 text-[12px] text-good-text">
                   <span className="figures">{counts.posted}</span> in the books
                 </p>
                 {settledReady > 0 ? (
                   <p className="mt-1 text-[12px] text-good-text">
-                    {settledReady} categorized and ready — post {settledReady === 1 ? "it" : "them"} to finish.
+                    {settledReady} categorized and ready: post {settledReady === 1 ? "it" : "them"} to finish.
                   </p>
                 ) : (
                   <Link
@@ -710,7 +710,7 @@ export default async function BankFeedPage({
                       : status !== "all"
                         ? `Nothing ${STATUS_LABEL[status].toLowerCase()} yet.`
                         : checking.length > 0
-                          ? "Checking the bank for transactions now — reload in a minute."
+                          ? "Checking the bank for transactions now. Reload in a minute."
                           : "No transactions synced yet. Click “Sync now” above."}
               </Empty>
             ) : (

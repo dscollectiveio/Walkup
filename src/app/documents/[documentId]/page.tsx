@@ -22,6 +22,7 @@ import { ReadButtons } from "@/app/insurance/review/[documentId]/read-buttons";
 import { previewKind, summaryBullets } from "@/lib/documents/preview";
 import { ReadingBar } from "./reading-bar";
 import { Viewing } from "./viewing";
+import { btnPrimary, btnSecondary } from "@/components/repairs/styles";
 
 export const dynamic = "force-dynamic";
 // Uploads and re-reads run the document reader in after(); give it the
@@ -106,7 +107,7 @@ export default async function DocumentDetailPage({
         <div className="border-l-[3px] border-warning bg-warning-tint px-5 py-4">
           <p className="font-medium text-warning-text">This document is in the bin</p>
           <p className="mt-1 text-[13px] text-warning-text opacity-90">
-            Owners can no longer see it. Nothing has been destroyed — restore it if this was a
+            Owners can no longer see it. Nothing has been destroyed. Restore it if this was a
             mistake.
           </p>
           {canWrite ? (
@@ -123,7 +124,7 @@ export default async function DocumentDetailPage({
           <div className="space-y-3">
             <DownloadButton
               id={doc.id}
-              className="rounded-md bg-ink px-4 py-2 text-[13px] font-medium text-paper hover:bg-ink-mid disabled:opacity-50"
+              className={btnPrimary}
             >
               Download
             </DownloadButton>
@@ -196,13 +197,13 @@ export default async function DocumentDetailPage({
               <div className="flex flex-col gap-2 sm:flex-row">
                 <Link
                   href={`/insurance/policies/new?document=${doc.id}`}
-                  className="inline-flex min-h-[44px] items-center justify-center rounded-md bg-ink px-4 text-[13px] font-medium text-paper hover:bg-ink-mid"
+                  className={btnPrimary}
                 >
                   Enter it as a policy
                 </Link>
                 <Link
                   href={`/insurance/quotes/new?document=${doc.id}`}
-                  className="inline-flex min-h-[44px] items-center justify-center rounded-md border border-line-strong bg-paper px-4 text-[13px] font-medium text-ink hover:bg-fill"
+                  className={btnSecondary}
                 >
                   Enter it as a quote
                 </Link>

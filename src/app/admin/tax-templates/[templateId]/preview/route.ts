@@ -43,7 +43,7 @@ export async function GET(request: NextRequest, { params }: { params: Promise<{ 
   const t = rows?.[0];
   if (!t) return NextResponse.json({ error: "Template not found." }, { status: 404 });
   if (t.kind === "link_only" || !t.storage_path) {
-    return NextResponse.json({ error: "This template has no PDF — the form is filed online. There is nothing to preview." }, { status: 409 });
+    return NextResponse.json({ error: "This template has no PDF. The form is filed online. There is nothing to preview." }, { status: 409 });
   }
   const { data: blob, error } = await supabase.storage.from("tax-templates").download(t.storage_path);
   if (error || !blob) return NextResponse.json({ error: "The stored PDF couldn't be read." }, { status: 500 });

@@ -15,7 +15,7 @@ export function ResendLink({ email, className = "" }: { email: string; className
         onClick={() =>
           start(async () => {
             const r = await resendConfirmation(email);
-            setMsg(r.error ? { ok: false, text: r.error } : { ok: true, text: "Sent — check your inbox." });
+            setMsg(r.error ? { ok: false, text: r.error } : { ok: true, text: "Sent. Check your inbox." });
           })
         }
         className="font-semibold underline underline-offset-2 disabled:opacity-60"

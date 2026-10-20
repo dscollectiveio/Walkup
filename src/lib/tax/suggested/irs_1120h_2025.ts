@@ -25,7 +25,7 @@ const max0 = (x: string) => `max0(${x})`;
 
 const FORM = "Form 1120-H (2025)";
 const INSTR = "Instructions for Form 1120-H (2025), Specific Instructions";
-const cite = (line: string, heading?: string) => (heading ? `${FORM}, ${line}; ${INSTR} — ${heading}` : `${FORM}, ${line}`);
+const cite = (line: string, heading?: string) => (heading ? `${FORM}, ${line}; ${INSTR}: ${heading}` : `${FORM}, ${line}`);
 
 const S1 = "1. About your association";
 const S2 = "2. Lines B–E (the two tests)";
@@ -66,7 +66,7 @@ const calc = (label: string, section: string, rule: string, citation: string, ex
   ...extra,
 });
 
-const HEADER_DATE_HINT = "Blank for a calendar-year association — leave it blank.";
+const HEADER_DATE_HINT = "Blank for a calendar-year association. Leave it blank.";
 
 const INCOME_LINES: { field: string; line: number; label: string; heading: string; hint?: string }[] = [
   { field: "f1_17[0]", line: 1, label: "Dividends", heading: "Dividends" },
@@ -129,61 +129,61 @@ const FIELD_MAP: FieldMap = {
   [f("PgHeader[0].f1_01[0]")]: setting(
     "Tax year beginning (fiscal-year filers only)",
     "fiscal_year.starts_on_mmdd_noncalendar",
-    cite("header — tax year beginning", "Period covered"),
+    cite("header: tax year beginning", "Period covered"),
     { hint: HEADER_DATE_HINT },
   ),
   [f("PgHeader[0].f1_02[0]")]: setting(
     "Tax year ending (fiscal-year filers only)",
     "fiscal_year.ends_on_mmdd_noncalendar",
-    cite("header — tax year ending", "Period covered"),
+    cite("header: tax year ending", "Period covered"),
     { hint: HEADER_DATE_HINT },
   ),
   [f("PgHeader[0].f1_03[0]")]: setting(
-    "Tax year ending — last two digits of the year",
+    "Tax year ending: last two digits of the year",
     "fiscal_year.ends_on_yy_noncalendar",
-    cite("header — tax year ending, the two-digit year box", "Period covered"),
+    cite("header: tax year ending, the two-digit year box", "Period covered"),
     { hint: HEADER_DATE_HINT },
   ),
-  [f("NameAddress[0].f1_04[0]")]: setting("Name", "association.legal_name", cite("header — Name", "Name and address")),
+  [f("NameAddress[0].f1_04[0]")]: setting("Name", "association.legal_name", cite("header: Name", "Name and address")),
   [f("f1_11[0]")]: setting(
     "Employer identification number",
     "association.ein",
-    cite("header — Employer identification number", "Employer identification number (EIN)"),
+    cite("header: Employer identification number", "Employer identification number (EIN)"),
   ),
-  [f("NameAddress[0].f1_05[0]")]: setting("Number and street", "association.street_address", cite("header — Number and street", "Name and address")),
-  [f("NameAddress[0].f1_07[0]")]: setting("City or town", "association.city", cite("header — City or town", "Name and address")),
-  [f("NameAddress[0].f1_08[0]")]: setting("State", "association.state_code", cite("header — State", "Name and address")),
-  [f("NameAddress[0].f1_10[0]")]: setting("ZIP code", "association.postal_code", cite("header — ZIP code", "Name and address")),
-  [f("f1_12[0]")]: setting("Date association formed", "association.incorporated_on_us", cite("header — Date association formed"), { kind: "date" }),
+  [f("NameAddress[0].f1_05[0]")]: setting("Number and street", "association.street_address", cite("header: Number and street", "Name and address")),
+  [f("NameAddress[0].f1_07[0]")]: setting("City or town", "association.city", cite("header: City or town", "Name and address")),
+  [f("NameAddress[0].f1_08[0]")]: setting("State", "association.state_code", cite("header: State", "Name and address")),
+  [f("NameAddress[0].f1_10[0]")]: setting("ZIP code", "association.postal_code", cite("header: ZIP code", "Name and address")),
+  [f("f1_12[0]")]: setting("Date association formed", "association.incorporated_on_us", cite("header: Date association formed"), { kind: "date" }),
   [f("c1_5[0]")]: {
-    label: "A — Condominium management association",
+    label: "A: Condominium management association",
     section: S1,
     source: "manual",
     rule: "",
-    citation: cite("item A, first box — condominium management association", "Item A. Type of homeowners association"),
+    citation: cite("item A, first box: condominium management association", "Item A. Type of homeowners association"),
     kind: "checkbox",
-    hint: "Check exactly one of the three. Walkup's 30% rate assumes a condominium or residential association; timeshares use 32% — ask your CPA if unsure.",
+    hint: "Check exactly one of the three. Walkup's 30% rate assumes a condominium or residential association; timeshares use 32%. Ask your CPA if unsure.",
   },
   [f("c1_5[1]")]: {
-    label: "A — Residential real estate association",
+    label: "A: Residential real estate association",
     section: S1,
     source: "manual",
     rule: "",
-    citation: cite("item A, second box — residential real estate association", "Item A. Type of homeowners association"),
+    citation: cite("item A, second box: residential real estate association", "Item A. Type of homeowners association"),
     kind: "checkbox",
   },
   [f("c1_5[2]")]: {
-    label: "A — Timeshare association",
+    label: "A: Timeshare association",
     section: S1,
     source: "manual",
     rule: "",
-    citation: cite("item A, third box — timeshare association", "Item A. Type of homeowners association"),
+    citation: cite("item A, third box: timeshare association", "Item A. Type of homeowners association"),
     kind: "checkbox",
   },
 
   // ---- 2. Lines B–E (the two tests) -----------------------------------------------
   [f("f1_13[0]")]: {
-    label: "Line B — Total exempt function income (60% test)",
+    label: "Line B: Total exempt function income (60% test)",
     section: S2,
     source: "ledger",
     rule: "exempt_income",
@@ -191,7 +191,7 @@ const FIELD_MAP: FieldMap = {
     kind: "money",
   },
   [f("f1_14[0]")]: {
-    label: "Line C — Expenditures for purposes in the 90% test",
+    label: "Line C: Expenditures for purposes in the 90% test",
     section: S2,
     source: "ledger",
     rule: "exempt_expenditures",
@@ -199,14 +199,14 @@ const FIELD_MAP: FieldMap = {
     kind: "money",
   },
   [f("f1_15[0]")]: {
-    label: "Line D — Association's total expenditures",
+    label: "Line D: Association's total expenditures",
     section: S2,
     source: "ledger",
     rule: "total_expenditures",
     citation: cite("line D", "Item D"),
     kind: "money",
   },
-  [f("f1_16[0]")]: typed("Line E — Tax-exempt interest received or accrued", S2, cite("line E", "Item E"), {
+  [f("f1_16[0]")]: typed("Line E: Tax-exempt interest received or accrued", S2, cite("line E", "Item E"), {
     zeroOk: true,
     hint: "Interest on state or municipal bonds. Most associations have none.",
   }),
@@ -215,14 +215,14 @@ const FIELD_MAP: FieldMap = {
   ...Object.fromEntries(
     INCOME_LINES.map((l) => [
       f(l.field),
-      typed(`Line ${l.line} — ${l.label}`, S3, cite(`line ${l.line}`, `Gross Income — Line ${l.line}. ${l.heading}`), {
+      typed(`Line ${l.line}: ${l.label}`, S3, cite(`line ${l.line}`, `Gross Income: Line ${l.line}. ${l.heading}`), {
         zeroOk: true,
         ...(l.hint ? { hint: l.hint } : {}),
       }),
     ]),
   ),
   [LINE_8]: calc(
-    "Line 8 — Gross income (excluding exempt function income): lines 1–7",
+    "Line 8: Gross income (excluding exempt function income): lines 1–7",
     S3,
     add(...LINES_1_TO_7),
     cite("line 8 (add lines 1 through 7)", "Gross Income"),
@@ -232,15 +232,15 @@ const FIELD_MAP: FieldMap = {
   ...Object.fromEntries(
     DEDUCTION_LINES.map((l) => [
       f(l.field),
-      typed(`Line ${l.line} — ${l.label}`, S4, cite(`line ${l.line}`, `Deductions — Line ${l.line}. ${l.label}`), {
+      typed(`Line ${l.line}: ${l.label}`, S4, cite(`line ${l.line}`, `Deductions: Line ${l.line}. ${l.label}`), {
         zeroOk: true,
         hint: DEDUCTION_HINT,
       }),
     ]),
   ),
-  [LINE_16]: calc("Line 16 — Total deductions: lines 9–15", S4, add(...LINES_9_TO_15), cite("line 16 (add lines 9 through 15)", "Line 16. Total deductions")),
+  [LINE_16]: calc("Line 16: Total deductions: lines 9–15", S4, add(...LINES_9_TO_15), cite("line 16 (add lines 9 through 15)", "Line 16. Total deductions")),
   [LINE_17]: calc(
-    "Line 17 — Taxable income before the specific deduction: line 8 minus line 16",
+    "Line 17: Taxable income before the specific deduction: line 8 minus line 16",
     S4,
     sub(LINE_8, LINE_16),
     cite("line 17 (subtract line 16 from line 8)"),
@@ -248,41 +248,41 @@ const FIELD_MAP: FieldMap = {
 
   // ---- 5. Tax and payments (lines 19–26) -------------------------------------------
   [LINE_19]: calc(
-    "Line 19 — Taxable income: line 17 minus the $100 specific deduction (line 18 is preprinted)",
+    "Line 19: Taxable income: line 17 minus the $100 specific deduction (line 18 is preprinted)",
     S5,
     max0(sub(LINE_17, "param:form_1120h_specific_deduction")),
     cite("line 19 (subtract line 18, the preprinted $100 specific deduction, from line 17)"),
   ),
   [LINE_20]: calc(
-    "Line 20 — 30% of line 19 (timeshare associations: 32% — ask your CPA)",
+    "Line 20: 30% of line 19 (timeshare associations: 32%, ask your CPA)",
     S5,
     mul(LINE_19, "param:form_1120h_rate_condo"),
     cite("line 20 (30% of line 19; 32% for timeshare associations)", "Line 20"),
     {
       blankIf: [f("c1_5[2]")],
-      hint: "Left blank if you check Timeshare association above — that rate isn't one Walkup has on file. Enter it with your CPA.",
+      hint: "Left blank if you check Timeshare association above. That rate isn't one Walkup has on file. Enter it with your CPA.",
     },
   ),
-  [LINE_21]: typed("Line 21 — Tax credits", S5, cite("line 21", "Line 21. Tax credits"), { hint: "Rare for an association. Leave blank if none." }),
-  [LINE_22]: calc("Line 22 — Total tax: line 20 minus line 21", S5, sub(LINE_20, LINE_21), cite("line 22 (subtract line 21 from line 20)", "Line 22. Total tax")),
+  [LINE_21]: typed("Line 21: Tax credits", S5, cite("line 21", "Line 21. Tax credits"), { hint: "Rare for an association. Leave blank if none." }),
+  [LINE_22]: calc("Line 22: Total tax: line 20 minus line 21", S5, sub(LINE_20, LINE_21), cite("line 22 (subtract line 21 from line 20)", "Line 22. Total tax")),
   ...Object.fromEntries(
     PAYMENT_LINES.map((l) => [
       f(l.field),
-      typed(`Line ${l.line} — ${l.label}`, S5, cite(`line ${l.line}`, l.heading), { hint: "Leave blank if none." }),
+      typed(`Line ${l.line}: ${l.label}`, S5, cite(`line ${l.line}`, l.heading), { hint: "Leave blank if none." }),
     ]),
   ),
   [LINE_23G]: calc(
-    "Line 23g — Total payments and credits",
+    "Line 23g: Total payments and credits",
     S5,
     add(...LINES_23A_TO_F),
     cite("line 23g (add lines 23a through 23f)", "Line 23g. Total payments and credits"),
   ),
-  [f("f1_46[0]")]: calc("Line 24 — Amount owed: line 22 minus line 23g", S5, max0(sub(LINE_22, LINE_23G)), cite("line 24", "Line 24. Amount owed")),
-  [f("f1_47[0]")]: calc("Line 25 — Overpayment: line 23g minus line 22", S5, max0(sub(LINE_23G, LINE_22)), cite("line 25", "Line 25. Overpayment")),
-  [f("f1_48[0]")]: typed("Line 26a — Overpayment credited to next year's estimated tax", S5, cite("line 26a", "Line 26a. Credited to estimated tax"), {
+  [f("f1_46[0]")]: calc("Line 24: Amount owed: line 22 minus line 23g", S5, max0(sub(LINE_22, LINE_23G)), cite("line 24", "Line 24. Amount owed")),
+  [f("f1_47[0]")]: calc("Line 25: Overpayment: line 23g minus line 22", S5, max0(sub(LINE_23G, LINE_22)), cite("line 25", "Line 25. Overpayment")),
+  [f("f1_48[0]")]: typed("Line 26a: Overpayment credited to next year's estimated tax", S5, cite("line 26a", "Line 26a. Credited to estimated tax"), {
     hint: "Leave blank if none.",
   }),
-  [f("f1_49[0]")]: typed("Line 26b — Overpayment refunded", S5, cite("line 26b", "Line 26b. Refunded"), { hint: "Leave blank if none." }),
+  [f("f1_49[0]")]: typed("Line 26b: Overpayment refunded", S5, cite("line 26b", "Line 26b. Refunded"), { hint: "Leave blank if none." }),
 };
 
 export const IRS_1120H_2025: SuggestedTemplate = {
@@ -301,7 +301,7 @@ export const IRS_1120H_2025: SuggestedTemplate = {
   dueRule: "FY_END + 4 MONTHS, DAY 15",
   dueRuleCitation: "Instructions for Form 1120-H (2025), When To File",
   filingInstructions:
-    "Sign and date page 1 (an officer of the association). Mail it to the address under 'Where To File' in the instructions for your state, or e-file. An association that files 10 or more returns of any type in the calendar year (1099s count) must e-file — don't mail this packet in that case.",
+    "Sign and date page 1 (an officer of the association). Mail it to the address under 'Where To File' in the instructions for your state, or e-file. An association that files 10 or more returns of any type in the calendar year (1099s count) must e-file. Don't mail this packet in that case.",
   filingCitation: "Instructions for Form 1120-H (2025), Where To File; Electronic Filing",
   notes:
     "Fiscal years ending June 30 are due in the 3rd month, not the 4th. A due date on a Saturday, Sunday or legal holiday moves to the next business day. Extension: Form 7004. The election to file 1120-H is made each year by filing it on time. " +

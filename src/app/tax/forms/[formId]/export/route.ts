@@ -92,7 +92,7 @@ export async function GET(request: NextRequest, { params }: { params: Promise<{ 
       ? deadline.citation
       : deadline.note
     : form.due_on
-      ? "recorded when the form was started — not yet checked against this year's instructions"
+      ? "recorded when the form was started, not yet checked against this year's instructions"
       : null;
 
   if (kind === "worksheet") {
@@ -111,7 +111,7 @@ export async function GET(request: NextRequest, { params }: { params: Promise<{ 
     figures.addRow({});
     figures.addRow({
       section: "Due date",
-      label: dueOn ? dateWords(dueOn) : "Not on file — ask your CPA",
+      label: dueOn ? dateWords(dueOn) : "Not on file. Ask your CPA",
       value: deadline ? deadline.basis : form.due_on ? "recorded at start" : "",
       note: dueWords ?? "",
     });
@@ -178,7 +178,7 @@ export async function GET(request: NextRequest, { params }: { params: Promise<{ 
         filename,
         mimeType: XLSX_TYPE,
         categorySlug: "tax_form",
-        title: `${label} ${form.tax_year} — figures worksheet`,
+        title: `${label} ${form.tax_year}: figures worksheet`,
         link: { targetTable: "tax_forms", targetId: formId, relation: "worksheet" },
       });
       if ("id" in stored) await supabase.from("tax_forms").update({ worksheet_document_id: stored.id }).eq("id", formId);
@@ -257,7 +257,7 @@ export async function GET(request: NextRequest, { params }: { params: Promise<{ 
       filename,
       mimeType: "application/pdf",
       categorySlug: "tax_form",
-      title: `${label} ${form.tax_year} — ${flatten ? "ready to sign" : draft ? "draft, editable for a CPA" : "editable, for a CPA"}`,
+      title: `${label} ${form.tax_year}: ${flatten ? "ready to sign" : draft ? "draft, editable for a CPA" : "editable, for a CPA"}`,
       link: { targetTable: "tax_forms", targetId: formId, relation: flatten ? "signable" : "editable" },
     });
     if ("id" in saved) {

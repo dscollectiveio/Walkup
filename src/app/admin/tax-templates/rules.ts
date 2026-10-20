@@ -196,7 +196,7 @@ export function suggestionDecision(entry: SuggestedTemplate, pdf: InspectedPdf):
       apply: false,
       note:
         `Walkup's suggested map (${entry.key}) was NOT applied: ${reason} ` +
-        "The PDF is stored, inactive, with no map — map it by hand against the labeled preview. " +
+        "The PDF is stored, inactive, with no map. Map it by hand against the labeled preview. " +
         "The due rule and filing instructions below came from the suggestion; check them against this revision before activating.",
     };
   }
@@ -248,9 +248,9 @@ export function classifyLinkCheck(url: string, outcome: { status: number; finalU
 const PARAMETER_LABEL: Record<string, string> = {
   form_1120h_rate_condo: "1120-H tax rate (condominium and residential associations)",
   form_1120h_specific_deduction: "1120-H specific deduction",
-  form_1120h_income_test: "1120-H income test — share of gross income that must be owner fees",
-  form_1120h_expenditure_test: "1120-H expenditure test — share of spending that must be on the building",
-  form_1099_nec_threshold: "1099-NEC threshold — payments to one contractor in a calendar year",
+  form_1120h_income_test: "1120-H income test: share of gross income that must be owner fees",
+  form_1120h_expenditure_test: "1120-H expenditure test: share of spending that must be on the building",
+  form_1099_nec_threshold: "1099-NEC threshold: payments to one contractor in a calendar year",
 };
 
 export function parameterLabel(key: string): string {

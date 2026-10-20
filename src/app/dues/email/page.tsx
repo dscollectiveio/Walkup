@@ -143,7 +143,7 @@ export default async function EmailPage({ searchParams }: { searchParams: Promis
     <div className="space-y-6">
       {heading}
 
-      <Card title="Status">
+      <Card navy title="Status">
         {status === "suspended" ? (
           <Answer status="bad" headline="Sending is paused by Walkup" detail={`${settings?.suspended_reason || "Contact support."} Write to ${SUPPORT_EMAIL}.`} />
         ) : status === "not_set_up" && !config.ok ? (
@@ -178,16 +178,16 @@ export default async function EmailPage({ searchParams }: { searchParams: Promis
       </Card>
 
       {status === "on" && viewer.isBoardAdmin && settings ? (
-        <Card title="Daily limit">
+        <Card navy title="Daily limit">
           <DailyLimit cap={settings.daily_cap} />
         </Card>
       ) : null}
 
-      <Card title="Reminder rules" hint="Rules send dues reminders on their own once a day, only after a board admin turns them on.">
+      <Card navy title="Reminder rules" hint="Rules send dues reminders on their own once a day, only after a board admin turns them on.">
         <RulesCard rules={rules} sendingOn={status === "on"} canAdmin={viewer.isBoardAdmin} canBoard />
       </Card>
 
-      <Card title="Blocked addresses">
+      <Card navy title="Blocked addresses">
         {(blockedRes.data ?? []).length === 0 ? (
           <p className="text-[13px] text-mute">No address is blocked. An address is blocked when it bounces or someone reports an email as spam.</p>
         ) : (
@@ -198,7 +198,7 @@ export default async function EmailPage({ searchParams }: { searchParams: Promis
         )}
       </Card>
 
-      <Card title="Opt-outs">
+      <Card navy title="Opt-outs">
         {optoutPeople === 0 ? (
           <p className="text-[13px] text-mute">Nobody has opted out of email.</p>
         ) : (
@@ -209,7 +209,7 @@ export default async function EmailPage({ searchParams }: { searchParams: Promis
       </Card>
 
       <section id="log">
-        <Card title="Send log">
+        <Card navy title="Send log">
           <form method="get" action="/dues/email" className="mb-4 flex flex-wrap items-end gap-3">
             <div>
               <label htmlFor="log-kind" className="block text-[12px] font-medium text-ink">

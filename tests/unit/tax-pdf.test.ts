@@ -81,7 +81,7 @@ describe("official form PDFs", () => {
   });
 
   it("renders the draft cover for a CPA's editable copy, and keeps the form fillable behind it", async () => {
-    expect(DRAFT_NOTICE).toBe("Draft from Walkup — figures not yet confirmed by the board. Not the official filing.");
+    expect(DRAFT_NOTICE).toBe("Draft from Walkup: figures not yet confirmed by the board. Not the official filing.");
     const cover = await draftCover({ formLabel: "Form 1120-H", associationName: "2158 N. Damen Condominium Association", taxYear: 2025 });
     expect((await PDFDocument.load(cover)).getPageCount()).toBe(1);
 

@@ -58,7 +58,7 @@ export interface FiguresForm {
   vendorId: string | null;
 }
 
-const NOT_ON_FILE = "Not on file — add it in Building & Owners";
+const NOT_ON_FILE = "Not on file. Add it in Building & Owners";
 const NOT_CHECKED = "not yet checked against this year's instructions";
 const money = formatMoney;
 const plural = (n: number, word: string) => `${n} ${word}${n === 1 ? "" : "s"}`;
@@ -101,7 +101,7 @@ function figuresSection(ctx: FiguresContext): FiguresSection {
       {
         label: "Gross income",
         value: money(f.grossIncomeCents),
-        note: `${plural(receipts.exempt.length + receipts.nonexempt.length, "receipt")} — owner fees plus everything else`,
+        note: `${plural(receipts.exempt.length + receipts.nonexempt.length, "receipt")}: owner fees plus everything else`,
       },
       { label: "Spending on the building (exempt function expenditures)", value: money(f.exemptExpendituresCents), note: plural(payments.exempt.length, "payment") },
       { label: "Total spending", value: money(f.totalExpendituresCents), note: plural(payments.all.length, "payment") },
@@ -127,14 +127,14 @@ function testsSection(ctx: FiguresContext): FiguresSection {
     rows.push({
       label: "Both tests",
       value: "Can't be run",
-      note: "The 1120-H test thresholds aren't on file in Walkup — ask your CPA.",
+      note: "The 1120-H test thresholds aren't on file in Walkup. Ask your CPA.",
     });
   } else {
     for (const t of tests) {
       rows.push({
         label: t.key === "income" ? "Owner fees ÷ gross income (the income test)" : "Spending on the building ÷ total spending (the expenditure test)",
-        value: `${t.ratio === null ? `n/a — no ${t.key === "income" ? "gross income" : "spending"} recorded` : pct(t.ratio)} — ${t.passed ? "passes" : "fails"} (needs ${needs(t.threshold)})`,
-        note: `Threshold ${needs(t.threshold)} from ${t.sourceUrl ?? "tax_parameters"} — ${t.thresholdVerified ? "checked by a person" : NOT_CHECKED}`,
+        value: `${t.ratio === null ? `n/a, no ${t.key === "income" ? "gross income" : "spending"} recorded` : pct(t.ratio)}: ${t.passed ? "passes" : "fails"} (needs ${needs(t.threshold)})`,
+        note: `Threshold ${needs(t.threshold)} from ${t.sourceUrl ?? "tax_parameters"}: ${t.thresholdVerified ? "checked by a person" : NOT_CHECKED}`,
       });
     }
   }
@@ -143,7 +143,7 @@ function testsSection(ctx: FiguresContext): FiguresSection {
     rows.push({
       label: "Income still to classify",
       value: plural(unconfirmed.length, "account"),
-      note: `${unconfirmed.join(", ")} — until each is confirmed, the tests are provisional.`,
+      note: `${unconfirmed.join(", ")}: until each is confirmed, the tests are provisional.`,
     });
   }
   return { title: "1120-H tests", rows };
@@ -169,7 +169,7 @@ function estimateSection(ctx: FiguresContext): FiguresSection {
   } catch {
     return {
       title,
-      rows: [{ label: "Estimated tax", value: "Can't be estimated", note: "The rate or specific deduction isn't on file in Walkup — ask your CPA." }],
+      rows: [{ label: "Estimated tax", value: "Can't be estimated", note: "The rate or specific deduction isn't on file in Walkup. Ask your CPA." }],
     };
   }
   const checked = result.usesUnverifiedParameters ? NOT_CHECKED : "checked by a person";
@@ -177,13 +177,13 @@ function estimateSection(ctx: FiguresContext): FiguresSection {
     title,
     rows: [
       { label: "Income that isn't owner fees", value: money(result.nonexemptIncomeCents) },
-      { label: "Specific deduction", value: `−${money(result.specificDeductionCents)}`, note: `From tax_parameters — ${checked}` },
+      { label: "Specific deduction", value: `−${money(result.specificDeductionCents)}`, note: `From tax_parameters: ${checked}` },
       { label: "Taxable income (estimate)", value: money(result.taxableIncomeCents) },
-      { label: "Rate", value: needs(result.rate), note: `Condominium and residential associations; timeshares differ — ask your CPA. From tax_parameters — ${checked}` },
+      { label: "Rate", value: needs(result.rate), note: `Condominium and residential associations; timeshares differ. Ask your CPA. From tax_parameters: ${checked}` },
       {
         label: "Estimated tax before any deductions",
         value: money(result.taxDueCents),
-        note: "Provisional — before any deductions the form allows, and not tax advice. Ask your CPA.",
+        note: "Provisional: before any deductions the form allows, and not tax advice. Ask your CPA.",
       },
     ],
   };
@@ -198,7 +198,7 @@ function contractorSection(ctx: FiguresContext, form: FiguresForm): FiguresSecti
         {
           label: "Contractor",
           value: "Not found among this year's contractor payments",
-          note: "Check the Contractors page — the payments may be recorded under another name.",
+          note: "Check the Contractors page. The payments may be recorded under another name.",
         },
       ],
     };
@@ -207,11 +207,11 @@ function contractorSection(ctx: FiguresContext, form: FiguresForm): FiguresSecti
     title: "Contractor",
     rows: [
       { label: "Name", value: scrubIdentifiers(c.name) },
-      { label: "Address", value: c.address?.trim() ? scrubIdentifiers(c.address) : "Not on file — add it on the Contractors page" },
+      { label: "Address", value: c.address?.trim() ? scrubIdentifiers(c.address) : "Not on file. Add it on the Contractors page" },
       { label: `Total paid in ${form.taxYear}`, value: money(c.totalCents), note: "Every payment we recorded; card payments are reported by the processor instead." },
       { label: "Payments", value: String(c.paymentCount) },
       { label: "W-9 on file", value: c.w9OnFile ? "Yes" : "No", note: c.w9OnFile ? undefined : "Ask for a W-9 before preparing the 1099." },
-      { label: "Taxpayer ID", value: "Not stored in Walkup — copy it from the W-9", note: "Walkup keeps only the last four digits, by design." },
+      { label: "Taxpayer ID", value: "Not stored in Walkup. Copy it from the W-9", note: "Walkup keeps only the last four digits, by design." },
     ],
   };
 }

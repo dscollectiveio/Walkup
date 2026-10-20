@@ -2,6 +2,7 @@
 
 import { useState, useTransition } from "react";
 import { Pill } from "@/components/repairs/pills";
+import { btnSecondary } from "@/components/repairs/styles";
 import { withdrawPaymentReport } from "../actions";
 
 export interface MyReport {
@@ -57,7 +58,7 @@ export function MyReports({ reports }: { reports: MyReport[] }) {
                   type="button"
                   disabled={pending}
                   onClick={() => setConfirming(null)}
-                  className="inline-flex min-h-[44px] items-center rounded-md border border-line-strong bg-paper px-4 text-[13px] font-medium text-ink hover:bg-fill"
+                  className={btnSecondary}
                 >
                   Keep it
                 </button>

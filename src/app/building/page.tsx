@@ -18,6 +18,7 @@ import Link from "next/link";
 import { aiConfigured } from "@/lib/ai/client";
 import { inForce } from "@/lib/insurance/status";
 import { todayIso as localTodayIso } from "@/lib/dates";
+import { btnPrimary } from "@/components/repairs/styles";
 
 export const dynamic = "force-dynamic";
 
@@ -375,7 +376,7 @@ export default async function BuildingPage() {
         {isBoard ? (
           <Link
             href="/documents"
-            className="inline-flex min-h-[44px] w-full shrink-0 items-center justify-center rounded-md bg-ink px-4 py-2 text-[13px] font-medium text-paper hover:bg-ink-mid sm:w-auto"
+            className={`${btnPrimary} w-full shrink-0 sm:w-auto`}
           >
             Add Documents
           </Link>

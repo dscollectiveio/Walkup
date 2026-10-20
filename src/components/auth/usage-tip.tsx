@@ -68,7 +68,7 @@ export function UsageTip() {
       onFocus={() => setPaused(true)}
       onBlur={() => setPaused(false)}
     >
-      <p className="flex items-center gap-2 text-[11px] font-semibold uppercase tracking-[0.1em] text-[#D9A441]">
+      <p className="flex items-center gap-2 text-[11px] font-semibold uppercase tracking-[0.1em] text-brass">
         <Lightbulb size={14} strokeWidth={1.8} aria-hidden="true" />
         Did you know?
       </p>
@@ -84,9 +84,9 @@ export function UsageTip() {
             onClick={() => setI(n)}
             aria-label={`Tip ${n + 1} of ${TIPS.length}`}
             aria-current={n === i ? "true" : undefined}
-            className="flex h-6 w-4 items-center justify-center focus-visible:outline focus-visible:outline-2 focus-visible:outline-[#D9A441]"
+            className="flex h-6 w-4 items-center justify-center focus-visible:outline focus-visible:outline-2 focus-visible:outline-brass"
           >
-            <span className={`h-1.5 rounded-full transition-all ${n === i ? "w-4 bg-[#D9A441]" : "w-1.5 bg-white/30"}`} />
+            <span className={`h-1.5 rounded-full transition-all ${n === i ? "w-4 bg-brass" : "w-1.5 bg-white/30"}`} />
           </button>
         ))}
       </div>

@@ -190,7 +190,7 @@ function wrap(text: string, max: number): string[] {
 export const COVER_DISCLAIMER =
   "The board is responsible for reviewing these figures before filing. Walkup fills forms from your records and does not file them.";
 
-export const DRAFT_NOTICE = "Draft from Walkup — figures not yet confirmed by the board. Not the official filing.";
+export const DRAFT_NOTICE = "Draft from Walkup: figures not yet confirmed by the board. Not the official filing.";
 
 /** One US-letter page of plain text, in the same type as every Walkup cover. */
 async function textPage(): Promise<{ pdf: PDFDocument; line: (text: string, opts?: { size?: number; bold?: boolean; mute?: boolean; gap?: number }) => void }> {
@@ -225,11 +225,11 @@ export async function coverSheet(input: {
 }): Promise<Uint8Array> {
   const { pdf, line } = await textPage();
 
-  line(`${input.formLabel} — ${input.taxYear}`, { size: 18, bold: true, gap: 2 });
+  line(`${input.formLabel}, ${input.taxYear}`, { size: 18, bold: true, gap: 2 });
   line(input.associationName, { mute: true, gap: 18 });
 
   line("Due", { bold: true, gap: 0 });
-  line(input.dueOn ? `${input.dueOn}${input.dueCitation ? ` (${input.dueCitation})` : ""}` : "Not on file — confirm the due date with your CPA.", { gap: 14 });
+  line(input.dueOn ? `${input.dueOn}${input.dueCitation ? ` (${input.dueCitation})` : ""}` : "Not on file. Confirm the due date with your CPA.", { gap: 14 });
 
   line("What to sign, attach, and where to mail it", { bold: true, gap: 0 });
   line(
@@ -254,7 +254,7 @@ export async function coverSheet(input: {
 export async function draftCover(input: { formLabel: string; associationName: string; taxYear: number }): Promise<Uint8Array> {
   const { pdf, line } = await textPage();
 
-  line(`${input.formLabel} — ${input.taxYear}`, { size: 18, bold: true, gap: 2 });
+  line(`${input.formLabel}, ${input.taxYear}`, { size: 18, bold: true, gap: 2 });
   line(input.associationName, { mute: true, gap: 18 });
 
   line(DRAFT_NOTICE, { size: 14, bold: true, gap: 12 });

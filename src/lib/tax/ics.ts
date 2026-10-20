@@ -109,7 +109,7 @@ export function buildCalendar(input: CalendarInput): string {
     "PRODID:-//Walkup//Taxes//EN",
     "CALSCALE:GREGORIAN",
     "METHOD:PUBLISH",
-    `X-WR-CALNAME:${escapeText(`Walkup — ${input.associationName} taxes`)}`,
+    `X-WR-CALNAME:${escapeText(`Walkup: ${input.associationName} taxes`)}`,
   ];
 
   // Shared by a deadline and its milestones: an all-day event that doesn't

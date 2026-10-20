@@ -172,7 +172,7 @@ export function AppTour({
       {hole ? (
         <div
           aria-hidden="true"
-          className="pointer-events-none absolute rounded-[10px] ring-2 ring-[#D9A441] transition-all duration-200 motion-reduce:transition-none"
+          className="pointer-events-none absolute rounded-[10px] ring-2 ring-brass transition-all duration-200 motion-reduce:transition-none"
           style={{ left: hole.x, top: hole.y, width: hole.w, height: hole.h }}
         />
       ) : null}
@@ -216,7 +216,7 @@ export function AppTour({
               ref={nextRef}
               type="button"
               onClick={next}
-              className="rounded-md bg-[#D9A441] px-3.5 py-1.5 text-[13px] font-semibold text-[#1B2A41] hover:bg-[#E4B75B] focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#1B2A41]"
+              className="rounded-md bg-brass px-3.5 py-1.5 text-[13px] font-semibold text-on-brass hover:brightness-105 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ink"
             >
               {index === 0 ? "Show me around" : isFinishForAdmin ? "Go to the checklist" : last ? "Done" : "Next"}
             </button>

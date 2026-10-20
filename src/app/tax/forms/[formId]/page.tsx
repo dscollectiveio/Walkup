@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { createClient, getUser } from "@/lib/supabase/server";
 import { Restricted } from "@/components/ui";
+import { btnPrimary, btnSecondary } from "@/components/repairs/styles";
 import type { FieldMap } from "@/lib/tax/autofill";
 import { accountantEmail, mailtoHref, type AccountantEmailInput } from "@/lib/tax/accountant-email";
 import { dateWords, ESTIMATED_NOTE, TAX_FOOTER } from "@/lib/tax/copy";
@@ -27,8 +28,8 @@ const STATUS_LABEL: Record<string, string> = {
 /** The board's five steps, in order; the strip shows which one the form is on. */
 const STEPS = ["Check the figures", "Send to your accountant", "Confirm each line", "Export to sign", "Mark as filed"];
 
-const primary = "inline-flex min-h-[44px] items-center rounded-md bg-ink px-4 text-[13px] font-medium text-paper hover:bg-ink-mid";
-const secondary = "inline-flex min-h-[44px] items-center rounded-md border border-line-strong bg-paper px-4 text-[13px] font-medium text-ink hover:bg-fill";
+const primary = btnPrimary;
+const secondary = btnSecondary;
 
 /** A tax_forms row, as much of it as this page reads. */
 interface FormRow {
@@ -148,26 +149,26 @@ function dueWords(deadline: Deadline | undefined, form: Pick<FormRow, "status" |
   }
   if (deadline?.dueOn) {
     const when = dateWords(deadline.dueOn);
-    const days = deadline.daysLeft !== null && deadline.daysLeft >= 0 ? ` — ${deadline.daysLeft} day${deadline.daysLeft === 1 ? "" : "s"}` : "";
+    const days = deadline.daysLeft !== null && deadline.daysLeft >= 0 ? `, ${deadline.daysLeft} day${deadline.daysLeft === 1 ? "" : "s"}` : "";
     const cite = deadline.citation ? ` (${deadline.citation})` : "";
     if (deadline.basis === "verified") {
       return deadline.overdue
-        ? { text: `Overdue — was due ${when}${cite}.`, note: deadline.note, cls: "text-bad-text" }
+        ? { text: `Overdue: was due ${when}${cite}.`, note: deadline.note, cls: "text-bad-text" }
         : { text: `Due ${when}${days}${cite}.`, note: deadline.note, cls: "text-ink" };
     }
     return deadline.overdue
-      ? { text: `May be overdue — estimated ${when}. ${ESTIMATED_NOTE}`, note: null, cls: "text-warning-text" }
+      ? { text: `May be overdue: estimated ${when}. ${ESTIMATED_NOTE}`, note: null, cls: "text-warning-text" }
       : { text: `Estimated ${when}${days}. ${ESTIMATED_NOTE}`, note: null, cls: "text-ink" };
   }
-  if (deadline) return { text: "Due date not on file — ask your CPA.", note: deadline.note, cls: "text-mute" };
+  if (deadline) return { text: "Due date not on file. Ask your CPA.", note: deadline.note, cls: "text-mute" };
   if (form.due_on) {
     return {
-      text: `Due ${dateWords(form.due_on)} — recorded when this form was started; check it against this year’s instructions or ask your CPA.`,
+      text: `Due ${dateWords(form.due_on)}. Recorded when this form was started; check it against this year’s instructions or ask your CPA.`,
       note: null,
       cls: "text-mute",
     };
   }
-  return { text: "Due date not on file — ask your CPA.", note: null, cls: "text-mute" };
+  return { text: "Due date not on file. Ask your CPA.", note: null, cls: "text-mute" };
 }
 
 /**
@@ -209,7 +210,7 @@ function LinksLine({ links }: { links: LinkView[] }) {
           {uniform ? "" : ` (${words[i]})`}
         </span>
       ))}
-      {uniform ? ` — ${words[0]}` : ""}
+      {uniform ? `, ${words[0]}` : ""}
     </p>
   );
 }
@@ -402,7 +403,7 @@ export default async function TaxFormPage({ params }: { params: Promise<{ formId
 
   // What the accountant should know is still open — the figures are in the body; these are the gaps.
   const openItems: string[] = [];
-  if (!ctx.association.ein?.trim()) openItems.push("The association's EIN isn't in Walkup yet — we'll add it.");
+  if (!ctx.association.ein?.trim()) openItems.push("The association's EIN isn't in Walkup yet. We'll add it.");
   if (ctx.input.unconfirmedIncomeAccounts.length > 0) openItems.push(`Income still to classify in Walkup: ${ctx.input.unconfirmedIncomeAccounts.join(", ")}.`);
   if (openCount > 0 && !locked) openItems.push(`${openCount} line${openCount === 1 ? "" : "s"} on the form still need${openCount === 1 ? "s" : ""} a figure or a confirmation.`);
   const thresholdCents = Math.round((ctx.input.parameters.find((p) => p.key === "form_1099_nec_threshold")?.value ?? Infinity) * 100);
@@ -459,7 +460,7 @@ export default async function TaxFormPage({ params }: { params: Promise<{ formId
       {!hasPdf ? (
         <div className="rounded-xl border border-line bg-paper px-5 py-4 text-[13px]">
           <p className="font-medium text-ink">
-            {linkOnly ? `${label} is filed on the official site — Walkup doesn’t fill it.` : `Walkup hasn’t checked the ${form.tax_year} official form yet.`}
+            {linkOnly ? `${label} is filed on the official site. Walkup doesn’t fill it.` : `Walkup hasn’t checked the ${form.tax_year} official form yet.`}
           </p>
           <p className="mt-1 text-mute">
             {linkOnly
@@ -469,7 +470,7 @@ export default async function TaxFormPage({ params }: { params: Promise<{ formId
           {template?.filingInstructions ? (
             <p className="mt-2 text-ink">
               {template.filingInstructions}
-              {template.filingCitation ? <span className="text-mute"> — {template.filingCitation}</span> : null}
+              {template.filingCitation ? <span className="text-mute">: {template.filingCitation}</span> : null}
             </p>
           ) : null}
           {form.form_code === "il_sos_annual_report" ? (
@@ -479,7 +480,7 @@ export default async function TaxFormPage({ params }: { params: Promise<{ formId
                 <span className="figures text-ink">{ctx.settings.ilSosFileNumber}</span>
               ) : (
                 <>
-                  not on file — <a href="/tax#sos-file-number" className="underline underline-offset-2">add it on the Taxes tab</a>; the portal asks for it.
+                  not on file: <a href="/tax#sos-file-number" className="underline underline-offset-2">add it on the Taxes tab</a>; the portal asks for it.
                 </>
               )}
             </p>
@@ -496,7 +497,7 @@ export default async function TaxFormPage({ params }: { params: Promise<{ formId
             <a href="#send" className={secondary}>
               Send to your accountant
             </a>
-            {canEdit && !locked && views.length === 0 ? <MarkFiled formId={formId} label="Mark as filed — filed by hand or by your accountant" /> : null}
+            {canEdit && !locked && views.length === 0 ? <MarkFiled formId={formId} label="Mark as filed: filed by hand or by your accountant" /> : null}
             {canEdit && !locked ? <RefreshButton formId={formId} /> : null}
           </div>
           {locked ? <p className="mt-3 text-good-text">Filed on {form.filed_on ? dateWords(form.filed_on) : "a date not recorded"}.</p> : null}
@@ -529,7 +530,7 @@ export default async function TaxFormPage({ params }: { params: Promise<{ formId
             </p>
           ) : null}
           {!locked && views.length === 0 ? (
-            <p className="text-[13px] text-mute">No lines yet — Refresh from your records fills them from the checked official form.</p>
+            <p className="text-[13px] text-mute">No lines yet. Refresh from your records fills them from the checked official form.</p>
           ) : null}
         </>
       )}
@@ -555,7 +556,7 @@ export default async function TaxFormPage({ params }: { params: Promise<{ formId
               <div className="border-b border-line px-5 py-3 text-[12px]">
                 <p className="text-ink">
                   Your records show {formatMoney(nonexemptCents)} of income that isn&rsquo;t owner fees{byAccount ? `: ${byAccount}` : ""}.{" "}
-                  {nonexemptCents === 0 ? "Lines 1–7 can be left blank — a blank money line counts as zero." : "Enter it on the matching lines."}
+                  {nonexemptCents === 0 ? "Lines 1–7 can be left blank. A blank money line counts as zero." : "Enter it on the matching lines."}
                 </p>
                 {settled && enteredCents !== nonexemptCents ? (
                   <p className="mt-1 text-warning-text">
@@ -579,7 +580,7 @@ export default async function TaxFormPage({ params }: { params: Promise<{ formId
           <header className="border-b border-line px-5 py-4">
             <h2 className="eyebrow text-mute">Your figures</h2>
             <p className="mt-1.5 text-[13px] text-mute">
-              From your records, for your accountant or the official form — the same rows as the worksheet. Nobody has checked them against this
+              From your records, for your accountant or the official form. The same rows as the worksheet. Nobody has checked them against this
               year&rsquo;s instructions yet.
             </p>
           </header>

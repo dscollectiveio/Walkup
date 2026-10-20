@@ -50,7 +50,7 @@ export default async function AnnouncementsPage({ searchParams }: { searchParams
         {result === null ? (
           <p className="text-[14px] text-mute">We couldn&rsquo;t load announcements. Reload the page.</p>
         ) : result.rows.length === 0 ? (
-          <Card title="Announcements">
+          <Card navy title="Announcements">
             <Empty>Nothing posted yet. When the board posts something, it shows up here.</Empty>
           </Card>
         ) : (
@@ -133,7 +133,7 @@ export default async function AnnouncementsPage({ searchParams }: { searchParams
       {error ? (
         <p className="text-[14px] text-mute">We couldn&rsquo;t load announcements. Reload the page.</p>
       ) : rows.length === 0 ? (
-        <Card title={tab.label}>
+        <Card navy title={tab.label}>
           <Empty>{EMPTY_TAB[tab.key]}</Empty>
         </Card>
       ) : (

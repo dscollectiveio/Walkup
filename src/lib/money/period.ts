@@ -75,10 +75,10 @@ export function resolvePeriod(key: PeriodKey, fy: FiscalYearLike, today: Date): 
 
   const budgetCaption =
     key === "month"
-      ? `Compared with 1/${fyMonths} of each annual budget — one month's share.`
+      ? `Compared with 1/${fyMonths} of each annual budget: one month's share.`
       : key === "12m"
-        ? "Compared with each full annual budget — twelve months' worth."
-        : `Compared with ${months.length}/${fyMonths} of each annual budget — the share for the months so far this year, not the full-year number.`;
+        ? "Compared with each full annual budget: twelve months' worth."
+        : `Compared with ${months.length}/${fyMonths} of each annual budget: the share for the months so far this year, not the full-year number.`;
 
   return {
     key,

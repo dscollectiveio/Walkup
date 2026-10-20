@@ -21,6 +21,7 @@ import { ThisYear, type ThisYearInput } from "./this-year";
 import { AccountantCard } from "./accountant-card";
 import { FilingMethodChooser, SosFileNumber } from "./filing-settings";
 import { startForm } from "./form-actions";
+import { btnSecondary } from "@/components/repairs/styles";
 import { FORM_LABEL, FORM_PLAIN, run1120hTests, type FormOutcome } from "@/lib/tax/determine";
 import { addDays } from "@/lib/tax/deadlines";
 import { accountantEmail, mailtoHref, type AccountantEmailInput } from "@/lib/tax/accountant-email";
@@ -151,8 +152,8 @@ const LINK_KIND_ORDER: LinkKind[] = ["about", "form", "instructions", "file_onli
 const PARAMETER_LABEL: Record<string, string> = {
   form_1120h_rate_condo: "Tax rate on income that isn't owner fees",
   form_1120h_specific_deduction: "Allowance every association gets",
-  form_1120h_income_test: "Rule 1 — the share of income that must be owner fees",
-  form_1120h_expenditure_test: "Rule 2 — the share of spending that must be on the building",
+  form_1120h_income_test: "Rule 1: the share of income that must be owner fees",
+  form_1120h_expenditure_test: "Rule 2: the share of spending that must be on the building",
   form_1099_nec_threshold: "1099-NEC threshold, per contractor per calendar year",
 };
 
@@ -263,21 +264,21 @@ function cardViewFor(ctx: TaxContext, o: FormOutcome, canWrite: boolean): FormCa
       const when = dateWords(deadline.dueOn);
       if (deadline.basis === "verified") {
         due = {
-          text: `${deadline.overdue ? "Was due" : "Due"} ${when}${deadline.citation ? ` (${deadline.citation})` : ""}${deadline.overdue ? " — overdue" : ""}`,
+          text: `${deadline.overdue ? "Was due" : "Due"} ${when}${deadline.citation ? ` (${deadline.citation})` : ""}${deadline.overdue ? ", overdue" : ""}`,
           tone: deadline.overdue ? "bad" : "ink",
         };
       } else {
         due = {
-          text: `Estimated ${when} — not yet checked against this year's instructions${deadline.overdue ? " — may be overdue" : ""}`,
+          text: `Estimated ${when}, not yet checked against this year's instructions${deadline.overdue ? ", may be overdue" : ""}`,
           tone: deadline.overdue ? "warning" : "mute",
         };
       }
     } else if (deadline) {
-      due = { text: `Due date not on file — ask your CPA.${deadline.note ? ` ${deadline.note}` : ""}`, tone: "mute" };
+      due = { text: `Due date not on file. Ask your CPA.${deadline.note ? ` ${deadline.note}` : ""}`, tone: "mute" };
     } else if (o.dueOn) {
       due = { text: `Due ${dateWords(o.dueOn)}${o.dueCitation ? ` (${o.dueCitation})` : ""}`, tone: "ink" };
     } else {
-      due = { text: "Due date not on file — ask your CPA.", tone: "mute" };
+      due = { text: "Due date not on file. Ask your CPA.", tone: "mute" };
     }
   }
 
@@ -286,7 +287,7 @@ function cardViewFor(ctx: TaxContext, o: FormOutcome, canWrite: boolean): FormCa
 
   let status: FormCardView["status"];
   if (lockedYear) {
-    status = { text: "Figures saved and locked on the 1120-H check — record the filing here", tone: "warning" };
+    status = { text: "Figures saved and locked on the 1120-H check: record the filing here", tone: "warning" };
   } else if (!started) {
     status = { text: notRequired ? "Nothing to do" : "Not started", tone: "mute" };
   } else if (started.status === "filed") {
@@ -305,7 +306,7 @@ function cardViewFor(ctx: TaxContext, o: FormOutcome, canWrite: boolean): FormCa
     } else if (needs) {
       status = { text: needs, tone: "warning" };
     } else if (started.fields.total === 0) {
-      status = { text: "Figures ready — nothing to confirm in Walkup", tone: "ink" };
+      status = { text: "Figures ready: nothing to confirm in Walkup", tone: "ink" };
     } else {
       status = { text: "In review", tone: "ink" };
     }
@@ -392,7 +393,7 @@ function headsUpInput(ctx: TaxContext, result: Form1120hResult | null, senderNam
 function boardDraft(ctx: TaxContext, taxUrl: string, senderName: string): { subject: string; body: string } {
   const subject = `${ctx.association.display_name}: tax dates for ${ctx.fiscalYear.taxYear}`;
   const dates = ctx.deadlines.map((d) =>
-    d.dueOn ? `- ${d.name}: ${dateWords(d.dueOn)}${d.basis === "verified" ? "" : " (estimated)"}` : `- ${d.name}: date not on file — ask our CPA`,
+    d.dueOn ? `- ${d.name}: ${dateWords(d.dueOn)}${d.basis === "verified" ? "" : " (estimated)"}` : `- ${d.name}: date not on file, ask our CPA`,
   );
   const estimated = ctx.deadlines.some((d) => d.dueOn && d.basis !== "verified");
   const lines = [
@@ -674,7 +675,7 @@ export default async function TaxPage({ searchParams }: { searchParams: Promise<
       <div>
         <h1 className="text-[20px] font-bold tracking-tight text-ink">Taxes</h1>
         <p className="mt-1 text-mute">
-          Fiscal year {ctx.fiscalYear.label} ({ctx.fiscalYear.starts_on} to {ctx.fiscalYear.ends_on}) — which forms you
+          Fiscal year {ctx.fiscalYear.label} ({ctx.fiscalYear.starts_on} to {ctx.fiscalYear.ends_on}): which forms you
           need, why, and when.
         </p>
         {ctx.fiscalYears.length > 1 ? (
@@ -733,7 +734,7 @@ export default async function TaxPage({ searchParams }: { searchParams: Promise<
                 headline="Add your incorporation date so Walkup can list the Illinois annual report"
                 detail="The Secretary of State's annual report is due around the anniversary of incorporation. Add the date in Building & Owners and the report appears above with an estimated date."
               >
-                <a href="/building" className="inline-flex min-h-[44px] items-center rounded-md border border-line-strong bg-paper px-4 text-[13px] font-medium text-ink hover:bg-fill">
+                <a href="/building" className={btnSecondary}>
                   Open Building & Owners
                 </a>
               </Answer>
@@ -786,7 +787,7 @@ export default async function TaxPage({ searchParams }: { searchParams: Promise<
       {ctx.input.unconfirmedIncomeAccounts.length > 0 ? (
         <Answer
           status="attention"
-          headline="Ask your CPA — some income isn't classified yet"
+          headline="Ask your CPA: some income isn't classified yet"
           detail={`Classify ${ctx.input.unconfirmedIncomeAccounts.join(", ")} above to check whether you qualify. The figures below use Walkup's suggestions until then.`}
         />
       ) : null}
@@ -794,24 +795,24 @@ export default async function TaxPage({ searchParams }: { searchParams: Promise<
       {!result ? (
         <Answer
           status="attention"
-          headline="Ask your CPA — this year's tax rules aren't on file in Walkup"
+          headline="Ask your CPA: this year's tax rules aren't on file in Walkup"
           detail={`No stored rate or threshold covers a fiscal year ending ${dateWords(ctx.fiscalYear.ends_on)}, so the check can't run. The rules Walkup has are listed under "Where these tax rules come from".`}
         />
       ) : result.qualifies ? (
         <Answer
           status="good"
           headline="You qualify for the short tax form this year"
-          detail={`Both rules are met. Filing 1120-H is a choice you make each year by filing it — ask your CPA whether 1120-H or Form 1120 is better for you. ${
+          detail={`Both rules are met. Filing 1120-H is a choice you make each year by filing it. Ask your CPA whether 1120-H or Form 1120 is better for you. ${
             result.taxDueCents > 0
-              ? `Walkup's provisional estimate, before any deductions or credits the form allows, is about ${formatMoney(result.taxDueCents)} — ask your CPA.`
-              : "Walkup's provisional estimate, before any deductions or credits the form allows, is $0 — ask your CPA."
+              ? `Walkup's provisional estimate, before any deductions or credits the form allows, is about ${formatMoney(result.taxDueCents)}. Ask your CPA.`
+              : "Walkup's provisional estimate, before any deductions or credits the form allows, is $0. Ask your CPA."
           }`}
         />
       ) : (
         <Answer
           status="bad"
           headline="You do not currently qualify for the short tax form"
-          detail="At least one of the two rules is not met. Talk to an accountant before the filing deadline — there may still be time to change the outcome."
+          detail="At least one of the two rules is not met. Talk to an accountant before the filing deadline. There may still be time to change the outcome."
         />
       )}
 
@@ -823,16 +824,16 @@ export default async function TaxPage({ searchParams }: { searchParams: Promise<
         <>
           <div className="grid gap-4 lg:grid-cols-2">
             <Rule
-              heading="Rule 1 — where your money comes from"
+              heading="Rule 1: where your money comes from"
               plainQuestion="Is most of your income ordinary member fees?"
               test={result.incomeTest}
               numeratorLabel="Fees collected from owners"
               denominatorLabel="All money collected"
               technicalName="60% income test"
-              meaning="This counts money you actually received this year, not money you billed. If an owner stops paying, this number goes down — which is why chasing unpaid fees matters for more than just cash flow."
+              meaning="This counts money you actually received this year, not money you billed. If an owner stops paying, this number goes down, which is why chasing unpaid fees matters for more than just cash flow."
             />
             <Rule
-              heading="Rule 2 — what you spend it on"
+              heading="Rule 2: what you spend it on"
               plainQuestion="Is almost all your spending on the building?"
               test={result.expenditureTest}
               numeratorLabel="Spent on the building"
@@ -844,7 +845,7 @@ export default async function TaxPage({ searchParams }: { searchParams: Promise<
 
           <Card navy
             title="What you might owe (estimate, before deductions)"
-            hint="Owner fees are not taxed. Only other income — bank interest, laundry, renting out common space — is."
+            hint="Owner fees are not taxed. Only other income (bank interest, laundry, renting out common space) is."
           >
             <dl className="max-w-md space-y-2 text-[13px]">
               <div className="flex justify-between gap-4">
@@ -954,7 +955,7 @@ export default async function TaxPage({ searchParams }: { searchParams: Promise<
             <li key={p.id} className="flex flex-wrap items-center justify-between gap-2 py-2.5">
               <span className="min-w-0">
                 <span className="figures text-ink">{parameterValueWords(p)}</span>
-                <span className="text-mute"> — {PARAMETER_LABEL[p.key] ?? p.key}</span>
+                <span className="text-mute">: {PARAMETER_LABEL[p.key] ?? p.key}</span>
                 <span className="block text-[11px] text-mute-soft">
                   {effectiveWords(p)}
                   {inForceIds.has(p.id) ? " · this year" : ""}
@@ -985,7 +986,7 @@ export default async function TaxPage({ searchParams }: { searchParams: Promise<
       <div className="border-t border-line pt-6">
         <div>
           <h2 className="text-[16px] font-bold tracking-tight text-ink">
-            Contractors and 1099s — payments in {ctx.contractorYear}
+            Contractors and 1099s: payments in {ctx.contractorYear}
           </h2>
           <p className="mt-1 text-mute">
             1099-NEC is a calendar-year form: contractors paid for services during {ctx.contractorYear} at or above the
@@ -1006,7 +1007,7 @@ export default async function TaxPage({ searchParams }: { searchParams: Promise<
             <Answer
               status="bad"
               headline={`${missingW9.length} contractor${missingW9.length === 1 ? " needs" : "s need"} a W-9 before you can file`}
-              detail={`${missingW9.map((v) => v.name).join(", ")} — get these on file now rather than chasing them in January.`}
+              detail={`${missingW9.map((v) => v.name).join(", ")}: get these on file now rather than chasing them in January.`}
             />
           ) : (
             <Answer
@@ -1026,7 +1027,7 @@ export default async function TaxPage({ searchParams }: { searchParams: Promise<
             title="Everyone paid for services"
             hint={
               thresholdParam && thresholdCents !== null
-                ? `The threshold for payments made in ${ctx.contractorYear} is ${formatMoney(thresholdCents)} per contractor — ${
+                ? `The threshold for payments made in ${ctx.contractorYear} is ${formatMoney(thresholdCents)} per contractor, ${
                     thresholdParam.verifiedOn ? `checked ${dateWords(thresholdParam.verifiedOn, "short")}` : "not yet checked against this year's instructions"
                   }.`
                 : undefined
@@ -1067,7 +1068,7 @@ export default async function TaxPage({ searchParams }: { searchParams: Promise<
                                 <span className="text-bad-text">Missing</span>
                                 <a
                                   href={w9Href(ctx, v, w9Url, senderName)}
-                                  title={v.email ? `Opens a draft to ${v.email} — nothing is sent.` : "No email on file — opens a draft with no recipient."}
+                                  title={v.email ? `Opens a draft to ${v.email}. Nothing is sent.` : "No email on file. Opens a draft with no recipient."}
                                   className="text-[11px] text-ink underline underline-offset-2"
                                 >
                                   Ask for a W-9
@@ -1095,7 +1096,7 @@ export default async function TaxPage({ searchParams }: { searchParams: Promise<
         </div>
 
         <p className="mt-4 text-[11px] leading-relaxed text-mute">
-          Corporations are usually exempt from 1099-NEC — mark a contractor exempt on the Contractors page rather than
+          Corporations are usually exempt from 1099-NEC. Mark a contractor exempt on the Contractors page rather than
           assuming from the totals here. &ldquo;Ask for a W-9&rdquo; opens a draft in your email app; nothing is sent.
         </p>
       </div>

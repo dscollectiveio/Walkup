@@ -4,7 +4,7 @@ import { AuthShell } from "@/components/auth/auth-shell";
 import { ResetPasswordForm } from "./reset-password-form";
 
 export const dynamic = "force-dynamic";
-export const metadata = { title: "Choose a new password — Walkup" };
+export const metadata = { title: "Choose a new password | Walkup" };
 
 /**
  * Reached from a password-reset email (via /auth/confirm, which signs the

@@ -236,7 +236,7 @@ export function CategoryPicker({
           ))}
           {visible.length === 0 ? (
             <li className="px-2.5 py-1.5 text-[12px] text-mute">
-              No match — try “Transfer” or “Not for the books”.
+              No match. Try “Transfer” or “Not for the books”.
             </li>
           ) : null}
         </ul>

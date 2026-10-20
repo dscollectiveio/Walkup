@@ -33,7 +33,7 @@ export default async function OwnerPayPage() {
     return (
       <div className="mx-auto w-full max-w-[760px] space-y-6">
         {heading}
-        <Card title="No unit is linked to your account yet">
+        <Card navy title="No unit is linked to your account yet">
           <p className="text-[14px] leading-relaxed text-ink">
             The board hasn&rsquo;t linked your sign-in to a unit. Ask {contactName} to send you a new invite from Building & Owners.
           </p>
@@ -141,7 +141,7 @@ export default async function OwnerPayPage() {
       </Card>
 
       <div id="report" className="scroll-mt-20">
-        <Card title="Tell the board you paid">
+        <Card navy title="Tell the board you paid">
           <p className="mb-3 text-[13px] text-mute">
             This does not move money. It tells the board to look for your payment. They record it when the deposit shows up at the bank.
           </p>

@@ -15,7 +15,7 @@ export function toCents(numeric: string): number {
   if (typeof numeric !== "string") {
     throw new Error(
       `money must cross the API boundary as text, not ${typeof numeric}: ` +
-        `${JSON.stringify(numeric)}. Cast the column to ::text in SQL — ` +
+        `${JSON.stringify(numeric)}. Cast the column to ::text in SQL. ` +
         `PostgREST turns NUMERIC into a float.`,
     );
   }

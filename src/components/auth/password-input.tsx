@@ -23,7 +23,7 @@ export function PasswordInput({ className = "", ...props }: Omit<InputHTMLAttrib
         onClick={() => setShown((s) => !s)}
         aria-label={shown ? "Hide password" : "Show password"}
         aria-pressed={shown}
-        className="absolute inset-y-0 right-0 flex w-11 items-center justify-center rounded-r-lg text-mute hover:text-ink focus-visible:outline focus-visible:outline-2 focus-visible:-outline-offset-2 focus-visible:outline-[#D9A441]"
+        className="absolute inset-y-0 right-0 flex w-11 items-center justify-center rounded-r-lg text-mute hover:text-ink focus-visible:outline focus-visible:outline-2 focus-visible:-outline-offset-2 focus-visible:outline-brass"
       >
         <Icon size={18} strokeWidth={1.7} aria-hidden="true" />
       </button>

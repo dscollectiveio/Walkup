@@ -219,7 +219,7 @@ describe("determineForms", () => {
     );
     const nec = forms.filter((x) => x.formCode === "irs_1099_nec");
     expect(nec.map((n) => n.vendorId)).toEqual(["a"]);
-    expect(nec[0].name).toBe("1099-NEC — Damen Plumbing");
+    expect(nec[0].name).toBe("1099-NEC: Damen Plumbing");
     expect(nec[0].warnings).toEqual(["Get a W-9 from Damen Plumbing before preparing their 1099."]);
   });
 

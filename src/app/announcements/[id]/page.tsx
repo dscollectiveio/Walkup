@@ -90,12 +90,12 @@ export default async function AnnouncementPage({ params }: { params: Promise<{ i
         ) : null}
       </div>
 
-      <Card title="Message">
+      <Card navy title="Message">
         <div className="whitespace-pre-wrap break-words text-[15px] leading-relaxed text-ink">{row.body}</div>
       </Card>
 
       {doc ? (
-        <Card title="Attached file">
+        <Card navy title="Attached file">
           <div className="flex flex-wrap items-center justify-between gap-3">
             <div className="min-w-0">
               <p className="break-words text-[14px] font-medium text-ink">{doc.title || doc.filename}</p>

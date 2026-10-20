@@ -61,7 +61,7 @@ describe("planHeadline", () => {
       rows: [],
     });
     expect(h.status).toBe("good");
-    expect(h.headline).toBe("October: $2,980 spent of $3,190 planned — $210 under plan.");
+    expect(h.headline).toBe("October: $2,980 spent of $3,190 planned: $210 under plan.");
     expect(h.detail).toBeUndefined();
   });
 
@@ -76,7 +76,7 @@ describe("planHeadline", () => {
     });
     expect(h.status).toBe("attention");
     expect(h.headline).toContain("$310 over plan");
-    expect(h.detail).toBe("Repairs is the one to watch — $210 over its share.");
+    expect(h.detail).toBe("Repairs is the one to watch: $210 over its share.");
   });
 
   it("uses the forecast for the fiscal year", () => {
@@ -94,7 +94,7 @@ describe("planHeadline", () => {
       },
       rows: [],
     });
-    expect(h.headline).toBe("2026 so far: $29,400 spent of $34,285 planned — on pace to finish about $1,100 under.");
+    expect(h.headline).toBe("2026 so far: $29,400 spent of $34,285 planned, on pace to finish about $1,100 under.");
     expect(h.detail).toBe("Most of the room is insurance.");
     expect(h.status).toBe("good");
   });

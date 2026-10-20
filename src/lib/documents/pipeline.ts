@@ -201,6 +201,6 @@ export async function runExtraction(
       ? "Read; the category you chose was left alone."
       : confident
         ? `Filed as ${category?.label ?? e.category}.`
-        : `Guessed ${category?.label ?? e.category} — waiting for someone to confirm.`,
+        : `Guessed ${category?.label ?? e.category}, waiting for someone to confirm.`,
   };
 }

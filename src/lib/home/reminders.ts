@@ -147,7 +147,7 @@ export function homeTaxDeadlines(rows: HomeTaxRows): HomeTaxDeadlines {
     outcomes.push({ formCode: "irs_1099_nec", taxYear: contractorYear, determination: "ask_cpa", name: FORM_LABEL.irs_1099_nec });
   }
   for (const c of over) {
-    outcomes.push({ formCode: "irs_1099_nec", taxYear: contractorYear, vendorId: c.vendorId, determination: "required", name: `1099-NEC — ${c.name}` });
+    outcomes.push({ formCode: "irs_1099_nec", taxYear: contractorYear, vendorId: c.vendorId, determination: "required", name: `1099-NEC: ${c.name}` });
   }
   if (over.length > 0) {
     // Same three-way answer as determineForms: paper → required, electronic →

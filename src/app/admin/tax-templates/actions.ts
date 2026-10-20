@@ -265,7 +265,7 @@ export async function createLinkOnlyTemplate(_prev: unknown, formData: FormData)
   if (!isOfficialTemplateUrl(sourceUrl)) return { error: "The official source must be an https page on irs.gov, tax.illinois.gov or ilsos.gov." };
   const rules = readRules(formData);
   if ("error" in rules) return { error: rules.error };
-  if (!rules.due_rule && !rules.filing_instructions) return { error: "A link-only template carries a due rule or filing instructions — add at least one." };
+  if (!rules.due_rule && !rules.filing_instructions) return { error: "A link-only template carries a due rule or filing instructions. Add at least one." };
 
   const { data, error } = await supabase
     .from("tax_form_templates")
@@ -458,7 +458,7 @@ export async function checkForUpdates() {
     if ((await sha256Hex(fetched.bytes)) === t.sha256) continue;
     const title = await getTitle(fetched.bytes).catch(() => null);
     const titleChanged = t.revision_title && title && title !== t.revision_title;
-    const titleNote = titleChanged ? ` Title changed from “${t.revision_title}” to “${title}” — probably next year's form; set its tax year by hand.` : "";
+    const titleNote = titleChanged ? ` Title changed from “${t.revision_title}” to “${title}”. It is probably next year's form; set its tax year by hand.` : "";
     const stored = await storeTemplate(supabase, {
       formCode: t.form_code,
       taxYear: t.tax_year,
@@ -468,7 +468,7 @@ export async function checkForUpdates() {
       note: `The published file changed; detected ${todayIso()}. Review before activating.${titleNote}`,
     });
     if ("error" in stored) failed.push(`${t.form_code} ${t.tax_year}: ${stored.error}`);
-    else if (!stored.unchanged) changed.push(`${t.form_code} ${t.tax_year}${titleNote ? ` (title now “${title}” — probably next year's form; set its tax year by hand)` : ""}`);
+    else if (!stored.unchanged) changed.push(`${t.form_code} ${t.tax_year}${titleNote ? ` (title now “${title}”, probably next year's form; set its tax year by hand)` : ""}`);
   }
   revalidatePath("/admin/tax-templates");
   return { ok: true, checked: (active ?? []).length, changed, failed };

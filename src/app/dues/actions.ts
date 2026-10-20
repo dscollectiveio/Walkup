@@ -103,7 +103,7 @@ export async function chargeDuesPeriod(scheduleId: string) {
     schedule.ends_on,
   );
   if (!periodStart) {
-    return { error: `Nothing to charge — this schedule starts ${schedule.starts_on}.` };
+    return { error: `Nothing to charge: this schedule starts ${schedule.starts_on}.` };
   }
 
   const [{ data: fiscalYears }, { data: accounts }, { data: units }, { data: existing }] = await Promise.all([
@@ -319,7 +319,7 @@ export async function addOneOffCharge(_prev: unknown, formData: FormData) {
   const amount = Number(String(formData.get("amount") ?? "").trim());
   const reason = String(formData.get("reason") ?? "").trim();
   if (!unitId) return { error: "Choose a unit." };
-  if (!reason) return { error: "Say what the charge is for — it appears on the owner's statement." };
+  if (!reason) return { error: "Say what the charge is for. It appears on the owner's statement." };
   const today = new Date().toISOString().slice(0, 10);
   const result = await addUnitCharge({ unitId, amount, kind: "other", periodStart: today, dueOn: today, memo: reason });
   return result.error ? { error: result.error as string } : { ok: true as const };

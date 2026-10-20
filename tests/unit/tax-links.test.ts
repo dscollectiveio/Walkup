@@ -65,9 +65,9 @@ describe("linkStatusWords", () => {
     expect(words({})).toBe("retrieved Oct 11, 2026 · not yet checked by a person");
     expect(words({ verified_at: "2025-06-30T15:00:00+00:00" })).toBe("last checked over a year ago");
     expect(words({ verified_at: "2026-10-11T15:00:00+00:00", last_check_status: "blocked" })).toBe(
-      "couldn't be checked automatically — opened by a person on Oct 11, 2026",
+      "couldn't be checked automatically, opened by a person on Oct 11, 2026",
     );
-    expect(words({ last_check_status: "blocked" })).toBe("couldn't be checked automatically — not yet checked by a person");
+    expect(words({ last_check_status: "blocked" })).toBe("couldn't be checked automatically, not yet checked by a person");
   });
 
   it("never says a tax rule was verified by Walkup", () => {

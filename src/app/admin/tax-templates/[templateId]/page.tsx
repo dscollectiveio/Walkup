@@ -18,7 +18,7 @@ const SETUP_NOTE: Record<string, { tone: "good" | "warning" | "neutral"; text: s
   },
   refused: {
     tone: "warning",
-    text: "The suggested map was NOT applied — the note below says why. The PDF is stored, inactive; map it by hand against the labeled preview, or wait for an updated suggestion.",
+    text: "The suggested map was NOT applied. The note below says why. The PDF is stored, inactive; map it by hand against the labeled preview, or wait for an updated suggestion.",
   },
   link_only: {
     tone: "good",
@@ -26,7 +26,7 @@ const SETUP_NOTE: Record<string, { tone: "good" | "warning" | "neutral"; text: s
   },
   created: { tone: "good", text: "Link-only template saved, inactive. Check the rule and its citation against the official page, then verify and activate." },
   active: { tone: "neutral", text: "This exact file is already an active template, so nothing was changed. Deactivate it first if its map or rules need to change." },
-  exists: { tone: "neutral", text: "This file was already stored as a template — here it is." },
+  exists: { tone: "neutral", text: "This file was already stored as a template. Here it is." },
 };
 
 const NOTE_TONE = {
@@ -78,7 +78,7 @@ export default async function TemplatePage({
         <Link href="/admin/tax-templates" className="text-[13px] text-mute hover:underline">← All templates</Link>
         <h1 className="mt-2 text-[20px] font-bold tracking-tight text-ink">
           {label} · {t.tax_year}
-          {kind === "link_only" ? <span className="ml-2 align-middle rounded-full border border-line bg-fill px-2 py-0.5 text-[11px] font-normal text-mute">Link only — rules, no PDF</span> : null}
+          {kind === "link_only" ? <span className="ml-2 align-middle rounded-full border border-line bg-fill px-2 py-0.5 text-[11px] font-normal text-mute">Link only: rules, no PDF</span> : null}
         </h1>
         <p className="mt-1 text-[12px] text-mute">
           From <a href={t.source_url} target="_blank" rel="noopener noreferrer" className="underline underline-offset-2">{t.source_url}</a>
@@ -104,7 +104,7 @@ export default async function TemplatePage({
       {note ? <p className={`rounded-lg border px-4 py-3 text-[13px] ${NOTE_TONE[note.tone]}`}>{note.text}</p> : null}
 
       {kind === "pdf" ? (
-        <Card
+        <Card navy
           title="Check it"
           hint="The labeled preview prints every text field's own name in its box; the sample export fills every mapped box with its label (money lines 1234.56, checkboxes ticked), mirrors and keeps the pages exactly as a board's export would."
         >
@@ -124,7 +124,7 @@ export default async function TemplatePage({
           </div>
         </Card>
       ) : (
-        <Card title="Check it" hint="There is no PDF to preview. Open the official page and read the due rule, the filing instructions and the citations against it.">
+        <Card navy title="Check it" hint="There is no PDF to preview. Open the official page and read the due rule, the filing instructions and the citations against it.">
           <div className="flex flex-wrap gap-2">
             <a href={t.source_url} target="_blank" rel="noopener noreferrer" className={linkBtn}>
               Open the official page ↗
@@ -138,7 +138,7 @@ export default async function TemplatePage({
           <dl className="mt-4 grid gap-2 text-[13px] sm:grid-cols-[10rem_1fr]">
             <dt className="text-mute">Due rule</dt>
             <dd>
-              {t.due_rule ? <span className="font-mono">{t.due_rule}</span> : <span className="text-mute">none — boards read “ask your CPA”</span>}
+              {t.due_rule ? <span className="font-mono">{t.due_rule}</span> : <span className="text-mute">none: boards read “ask your CPA”</span>}
               {t.due_rule_citation ? <span className="block text-[12px] text-mute">{t.due_rule_citation}</span> : null}
             </dd>
             <dt className="text-mute">Filing instructions</dt>
@@ -153,7 +153,7 @@ export default async function TemplatePage({
         </Card>
       )}
 
-      <Card title={kind === "pdf" ? "Map and rules" : "Rules"}>
+      <Card navy title={kind === "pdf" ? "Map and rules" : "Rules"}>
         <FieldMapForm
           id={t.id}
           kind={kind}

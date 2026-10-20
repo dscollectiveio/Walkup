@@ -35,7 +35,7 @@ export const FORM_PLAIN: Record<FormCode, string> = {
 };
 
 export const ELIGIBLE_1120H_REASON =
-  "You qualify — elect it by filing. Ask your CPA whether 1120-H or Form 1120 is better this year.";
+  "You qualify: elect it by filing. Ask your CPA whether 1120-H or Form 1120 is better this year.";
 
 export interface Parameter {
   key: string;
@@ -193,7 +193,7 @@ export function determineForms(input: DetermineInput): FormOutcome[] {
       `Exempt-function income is ${inc.ratio === null ? "not applicable (no income)" : pct(inc.ratio)} of gross income ` +
       `(needs ${pct(inc.threshold)}); exempt-function spending is ${exp.ratio === null ? "not applicable (no spending)" : pct(exp.ratio)} ` +
       `of total spending (needs ${pct(exp.threshold)}). Thresholds from ${inc.sourceUrl ?? "tax_parameters"}` +
-      (unverified ? " — not yet verified against this year's instructions." : ".");
+      (unverified ? ", not yet verified against this year's instructions." : ".");
     const warnings = tests.filter((t) => t.nearThreshold).map((t) => `The ${t.key} test is within 5 points of its threshold.`);
     if (inc.passed && exp.passed) {
       out.push({ ...h, determination: "eligible", reason: `${ELIGIBLE_1120H_REASON} ${detail}`, warnings });
@@ -262,7 +262,7 @@ export function determineForms(input: DetermineInput): FormOutcome[] {
         formCode: "irs_1099_nec",
         taxYear: cy,
         vendorId: c.vendorId,
-        name: `1099-NEC — ${c.name}`,
+        name: `1099-NEC: ${c.name}`,
         determination: "required",
         reason: `${c.name} was paid ${dollars(c.totalCents)} for services in ${cy}, at or above the ${dollars(thresholdCents)} reporting threshold${threshold.verifiedOn ? "" : " (threshold not yet verified against this year's instructions)"}.`,
         ...fromTemplate(input, "irs_1099_nec", cy),
@@ -280,7 +280,7 @@ export function determineForms(input: DetermineInput): FormOutcome[] {
         name: FORM_LABEL.irs_1096,
         determination: method === "paper" ? "required" : method === "electronic" ? "not_required" : "ask_cpa",
         reason:
-          method === "paper" ? `Sent with your paper 1099s — ${who}.`
+          method === "paper" ? `Sent with your paper 1099s: ${who}.`
           : method === "electronic" ? "Not needed: you file 1099s electronically, and Form 1096 only goes with paper 1099s."
           : `Only needed if you file 1099s on paper (${who}). Tell Walkup how you file 1099s with the IRS, or ask your CPA.`,
         ...fromTemplate(input, "irs_1096", cy),

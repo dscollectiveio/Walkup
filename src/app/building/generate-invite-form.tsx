@@ -2,6 +2,7 @@
 
 import { useActionState, useState } from "react";
 import { createInvite } from "./actions";
+import { btnPrimary } from "@/components/repairs/styles";
 
 const ROLES = [
   { value: "board_admin", label: "Board admin: full read/write" },
@@ -34,7 +35,7 @@ export function GenerateInviteForm({
       <button
         type="button"
         onClick={() => setOpen(true)}
-        className="rounded-md bg-ink px-4 py-2 text-[13px] font-medium text-paper hover:bg-ink-mid"
+        className={btnPrimary}
       >
         Generate an invite
       </button>
@@ -111,7 +112,7 @@ export function GenerateInviteForm({
         <button
           type="submit"
           disabled={pending}
-          className="rounded-md bg-ink px-4 py-2 text-[13px] font-medium text-paper hover:bg-ink-mid disabled:opacity-50"
+          className={btnPrimary}
         >
           {pending ? "Creating…" : "Create invite link"}
         </button>

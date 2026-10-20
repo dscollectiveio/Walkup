@@ -2,6 +2,7 @@
 
 import { useState, useTransition } from "react";
 import { Answer } from "@/components/ui";
+import { btnPrimary, btnSecondary } from "@/components/repairs/styles";
 import { ESTIMATED_NOTE, dateWords } from "@/lib/tax/copy";
 import { nextDeadline, type Deadline } from "@/lib/tax/deadlines";
 import type { FormCode } from "@/lib/tax/determine";
@@ -116,7 +117,7 @@ export function thisYearAnswer(input: ThisYearInput): ThisYearAnswer {
     }
     return {
       status: "attention",
-      headline: `${overdue.name} may be overdue — estimated`,
+      headline: `${overdue.name} may be overdue, estimated`,
       detail: `Walkup's estimate was ${dateWords(overdue.dueOn)}. ${ESTIMATED_NOTE}${tail}`,
       step,
     };
@@ -129,7 +130,7 @@ export function thisYearAnswer(input: ThisYearInput): ThisYearAnswer {
     const basis = next.basis === "verified" ? (next.citation ? `From ${next.citation}.` : "From a rule a person has checked.") : ESTIMATED_NOTE;
     return {
       status: "neutral",
-      headline: `${next.name} is due ${dateWords(next.dueOn)} — ${when}`,
+      headline: `${next.name} is due ${dateWords(next.dueOn)}, ${when}`,
       detail: `${basis}${step ? ` Next step: ${step.label.toLowerCase()}.` : ""}`,
       step,
     };
@@ -153,7 +154,7 @@ export function thisYearAnswer(input: ThisYearInput): ThisYearAnswer {
     headline: "Nothing on the calendar yet",
     detail:
       input.deadlines.length > 0
-        ? "Walkup can't work out a due date for this year's forms yet — the cards below say why. Ask your CPA what applies."
+        ? "Walkup can't work out a due date for this year's forms yet. The cards below say why. Ask your CPA what applies."
         : "No form has a due date Walkup can work out yet. Ask your CPA what applies this year.",
     step: null,
   };
@@ -167,8 +168,8 @@ const STATUS_WORDS: Record<Deadline["status"], string> = {
   filed: "filed",
 };
 
-const primary = "inline-flex min-h-[44px] items-center rounded-md bg-ink px-4 text-[13px] font-medium text-paper hover:bg-ink-mid disabled:opacity-50";
-const secondary = "inline-flex min-h-[44px] items-center rounded-md border border-line-strong bg-paper px-4 text-[13px] font-medium text-ink hover:bg-fill";
+const primary = btnPrimary;
+const secondary = btnSecondary;
 
 export function ThisYear({
   input,
@@ -260,11 +261,11 @@ export function ThisYear({
                   {d.dueOn ? (
                     <>
                       {dateWords(d.dueOn)}
-                      {d.basis === "verified" ? (d.citation ? ` · ${d.citation}` : "") : " · estimated — not yet checked"}
+                      {d.basis === "verified" ? (d.citation ? ` · ${d.citation}` : "") : " · estimated, not yet checked"}
                       {d.overdue ? " · overdue" : ""}
                     </>
                   ) : (
-                    "not on file — ask your CPA"
+                    "not on file, ask your CPA"
                   )}
                 </span>
                 {!d.dueOn && d.note ? <span className="w-full text-[11px] text-mute-soft">{d.note}</span> : null}

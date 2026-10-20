@@ -5,6 +5,7 @@ import { useRouter } from "next/navigation";
 import { useMemo, useState, useTransition } from "react";
 import { prepareStatements } from "@/app/dues/email-actions";
 import { formatBalanceWords, formatMoney } from "@/lib/email-outbox/format";
+import { btnPrimary, btnSecondary } from "@/components/repairs/styles";
 
 export interface StatementRow {
   unitId: string;
@@ -18,10 +19,8 @@ export interface StatementRow {
   active: boolean;
 }
 
-const btn =
-  "inline-flex min-h-[44px] items-center justify-center rounded-md bg-ink px-4 py-2 text-[13px] font-medium text-paper hover:bg-ink-mid disabled:opacity-50";
-const btnGhost =
-  "inline-flex min-h-[44px] items-center justify-center rounded-md border border-line-strong bg-paper px-4 py-2 text-[13px] font-medium text-ink hover:bg-fill disabled:opacity-50";
+const btn = btnPrimary;
+const btnGhost = btnSecondary;
 
 export function StatementsForm({
   rows,

@@ -1,10 +1,10 @@
-WALKUP — HOW TO USE IT
+WALKUP: HOW TO USE IT
 From signing in for the first time to running the building every month.
 ==========================================================================
 
 Walkup keeps a small condo association's books, dues, taxes, insurance and
 repairs in one place. It reads your bank (read-only), but it never moves
-money and never sends anything on its own — every payment and every email
+money and never sends anything on its own. Every payment and every email
 still goes out from you.
 
 Keyboard: press [ to shrink the sidebar to icons, ] to bring it back.
@@ -12,7 +12,7 @@ Help: the Help button at the top right of every page has the short version.
 
 
 --------------------------------------------------------------------------
-PART 1 — GETTING IN
+PART 1: GETTING IN
 --------------------------------------------------------------------------
 
 1. Create your account
@@ -20,7 +20,7 @@ PART 1 — GETTING IN
    - Enter your email and a password (twice), tick the privacy notice, and
      submit.
    - If a board member invited you, open the invite link from their email
-     instead — it brings you straight to their building after you sign up.
+     instead. It brings you straight to their building after you sign up.
 
 2. Turn on two-step sign-in (required)
    - Walkup holds your association's financial records, so every account
@@ -36,40 +36,40 @@ PART 1 — GETTING IN
    - Walkup sets up the fiscal year, the operating and reserve funds, and a
      chart of accounts for you. You land on the Dashboard.
 
-   Invited members skip this step — they join the building that invited
+   Invited members skip this step. They join the building that invited
    them.
 
 
 --------------------------------------------------------------------------
-PART 2 — SETTING UP (about an hour, can be spread over a week)
+PART 2: SETTING UP (about an hour, can be spread over a week)
 --------------------------------------------------------------------------
 
 The Dashboard shows "Set up your building": a checklist in the right order. Each
-step ticks itself off when the information exists — there is nothing to
+step ticks itself off when the information exists. There is nothing to
 check off by hand. You can skip it and come back; it stays on the Dashboard until
 it's done.
 
-STEP 1 — BUILDING & OWNERS  (Sidebar: Building & Owners)
+STEP 1: BUILDING & OWNERS  (Sidebar: Building & Owners)
    a. Fill in the association's details: EIN, city, county, date
       incorporated. The EIN is needed for the tax return; the date
       incorporated is what the Illinois annual-report reminder is worked
       out from.
    b. Add every unit (e.g. Unit 1, Unit 2, Garden).
-   c. Assign an owner to each unit — name and email. The email is what
+   c. Assign an owner to each unit: name and email. The email is what
       reminders and invites use.
    d. Add the rest of the board and give each person their role.
    e. Invite them to sign in. They get a link; nothing is emailed by
       Walkup itself.
 
-STEP 2 — FINANCES & DUES
+STEP 2: FINANCES & DUES
    a. Connect the bank  (Bank Feed & Transactions)
       - Click "Connect your bank" and sign in to your bank through Plaid.
         Walkup gets read-only access: it can see transactions and
         balances, never move money.
       - If the association has money at a second bank (often the reserve),
         use "+ Add another bank" and tell Walkup which account it is.
-   b. Sync transactions — "Sync now" pulls in recent history.
-   c. Categorize and post the backlog — see "The monthly routine" below.
+   b. Sync transactions: "Sync now" pulls in recent history.
+   c. Categorize and post the backlog. See "The monthly routine" below.
       The first time this may take 20–30 minutes; after that, ten.
    d. Financial statements fill themselves in once transactions are
       posted. Nothing to set up.
@@ -79,29 +79,29 @@ STEP 2 — FINANCES & DUES
         point (with an optional +2–5% for rising costs).
       - Plan a yearly amount to set aside for the reserve, too.
    f. Tell owners how to pay  (HOA Dues → How to pay)
-      - Payee name, bank, account and routing numbers, Zelle — whatever
+      - Payee name, bank, account and routing numbers, Zelle, whatever
         owners should use. Owners see this on their own Dues page.
    g. Set each unit's dues  (HOA Dues → Dues plan, far right of each row)
       - Enter what each unit pays for the year and how often (monthly,
         quarterly, once a year). Units can all be different.
       - Optional: a late-fee rule (amount and grace days). It's off until
-        you set it, and even then fees are only ever proposed — you click
+        you set it, and even then fees are only ever proposed. You click
         to add each one.
 
-STEP 3 — TAXES & INSURANCE
+STEP 3: TAXES & INSURANCE
    a. EIN on file (from Step 1a).
    b. Taxes  (Taxes)
       - Classify your income once. Each income account with activity gets
-        one question — owner fees, or not (interest, laundry, parking…).
+        one question: owner fees, or not (interest, laundry, parking…).
         Walkup pre-fills the answer; you confirm it. The 1120-H tests
         wait until every account is confirmed.
       - Add your accountant: name, firm, email. Every email draft Walkup
         prepares is addressed to them. "Give them read access to the
         books" is a separate link, with an end date.
-      - Answer "How do you file 1099s with the IRS?" — on paper,
+      - Answer "How do you file 1099s with the IRS?": on paper,
         electronically (IRIS), or not sure yet. Form 1096 only goes with
         paper 1099s.
-      - Illinois buildings: add the corporation file number — the
+      - Illinois buildings: add the corporation file number. The
         Secretary of State's annual-report portal asks for it.
       - "Add these dates to your calendar" downloads every due date, with
         reminders, for Apple Calendar, Google Calendar or Outlook. "Send
@@ -113,11 +113,11 @@ STEP 3 — TAXES & INSURANCE
       - Upload the declarations page if you have it.
       - The premium is added to your recurring bills automatically.
 
-STEP 4 — BUILDING UPKEEP  (Repairs & Upkeep)
-   a. Add your contractors  (Contractors view) — the plumber, electrician,
+STEP 4: BUILDING UPKEEP  (Repairs & Upkeep)
+   a. Add your contractors  (Contractors view), the plumber, electrician,
       roofer, cleaners you already use. If Google search is turned on,
       "Find a contractor" searches near the building.
-   b. Collect W-9s from each contractor you pay — you need them before you
+   b. Collect W-9s from each contractor you pay. You need them before you
       can issue 1099s in January. Record "W-9 on file" on their profile.
       Taxes has an "Ask for a W-9" email draft for each one still missing.
    c. Set up the upkeep schedule  (Upkeep view)
@@ -128,7 +128,7 @@ STEP 4 — BUILDING UPKEEP  (Repairs & Upkeep)
 
 
 --------------------------------------------------------------------------
-PART 3 — THE MONTHLY ROUTINE (about 15 minutes)
+PART 3: THE MONTHLY ROUTINE (about 15 minutes)
 --------------------------------------------------------------------------
 
 1. Bank Feed & Transactions
@@ -142,7 +142,7 @@ PART 3 — THE MONTHLY ROUTINE (about 15 minutes)
    - "Save for later" beside the chip files it without posting; "Post N
      saved" at the top posts everything you saved.
    - No recommendation, or it's wrong? Click the row (or "Categorize") and
-     start typing — Utilities, Dues, Transfer, Not for the books — then
+     start typing: Utilities, Dues, Transfer, Not for the books, then
      pick from the list and Save & post.
    - Many at once: "Post all N recommended" posts what your own history
      backs; or tick the boxes and a bar appears at the bottom of the
@@ -154,7 +154,7 @@ PART 3 — THE MONTHLY ROUTINE (about 15 minutes)
 2. HOA Dues
    - "Needs you" lists everything waiting, one decision per line:
      * "October dues haven't been charged yet" → Charge what's due.
-     * "$450 came in on Oct 3 — looks like Unit 2" → Yes, Unit 2.
+     * "$450 came in on Oct 3, looks like Unit 2" → Yes, Unit 2.
      * "Unit 3 says they paid by Zelle" → it's matched automatically when
        the deposit shows up; otherwise Keep waiting or Not received.
      * A late fee, if you set a rule → Add the fee, or Skip this time.
@@ -175,7 +175,7 @@ PART 3 — THE MONTHLY ROUTINE (about 15 minutes)
 
 
 --------------------------------------------------------------------------
-PART 4 — AS THINGS COME UP
+PART 4: AS THINGS COME UP
 --------------------------------------------------------------------------
 
 Something breaks
@@ -185,7 +185,7 @@ Something breaks
 
 Upkeep comes due
    Repairs & Upkeep → Upkeep. Overdue jobs are at the top. When a job is
-   done, "Mark done" with the date, cost and who did it — the next date
+   done, "Mark done" with the date, cost and who did it. The next date
    rolls forward on its own.
 
 Board meeting or an owner asks for the numbers
@@ -201,18 +201,18 @@ Year end
    1. Make sure every transaction for the year is posted.
    2. Taxes → "This year" says what is due next and the one thing to do
       about it. Each form card shows why you need it, the official IRS or
-      Illinois link, and the due date — with whether a person has checked
+      Illinois link, and the due date, with whether a person has checked
       that date or it is estimated.
    3. Open the 1120-H form → "Send to your accountant": download the
       figures worksheet (and the editable PDF, once Walkup has that
       year's official form checked), open the email draft, attach the
       files and send it from your own email, then "Mark as sent". Have an
-      accountant look before you file — Walkup is not a tax adviser.
+      accountant look before you file. Walkup is not a tax adviser.
    4. 1099-NECs: Taxes lists every contractor paid at or above the IRS
       threshold for that year's payments, shows the amount it used and
       whether a person has checked it (the threshold changed for payments
       made from 2026). W-9s first. Walkup prepares the contractor's copies
-      only — file with the IRS through IRIS or on official forms, never a
+      only. File with the IRS through IRIS or on official forms, never a
       Copy A printed from the IRS website.
    5. Once a form is filed, "Mark as filed" on its page records the date
       and, for the 1120-H, locks that year's figures.
@@ -232,13 +232,13 @@ FOR OWNERS (not on the board)
 
 
 --------------------------------------------------------------------------
-FOR THE WALKUP ADMIN (one-time setup per form and year — not a board job)
+FOR THE WALKUP ADMIN (one-time setup per form and year, not a board job)
 --------------------------------------------------------------------------
 
    - Open /admin/tax-templates ("Official tax forms, links and rules").
    - "Set up from Walkup's suggestions": one click per form fetches the
-     official PDF from irs.gov and installs Walkup's field map for it —
-     only if the file is the exact revision the map was written for.
+     official PDF from irs.gov and installs Walkup's field map for it,
+     but only if the file is the exact revision the map was written for.
      Otherwise it is stored inactive, with a note and no map.
    - Open the labeled preview and the filled test export, check every
      mapped line, the due rule and the links, then "Verify and activate".
@@ -248,7 +248,7 @@ FOR THE WALKUP ADMIN (one-time setup per form and year — not a board job)
      is confirmed against the instructions. Both read "not yet checked by
      a person" to every board until then.
    - Each January the page asks you to check the active forms for
-     updates. A changed file becomes a new, inactive template to check —
+     updates. A changed file becomes a new, inactive template to check,
      never an automatic switch.
 
 
@@ -263,7 +263,7 @@ GOOD TO KNOW
    - Posted entries are never deleted. "Undo posting" writes a reversing
      entry, so the history always adds up.
    - Walkup fills an official tax form only after a person has opened
-     that year's form and checked every mapped line — a one-time setup
+     that year's form and checked every mapped line, a one-time setup
      per form and year, done by Walkup's admin, not the board. Until
      then you still get your figures, the official link and the email
      draft to your accountant.

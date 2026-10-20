@@ -28,7 +28,7 @@ export default async function PartnersPage() {
           hidden where there are none.
         </p>
       </div>
-      <Card title="Partners">
+      <Card navy title="Partners">
         {(partners ?? []).length === 0 ? (
           <Empty>No partners yet.</Empty>
         ) : (

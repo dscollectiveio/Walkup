@@ -1,9 +1,10 @@
 "use client";
 
 import { useActionState, useState, useTransition } from "react";
+import { btnPrimary, btnSecondary } from "@/components/repairs/styles";
 import { markFormFiled, refreshFromRecords } from "../../form-actions";
 
-const btn = "inline-flex min-h-[44px] items-center rounded-md border border-line-strong bg-paper px-4 text-[13px] font-medium text-ink hover:bg-fill disabled:opacity-50";
+const btn = btnSecondary;
 
 /**
  * Refill the form from the records for its own year. Without a PDF template
@@ -66,14 +67,14 @@ export function MarkFiled({ formId, label = "Mark as filed" }: { formId: string;
       </div>
       <div>
         <label htmlFor="proof" className="block text-[12px] font-medium text-ink">
-          Proof <span className="font-normal text-mute-soft">optional — a mailing receipt, the portal&rsquo;s confirmation or your CPA&rsquo;s</span>
+          Proof <span className="font-normal text-mute-soft">optional: a mailing receipt, the portal&rsquo;s confirmation or your CPA&rsquo;s</span>
         </label>
         <input id="proof" name="proof" type="file" accept="application/pdf,image/*" className="mt-1 text-[12px]" />
       </div>
       {state?.error ? <p className="text-[12px] text-bad-text">{state.error}</p> : null}
       {state?.ok ? <p className="text-[12px] text-good-text">Recorded as filed.</p> : null}
       <div className="flex gap-2">
-        <button type="submit" disabled={pending} className="min-h-[44px] rounded-md bg-ink px-4 text-[13px] font-medium text-paper hover:bg-ink-mid disabled:opacity-50">
+        <button type="submit" disabled={pending} className={btnPrimary}>
           {pending ? "Saving…" : "Record it"}
         </button>
         <button type="button" onClick={() => setOpen(false)} className={btn}>

@@ -2,6 +2,7 @@
 
 import { useActionState, useState } from "react";
 import { savePartner } from "./actions";
+import { btnPrimary } from "@/components/repairs/styles";
 
 const inputClass = "mt-1 w-full rounded-lg border border-line-strong bg-paper px-3 py-2 text-[13px] text-ink";
 
@@ -34,7 +35,7 @@ export function PartnerForm({
         </button>
       </div>
     ) : (
-      <button type="button" onClick={() => setOpen(true)} className="min-h-[44px] rounded-md bg-ink px-4 text-[13px] font-medium text-paper hover:bg-ink-mid">
+      <button type="button" onClick={() => setOpen(true)} className={btnPrimary}>
         Add a partner
       </button>
     );
@@ -71,7 +72,7 @@ export function PartnerForm({
       </label>
       {state?.error ? <p className="text-[12px] text-bad-text">{state.error}</p> : null}
       <div className="flex gap-2">
-        <button type="submit" disabled={pending} className="min-h-[44px] rounded-md bg-ink px-4 text-[13px] font-medium text-paper hover:bg-ink-mid disabled:opacity-50">
+        <button type="submit" disabled={pending} className={btnPrimary}>
           {pending ? "Saving…" : "Save"}
         </button>
         <button type="button" onClick={() => setOpen(false)} className="min-h-[44px] rounded-md border border-line-strong px-4 text-[13px] text-ink hover:bg-fill">

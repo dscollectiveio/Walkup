@@ -233,7 +233,7 @@ export function ShowcaseCards({
   if (views.length === 0) {
     return (
       <div className="rounded-xl border border-line bg-paper">
-        <Empty>No monthly activity recorded yet — these fill in once something posts.</Empty>
+        <Empty>No monthly activity recorded yet. These fill in once something posts.</Empty>
       </div>
     );
   }

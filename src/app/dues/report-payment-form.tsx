@@ -2,6 +2,7 @@
 
 import { useActionState, useState } from "react";
 import { reportOutsidePayment } from "./actions";
+import { btnPrimary } from "@/components/repairs/styles";
 
 const inputClass = "mt-1 w-full rounded-lg border border-line-strong bg-paper px-3 py-2 text-[13px] text-ink";
 
@@ -35,12 +36,12 @@ export function ReportPaymentForm({
         <button
           type="button"
           onClick={() => setOpen(true)}
-          className="rounded-md bg-ink px-4 py-2 text-[13px] font-medium text-paper hover:bg-ink-mid"
+          className={btnPrimary}
         >
           I paid another way
         </button>
         {state?.ok ? (
-          <span className="text-[12px] text-good-text">Thanks — the board will match it when the deposit lands.</span>
+          <span className="text-[12px] text-good-text">Thanks. The board will match it when the deposit lands.</span>
         ) : null}
       </div>
     );
@@ -112,7 +113,7 @@ export function ReportPaymentForm({
         <button
           type="submit"
           disabled={pending}
-          className="rounded-md bg-ink px-4 py-2 text-[13px] font-medium text-paper hover:bg-ink-mid disabled:opacity-50"
+          className={btnPrimary}
         >
           {pending ? "Sending…" : "Tell the board"}
         </button>

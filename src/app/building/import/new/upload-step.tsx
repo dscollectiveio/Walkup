@@ -52,7 +52,7 @@ export function UploadStep({ kind }: { kind: ImportKind }) {
             type="checkbox"
             checked={keepCopy}
             onChange={(e) => setKeepCopy(e.target.checked)}
-            className="mt-0.5 h-5 w-5 shrink-0 accent-[var(--color-ink,#1f2a44)]"
+            className="mt-0.5 h-5 w-5 shrink-0 accent-ink"
           />
           <span>
             Keep a copy of this file in Documents (board only)

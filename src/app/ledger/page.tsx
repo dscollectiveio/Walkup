@@ -57,6 +57,7 @@ export default async function LedgerPage() {
       </div>
 
       <Card
+        navy
         title="Accounts"
         hint="Money is separated into a day-to-day account and reserve savings, so you can always tell how much is set aside for big repairs."
       >
@@ -102,7 +103,7 @@ export default async function LedgerPage() {
         <p className="mt-4 text-[11px] text-mute">
           {balanced
             ? "The two sides match, which is what you want. Walkup will not let you save a transaction where they do not."
-            : "The two sides do not match. This should be impossible — please report it."}
+            : "The two sides do not match. This should be impossible. Please report it."}
         </p>
       </Card>
     </div>

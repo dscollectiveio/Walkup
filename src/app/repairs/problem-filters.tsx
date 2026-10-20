@@ -5,7 +5,7 @@ import { useId, useRef, useState } from "react";
 import { tradeLabel } from "@/lib/contractors/trades";
 import { STAGE_LABEL } from "@/lib/repairs/stage";
 import type { ProblemParams } from "@/lib/repairs/problems-params";
-import { choiceRow, inputClass, labelClass } from "@/components/repairs/styles";
+import { btnPrimary, choiceRow, inputClass, labelClass } from "@/components/repairs/styles";
 
 /**
  * The problems filter bar (repairs-spec §5.7): a plain GET form, so every
@@ -136,7 +136,7 @@ export function ProblemFilters(props: {
             <input type="checkbox" name="mine" value="1" defaultChecked={p.mine} onChange={submit} className="h-5 w-5" />
             {props.isBoard ? "Following" : "I reported"}
           </label>
-          <button type="submit" className="inline-flex min-h-[44px] items-center rounded-md bg-ink px-4 text-[13px] font-medium text-paper">
+          <button type="submit" className={btnPrimary}>
             Apply
           </button>
           {props.clearHref ? (

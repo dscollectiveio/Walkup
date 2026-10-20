@@ -48,7 +48,7 @@ const NAVY = "bg-[#1B2A41]";
 const CTA = "Create your building, free";
 
 const primaryBtn =
-  "inline-flex min-h-[48px] items-center justify-center rounded-md bg-[#D9A441] px-6 text-[15px] font-bold text-[#1B2A41] transition-colors hover:bg-[#E4B75B] focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ink";
+  "inline-flex min-h-[48px] items-center justify-center rounded-md bg-brass px-6 text-[15px] font-bold text-on-brass transition-colors hover:bg-[#E4B75B] focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ink";
 const ghostBtn =
   "inline-flex min-h-[48px] items-center justify-center rounded-md border border-line-strong px-6 text-[15px] font-semibold text-ink transition-colors hover:bg-fill";
 // Navy on light, cream on dark: the app's own primary button, so it never sinks into a dark section.
@@ -188,7 +188,7 @@ export function Landing({ nonce }: { nonce?: string }) {
             <a href="#pricing" className="hidden rounded-md px-3 py-2 text-white/80 hover:text-white sm:inline-block">Pricing</a>
             <a href="#faq" className="hidden rounded-md px-3 py-2 text-white/80 hover:text-white md:inline-block">FAQ</a>
             <Link href="/login" className="rounded-md px-3 py-2 font-medium text-white hover:bg-white/10">Sign in</Link>
-            <Link href="/signup" data-cta="header" className="ml-1 hidden rounded-md bg-[#D9A441] px-3.5 py-2 font-bold text-[#1B2A41] hover:bg-[#E4B75B] sm:inline-block">
+            <Link href="/signup" data-cta="header" className="ml-1 hidden rounded-md bg-brass px-3.5 py-2 font-bold text-on-brass hover:bg-[#E4B75B] sm:inline-block">
               Get started
             </Link>
           </nav>
@@ -207,12 +207,12 @@ export function Landing({ nonce }: { nonce?: string }) {
             </h1>
             <p className="mt-5 max-w-xl text-[17px] leading-relaxed text-mute">
               Walkup is{" "}
-              <strong className="font-bold text-ink underline decoration-[#D9A441] decoration-2 underline-offset-4">bookkeeping</strong>,{" "}
-              <strong className="font-bold text-ink underline decoration-[#D9A441] decoration-2 underline-offset-4">dues</strong>,{" "}
-              <strong className="font-bold text-ink underline decoration-[#D9A441] decoration-2 underline-offset-4">tax</strong>,{" "}
-              <strong className="font-bold text-ink underline decoration-[#D9A441] decoration-2 underline-offset-4">insurance</strong>,{" "}
-              <strong className="font-bold text-ink underline decoration-[#D9A441] decoration-2 underline-offset-4">repairs and maintenance</strong>, and{" "}
-              <strong className="font-bold text-ink underline decoration-[#D9A441] decoration-2 underline-offset-4">document storage</strong>{" "}
+              <strong className="font-bold text-ink underline decoration-brass decoration-2 underline-offset-4">bookkeeping</strong>,{" "}
+              <strong className="font-bold text-ink underline decoration-brass decoration-2 underline-offset-4">dues</strong>,{" "}
+              <strong className="font-bold text-ink underline decoration-brass decoration-2 underline-offset-4">tax</strong>,{" "}
+              <strong className="font-bold text-ink underline decoration-brass decoration-2 underline-offset-4">insurance</strong>,{" "}
+              <strong className="font-bold text-ink underline decoration-brass decoration-2 underline-offset-4">repairs and maintenance</strong>, and{" "}
+              <strong className="font-bold text-ink underline decoration-brass decoration-2 underline-offset-4">document storage</strong>{" "}
               software for self-managed condo associations of 2 to 20 units.
             </p>
             <div className="mt-8 flex flex-wrap gap-3">
@@ -272,7 +272,7 @@ export function Landing({ nonce }: { nonce?: string }) {
                 <FeatureArt kind={f.art} />
                 <div className="flex items-center justify-between gap-3">
                   <h3 className="text-[17px] font-bold text-ink">{f.title}</h3>
-                  <span aria-hidden="true" className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-[#D9A441]/15 text-eyebrow transition-colors duration-300 group-hover:bg-[#D9A441] group-hover:text-[#1B2A41]">
+                  <span aria-hidden="true" className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-brass/15 text-eyebrow transition-colors duration-300 group-hover:bg-brass group-hover:text-on-brass">
                     {(() => {
                       const Icon = FEATURE_ICONS[f.art];
                       return <Icon size={18} strokeWidth={1.8} />;
@@ -362,7 +362,7 @@ export function Landing({ nonce }: { nonce?: string }) {
           <figure className="mx-auto flex w-full max-w-[290px] flex-col items-center text-center md:mx-0">
             {/* Round photo with one offset circle behind it, like the timeline's rectangles. */}
             <div className="relative h-[230px] w-[230px] sm:h-[250px] sm:w-[250px]">
-              <span aria-hidden="true" className="absolute inset-0 translate-x-[18px] translate-y-[16px] rounded-full bg-[#D9A441]" />
+              <span aria-hidden="true" className="absolute inset-0 translate-x-[18px] translate-y-[16px] rounded-full bg-brass" />
               <Image
                 src="/doug-smart.jpg"
                 alt="Doug Smart, founder of Walkup, smiling in front of the Chicago skyline at sunset"
@@ -418,7 +418,7 @@ export function Landing({ nonce }: { nonce?: string }) {
               return (
                 <div key={t as string} className="rounded-xl border border-line bg-paper p-4">
                   <div className="flex items-start gap-3">
-                    <span aria-hidden="true" className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-[#D9A441]/15 text-eyebrow">
+                    <span aria-hidden="true" className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-brass/15 text-eyebrow">
                       <TrustIcon size={18} strokeWidth={1.8} />
                     </span>
                     <h3 className="pt-1.5 text-[15px] font-bold leading-snug text-ink">{t as string}</h3>
@@ -492,7 +492,7 @@ export function Landing({ nonce }: { nonce?: string }) {
             intro={words.pricingIntro}
           />
 
-          <div className="mt-8 rounded-xl border border-[#D9A441]/50 bg-[#D9A441]/10 px-5 py-4 text-[14px] text-ink">
+          <div className="mt-8 rounded-xl border border-brass/50 bg-brass/10 px-5 py-4 text-[14px] text-ink">
             <strong>{words.calloutLead}</strong> {words.calloutRest}
           </div>
 
@@ -501,10 +501,10 @@ export function Landing({ nonce }: { nonce?: string }) {
             {PLANS.map((p) => (
               <div
                 key={p.name}
-                className={`relative rounded-xl border bg-paper p-6 ${p.featured ? "border-[#D9A441] shadow-lg" : "border-line"}`}
+                className={`relative rounded-xl border bg-paper p-6 ${p.featured ? "border-brass shadow-lg" : "border-line"}`}
               >
                 {p.featured ? (
-                  <span className="absolute -top-3 left-6 rounded-full bg-[#D9A441] px-3 py-0.5 text-[11px] font-bold uppercase tracking-[0.08em] text-[#1B2A41]">
+                  <span className="absolute -top-3 left-6 rounded-full bg-brass px-3 py-0.5 text-[11px] font-bold uppercase tracking-[0.08em] text-on-brass">
                     Most popular
                   </span>
                 ) : null}
@@ -568,7 +568,7 @@ export function Landing({ nonce }: { nonce?: string }) {
                         <span className="font-semibold uppercase tracking-[0.08em] text-mute-soft">Learn more</span>
                         {f.links.map((l) =>
                           l.href.startsWith("/") ? (
-                            <Link key={l.href} href={l.href} className="font-medium text-ink underline decoration-[#D9A441] decoration-2 underline-offset-4 hover:text-mute">
+                            <Link key={l.href} href={l.href} className="font-medium text-ink underline decoration-brass decoration-2 underline-offset-4 hover:text-mute">
                               {l.label} &rarr;
                             </Link>
                           ) : (
@@ -576,7 +576,7 @@ export function Landing({ nonce }: { nonce?: string }) {
                               key={l.href}
                               href={l.href}
                               {...(l.href.startsWith("http") ? { target: "_blank", rel: "noopener noreferrer" } : {})}
-                              className="font-medium text-ink underline decoration-[#D9A441] decoration-2 underline-offset-4 hover:text-mute"
+                              className="font-medium text-ink underline decoration-brass decoration-2 underline-offset-4 hover:text-mute"
                             >
                               {l.label} &rarr;
                             </a>

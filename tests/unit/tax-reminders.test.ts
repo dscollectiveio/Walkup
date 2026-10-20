@@ -68,7 +68,7 @@ describe("homeTaxDeadlines — the light list Home builds from its own rows", ()
       "irs_1120h:2025 2026-04-15",
       "il_1120:2025 2026-04-15",
     ]);
-    expect(deadlines.find((d) => d.key === "irs_1099_nec:2025:v-acme")?.name).toBe("1099-NEC — Acme Plumbing");
+    expect(deadlines.find((d) => d.key === "irs_1099_nec:2025:v-acme")?.name).toBe("1099-NEC: Acme Plumbing");
     // Every date is a built-in estimate, and says so.
     expect(deadlines.every((d) => d.basis === "estimated")).toBe(true);
     // Small Jobs is under the threshold, so only Acme's missing W-9 counts.
@@ -230,7 +230,7 @@ describe("assembleReminders — tax deadlines in Coming up", () => {
     const send = r.find((x) => x.name === "Send 2 1099-NECs to your accountant")!;
     expect(send).toMatchObject({ kind: "1099-NECs due January 31, 2027", unverified: true });
     expect(send.due.getTime()).toBe(at("2026-12-02"));
-    expect(r.some((x) => x.name.startsWith("Send 1099-NEC — "))).toBe(false);
+    expect(r.some((x) => x.name.startsWith("Send 1099-NEC: "))).toBe(false);
 
     const one = remind(
       {
@@ -241,7 +241,7 @@ describe("assembleReminders — tax deadlines in Coming up", () => {
       },
       october,
     );
-    expect(one.find((x) => x.name === "Send 1099-NEC — Acme Plumbing to your accountant")).toMatchObject({ kind: "1099-NEC due January 31, 2027" });
+    expect(one.find((x) => x.name === "Send 1099-NEC: Acme Plumbing to your accountant")).toMatchObject({ kind: "1099-NEC due January 31, 2027" });
   });
 
   it("reads a slipped milestone as today, drops one beyond the horizon, and none once the filing itself is overdue", () => {

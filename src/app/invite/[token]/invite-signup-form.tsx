@@ -4,6 +4,7 @@ import Link from "next/link";
 import { useActionState } from "react";
 import { signUp } from "@/app/login/actions";
 import { PasswordInput } from "@/components/auth/password-input";
+import { btnPrimary } from "@/components/repairs/styles";
 
 export function InviteSignupForm({ token }: { token: string }) {
   const [state, action, pending] = useActionState(signUp, null);
@@ -11,7 +12,7 @@ export function InviteSignupForm({ token }: { token: string }) {
   if (state?.checkEmail) {
     return (
       <p className="mt-8 border-l-[3px] border-good bg-good-tint px-3 py-2 text-[13px] text-good-text">
-        Check your email for a confirmation link — it&rsquo;ll bring you right
+        Check your email for a confirmation link. It&rsquo;ll bring you right
         back here to finish joining.
       </p>
     );
@@ -93,7 +94,7 @@ export function InviteSignupForm({ token }: { token: string }) {
       <button
         type="submit"
         disabled={pending}
-        className="w-full rounded-md bg-ink px-3 py-2 text-[13px] font-medium text-paper transition hover:bg-ink-mid disabled:opacity-50"
+        className={`${btnPrimary} w-full`}
       >
         {pending ? "Creating account…" : "Create account and join"}
       </button>

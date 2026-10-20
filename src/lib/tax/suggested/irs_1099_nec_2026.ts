@@ -31,7 +31,7 @@ const payer = (label: string, rule: string, box: string): MapEntry => ({
   section: S1,
   source: "setting",
   rule,
-  citation: `${FORM} — ${box} box; ${PART_K}`,
+  citation: `${FORM}: ${box} box; ${PART_K}`,
   kind: "text",
 });
 
@@ -41,7 +41,7 @@ const typed = (label: string, box: string): MapEntry => ({
   section: S2,
   source: "manual",
   rule: "",
-  citation: `${FORM} — ${box} box under RECIPIENT'S name`,
+  citation: `${FORM}: ${box} box under RECIPIENT'S name`,
   kind: "text",
   hint: "Copy it from the contractor's W-9 or invoice.",
 });
@@ -53,7 +53,7 @@ const FIELD_MAP: FieldMap = {
     section: S1,
     source: "setting",
     rule: "form.tax_year",
-    citation: `${FORM} — 'For calendar year' box; Instructions for Forms 1099-MISC and 1099-NEC (Rev. December 2026), Reminders — Filing dates`,
+    citation: `${FORM}: 'For calendar year' box; Instructions for Forms 1099-MISC and 1099-NEC (Rev. December 2026), Reminders: Filing dates`,
     kind: "text",
   },
   [f("LeftCol[0].f2_2[0]")]: payer("Payer's name", "association.legal_name", "PAYER'S name"),
@@ -69,7 +69,7 @@ const FIELD_MAP: FieldMap = {
     section: S2,
     source: "contractors",
     rule: "contractor.name",
-    citation: `${FORM} — RECIPIENT'S name box; ${PART_J}`,
+    citation: `${FORM}: RECIPIENT'S name box; ${PART_J}`,
     kind: "text",
   },
   [f("LeftCol[0].f2_13[0]")]: {
@@ -77,10 +77,10 @@ const FIELD_MAP: FieldMap = {
     section: S2,
     source: "contractors",
     rule: "contractor.address",
-    citation: `${FORM} — Street address (including apt. no.) box under RECIPIENT'S name`,
+    citation: `${FORM}: Street address (including apt. no.) box under RECIPIENT'S name`,
     kind: "text",
     review: true,
-    hint: "Walkup keeps one address line — split it across the street, city, state and ZIP boxes if you can.",
+    hint: "Walkup keeps one address line. Split it across the street, city, state and ZIP boxes if you can.",
   },
   [f("LeftCol[0].f2_15[0]")]: typed("Recipient's city", "City or town"),
   [f("LeftCol[0].f2_16[0]")]: typed("Recipient's state", "State or province"),
@@ -88,11 +88,11 @@ const FIELD_MAP: FieldMap = {
 
   // ---- 3. Amounts -----------------------------------------------------------------
   [f("RightCol[0].f2_20[0]")]: {
-    label: "Box 1a — Nonemployee compensation",
+    label: "Box 1a: Nonemployee compensation",
     section: S3,
     source: "contractors",
     rule: "contractor.total_paid",
-    citation: `${FORM} — box 1a Nonemployee compensation; Instructions for Forms 1099-MISC and 1099-NEC (Rev. December 2026), Specific Instructions for Form 1099-NEC — Box 1a. Nonemployee Compensation`,
+    citation: `${FORM}: box 1a Nonemployee compensation; Instructions for Forms 1099-MISC and 1099-NEC (Rev. December 2026), Specific Instructions for Form 1099-NEC: Box 1a. Nonemployee Compensation`,
     kind: "money",
   },
 };
@@ -113,13 +113,13 @@ export const IRS_1099_NEC_2026: SuggestedTemplate = {
   mirror: [{ from: "CopyB[0]", to: "Copy2[0]" }],
   dueRule: "CAL_YEAR_END + 1 MONTHS, DAY 31",
   dueRuleCitation:
-    "Instructions for Forms 1099-MISC and 1099-NEC (Rev. December 2026), Reminders — Filing dates: IRC section 6071(c) requires Form 1099-NEC to be filed on or before January 31; General Instructions for Certain Information Returns, Part C. When To File",
+    "Instructions for Forms 1099-MISC and 1099-NEC (Rev. December 2026), Reminders: Filing dates: IRC section 6071(c) requires Form 1099-NEC to be filed on or before January 31; General Instructions for Certain Information Returns, Part C. When To File",
   filingInstructions:
-    "Give Copy B (with the instructions page) to the contractor by the due date and keep Copy 2 for your records. Do not print and file Copy A from this PDF — it isn't scannable and the IRS can penalize it. File with the IRS online through IRIS (free; you need a Transmitter Control Code, which takes weeks — apply well before January) or on official red-ink forms ordered from the IRS. If you file 10 or more information returns in total, you must e-file. The contractor's taxpayer ID is left blank on purpose — write it on their copy from their W-9.",
+    "Give Copy B (with the instructions page) to the contractor by the due date and keep Copy 2 for your records. Do not print and file Copy A from this PDF. It isn't scannable and the IRS can penalize it. File with the IRS online through IRIS (free; you need a Transmitter Control Code, which takes weeks. Apply well before January) or on official red-ink forms ordered from the IRS. If you file 10 or more information returns in total, you must e-file. The contractor's taxpayer ID is left blank on purpose. Write it on their copy from their W-9.",
   filingCitation:
     "Form 1099-NEC (Rev. December 2026), page 1 'Attention'; General Instructions for Certain Information Returns, Part E. Filing Returns With the IRS (Copy A printed from the IRS website can't be filed) and Part O. Penalties; Regulations section 301.6011-2 (e-file at 10 or more returns)",
   notes:
-    "Copy A and Form 1096 are never produced by Walkup. Boxes 1b–1d (tips, TTOC, overtime) and the state boxes are left blank — ask your CPA if they apply. " +
-    "Also left blank on purpose: the recipient's TIN (Walkup keeps only the last four digits — copy it from the W-9), the payer's telephone number, the account number box, boxes 2–7 and the FATCA box. Copy 2 is filled by mirroring Copy B at export.",
+    "Copy A and Form 1096 are never produced by Walkup. Boxes 1b–1d (tips, TTOC, overtime) and the state boxes are left blank. Ask your CPA if they apply. " +
+    "Also left blank on purpose: the recipient's TIN (Walkup keeps only the last four digits, copy it from the W-9), the payer's telephone number, the account number box, boxes 2–7 and the FATCA box. Copy 2 is filled by mirroring Copy B at export.",
   authoredOn: "2026-10-11",
 };

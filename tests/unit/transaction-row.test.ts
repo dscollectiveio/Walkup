@@ -100,7 +100,7 @@ describe("TransactionRow", () => {
       suggestion: utilities,
       onAcceptSuggestion: async () => ({}),
     });
-    expect(html).toContain("Pending at the bank — posts once it settles");
+    expect(html).toContain("Pending at the bank: posts once it settles");
     expect(html).toContain("Saves the category; it posts once the bank settles it");
     expect(html).not.toContain("Save for later");
   });

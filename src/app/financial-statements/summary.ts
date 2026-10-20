@@ -168,7 +168,7 @@ export function headlineFor(input: HeadlineInput): {
       : net > 0
         ? `${money(net)} ahead`
         : `${money(Math.abs(net))} behind`;
-  const headline = `You took in ${money(input.totalIncome)} and spent ${money(input.totalExpenses)} in ${input.label} — ${tail}.`;
+  const headline = `You took in ${money(input.totalIncome)} and spent ${money(input.totalExpenses)} in ${input.label}: ${tail}.`;
 
   let detail: string | undefined;
   if (input.prior?.hasActivity) {

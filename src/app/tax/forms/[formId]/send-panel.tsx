@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useTransition } from "react";
+import { btnPrimary, btnSecondary } from "@/components/repairs/styles";
 import { dateWords, NOTHING_SENT } from "@/lib/tax/copy";
 import { markSentToAccountant } from "../../form-actions";
 
@@ -17,8 +18,8 @@ export interface SendPanelProps {
   sent: { at: string; toFirstName: string | null; subject: string | null; attachments: string[] } | null;
 }
 
-const primary = "inline-flex min-h-[44px] items-center rounded-md bg-ink px-4 text-[13px] font-medium text-paper hover:bg-ink-mid disabled:opacity-50";
-const secondary = "inline-flex min-h-[44px] items-center rounded-md border border-line-strong bg-paper px-4 text-[13px] font-medium text-ink hover:bg-fill disabled:opacity-50";
+const primary = btnPrimary;
+const secondary = btnSecondary;
 
 /** "Sent to Jane on April 2, 2026." — the day in the stored timestamp, read the way the rest of Walkup reads one. */
 const sentWords = (at: string, firstName: string | null) => `Sent to ${firstName || "your accountant"} on ${dateWords(at.slice(0, 10))}.`;
@@ -71,7 +72,7 @@ export function SendPanel({ formId, canEdit, locked, downloads, draft, accountan
         ) : (
           <p className="text-warning-text">
             <a href="/tax#accountant" className="underline underline-offset-2">Add your accountant on the Taxes tab</a> so the draft is addressed
-            to them. The draft still opens — with no recipient.
+            to them. The draft still opens, with no recipient.
           </p>
         )}
 

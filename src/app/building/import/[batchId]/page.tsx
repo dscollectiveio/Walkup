@@ -197,7 +197,7 @@ async function OptionsStep({
   const mapping = batch.mapping ?? {};
   const mapped = (key: string) => mapping[key] !== null && mapping[key] !== undefined;
   return (
-    <Card title="Your books" hint="Tell Walkup where this goes. Every answer is checked again before anything is saved.">
+    <Card navy title="Your books" hint="Tell Walkup where this goes. Every answer is checked again before anything is saved.">
       <OptionsPanel
         batchId={batch.id}
         kind={kind}
@@ -399,7 +399,7 @@ async function DonePage({ batch, supabase, associationId }: { batch: Batch; supa
         </p>
       ) : null}
       {kind === "units_owners" && invitees.length > 0 ? (
-        <Card title={`Invite ${invitees.length} ${invitees.length === 1 ? "owner" : "owners"} to sign in`} hint="They were added without a login. An invite lets the owner sign in as this person. Walkup sends nothing.">
+        <Card navy title={`Invite ${invitees.length} ${invitees.length === 1 ? "owner" : "owners"} to sign in`} hint="They were added without a login. An invite lets the owner sign in as this person. Walkup sends nothing.">
           <InviteList people={invitees} associationName={associationName} boardContactName={boardContactName} />
         </Card>
       ) : null}

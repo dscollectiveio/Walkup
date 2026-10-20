@@ -21,9 +21,9 @@ export const IRS_1096_2026: SuggestedTemplate = {
   dueRule: "CAL_YEAR_END + 1 MONTHS, DAY 31",
   dueRuleCitation: "Form 1096 (2026), When To File: 'With Forms 1099-NEC, file by January 31'",
   filingInstructions:
-    "Only if you file 1099s on paper: order the official red-ink Form 1096 from the IRS and mail it with Copy A of each 1099-NEC to the address printed on the form. Not needed when you file through IRIS. Do not print and file the PDF from irs.gov — it can't be scanned.",
+    "Only if you file 1099s on paper: order the official red-ink Form 1096 from the IRS and mail it with Copy A of each 1099-NEC to the address printed on the form. Not needed when you file through IRIS. Do not print and file the PDF from irs.gov. It can't be scanned.",
   filingCitation:
     "Form 1096 (2026), Where To File and the caution on page 1; General Instructions for Certain Information Returns, Part E. Filing Returns With the IRS and Part G. Paper Document Reporting",
-  notes: "Only with paper 1099s; not used when filing through IRIS. Do not print and file the PDF from irs.gov — order official forms.",
+  notes: "Only with paper 1099s; not used when filing through IRIS. Do not print and file the PDF from irs.gov. Order official forms.",
   authoredOn: "2026-10-11",
 };

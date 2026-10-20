@@ -3,6 +3,7 @@
 import Link from "next/link";
 import { useRef, useState } from "react";
 import { useRouter } from "next/navigation";
+import { btnSecondary } from "@/components/repairs/styles";
 import { archivePolicy, deletePolicy } from "../../policy-actions";
 import { ConfirmDialog } from "../../components/confirm-dialog";
 
@@ -40,7 +41,7 @@ export function MoreMenu({ policyId, isAdmin, archived }: { policyId: string; is
         <summary
           ref={summaryRef}
           aria-label="More actions for this policy"
-          className="inline-flex min-h-[44px] cursor-pointer list-none items-center rounded-md border border-line-strong bg-paper px-4 text-[13px] font-medium text-ink hover:bg-fill [&::-webkit-details-marker]:hidden"
+          className={`${btnSecondary} cursor-pointer list-none [&::-webkit-details-marker]:hidden`}
         >
           More
         </summary>

@@ -11,11 +11,10 @@ import {
   setSendingEnabled,
 } from "@/app/dues/email-actions";
 import type { RuleFieldErrors } from "@/lib/email-outbox/actions-core";
+import { btnPrimary, btnSecondary } from "@/components/repairs/styles";
 
-const btn =
-  "inline-flex min-h-[44px] items-center justify-center rounded-md bg-ink px-4 py-2 text-[13px] font-medium text-paper hover:bg-ink-mid disabled:opacity-50";
-const btnGhost =
-  "inline-flex min-h-[44px] items-center justify-center rounded-md border border-line-strong bg-paper px-4 py-2 text-[13px] font-medium text-ink hover:bg-fill disabled:opacity-50";
+const btn = btnPrimary;
+const btnGhost = btnSecondary;
 const input = "mt-1 w-full rounded-lg border border-line-strong bg-paper px-3 py-2 text-[16px] text-ink sm:text-[14px]";
 const label = "block text-[12px] font-medium text-ink";
 

@@ -120,7 +120,7 @@ export function TopBar({
           aria-label="Your account"
           aria-current={onAccount ? "page" : undefined}
           title={`Your account (${shownName})`}
-          className={`ml-1 flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-[#D9A441] text-[13px] font-bold text-[#1B2A41] ring-2 transition duration-300 hover:scale-105 hover:brightness-105 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-paper ${
+          className={`ml-1 flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-brass text-[13px] font-bold text-on-brass ring-2 transition duration-300 hover:scale-105 hover:brightness-105 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-paper ${
             onAccount ? "ring-paper" : "ring-transparent"
           }`}
         >

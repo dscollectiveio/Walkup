@@ -24,7 +24,7 @@ export function DevSignIn() {
         Development only
       </p>
       <p className="mt-1 text-[11px] leading-relaxed text-warning-text">
-        Signs in as <code>walkup-dev@dscollective.io</code> — a real account
+        Signs in as <code>walkup-dev@dscollective.io</code>, a real account
         with a real token, so row-level security applies normally. Delete it
         before any real financial data exists.
       </p>

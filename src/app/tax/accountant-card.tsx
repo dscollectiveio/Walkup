@@ -2,11 +2,12 @@
 
 import { useActionState, useState, useTransition } from "react";
 import { Card } from "@/components/ui";
+import { btnPrimary, btnSecondary } from "@/components/repairs/styles";
 import { clearAccountant, setAccountant } from "./form-actions";
 
 const inputClass = "mt-1 w-full rounded-lg border border-line-strong bg-paper px-3 py-2 text-[13px] text-ink";
-const primary = "inline-flex min-h-[44px] items-center rounded-md bg-ink px-4 text-[13px] font-medium text-paper hover:bg-ink-mid disabled:opacity-50";
-const secondary = "inline-flex min-h-[44px] items-center rounded-md border border-line-strong bg-paper px-4 text-[13px] font-medium text-ink hover:bg-fill disabled:opacity-50";
+const primary = btnPrimary;
+const secondary = btnSecondary;
 
 /**
  * Who the drafts are addressed to. A contact, not an access grant: the
@@ -83,7 +84,7 @@ export function AccountantCard({
             ) : null}
           </div>
           {headsUpHref ? (
-            <p className="w-full text-[11px] text-mute">Opens a draft in your email app — nothing is sent until you send it.</p>
+            <p className="w-full text-[11px] text-mute">Opens a draft in your email app. Nothing is sent until you send it.</p>
           ) : null}
           {removeError ? <p className="w-full text-[12px] text-bad-text">{removeError}</p> : null}
         </div>

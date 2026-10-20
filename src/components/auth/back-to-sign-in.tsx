@@ -12,7 +12,7 @@ export function BackToSignIn() {
     <form action={signOut}>
       <button
         type="submit"
-        className="inline-flex min-h-[44px] items-center gap-1.5 rounded-md px-3 text-[14px] font-medium text-mute hover:text-ink focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#D9A441]"
+        className="inline-flex min-h-[44px] items-center gap-1.5 rounded-md px-3 text-[14px] font-medium text-mute hover:text-ink focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-brass"
       >
         <ArrowLeft size={15} strokeWidth={1.8} aria-hidden="true" />
         Back to sign in

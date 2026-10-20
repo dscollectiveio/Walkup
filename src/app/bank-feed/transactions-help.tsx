@@ -15,7 +15,7 @@ const STEPS: { title: string; body: string }[] = [
   },
   {
     title: "Pick one yourself when needed",
-    body: "No recommendation, or it’s wrong? Click the row and start typing — Utilities, Dues, Transfer, Not for the books — then pick from the list and Save & post.",
+    body: "No recommendation, or it’s wrong? Click the row and start typing (Utilities, Dues, Transfer, Not for the books), then pick from the list and Save & post.",
   },
   {
     title: "Do many at once",
@@ -77,7 +77,7 @@ export function TransactionsHelp() {
             <li key={step.title} className="flex gap-3">
               <span
                 aria-hidden="true"
-                className="figures flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-brass text-[12px] text-paper"
+                className="figures flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-brass text-[12px] text-on-brass"
               >
                 {i + 1}
               </span>

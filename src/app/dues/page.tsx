@@ -784,7 +784,7 @@ export default async function DuesPage() {
 
         {isBoard && unitList.length > 0 && planByUnit.size === 0 ? (
           <p className="mt-3 text-[12px] text-mute">
-            Set each unit&rsquo;s dues in the table — a yearly amount and how often they pay. They don&rsquo;t have to match.
+            Set each unit&rsquo;s dues in the table: a yearly amount and how often they pay. They don&rsquo;t have to match.
             Then &ldquo;Charge what&rsquo;s due&rdquo; appears under Needs you each period.
           </p>
         ) : null}

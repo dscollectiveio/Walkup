@@ -53,7 +53,7 @@ export function SuggestedPanel({ rows }: { rows: SuggestionRow[] }) {
                 <p className="font-medium text-ink">
                   {r.label} · {r.taxYear}
                   <span className="ml-2 rounded-full border border-line bg-fill px-2 py-0.5 text-[11px] font-normal text-mute">
-                    {r.kind === "pdf" ? "PDF + field map" : "Link only — rules, no PDF"}
+                    {r.kind === "pdf" ? "PDF + field map" : "Link only: rules, no PDF"}
                   </span>
                 </p>
                 <p className="mt-0.5 text-[12px] text-mute">
@@ -75,7 +75,7 @@ export function SuggestedPanel({ rows }: { rows: SuggestionRow[] }) {
           <ul className="mt-1 space-y-1 text-[12px]">
             {done.map((r) => {
               const t = r.installed!;
-              const state = t.active ? "active" : t.verified ? "verified, inactive" : t.mapped > 0 || r.kind === "link_only" ? "not verified" : "map not applied — see its note";
+              const state = t.active ? "active" : t.verified ? "verified, inactive" : t.mapped > 0 || r.kind === "link_only" ? "not verified" : "map not applied, see its note";
               return (
                 <li key={r.key} className="flex flex-wrap items-center gap-2">
                   <Link href={`/admin/tax-templates/${t.id}`} className="font-medium text-ink underline-offset-2 hover:underline">

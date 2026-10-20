@@ -522,7 +522,7 @@ export function ReviewForm(props: ReviewFormProps) {
     >
       <div>
         <h1 className="text-[20px] font-bold tracking-tight text-ink">{header.title}</h1>
-        {header.blurb ? <p className="mt-1 max-w-2xl text-[13px] text-mute">{header.blurb}</p> : null}
+        {header.blurb ? <p className="mt-1 max-w-2xl text-mute">{header.blurb}</p> : null}
       </div>
 
       {hasRail ? (

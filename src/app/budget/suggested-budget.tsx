@@ -2,6 +2,7 @@
 
 import { useState, useTransition } from "react";
 import { applySuggestedBudget } from "./actions";
+import { btnPrimary } from "@/components/repairs/styles";
 
 const BUMPS = [0, 2, 3, 5] as const;
 
@@ -91,7 +92,7 @@ export function SuggestedBudget({
                   if (r.error) setError(r.error);
                 })
               }
-              className="min-h-[44px] rounded-md bg-ink px-4 py-2 text-[13px] font-medium text-paper hover:bg-ink-mid disabled:opacity-50"
+              className={btnPrimary}
             >
               {pending ? "Setting the budget…" : `Yes, use these ${lines.length} amounts`}
             </button>

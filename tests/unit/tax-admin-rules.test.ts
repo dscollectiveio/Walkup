@@ -149,7 +149,7 @@ describe("suggestionDecision (§3.2)", () => {
     expect(note).toContain("“2025 Form 1120-H”");
     expect(note).toContain("dffaa4d3079c…");
     expect(note).toContain("000000000000…");
-    expect(note).toContain("map it by hand against the labeled preview");
+    expect(note).toContain("Map it by hand against the labeled preview");
   });
 
   it("refuses the map when only the title differs — the same bytes can't have a different title, so this is a republished form", () => {

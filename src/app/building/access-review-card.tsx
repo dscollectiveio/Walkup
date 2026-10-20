@@ -3,6 +3,7 @@
 import { useActionState, useState } from "react";
 import { recordAccessReview } from "./actions";
 import { ACCESS_REVIEW_INTERVAL_DAYS } from "@/lib/home/reminders";
+import { btnPrimary } from "@/components/repairs/styles";
 
 export interface AccessReviewRecord {
   id: string;
@@ -47,7 +48,7 @@ export function AccessReviewCard({
         {last === null
           ? "No access review has been recorded yet."
           : overdue
-            ? `Last reviewed ${daysSince} days ago — a review is due every ${ACCESS_REVIEW_INTERVAL_DAYS} days.`
+            ? `Last reviewed ${daysSince} days ago. A review is due every ${ACCESS_REVIEW_INTERVAL_DAYS} days.`
             : `Last reviewed ${daysSince === 0 ? "today" : `${daysSince} days ago`}. Next one due in ${
                 ACCESS_REVIEW_INTERVAL_DAYS - (daysSince ?? 0)
               } days.`}
@@ -56,8 +57,8 @@ export function AccessReviewCard({
       <p className="text-[13px] leading-relaxed text-mute">
         Look over everyone in Units and people above who has access ({activeGrantCount} active{" "}
         {activeGrantCount === 1 ? "grant" : "grants"}) and remove anything that shouldn&rsquo;t be
-        there. Recording the review also revokes access that has lapsed on its own — expired
-        accountant grants and owners whose sale has closed — and keeps a snapshot of who had
+        there. Recording the review also revokes access that has lapsed on its own: expired
+        accountant grants and owners whose sale has closed. It also keeps a snapshot of who had
         access that day.
       </p>
 
@@ -73,7 +74,7 @@ export function AccessReviewCard({
           <div>
             <label htmlFor="review_notes" className="block text-[12px] font-medium text-ink">
               Notes
-              <span className="ml-1 font-normal text-mute-soft">optional — what you changed, if anything</span>
+              <span className="ml-1 font-normal text-mute-soft">optional: what you changed, if anything</span>
             </label>
             <textarea
               id="review_notes"
@@ -87,7 +88,7 @@ export function AccessReviewCard({
             <button
               type="submit"
               disabled={pending}
-              className="rounded-md bg-ink px-4 py-2 text-[13px] font-medium text-paper hover:bg-ink-mid disabled:opacity-50"
+              className={btnPrimary}
             >
               {pending ? "Recording…" : "I've reviewed everyone's access"}
             </button>
@@ -104,7 +105,7 @@ export function AccessReviewCard({
         <button
           type="button"
           onClick={() => setOpen(true)}
-          className="rounded-md bg-ink px-4 py-2 text-[13px] font-medium text-paper hover:bg-ink-mid"
+          className={btnPrimary}
         >
           Record an access review
         </button>

@@ -3,6 +3,7 @@
 import { useActionState, useState, useTransition } from "react";
 import { Card, Empty, money } from "@/components/ui";
 import { chargeDuesPeriod, createDuesSchedule } from "./actions";
+import { btnPrimary } from "@/components/repairs/styles";
 
 export interface ScheduleView {
   id: string;
@@ -46,7 +47,7 @@ function AddScheduleForm() {
       <button
         type="button"
         onClick={() => setOpen(true)}
-        className="rounded-md bg-ink px-4 py-2 text-[13px] font-medium text-paper hover:bg-ink-mid"
+        className={btnPrimary}
       >
         Add a dues schedule
       </button>
@@ -109,7 +110,7 @@ function AddScheduleForm() {
         </div>
       </div>
       <p className="text-[11px] text-mute-soft">
-        Splitting by ownership percentage isn&rsquo;t available yet — use a per-unit amount for now.
+        Splitting by ownership percentage isn&rsquo;t available yet. Use a per-unit amount for now.
       </p>
       {state?.error ? (
         <p className="border-l-[3px] border-bad bg-bad-tint px-3 py-2 text-[13px] text-bad-text">{state.error}</p>
@@ -118,7 +119,7 @@ function AddScheduleForm() {
         <button
           type="submit"
           disabled={pending}
-          className="rounded-md bg-ink px-4 py-2 text-[13px] font-medium text-paper hover:bg-ink-mid disabled:opacity-50"
+          className={btnPrimary}
         >
           {pending ? "Saving…" : "Save schedule"}
         </button>
@@ -195,7 +196,7 @@ export function DuesScheduleCard({
       {schedules.length === 0 ? (
         <Empty>
           {canManage
-            ? "No schedule yet — set the amount and cadence, then charge the first period."
+            ? "No schedule yet. Set the amount and cadence, then charge the first period."
             : "The board hasn't set a dues schedule yet."}
         </Empty>
       ) : (

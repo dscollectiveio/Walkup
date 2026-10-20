@@ -52,7 +52,7 @@ describe("buildCalendar", () => {
     expect(ics.startsWith("BEGIN:VCALENDAR\r\nVERSION:2.0\r\nPRODID:-//Walkup//Taxes//EN\r\nCALSCALE:GREGORIAN\r\nMETHOD:PUBLISH\r\n")).toBe(true);
     expect(ics.endsWith("END:VCALENDAR\r\n")).toBe(true);
     expect(ics.replace(/\r\n/g, "")).not.toContain("\n");
-    expect(lines(ics)).toContain("X-WR-CALNAME:Walkup — 2158 N. Damen Condominium Association taxes");
+    expect(lines(ics)).toContain("X-WR-CALNAME:Walkup: 2158 N. Damen Condominium Association taxes");
   });
 
   it("writes one all-day event per dated deadline, skipping the ones with no date", () => {

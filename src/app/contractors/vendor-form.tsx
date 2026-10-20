@@ -3,6 +3,7 @@
 import { useActionState, useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { PhoneInput } from "@/components/phone-input";
+import { btnLink, btnPrimary, btnSecondary } from "@/components/repairs/styles";
 import { TRADE_GROUP_LABEL, TRADES, type TradeGroup } from "@/lib/contractors/trades";
 import { addVendor, updateVendor } from "./vendor-actions";
 
@@ -372,11 +373,11 @@ export function VendorForm({
         <button
           type="submit"
           disabled={pending}
-          className="min-h-[44px] rounded-md bg-ink px-4 py-2 text-[13px] font-medium text-paper hover:bg-ink-mid disabled:opacity-50"
+          className={btnPrimary}
         >
           {pending ? "Saving…" : vendor ? "Save changes" : "Save contractor"}
         </button>
-        <button type="button" onClick={onClose} className="min-h-[44px] rounded-md border border-line-strong px-4 py-2 text-[13px] text-ink hover:bg-fill">
+        <button type="button" onClick={onClose} className={btnSecondary}>
           Cancel
         </button>
       </div>
@@ -398,10 +399,10 @@ export function AddVendorButton({
   if (open) return <VendorForm vendor={null} onClose={() => setOpen(false)} initialTrade={initialTrade} />;
   const cls =
     variant === "link"
-      ? "inline-flex min-h-[44px] items-center text-[13px] font-medium text-ink underline underline-offset-2 hover:text-ink-mid"
+      ? btnLink
       : variant === "secondary"
-        ? "min-h-[44px] rounded-md border border-line-strong bg-paper px-4 py-2 text-[13px] font-medium text-ink hover:bg-fill"
-        : "min-h-[44px] rounded-md bg-ink px-4 py-2 text-[13px] font-medium text-paper hover:bg-ink-mid";
+        ? btnSecondary
+        : btnPrimary;
   return (
     <button type="button" onClick={() => setOpen(true)} className={cls}>
       {label}

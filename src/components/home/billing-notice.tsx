@@ -1,5 +1,6 @@
 import Link from "next/link";
 import type { BillingCopy } from "@/lib/billing/copy";
+import { btnPrimary } from "@/components/repairs/styles";
 
 const TONE: Record<BillingCopy["tone"], string> = {
   bad: "border-bad-line bg-bad-tint text-bad-text",
@@ -27,7 +28,7 @@ export function BillingNotice({ copy, canPay }: { copy: BillingCopy; canPay: boo
       {canPay && copy.action ? (
         <Link
           href="/account?tab=billing"
-          className="inline-flex min-h-[40px] shrink-0 items-center rounded-md bg-ink px-4 text-[13px] font-medium text-paper hover:bg-ink-mid"
+          className={`${btnPrimary} shrink-0`}
         >
           {copy.action === "manage" ? "Manage billing" : "Choose a plan"}
         </Link>

@@ -6,6 +6,7 @@ import { addPerson } from "./actions";
 import { PhoneInput } from "@/components/phone-input";
 import { todayIso } from "@/lib/dates";
 import { ROLE_OPTIONS } from "./person-row";
+import { btnPrimary } from "@/components/repairs/styles";
 
 const input = "mt-1 w-full rounded-lg border border-line-strong bg-paper px-3 py-2 text-[13px] text-ink";
 const label = "block text-[12px] font-medium text-ink";
@@ -129,7 +130,7 @@ export function AddPersonForm({
         <button
           type="submit"
           disabled={pending}
-          className="rounded-md bg-ink px-4 py-2 text-[13px] font-medium text-paper hover:bg-ink-mid disabled:opacity-50"
+          className={btnPrimary}
         >
           {pending ? "Saving…" : "Add them"}
         </button>

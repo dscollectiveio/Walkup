@@ -29,7 +29,7 @@ export default function FeaturesPage() {
             <Link href="/#pricing" className="hidden rounded-md px-3 py-2 text-white/80 hover:text-white sm:inline-block">Pricing</Link>
             <Link href="/#faq" className="hidden rounded-md px-3 py-2 text-white/80 hover:text-white md:inline-block">FAQ</Link>
             <Link href="/login" className="rounded-md px-3 py-2 font-medium text-white hover:bg-white/10">Sign in</Link>
-            <Link href="/signup" data-cta="features-header" className="ml-1 hidden rounded-md bg-[#D9A441] px-3.5 py-2 font-bold text-[#1B2A41] hover:bg-[#E4B75B] sm:inline-block">
+            <Link href="/signup" data-cta="features-header" className="ml-1 hidden rounded-md bg-brass px-3.5 py-2 font-bold text-on-brass hover:bg-[#E4B75B] sm:inline-block">
               Get started
             </Link>
           </nav>

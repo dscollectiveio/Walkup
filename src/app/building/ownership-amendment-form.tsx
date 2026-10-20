@@ -2,6 +2,7 @@
 
 import { useActionState, useMemo, useState } from "react";
 import { recordOwnershipAmendment } from "./actions";
+import { btnPrimary } from "@/components/repairs/styles";
 
 export function OwnershipAmendmentForm({
   units,
@@ -34,7 +35,7 @@ export function OwnershipAmendmentForm({
       <button
         type="button"
         onClick={() => setOpen(true)}
-        className="rounded-md bg-ink px-4 py-2 text-[13px] font-medium text-paper hover:bg-ink-mid"
+        className={btnPrimary}
       >
         Record an ownership change
       </button>
@@ -129,7 +130,7 @@ export function OwnershipAmendmentForm({
         <button
           type="submit"
           disabled={pending || !atHundred}
-          className="rounded-md bg-ink px-4 py-2 text-[13px] font-medium text-paper hover:bg-ink-mid disabled:opacity-50"
+          className={btnPrimary}
         >
           {pending ? "Saving…" : "Record it"}
         </button>

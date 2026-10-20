@@ -1,5 +1,6 @@
 import { createClient, getUser } from "@/lib/supabase/server";
 import { Empty, money, moneyRounded } from "@/components/ui";
+import { btnSecondary } from "@/components/repairs/styles";
 import { toCents } from "@/lib/tax/form1120h";
 import { assembleReminders, homeTaxDeadlines, nextFilingReminder, nextOccurrence } from "@/lib/home/reminders";
 import { urgentItems } from "@/lib/home/urgent-items";
@@ -846,13 +847,13 @@ export default async function HomePage() {
       />
 
       {ownerInsurance ? (
-        <Card title="What the building's insurance covers">
+        <Card navy title="What the building's insurance covers">
           <p className="text-[13px] text-ink">
             What the building&rsquo;s master policy covers, and what it leaves for your own condo (HO-6) policy.
           </p>
           <Link
             href="/insurance"
-            className="mt-3 inline-flex min-h-[40px] items-center rounded-md border border-line-strong bg-paper px-3.5 text-[13px] font-medium text-ink hover:bg-fill"
+            className={`${btnSecondary} mt-3`}
           >
             Read the summary
           </Link>

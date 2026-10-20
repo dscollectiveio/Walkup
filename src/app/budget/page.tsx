@@ -17,6 +17,7 @@ import { SuggestedBudget } from "./suggested-budget";
 import { PlannedAmount } from "./planned-amount";
 import { inForce } from "@/lib/insurance/status";
 import { toCents } from "@/lib/money/cents";
+import { btnPrimary } from "@/components/repairs/styles";
 
 export const dynamic = "force-dynamic";
 
@@ -517,7 +518,7 @@ export default async function BudgetPage({ searchParams }: { searchParams: Promi
                 <p className="text-[13px] text-mute">Nothing posted for {p.label.toLowerCase()} yet.</p>
                 <Link
                   href="/bank-feed"
-                  className="mt-3 inline-block rounded-md bg-ink px-4 py-2 text-[13px] font-medium text-paper hover:bg-ink-mid"
+                  className={`mt-3 ${btnPrimary}`}
                 >
                   Categorize transactions on the bank feed →
                 </Link>

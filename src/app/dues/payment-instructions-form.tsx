@@ -2,6 +2,7 @@
 
 import { useActionState, useState } from "react";
 import { updateDuesPaymentInstructions } from "./actions";
+import { btnPrimary } from "@/components/repairs/styles";
 
 export interface DuesPaymentInstructions {
   dues_payee_name: string | null;
@@ -92,7 +93,7 @@ export function PaymentInstructionsForm({
         <div>
           <label htmlFor="dues_zelle_handle" className="block text-[12px] font-medium text-ink">
             Zelle handle
-            <span className="ml-1 font-normal text-mute-soft">optional — email or phone</span>
+            <span className="ml-1 font-normal text-mute-soft">optional: email or phone</span>
           </label>
           <input
             id="dues_zelle_handle"
@@ -112,7 +113,7 @@ export function PaymentInstructionsForm({
           id="dues_payment_notes"
           name="dues_payment_notes"
           rows={2}
-          placeholder="e.g. Bill pay only — we don't accept Zelle over $500."
+          placeholder="e.g. Bill pay only. We don't accept Zelle over $500."
           defaultValue={instructions.dues_payment_notes ?? ""}
           className="mt-1 w-full rounded-lg border border-line-strong px-3 py-2 text-[13px] text-ink"
         />
@@ -128,7 +129,7 @@ export function PaymentInstructionsForm({
         <button
           type="submit"
           disabled={pending}
-          className="rounded-md bg-ink px-4 py-2 text-[13px] font-medium text-paper hover:bg-ink-mid disabled:opacity-50"
+          className={btnPrimary}
         >
           {pending ? "Saving…" : "Save"}
         </button>

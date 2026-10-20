@@ -167,7 +167,7 @@ export function PeopleFields({
                       value={value}
                       checked={a.mode === value}
                       onChange={() => setMode(k, value)}
-                      className="h-4 w-4 accent-[#1B2A41]"
+                      className="h-4 w-4 accent-ink"
                     />
                     {text}
                   </label>
@@ -236,7 +236,7 @@ export function PeopleFields({
 
             <div className="grid gap-3 sm:grid-cols-2">
               <label className="flex min-h-[40px] items-center gap-2 text-[13px] text-ink">
-                <input type="checkbox" name={`p.${k}.owns_unit`} defaultChecked className="h-4 w-4 rounded border-line-strong accent-[#1B2A41]" />
+                <input type="checkbox" name={`p.${k}.owns_unit`} defaultChecked className="h-4 w-4 rounded border-line-strong accent-ink" />
                 They own this unit
               </label>
               <div>

@@ -1,7 +1,7 @@
 import Link from "next/link";
 import { PolicyPage, PolicySection, PolicyList, PolicyTable } from "@/components/policy-page";
 
-export const metadata = { title: "Data Retention and Deletion Policy — Walkup" };
+export const metadata = { title: "Data Retention and Deletion Policy | Walkup" };
 
 export default function DataRetentionPolicyPage() {
   return (
@@ -26,7 +26,7 @@ export default function DataRetentionPolicyPage() {
             [
               "Financial records: ledger, payments, charges, budgets, tax filings, and bank transactions",
               "Life of the account, then 7 years after closure (tax-record retention)",
-              "Purged by the operator at the end of the period. Never altered in the meantime — errors are corrected with a reversing entry, not a deletion.",
+              "Purged by the operator at the end of the period. Never altered in the meantime. Errors are corrected with a reversing entry, not a deletion.",
             ],
             [
               "Plaid access tokens",
@@ -78,7 +78,7 @@ export default function DataRetentionPolicyPage() {
         />
         <p>
           Removal is refused while the person still holds access or still owns a unit, so data is
-          never deleted out from under an active relationship — access ends first, and access
+          never deleted out from under an active relationship. Access ends first, and access
           that should have ended is ended automatically (see the{" "}
           <Link href="/policies/access-controls" className="text-ink underline-offset-2 hover:underline">
             Access Controls Policy

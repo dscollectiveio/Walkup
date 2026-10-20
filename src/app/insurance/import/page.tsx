@@ -5,6 +5,7 @@ import { Card, Restricted } from "@/components/ui";
 import { isCoverageType } from "@/lib/insurance/coverage";
 import { loadInsuranceContext } from "@/lib/insurance/queries";
 import { BackLink } from "../components/page-header";
+import { btnSecondary } from "@/components/repairs/styles";
 import { Chip } from "../components/status-chip";
 import { ImportScreen } from "./import-screen";
 import { READ_SELECT, itemCounts, readChip, readFilename, type ReadRow } from "./read-state";
@@ -79,7 +80,7 @@ export default async function ImportPage({ searchParams }: { searchParams: Promi
                   </div>
                   <Link
                     href={`/insurance/import/${r.id}`}
-                    className="inline-flex min-h-[44px] items-center rounded-md border border-line-strong bg-paper px-4 text-[13px] font-medium text-ink hover:bg-fill"
+                    className={btnSecondary}
                   >
                     Open
                   </Link>

@@ -2,6 +2,7 @@
 
 import { useActionState, useState } from "react";
 import { Card } from "@/components/ui";
+import { btnPrimary } from "@/components/repairs/styles";
 import { setMyEmailPreferences, type PreferencesState } from "./email-preferences-actions";
 
 const row = "flex min-h-[44px] cursor-pointer items-start gap-3 rounded-lg border border-line px-3.5 py-3 text-[14px] text-ink has-[:checked]:bg-fill";
@@ -53,7 +54,7 @@ export function EmailPreferencesCard({
           <button
             type="submit"
             disabled={pending}
-            className="inline-flex min-h-[44px] items-center justify-center rounded-md bg-ink px-4 py-2 text-[13px] font-medium text-paper hover:bg-ink-mid disabled:opacity-60"
+            className={btnPrimary}
           >
             {pending ? "Saving..." : "Save"}
           </button>

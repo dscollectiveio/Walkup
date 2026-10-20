@@ -429,7 +429,7 @@ describe("the link-only templates", () => {
     const sos = suggestedByKey("il_sos_annual_report_2026")!;
     expect(sos.filingInstructions).toContain("apps.ilsos.gov/nfpannualreports");
     expect(sos.dueRuleCitation).toContain("805 ILCS 105/114.10");
-    expect(sos.notes).toContain("a person confirms these links");
+    expect(sos.notes).toContain("A person confirms these links");
 
     const il = suggestedByKey("il_1120_2025")!;
     expect(il.dueRule).toBe("FY_END + 4 MONTHS, DAY 15");

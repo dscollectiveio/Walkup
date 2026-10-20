@@ -3,10 +3,10 @@
 import { useActionState, useState } from "react";
 import { addOneOffCharge, saveLateFeeRule } from "./actions";
 import { MoneyInput } from "@/components/money-input";
+import { btnPrimary, btnSecondary } from "@/components/repairs/styles";
 
 const inputClass = "mt-1 w-full rounded-lg border border-line-strong bg-paper px-3 py-2 text-[13px] text-ink";
-const btnPrimary = "rounded-md bg-ink px-4 py-2 text-[13px] font-medium text-paper hover:bg-ink-mid disabled:opacity-50";
-const btnGhost = "rounded-md border border-line-strong bg-paper px-4 py-2 text-[13px] font-medium text-ink hover:bg-fill";
+const btnGhost = btnSecondary;
 
 /** The late-fee rule in one sentence: off by default, nothing fires until it's set. */
 export function LateFeeRuleForm({
@@ -38,7 +38,7 @@ export function LateFeeRuleForm({
           ) : (
             <>
               <span className="font-medium">No late fees.</span>{" "}
-              <span className="text-mute">Set a rule and this page will propose them — nothing is added without your click.</span>
+              <span className="text-mute">Set a rule and this page will propose them. Nothing is added without your click.</span>
             </>
           )}
         </p>

@@ -15,7 +15,7 @@ const METHODS: { value: "paper" | "electronic" | ""; label: string; current: Met
 const METHOD_WORDS: Record<"paper" | "electronic" | "null", string> = {
   paper: "on paper",
   electronic: "electronically, through IRIS",
-  null: "not decided yet — Form 1096 reads “ask your CPA” until you say",
+  null: "not decided yet, Form 1096 reads “ask your CPA” until you say",
 };
 
 /**
@@ -86,9 +86,9 @@ export function SosFileNumber({ current, canWrite }: { current: string | null; c
       Illinois SOS file number: <span className="figures text-ink">{current}</span>
     </>
   ) : canWrite ? (
-    "Add your file number — the portal asks for it."
+    "Add your file number. The portal asks for it."
   ) : (
-    "No Illinois SOS file number on file yet — the portal asks for it."
+    "No Illinois SOS file number on file yet. The portal asks for it."
   );
 
   if (!canWrite || !editing) {

@@ -174,7 +174,7 @@ function onControl(target: EventTarget | null): boolean {
 
 function StatusPill({ t }: { t: TransactionRecord }) {
   if (t.removed_at && t.journal_entry_id) {
-    return <Pill tone="bad">Retracted by bank — review</Pill>;
+    return <Pill tone="bad">Retracted by bank: review</Pill>;
   }
   if (t.removed_at) return <Pill tone="mute">Retracted by bank</Pill>;
   if (t.journal_entry_id) return <Pill tone="good">Posted</Pill>;
@@ -557,7 +557,7 @@ export function TransactionRow({
                   ) : null}
                 </div>
                 <span className="text-[11px] text-mute-soft">
-                  {t.pending && !suggestion.needsPick ? "Pending at the bank — posts once it settles" : suggestion.reason}
+                  {t.pending && !suggestion.needsPick ? "Pending at the bank: posts once it settles" : suggestion.reason}
                 </span>
               </div>
             ) : (

@@ -87,18 +87,18 @@ export default async function TaxTemplatesPage() {
 
       {january ? (
         <p className="rounded-lg border border-warning-line bg-warning-tint px-4 py-3 text-[13px] text-warning-text">
-          It&rsquo;s January — the IRS and Illinois often republish forms now. Check the active templates for updates, and open each link again.
+          It&rsquo;s January. The IRS and Illinois often republish forms now. Check the active templates for updates, and open each link again.
         </p>
       ) : null}
 
-      <Card
+      <Card navy
         title="Set up from Walkup's suggestions"
-        hint="Walkup's own cited field maps and rules for the official forms, authored 2026-10-11. Setting one up fetches the pinned PDF, applies the map only if the file is byte-for-byte the one it was written against, and leaves the template inactive — you still check it and activate it."
+        hint="Walkup's own cited field maps and rules for the official forms, authored 2026-10-11. Setting one up fetches the pinned PDF, applies the map only if the file is byte-for-byte the one it was written against, and leaves the template inactive, so you still check it and activate it."
       >
         <SuggestedPanel rows={suggestions} />
       </Card>
 
-      <Card title="Templates">
+      <Card navy title="Templates">
         {(templates ?? []).length === 0 ? (
           <Empty>No templates yet. Set one up from the suggestions above, or fetch a form below.</Empty>
         ) : (
@@ -115,7 +115,7 @@ export default async function TaxTemplatesPage() {
                   </Link>
                   <span className="flex flex-wrap items-center gap-2 text-[12px] text-mute">
                     {linkOnly ? (
-                      <span className="rounded-full border border-line bg-fill px-2 py-0.5 text-[11px]">Link only — rules, no PDF</span>
+                      <span className="rounded-full border border-line bg-fill px-2 py-0.5 text-[11px]">Link only: rules, no PDF</span>
                     ) : (
                       <>
                         {mapped} of {total} fields mapped
@@ -142,25 +142,25 @@ export default async function TaxTemplatesPage() {
         </div>
       </Card>
 
-      <Card
+      <Card navy
         title="Official links"
-        hint="What boards see beside each form. Every link says when Walkup retrieved it and whether a person has opened it since — “I opened this and it's current” is that check. Nothing here is verified by code."
+        hint="What boards see beside each form. Every link says when Walkup retrieved it and whether a person has opened it since. “I opened this and it's current” is that check. Nothing here is verified by code."
       >
         <LinksPanel rows={(links ?? []) as AdminLinkRow[]} formLabels={LINK_FORM_LABELS} formOrder={[...LINK_FORM_CODES]} />
       </Card>
 
-      <Card
+      <Card navy
         title="Rules and thresholds"
         hint="The rates and amounts Walkup computes with, each for a period and from a source. A changed rule is a new row in a migration, never an edit here; this page only records that a person checked a figure."
       >
         <ParametersPanel rows={parameterRows} />
       </Card>
 
-      <Card title="Fetch a form" hint="From irs.gov, tax.illinois.gov or ilsos.gov only. It's stored, checksummed, and its fields listed — inactive until verified.">
+      <Card navy title="Fetch a form" hint="From irs.gov, tax.illinois.gov or ilsos.gov only. It's stored, checksummed, and its fields listed. Inactive until verified.">
         <FetchTemplateForm />
       </Card>
 
-      <Card
+      <Card navy
         title="Add a link-only template"
         hint="For a form Walkup never fills (the Illinois annual report, IL-1120, Form 1096): a cited due rule and filing instructions, verified and activated like any template, so boards get a real date instead of “ask your CPA”."
       >

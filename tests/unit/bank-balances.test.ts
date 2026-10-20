@@ -50,7 +50,7 @@ describe("Bank accounts section", () => {
     const html = await render();
     expect(html).toContain("Total bank balance");
     expect(html).toContain("$320.00"); // 110 + 210
-    expect(html).toContain("text-[48px]");
+    expect(html).toContain("text-[22px]");
     expect(html).toContain("as of each bank");
   });
 
@@ -166,6 +166,6 @@ describe("Bank accounts section", () => {
     });
     const html = renderToStaticMarkup(el);
     expect(html).toContain("Checking the bank for new transactions");
-    expect(html).toContain("reload in a minute");
+    expect(html).toContain("Reload in a minute");
   });
 });

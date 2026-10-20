@@ -214,7 +214,7 @@ export async function BankAccountsSection({
   const anyCached = balances.some((b) => b.source === "last_sync" || b.source === "stored");
   return (
     <section className="divide-y divide-line rounded-xl border border-line bg-paper">
-      <header className="flex flex-wrap items-end justify-between gap-x-6 gap-y-2 rounded-t-[7px] band bg-ink px-5 py-5">
+      <header className="flex flex-wrap items-center justify-between gap-x-6 gap-y-2 rounded-t-[7px] band bg-ink px-5 py-4">
         <div>
           <h2 className="eyebrow text-paper">Total bank balance</h2>
           <p className="mt-1.5 text-[13px] text-ondark-mute">
@@ -224,11 +224,11 @@ export async function BankAccountsSection({
           </p>
         </div>
         <div className="text-right">
-          <div className="figures text-[40px] leading-none text-paper sm:text-[48px]">
+          <div className="figures text-[22px] leading-none text-paper">
             {hasCash ? money(totalCashCents / 100) : "—"}
           </div>
           {flow ? (
-            <p className="mt-2 text-[12px] text-ondark-mute">
+            <p className="mt-1.5 text-[12px] text-ondark-mute">
               In <span className="figures text-paper">{money(flow.in)}</span> · Out{" "}
               <span className="figures text-paper">{money(flow.out)}</span> {flow.period}
             </p>
@@ -311,7 +311,7 @@ export async function BankAccountsSection({
             <div className="mt-0.5 text-[11px] text-mute-soft">
               {syncedAgo(c.last_synced_at)}
               {checkingIds.includes(c.id)
-                ? " · Checking the bank for new transactions — reload in a minute to see them"
+                ? " · Checking the bank for new transactions. Reload in a minute to see them"
                 : ""}
             </div>
           </div>
@@ -352,7 +352,7 @@ export async function BankAccountsSection({
       {canEdit ? (
         <div className="flex flex-wrap items-center justify-between gap-3 bg-fill/40 px-5 py-3">
           <p className="text-[12px] text-mute">
-            Have money at another bank too — say, the reserve? Add it here. For new transactions at a bank
+            Have money at another bank too (say, the reserve)? Add it here. For new transactions at a bank
             that&rsquo;s already listed, open its accounts and use Sync now.
           </p>
           <ConnectBankButton label="+ Add another bank" variant="outline" />

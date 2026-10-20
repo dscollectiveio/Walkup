@@ -113,8 +113,8 @@ export function linkStatusWords(v: LinkView): string {
       return "last checked over a year ago";
     case "blocked":
       return v.checkedOn
-        ? `couldn't be checked automatically — opened by a person on ${dateWords(v.checkedOn, "short")}`
-        : `couldn't be checked automatically — ${LINKS_NOT_CHECKED}`;
+        ? `couldn't be checked automatically, opened by a person on ${dateWords(v.checkedOn, "short")}`
+        : `couldn't be checked automatically, ${LINKS_NOT_CHECKED}`;
     default:
       return `retrieved ${dateWords(v.retrievedOn, "short")} · ${LINKS_NOT_CHECKED}`;
   }

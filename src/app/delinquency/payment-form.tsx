@@ -3,6 +3,7 @@
 import { useActionState, useState } from "react";
 import { recordPayment } from "./actions";
 import { MoneyInput } from "@/components/money-input";
+import { btnPrimary } from "@/components/repairs/styles";
 
 export function PaymentForm({
   units,
@@ -19,7 +20,7 @@ export function PaymentForm({
       <button
         type="button"
         onClick={() => setOpen(true)}
-        className="rounded-md bg-ink px-4 py-2 text-[13px] font-medium text-paper hover:bg-ink-mid"
+        className={btnPrimary}
       >
         Record a payment
       </button>
@@ -45,7 +46,7 @@ export function PaymentForm({
             </option>
             {units.map((u) => (
               <option key={u.id} value={u.id}>
-                {u.label} — owes {new Intl.NumberFormat("en-US", { style: "currency", currency: "USD" }).format(u.owed)}
+                {u.label}: owes {new Intl.NumberFormat("en-US", { style: "currency", currency: "USD" }).format(u.owed)}
               </option>
             ))}
           </select>
@@ -94,7 +95,7 @@ export function PaymentForm({
       <div>
         <label htmlFor="reference" className="block text-[12px] font-medium text-ink">
           Reference
-          <span className="ml-1 font-normal text-mute-soft">optional — check number, confirmation code</span>
+          <span className="ml-1 font-normal text-mute-soft">optional: check number, confirmation code</span>
         </label>
         <input
           id="reference"
@@ -113,7 +114,7 @@ export function PaymentForm({
         <button
           type="submit"
           disabled={pending}
-          className="rounded-md bg-ink px-4 py-2 text-[13px] font-medium text-paper hover:bg-ink-mid disabled:opacity-50"
+          className={btnPrimary}
         >
           {pending ? "Saving…" : "Record it"}
         </button>

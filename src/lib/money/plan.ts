@@ -99,15 +99,15 @@ export function planHeadline(input: PlanHeadlineInput): {
   const tone: "good" | "attention" | "bad" = status === "over" ? "bad" : status === "watch" ? "attention" : "good";
   const worst = input.rows.find((r) => r.status !== "on_track");
   const watchWord = worst
-    ? `${worst.name} is the one to watch — ${dollars(-worst.leftCents)} over its share.`
+    ? `${worst.name} is the one to watch: ${dollars(-worst.leftCents)} over its share.`
     : undefined;
 
   if (input.isFiscalYear && input.forecast) {
     const f = input.forecast;
     const near = Math.abs(f.overUnderCents) < 10000;
     const headline = near
-      ? `${input.periodLabel} so far: ${dollars(input.spentCents)} spent of ${dollars(input.targetCents)} planned — on pace to finish right on budget.`
-      : `${input.periodLabel} so far: ${dollars(input.spentCents)} spent of ${dollars(input.targetCents)} planned — on pace to finish about ${dollars(Math.abs(f.overUnderCents))} ${f.overUnderCents > 0 ? "over" : "under"}.`;
+      ? `${input.periodLabel} so far: ${dollars(input.spentCents)} spent of ${dollars(input.targetCents)} planned, on pace to finish right on budget.`
+      : `${input.periodLabel} so far: ${dollars(input.spentCents)} spent of ${dollars(input.targetCents)} planned, on pace to finish about ${dollars(Math.abs(f.overUnderCents))} ${f.overUnderCents > 0 ? "over" : "under"}.`;
     const driver = f.driver
       ? `${f.driverIsMost ? (f.overUnderCents > 0 ? "Almost all of it" : "Most of the room") : "The biggest part"} is ${f.driver.name.toLowerCase()}.`
       : undefined;
@@ -127,7 +127,7 @@ export function planHeadline(input: PlanHeadlineInput): {
       : `${dollars(diff)} over plan`;
   return {
     status: tone,
-    headline: `${input.periodLabel}: ${dollars(input.spentCents)} spent of ${dollars(input.targetCents)} planned — ${tail}.`,
+    headline: `${input.periodLabel}: ${dollars(input.spentCents)} spent of ${dollars(input.targetCents)} planned: ${tail}.`,
     detail: watchWord,
   };
 }

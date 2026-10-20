@@ -5,6 +5,7 @@ import { addUnitWithPerson } from "./actions";
 import { PeopleFields } from "./people-fields";
 import { UnitFields } from "./unit-fields";
 import { SECTION_HEADER } from "./section-header";
+import { btnPrimary } from "@/components/repairs/styles";
 
 /**
  * Adds a unit and everyone in it in one step: the unit's details, then any
@@ -58,7 +59,7 @@ export function AddUnitForm({
         <button
           type="submit"
           disabled={pending}
-          className="rounded-md bg-ink px-4 py-2 text-[13px] font-medium text-paper hover:bg-ink-mid disabled:opacity-50"
+          className={btnPrimary}
         >
           {pending ? "Saving…" : "Add it"}
         </button>

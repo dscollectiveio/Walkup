@@ -38,7 +38,7 @@ export default async function OwnerHomePage() {
       <div className="mx-auto w-full max-w-[760px] space-y-6">
         {header}
         {viewer.isStaff ? (
-          <Card title="This page is for owners">
+          <Card navy title="This page is for owners">
             <p className="text-[14px] text-ink">
               You don&rsquo;t own a unit in {viewer.associationName}, so there&rsquo;s no balance to show here. Your Dashboard has the association&rsquo;s numbers.
             </p>
@@ -49,7 +49,7 @@ export default async function OwnerHomePage() {
             </p>
           </Card>
         ) : (
-          <Card title="No unit is linked to your account yet">
+          <Card navy title="No unit is linked to your account yet">
             <p className="text-[14px] leading-relaxed text-ink">
               The board hasn&rsquo;t linked your sign-in to a unit. That usually means an invite was used that wasn&rsquo;t made for you. Ask{" "}
               {viewer.boardContact.name ?? "a board member"} to send you a new invite from Building & Owners.
@@ -99,7 +99,7 @@ export default async function OwnerHomePage() {
       </div>
 
       <div className="grid gap-6 min-[900px]:grid-cols-2 min-[900px]:items-start">
-        <Card title="Announcements">
+        <Card navy title="Announcements">
           {announcements === null ? (
             <p className="text-[13px] text-mute">We couldn&rsquo;t load announcements. Reload the page.</p>
           ) : announcements.rows.length === 0 ? (
@@ -118,7 +118,7 @@ export default async function OwnerHomePage() {
           </p>
         </Card>
 
-        <Card title="Repairs">
+        <Card navy title="Repairs">
           {repairs.latest ? (
             <div>
               <p className="text-[15px] font-medium text-ink">
@@ -153,7 +153,7 @@ export default async function OwnerHomePage() {
       </div>
 
       <div className="grid gap-6 min-[900px]:grid-cols-2 min-[900px]:items-start">
-        <Card title="Shared with you">
+        <Card navy title="Shared with you">
           {docs.length === 0 ? (
             <Empty>The board hasn&rsquo;t shared any documents yet.</Empty>
           ) : (
@@ -175,7 +175,7 @@ export default async function OwnerHomePage() {
           </p>
         </Card>
 
-        <Card title="Who to contact">
+        <Card navy title="Who to contact">
           <ContactLine contact={viewer.boardContact} canEdit={viewer.isBoardAdmin} />
           <p className="mt-2 border-t border-line pt-3">
             <Link href="/repairs/emergency-info" className="inline-flex min-h-[44px] items-center text-[13px] font-medium text-ink underline underline-offset-2">

@@ -20,7 +20,7 @@ export const IL_1120_2025: SuggestedTemplate = {
   mirror: [],
   dueRule: "FY_END + 4 MONTHS, DAY 15",
   dueRuleCitation:
-    "2025 Form IL-1120 Instructions; Illinois Department of Revenue, Corporate Income Tax — due dates: Form IL-1120 is due on or before the 15th day of the 4th month following the close of the tax year (same as federal); June 30 year ends: the 3rd month",
+    "2025 Form IL-1120 Instructions; Illinois Department of Revenue, Corporate Income Tax, due dates: Form IL-1120 is due on or before the 15th day of the 4th month following the close of the tax year (same as federal); June 30 year ends: the 3rd month",
   filingInstructions: null,
   filingCitation: null,
   notes:

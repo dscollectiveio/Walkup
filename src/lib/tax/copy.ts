@@ -9,14 +9,14 @@ export const TAX_FOOTER =
   "Walkup prepares forms from your records. It doesn't file them or give tax advice. When in doubt, ask a CPA.";
 
 /** A due date Walkup worked out from the general rule, which nobody has checked against this year's instructions. */
-export const ESTIMATED_NOTE = "Estimated — not yet checked against this year's instructions.";
+export const ESTIMATED_NOTE = "Estimated: not yet checked against this year's instructions.";
 
 /** An official link Walkup retrieved that no person has opened and confirmed yet. */
 export const LINKS_NOT_CHECKED = "not yet checked by a person";
 
 /** Under every "Open the email draft" button — Walkup has no email-sending service, and a draft can't carry attachments. */
 export const NOTHING_SENT =
-  "Opens a draft in your email app — nothing is sent. Attach the files you just downloaded; Walkup can't attach them for you.";
+  "Opens a draft in your email app. Nothing is sent. Attach the files you just downloaded; Walkup can't attach them for you.";
 
 /** Beside anything about filing 1099s on paper. Self-printed Copy A isn't scannable. */
 export const COPY_A_NOTE =
