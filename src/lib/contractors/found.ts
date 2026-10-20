@@ -46,8 +46,11 @@ export function cleanWants(wants: unknown): JobWant[] {
   return JOB_WANTS.filter((w) => list.includes(w)).slice().sort();
 }
 
-export function googleCacheKey(textQuery: string, lat: number, lng: number) {
-  return { query_key: textQuery.toLowerCase(), location_key: `${lat.toFixed(3)},${lng.toFixed(3)}` };
+/** Another distance gets its own key; every key notes that the results carry opening hours. */
+export function googleCacheKey(textQuery: string, lat: number, lng: number, miles: number = MAX_DISTANCE_MILES) {
+  const where = `${lat.toFixed(3)},${lng.toFixed(3)}`;
+  // "hrs" marks results that carry opening hours, so older saved results without them aren't reused for the open-now filter.
+  return { query_key: textQuery.toLowerCase(), location_key: `${where}${miles === MAX_DISTANCE_MILES ? "" : `|${miles}mi`}|hrs` };
 }
 
 export function webCacheKey(phrase: string, wants: JobWant[], loc: { city: string | null; state: string | null; postalCode: string | null }) {
@@ -115,6 +118,7 @@ export function googleCandidates(
   fetchedAt: string,
   from: { latitude: number; longitude: number },
   match: SavedMatcher,
+  maxMiles: number = MAX_DISTANCE_MILES,
 ): FoundCandidate[] {
   const out: FoundCandidate[] = [];
   for (const r of results ?? []) {
@@ -122,7 +126,7 @@ export function googleCandidates(
       r.latitude !== null && r.longitude !== null
         ? Math.round(milesBetween(from.latitude, from.longitude, r.latitude, r.longitude) * 10) / 10
         : null;
-    if (miles !== null && miles > MAX_DISTANCE_MILES) continue;
+    if (miles !== null && miles > maxMiles) continue;
     out.push({
       kind: "google",
       candidateId: `g:${r.placeId}`,
@@ -137,6 +141,8 @@ export function googleCandidates(
       ratingSource: r.rating !== null ? "Google" : null,
       ratingAsOf: fetchedAt,
       distanceMiles: miles,
+      openNow: r.openNow ?? null,
+      open24h: r.open24h ?? null,
       flags: { emergencyService: null, condoWork: null, smallJobs: null, freeEstimates: null },
       placeId: r.placeId,
       sourceUrls: [],

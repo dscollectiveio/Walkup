@@ -1,5 +1,7 @@
-import { describe, expect, it } from "vitest";
-import { askBarState, findHref, joinWords, NO_WANTS, parseWants, toggleWant } from "@/lib/contractors/find-params";
+import { describe, expect, it, vi } from "vitest";
+vi.mock("server-only", () => ({}));
+import { askBarState, DEFAULT_MILES, findHref, joinWords, NO_WANTS, parseMiles, parseMinRating, parseMinReviews, parseOpenNow, parseWants, toggleWant } from "@/lib/contractors/find-params";
+import { googleCacheKey } from "@/lib/contractors/found";
 
 describe("find page wants (repairs-spec §9.1)", () => {
   it("defaults an urgent job to emergency, and only when no want is in the URL", () => {
@@ -46,5 +48,56 @@ describe("the ask bar", () => {
   it("joins words with commas and 'and'", () => {
     expect(joinWords(["a"])).toBe("a");
     expect(joinWords(["a", "b", "c"])).toBe("a, b and c");
+  });
+});
+
+describe("how far to look", () => {
+  it("accepts any whole number of miles from 1 to 100 and holds the rest to the range", () => {
+    expect(parseMiles("5")).toBe(5);
+    expect(parseMiles("37")).toBe(37);
+    expect(parseMiles("100")).toBe(100);
+    expect(parseMiles("250")).toBe(100);
+    expect(parseMiles(25)).toBe(25);
+    expect(parseMiles(["60", "5"])).toBe(60);
+  });
+
+  it("falls back to the usual 15 for anything that isn't a distance", () => {
+    expect(parseMiles(undefined)).toBe(DEFAULT_MILES);
+    expect(parseMiles("")).toBe(15);
+    expect(parseMiles("far")).toBe(15);
+    expect(parseMiles("0")).toBe(15);
+    expect(parseMiles("-3")).toBe(15);
+  });
+
+  it("is in the link only when it isn't the usual distance", () => {
+    expect(findHref({ trade: "plumbing", miles: 15 })).toBe("/repairs/find?trade=plumbing");
+    expect(findHref({ trade: "plumbing", miles: 5 })).toBe("/repairs/find?trade=plumbing&miles=5");
+  });
+
+  it("gives each distance its own saved-results key, all marked as carrying opening hours", () => {
+    expect(googleCacheKey("Plumber", 41.9, -87.7).location_key).toBe("41.900,-87.700|hrs");
+    expect(googleCacheKey("Plumber", 41.9, -87.7, 15).location_key).toBe("41.900,-87.700|hrs");
+    expect(googleCacheKey("Plumber", 41.9, -87.7, 5).location_key).toBe("41.900,-87.700|5mi|hrs");
+  });
+});
+
+describe("narrowing the results", () => {
+  it("accepts only the offered minimums and treats anything else as none", () => {
+    expect([3.5, 4, 4.5].map((v) => parseMinRating(String(v)))).toEqual([3.5, 4, 4.5]);
+    expect(parseMinRating("5")).toBe(0);
+    expect(parseMinRating(undefined)).toBe(0);
+    expect([10, 25, 50].map((v) => parseMinReviews(String(v)))).toEqual([10, 25, 50]);
+    expect(parseMinReviews("7")).toBe(0);
+  });
+
+  it("reads open-now only from open=1", () => {
+    expect(parseOpenNow("1")).toBe(true);
+    expect(parseOpenNow("0")).toBe(false);
+    expect(parseOpenNow(undefined)).toBe(false);
+  });
+
+  it("puts the minimums in the link only when they are set", () => {
+    expect(findHref({ trade: "plumbing", minRating: 0, minReviews: 0, open: false })).toBe("/repairs/find?trade=plumbing");
+    expect(findHref({ trade: "plumbing", minRating: 4, minReviews: 25, open: true })).toBe("/repairs/find?trade=plumbing&rating=4&reviews=25&open=1");
   });
 });

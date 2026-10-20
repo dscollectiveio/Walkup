@@ -13,7 +13,7 @@ const GEOCODE_URL = "https://maps.googleapis.com/maps/api/geocode/json";
 export const SEARCH_RADIUS_METERS = 16_000;
 
 export const SEARCH_FIELD_MASK =
-  "places.id,places.displayName,places.formattedAddress,places.nationalPhoneNumber,places.websiteUri,places.rating,places.userRatingCount,places.businessStatus,places.location";
+  "places.id,places.displayName,places.formattedAddress,places.nationalPhoneNumber,places.websiteUri,places.rating,places.userRatingCount,places.businessStatus,places.location,places.currentOpeningHours.openNow,places.regularOpeningHours.periods";
 export const REFRESH_FIELD_MASK = "rating,userRatingCount,nationalPhoneNumber,websiteUri,businessStatus";
 
 export function googleKey(): string | null {
@@ -35,6 +35,10 @@ export interface PlaceResult {
   longitude: number | null;
   /** OPERATIONAL, CLOSED_TEMPORARILY or CLOSED_PERMANENTLY; absent on rows cached before 0053. */
   businessStatus?: string | null;
+  /** Open at the moment of the search; null when Google has no hours. Absent on rows cached before hours were asked for. */
+  openNow?: boolean | null;
+  /** Open around the clock, every day. */
+  open24h?: boolean | null;
 }
 
 interface RawPlace {
@@ -47,6 +51,16 @@ interface RawPlace {
   userRatingCount?: number;
   businessStatus?: string;
   location?: { latitude?: number; longitude?: number };
+  currentOpeningHours?: { openNow?: boolean };
+  regularOpeningHours?: { periods?: { open?: { day?: number; hour?: number; minute?: number }; close?: unknown }[] };
+}
+
+/** Google writes "open 24 hours, every day" as one period that opens Sunday 00:00 and never closes. */
+function isOpen24h(p: RawPlace): boolean | null {
+  const periods = p.regularOpeningHours?.periods;
+  if (!periods || periods.length === 0) return null;
+  const only = periods.length === 1 ? periods[0] : null;
+  return Boolean(only && !only.close && (only.open?.day ?? 0) === 0 && (only.open?.hour ?? 0) === 0 && (only.open?.minute ?? 0) === 0);
 }
 
 function toResult(p: RawPlace): PlaceResult {
@@ -61,6 +75,8 @@ function toResult(p: RawPlace): PlaceResult {
     latitude: p.location?.latitude ?? null,
     longitude: p.location?.longitude ?? null,
     businessStatus: p.businessStatus ?? null,
+    openNow: typeof p.currentOpeningHours?.openNow === "boolean" ? p.currentOpeningHours.openNow : null,
+    open24h: isOpen24h(p),
   };
 }
 
@@ -94,7 +110,7 @@ export async function searchNearby(
   query: string,
   latitude: number,
   longitude: number,
-  opts?: { includedType?: string },
+  opts?: { includedType?: string; radiusMeters?: number },
 ): Promise<PlaceResult[]> {
   const key = googleKey();
   if (!key) throw new GoogleUnavailableError("No Google key configured.");
@@ -110,7 +126,7 @@ export async function searchNearby(
       body: JSON.stringify({
         textQuery: query,
         pageSize: 20,
-        locationBias: { circle: { center: { latitude, longitude }, radius: SEARCH_RADIUS_METERS } },
+        locationBias: { circle: { center: { latitude, longitude }, radius: opts?.radiusMeters ?? SEARCH_RADIUS_METERS } },
         ...(opts?.includedType ? { includedType: opts.includedType } : {}),
       }),
     },

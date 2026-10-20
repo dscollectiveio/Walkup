@@ -319,7 +319,7 @@ describe("find: Google", () => {
     expect(r.candidates.map((c) => c.candidateId)).toEqual(["g:place-acme", "g:place-new"]);
     expect(r.candidates[0].alreadySaved).toMatchObject({ vendorId: ACME, status: "preferred" });
     expect(db.writes.find((w) => w.table === "google_api_calls")?.payload).toMatchObject({ kind: "text_search", trade: "plumbing" });
-    expect(db.tables.contractor_search_cache[0]).toMatchObject({ provider: "google", query_key: "sewer backup", location_key: "41.920,-87.678" });
+    expect(db.tables.contractor_search_cache[0]).toMatchObject({ provider: "google", query_key: "sewer backup", location_key: "41.920,-87.678|hrs" });
 
     searchNearby.mockClear();
     const again = await searchPlaces({ trade: "plumbing", phrase: "sewer backup" });

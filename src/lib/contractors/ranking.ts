@@ -68,6 +68,9 @@ export interface FoundCandidate {
   /** The cache row's fetched_at. */
   ratingAsOf: string;
   distanceMiles: number | null;
+  /** Google only: open at the moment of the search, and open around the clock. null or absent = not known. */
+  openNow?: boolean | null;
+  open24h?: boolean | null;
   /** Verified from the business's own website (web) or not known (google): null = not known. */
   flags: { emergencyService: boolean | null; condoWork: boolean | null; smallJobs: boolean | null; freeEstimates: boolean | null };
   placeId: string | null; sourceUrls: string[]; snippet: string | null;

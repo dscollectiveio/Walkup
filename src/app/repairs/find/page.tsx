@@ -1,28 +1,26 @@
 import Link from "next/link";
 import { createClient } from "@/lib/supabase/server";
 import { Card, Restricted } from "@/components/ui";
-import { Pill, type PillTone } from "@/components/repairs/pills";
-import { telHref } from "@/components/repairs/emergency-banner";
-import { btnLink, btnPrimary, btnSecondary, linkClass } from "@/components/repairs/styles";
+import type { PillTone } from "@/components/repairs/pills";
+import { linkClass } from "@/components/repairs/styles";
 import { aiConfigured, placesConfigured } from "@/lib/ai/client";
 import { aiUsageToday } from "@/lib/ai/usage";
 import { loadWebSearch, NEEDS_CITY } from "@/lib/contractors/found";
-import { findHref, type FindParams } from "@/lib/contractors/find-params";
+import { findHref, parseMiles, parseMinRating, parseMinReviews, parseOpenNow, type FindParams } from "@/lib/contractors/find-params";
 import { rankSaved, type RankContext, type Why } from "@/lib/contractors/ranking";
-import { loadSavedCandidates, resolveJob, type JobContext } from "@/lib/contractors/recommend";
+import { loadSavedCandidates, resolveJob } from "@/lib/contractors/recommend";
 import { monthYear, moneyText } from "@/lib/repairs/format";
 import { loadViewer } from "@/lib/repairs/page-data";
 import type { Supabase } from "@/lib/repairs/server";
 import { loadTicketPhotos } from "@/lib/repairs/ticket-photos";
 import type { QuoteCandidate } from "@/app/maintenance/[ticketId]/types";
 import { AskBar } from "./ask-bar";
-import { AssignButton } from "./assign-button";
-import { FindProvider, SavedSelect, type FindTicket } from "./find-context";
+import { FindProvider, type FindTicket } from "./find-context";
+import { SavedTable } from "./saved-table";
 import { FindResults } from "./find-results";
-import { WantsBar } from "./wants-bar";
+import { SearchSettings } from "./search-settings";
 import { CollapsibleCard } from "@/components/collapsible-card";
-import { TradeFields } from "./trade-fields";
-import { mailtoLink } from "@/lib/email/mailto";
+import { AddVendorButton } from "@/app/contractors/vendor-form";
 
 export const dynamic = "force-dynamic";
 // The web search runs in after() from this page's action (repairs-spec §2.5).
@@ -44,6 +42,10 @@ export default async function FindPage({ searchParams }: { searchParams: Promise
   const job = await resolveJob(supabase, sp);
   if (!job) return <Restricted what={sp.ticket ? "this problem" : "this upkeep job"} />;
 
+  const miles = parseMiles(sp.miles);
+  const minRating = parseMinRating(sp.rating);
+  const minReviews = parseMinReviews(sp.reviews);
+  const openNow = parseOpenNow(sp.open);
   const source = job.source;
   const ticketId = source.kind === "ticket" ? source.id : null;
   const taskId = source.kind === "task" ? source.id : null;
@@ -73,8 +75,8 @@ export default async function FindPage({ searchParams }: { searchParams: Promise
     return (
       <div className="space-y-6">
         {header}
-        <Card navy title="What kind of work is it?">
-          <TradePicker ticketId={ticketId} taskId={taskId} current={null} submitLabel="Show contractors" />
+        <Card navy title="Search settings" hint="Choose the kind of work, what matters and how far to look.">
+          <SearchSettings ticketId={ticketId} taskId={taskId} current={null} wants={job.wants} miles={miles} minRating={minRating} minReviews={minReviews} openNow={openNow} submitLabel="Search" />
         </Card>
       </div>
     );
@@ -83,12 +85,15 @@ export default async function FindPage({ searchParams }: { searchParams: Promise
   const trade = job.trade;
   const related = trade.related;
   const [{ data: assoc }, saved, web, usage] = await Promise.all([
-    supabase.from("associations").select("city, postal_code").eq("id", viewer.associationId).limit(1),
+    supabase.from("associations").select("street_address, city, state_code, postal_code").eq("id", viewer.associationId).limit(1),
     loadSavedCandidates(supabase, trade, related, viewer.todayIso),
     loadWebSearch(supabase, { trade: trade.slug, phrase: job.phrase, wants: job.wants }),
     aiConfigured() ? aiUsageToday(supabase, viewer.associationId) : Promise.resolve(null),
   ]);
   const city = (assoc?.[0]?.city as string | null)?.trim() || null;
+  // The building's own address is where every search starts: units share it, so a unit's problem searches from here too.
+  const baseAddress =
+    [assoc?.[0]?.street_address, assoc?.[0]?.city, assoc?.[0]?.state_code].map((x) => (typeof x === "string" ? x.trim() : "")).filter(Boolean).join(", ") || null;
   const ctx: RankContext = { trade: trade.slug, relatedTrades: related, urgent: job.urgent, wants: job.wants, todayIso: viewer.todayIso };
   const ranked = rankSaved(saved, ctx);
   const ticket = source.kind === "ticket" ? await loadFindTicket(supabase, source.id, source.reference, trade.slug, ranked) : null;
@@ -100,28 +105,20 @@ export default async function FindPage({ searchParams }: { searchParams: Promise
       <div className="space-y-6">
         <div className="space-y-3">
           {header}
-          <details className="group">
-            <summary className="inline-flex min-h-[44px] cursor-pointer list-none items-center gap-2 text-[13px] text-mute">
-              {trade.label}
-              <span className="font-medium text-ink underline underline-offset-2">Change</span>
-            </summary>
-            <div className="mt-2 max-w-md">
-              <TradePicker ticketId={ticketId} taskId={taskId} current={trade.slug} phrase={job.phrase} wants={job.wants} submitLabel="Change" />
-            </div>
-          </details>
+          <Card navy title="Search settings" hint="Change anything here and press Update Search to run it again.">
+            <SearchSettings ticketId={ticketId} taskId={taskId} current={trade.slug} phrase={job.phrase} wants={job.wants} miles={miles} minRating={minRating} minReviews={minReviews} openNow={openNow} submitLabel="Update Search" />
+          </Card>
         </div>
-
-        <WantsBar ticket={ticketId} task={taskId} trade={trade.slug} phrase={job.phrase} wants={job.wants} />
 
         <div className="space-y-1 text-[13px]">
           <p className="text-ink">
-            Searching for &ldquo;{searchWords}&rdquo; near {city ?? "your building"}.
+            Searching for &ldquo;{searchWords}&rdquo; near {baseAddress ?? city ?? "your building"}, within {miles} miles.
           </p>
           {job.suggestedPhrase ? (
             <p className="text-mute">
               From the report: &ldquo;{job.suggestedPhrase}&rdquo;.{" "}
               <Link
-                href={findHref({ ticket: ticketId, task: taskId, trade: trade.slug, phrase: job.suggestedPhrase, wants: sp.want === undefined ? null : job.wants })}
+                href={findHref({ ticket: ticketId, task: taskId, trade: trade.slug, phrase: job.suggestedPhrase, wants: sp.want === undefined ? null : job.wants, miles, minRating, minReviews, open: openNow })}
                 className={linkClass}
               >
                 Use it
@@ -133,53 +130,28 @@ export default async function FindPage({ searchParams }: { searchParams: Promise
           </p>
         </div>
 
-        <CollapsibleCard title="Your contractors who do this">
+        <CollapsibleCard title="Your contractors who do this" action={<AddVendorButton variant="header" initialTrade={trade.slug} />}>
           {ranked.length === 0 ? (
             <p className="text-[13px] text-mute">None of your saved contractors do {trade.label.toLowerCase()} yet.</p>
           ) : (
-            <ul className="divide-y divide-line">
-              {ranked.map((c) => (
-                <li key={c.vendorId} className="flex gap-2 py-4">
-                  {ticket ? <SavedSelect vendorId={c.vendorId} name={c.name} /> : null}
-                  <div className="min-w-0 flex-1 space-y-2">
-                    <div className="flex flex-wrap items-center gap-2">
-                      <Link href={`/contractors/${c.vendorId}`} className="text-[15px] font-medium text-ink underline-offset-2 hover:underline">
-                        {c.name}
-                      </Link>
-                      <Pill tone={c.status === "preferred" ? "good" : "outline"}>{c.status === "preferred" ? "Preferred" : "Okay"}</Pill>
-                    </div>
-                    <div className="flex flex-wrap gap-1">
-                      {c.why.map((w) => (
-                        <Pill key={w.key} tone={WHY_TONE[w.tone]}>
-                          {w.text}
-                        </Pill>
-                      ))}
-                    </div>
-                    {ratesLine(c.rates) ? <p className="text-[13px] text-mute">{ratesLine(c.rates)}</p> : null}
-                    <div className="flex flex-wrap items-center gap-x-4 gap-y-1">
-                      {c.phone ? (
-                        <a href={telHref(c.phone)} className={btnLink}>
-                          Call {c.phone}
-                        </a>
-                      ) : null}
-                      {c.email ? (
-                        <a href={mailtoLink(c.email)} className={btnLink}>
-                          Email
-                        </a>
-                      ) : null}
-                      {source.kind === "ticket" && source.open ? (
-                        <AssignButton
-                          ticketId={source.id}
-                          reference={source.reference}
-                          vendorId={c.vendorId}
-                          assigned={source.assignedVendorId === c.vendorId}
-                        />
-                      ) : null}
-                    </div>
-                  </div>
-                </li>
-              ))}
-            </ul>
+            <SavedTable
+              forTicket={ticket !== null}
+              assign={source.kind === "ticket" && source.open ? { ticketId: source.id, reference: source.reference, assignedVendorId: source.assignedVendorId } : null}
+              rows={ranked.map((c) => ({
+                vendorId: c.vendorId,
+                name: c.name,
+                status: c.status,
+                why: c.why.map((w) => ({ key: w.key, text: w.text, tone: WHY_TONE[w.tone] })),
+                phone: c.phone,
+                email: c.email,
+                website: c.website,
+                ratesText: ratesLine(c.rates),
+                rating: c.boardRating ?? c.googleRating,
+                jobs: c.jobs,
+                boardReviews: c.boardReviews.count > 0 && c.boardReviews.average !== null ? { average: c.boardReviews.average, count: c.boardReviews.count } : null,
+                googleReviews: c.googleRating !== null ? { rating: c.googleRating, count: c.googleReviewCount ?? 0 } : null,
+              }))}
+            />
           )}
         </CollapsibleCard>
 
@@ -193,6 +165,10 @@ export default async function FindPage({ searchParams }: { searchParams: Promise
             urgent={job.urgent}
             todayIso={viewer.todayIso}
             city={city}
+            miles={miles}
+            minRating={minRating}
+            minReviews={minReviews}
+            openNow={openNow}
             googleOn={placesConfigured()}
             webOn={aiConfigured()}
             web={web}
@@ -215,23 +191,6 @@ function ratesLine(r: { hourly: string | null; tripFee: string | null; afterHour
   ].filter(Boolean);
   if (parts.length === 0) return null;
   return `Rates you were quoted: ${parts.join(", ")}${r.asOf ? ` (as of ${monthYear(r.asOf)})` : ""}`;
-}
-
-/** The trade select: a GET form that keeps the problem or upkeep job (and the wants) and drops the old phrase. */
-function TradePicker(props: { ticketId: string | null; taskId: string | null; current: string | null; phrase?: string; wants?: JobContext["wants"]; submitLabel: string }) {
-  return (
-    <form method="get" action="/repairs/find" className="flex flex-col gap-3 sm:flex-row sm:items-end">
-      {props.ticketId ? <input type="hidden" name="ticket" value={props.ticketId} /> : null}
-      {props.taskId ? <input type="hidden" name="task" value={props.taskId} /> : null}
-      {(props.wants ?? []).map((w) => (
-        <input key={w} type="hidden" name="want" value={w} />
-      ))}
-      <TradeFields current={props.current} phrase={props.phrase ?? ""} />
-      <button type="submit" className={props.current ? btnSecondary : btnPrimary}>
-        {props.submitLabel}
-      </button>
-    </form>
-  );
 }
 
 /** What the "Get quotes" dialog needs when the search is for a problem (repairs-spec §8.2). */

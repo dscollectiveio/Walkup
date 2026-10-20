@@ -22,6 +22,7 @@ import {
   webLocation,
   type SourceState,
 } from "@/lib/contractors/found";
+import { DEFAULT_MILES, parseMiles } from "@/lib/contractors/find-params";
 import type { FoundCandidate, JobWant } from "@/lib/contractors/ranking";
 import { isTradeSlug, tradeBySlug, tradeLabel } from "@/lib/contractors/trades";
 import { verifyWebContractor, WEB_ITEM_GUIDANCE, webContractorSchema, webSearchTask, type WebContractor } from "@/lib/contractors/web-verify";
@@ -70,13 +71,14 @@ async function googleCallsToday(supabase: Supabase, associationId: string): Prom
  * page asks that way on load, so opening a link costs nothing, and a person presses a button for a live search
  * (REVIEW-2 #27).
  */
-export async function searchPlaces(input: { trade: string; phrase: string; refresh?: boolean; cacheOnly?: boolean }): Promise<{ source: SourceState; candidates: FoundCandidate[] }> {
+export async function searchPlaces(input: { trade: string; phrase: string; refresh?: boolean; cacheOnly?: boolean; miles?: number }): Promise<{ source: SourceState; candidates: FoundCandidate[] }> {
   if (!googleKey()) return { source: { state: "off" }, candidates: [] };
   const trade = isTradeSlug(String(input?.trade ?? "")) ? tradeBySlug(input.trade) : null;
   if (!trade || (!trade.googleQuery && trade.slug !== "other")) return { source: { state: "error", message: "Choose a kind of work to search for." }, candidates: [] };
   const phrase = searchPhraseFor(trade.slug, String(input?.phrase ?? ""));
   if (!trade.googleQuery && !phrase) return { source: { state: "error", message: "Describe the work you need done." }, candidates: [] };
 
+  const miles = parseMiles(input?.miles);
   const supabase = await createClient();
   const { data: assocRows } = await supabase
     .from("associations")
@@ -109,7 +111,7 @@ export async function searchPlaces(input: { trade: string; phrase: string; refre
 
     // 2. The cache, 24 hours (brief decision 10).
     const textQuery = phrase || (trade.googleQuery as string);
-    const key = googleCacheKey(textQuery, location.latitude, location.longitude);
+    const key = googleCacheKey(textQuery, location.latitude, location.longitude, miles);
     const { data: cacheRows } = await supabase
       .from("contractor_search_cache")
       .select("id, results_json, fetched_at")
@@ -124,7 +126,7 @@ export async function searchPlaces(input: { trade: string; phrase: string; refre
     if (hit && !input.refresh && fresh(hit.fetched_at, GOOGLE_MAX_AGE_MS)) {
       return {
         source: { state: "ok", cached: true, fetchedAt: hit.fetched_at },
-        candidates: googleCandidates(hit.results_json as PlaceResult[], hit.fetched_at, location, match),
+        candidates: googleCandidates(hit.results_json as PlaceResult[], hit.fetched_at, location, match, miles),
       };
     }
 
@@ -136,12 +138,16 @@ export async function searchPlaces(input: { trade: string; phrase: string; refre
     const used = await googleCallsToday(supabase, a.id);
     if (used >= GOOGLE_DAILY_LIMIT) {
       const old = hit
-        ? googleCandidates(hit.results_json as PlaceResult[], hit.fetched_at, location, match)
+        ? googleCandidates(hit.results_json as PlaceResult[], hit.fetched_at, location, match, miles)
         : [];
       return { source: { state: "quota", used, limit: GOOGLE_DAILY_LIMIT }, candidates: old };
     }
     await logGoogleCall(supabase, a.id, "text_search", trade.slug);
-    const results = await searchNearby(textQuery, location.latitude, location.longitude, { includedType: trade.placesType });
+    // The usual 15 miles keeps the original search circle; another distance sizes it to match (Google caps it at 50 km).
+    const results = await searchNearby(textQuery, location.latitude, location.longitude, {
+      includedType: trade.placesType,
+      ...(miles === DEFAULT_MILES ? {} : { radiusMeters: Math.min(50_000, Math.round(miles * 1609.34)) }),
+    });
     const fetchedAt = new Date().toISOString();
     const { error: cacheError } = await supabase.from("contractor_search_cache").upsert(
       {
@@ -160,7 +166,7 @@ export async function searchPlaces(input: { trade: string; phrase: string; refre
 
     return {
       source: { state: "ok", cached: false, fetchedAt },
-      candidates: googleCandidates(results, fetchedAt, location, match),
+      candidates: googleCandidates(results, fetchedAt, location, match, miles),
     };
   } catch (cause) {
     if (cause instanceof GoogleUnavailableError) {

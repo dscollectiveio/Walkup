@@ -12,11 +12,14 @@ export function CollapsibleCard({
   title,
   hint,
   defaultOpen = true,
+  action,
   children,
 }: {
   title: string;
   hint?: string;
   defaultOpen?: boolean;
+  /** Buttons on the right of the header, before Collapse. */
+  action?: React.ReactNode;
   children: React.ReactNode;
 }) {
   const [open, setOpen] = useState(defaultOpen);
@@ -28,12 +31,15 @@ export function CollapsibleCard({
             <h2 className="eyebrow text-paper">{title}</h2>
             {hint ? <p className="mt-1.5 text-[13px] text-ondark-mute">{hint}</p> : null}
           </div>
+          <div className="flex shrink-0 flex-wrap items-center justify-end gap-2">
+            {action}
           <button type="button" onClick={() => setOpen((v) => !v)} aria-expanded={open} className={HEADER_BUTTON}>
             {open ? "Collapse" : "Expand"}
             <svg width="12" height="12" viewBox="0 0 12 12" aria-hidden="true" className={`transition-transform ${open ? "rotate-90" : ""}`}>
               <path d="M4 2l4 4-4 4" stroke="currentColor" strokeWidth="1.6" fill="none" strokeLinecap="round" strokeLinejoin="round" />
             </svg>
           </button>
+          </div>
         </div>
       </header>
       <div hidden={!open} className="px-5 py-4">

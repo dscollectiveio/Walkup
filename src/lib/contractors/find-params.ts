@@ -10,6 +10,45 @@ export interface FindParams {
   trade?: string;
   phrase?: string;
   want?: string | string[];
+  /** How far to look, in miles: 5, 10, 15 or 25. */
+  miles?: string;
+  /** Smallest rating to show (3.5, 4 or 4.5), fewest reviews (10, 25 or 50), and "open now or around the clock" ("1"). */
+  rating?: string;
+  reviews?: string;
+  open?: string;
+}
+
+/** How far the search can look: a slider from 5 to 100 miles in steps of 5. 15 is the usual. */
+export const MILES_MIN = 5;
+export const MILES_MAX = 100;
+export const MILES_STEP = 5;
+export const DEFAULT_MILES = 15;
+
+/**
+ * The miles in the URL (or a number from a caller): a whole number from 1 to 100.
+ * Anything that isn't a number falls back to the usual 15; a number outside the
+ * range is held to it.
+ */
+export function parseMiles(v: string | number | string[] | undefined): number {
+  const n = Math.round(Number(Array.isArray(v) ? v[0] : v));
+  if (!Number.isFinite(n) || n < 1) return DEFAULT_MILES;
+  return Math.min(MILES_MAX, n);
+}
+
+/** The minimums the search can be set to; 0 means no minimum. */
+export const MIN_RATING_OPTIONS = [0, 3.5, 4, 4.5] as const;
+export const MIN_REVIEWS_OPTIONS = [0, 10, 25, 50] as const;
+
+export function parseMinRating(v: string | number | string[] | undefined): number {
+  const n = Number(Array.isArray(v) ? v[0] : v);
+  return (MIN_RATING_OPTIONS as readonly number[]).includes(n) ? n : 0;
+}
+export function parseMinReviews(v: string | number | string[] | undefined): number {
+  const n = Number(Array.isArray(v) ? v[0] : v);
+  return (MIN_REVIEWS_OPTIONS as readonly number[]).includes(n) ? n : 0;
+}
+export function parseOpenNow(v: string | string[] | undefined): boolean {
+  return (Array.isArray(v) ? v[0] : v) === "1";
 }
 
 /** Explicitly no wants, so an urgent job's default ("emergency") can be switched off. */
@@ -35,12 +74,16 @@ export function parseWants(want: string | string[] | undefined, urgent: boolean)
 }
 
 /** /repairs/find with the job, trade, phrase and wants, dropping empty values. */
-export function findHref(p: { ticket?: string | null; task?: string | null; trade?: string | null; phrase?: string | null; wants?: JobWant[] | null }): string {
+export function findHref(p: { ticket?: string | null; task?: string | null; trade?: string | null; phrase?: string | null; wants?: JobWant[] | null; miles?: number | null; minRating?: number | null; minReviews?: number | null; open?: boolean | null }): string {
   const q = new URLSearchParams();
   if (p.ticket) q.set("ticket", p.ticket);
   if (p.task) q.set("task", p.task);
   if (p.trade) q.set("trade", p.trade);
   if (p.phrase) q.set("phrase", p.phrase);
+  if (p.miles && p.miles !== DEFAULT_MILES) q.set("miles", String(p.miles));
+  if (p.minRating) q.set("rating", String(p.minRating));
+  if (p.minReviews) q.set("reviews", String(p.minReviews));
+  if (p.open) q.set("open", "1");
   if (p.wants) {
     if (p.wants.length === 0) q.append("want", NO_WANTS);
     else for (const w of p.wants) q.append("want", w);
