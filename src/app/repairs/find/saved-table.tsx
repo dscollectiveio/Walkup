@@ -27,6 +27,10 @@ export interface SavedRow {
 
 /** Fixed columns, desktop only: select, contractor, reviews, contact, rates, actions. Below that each row stacks. */
 const COLUMNS = "xl:grid xl:grid-cols-[2.75rem_minmax(0,1fr)_10rem_15rem_12rem_11rem] xl:items-center xl:gap-x-3";
+// With no problem to pick a contractor for there is no checkbox column, so the table is centered in its card.
+const COLUMNS_NO_PICK = "xl:grid xl:grid-cols-[minmax(0,1fr)_10rem_15rem_12rem_11rem] xl:items-center xl:gap-x-3";
+// The reasons that add something beyond the status pill and the Board Reviews column, at most two of them.
+const SKIP_WHY = new Set(["preferred", "trade", "board_reviews", "would_hire_again", "rating", "distance"]);
 /** Right-hand offsets of the rules between the columns (running width to the right plus half a 0.75rem gap). */
 const LINES = ["xl:right-[11.375rem]", "xl:right-[24.125rem]", "xl:right-[39.875rem]", "xl:right-[50.625rem]"];
 
@@ -150,8 +154,8 @@ export function SavedTable({
           {LINES.map((c) => (
             <span key={c} aria-hidden="true" className={`pointer-events-none absolute inset-y-0 -z-10 hidden w-px bg-line xl:block ${c}`} />
           ))}
-          <div aria-hidden="true" className={`${COLUMNS} mb-1 border-b border-line pb-2 text-[11px] font-bold uppercase tracking-wide text-ink`}>
-            <span />
+          <div aria-hidden="true" className={`${forTicket ? COLUMNS : COLUMNS_NO_PICK} mb-1 border-b border-line pb-2 text-[11px] font-bold uppercase tracking-wide text-ink`}>
+            {forTicket ? <span /> : null}
             <span className="text-center">Contractor</span>
             <span className="text-center">Board Reviews</span>
             <span className="text-center">Contact</span>
@@ -161,15 +165,15 @@ export function SavedTable({
           {/* Every other contractor gets a faint blue band, edge to edge. */}
           <ul className="divide-y divide-line [&>li:nth-child(even)]:bg-ink/[0.045]">
             {shown.map((c) => (
-              <li key={c.vendorId} className={`-mx-5 flex flex-col gap-2 px-5 py-3 ${COLUMNS}`}>
-                {forTicket ? <SavedSelect vendorId={c.vendorId} name={c.name} /> : <span className="hidden w-11 xl:block" aria-hidden="true" />}
+              <li key={c.vendorId} className={`-mx-5 flex flex-col gap-2 px-5 py-3 ${forTicket ? COLUMNS : COLUMNS_NO_PICK}`}>
+                {forTicket ? <SavedSelect vendorId={c.vendorId} name={c.name} /> : null}
                 <div className="min-w-0">
-                  <div className="flex flex-wrap items-center gap-x-2 gap-y-1">
+                  <div className="flex flex-wrap items-center gap-x-2 gap-y-1 xl:justify-center">
                     <Link href={`/contractors/${c.vendorId}`} className="text-[15px] font-medium text-ink underline-offset-2 hover:underline">
                       {c.name}
                     </Link>
                     <Pill tone={c.status === "preferred" ? "good" : "outline"}>{c.status === "preferred" ? "Preferred" : "Okay"}</Pill>
-                    {c.why.map((w) => (
+                    {c.why.filter((w) => !SKIP_WHY.has(w.key)).slice(0, 2).map((w) => (
                       <Pill key={w.key} tone={w.tone}>
                         {w.text}
                       </Pill>

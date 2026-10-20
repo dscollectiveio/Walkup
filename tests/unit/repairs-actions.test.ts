@@ -313,7 +313,7 @@ describe("find: Google", () => {
       { placeId: "place-far", name: "Far Away Pipes", address: null, phone: null, website: null, rating: 5, reviewCount: 3, latitude: 42.5, longitude: -87.68 },
       { placeId: "place-new", name: "New Pipes", address: null, phone: "(312) 555-0111", website: null, rating: null, reviewCount: null, latitude: null, longitude: null },
     ]);
-    const r = await searchPlaces({ trade: "plumbing", phrase: "Ada's sewer backup at 2158 Damen" });
+    const r = await searchPlaces({ trade: "plumbing", phrase: "Ada's sewer backup at 2158 Damen", miles: 15 });
     expect(searchNearby).toHaveBeenCalledWith("sewer backup", 41.92, -87.678, { includedType: "plumber" });
     expect(r.source).toMatchObject({ state: "ok", cached: false });
     expect(r.candidates.map((c) => c.candidateId)).toEqual(["g:place-acme", "g:place-new"]);
@@ -322,7 +322,7 @@ describe("find: Google", () => {
     expect(db.tables.contractor_search_cache[0]).toMatchObject({ provider: "google", query_key: "sewer backup", location_key: "41.920,-87.678|hrs" });
 
     searchNearby.mockClear();
-    const again = await searchPlaces({ trade: "plumbing", phrase: "sewer backup" });
+    const again = await searchPlaces({ trade: "plumbing", phrase: "sewer backup", miles: 15 });
     expect(searchNearby).not.toHaveBeenCalled();
     expect(again.source).toMatchObject({ state: "ok", cached: true });
   });

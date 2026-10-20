@@ -22,8 +22,8 @@ import {
   webLocation,
   type SourceState,
 } from "@/lib/contractors/found";
-import { DEFAULT_MILES, parseMiles } from "@/lib/contractors/find-params";
-import type { FoundCandidate, JobWant } from "@/lib/contractors/ranking";
+import { parseMiles } from "@/lib/contractors/find-params";
+import { MAX_DISTANCE_MILES, type FoundCandidate, type JobWant } from "@/lib/contractors/ranking";
 import { isTradeSlug, tradeBySlug, tradeLabel } from "@/lib/contractors/trades";
 import { verifyWebContractor, WEB_ITEM_GUIDANCE, webContractorSchema, webSearchTask, type WebContractor } from "@/lib/contractors/web-verify";
 import {
@@ -143,10 +143,10 @@ export async function searchPlaces(input: { trade: string; phrase: string; refre
       return { source: { state: "quota", used, limit: GOOGLE_DAILY_LIMIT }, candidates: old };
     }
     await logGoogleCall(supabase, a.id, "text_search", trade.slug);
-    // The usual 15 miles keeps the original search circle; another distance sizes it to match (Google caps it at 50 km).
+    // 15 miles keeps the original search circle; another distance sizes it to match (Google caps it at 50 km).
     const results = await searchNearby(textQuery, location.latitude, location.longitude, {
       includedType: trade.placesType,
-      ...(miles === DEFAULT_MILES ? {} : { radiusMeters: Math.min(50_000, Math.round(miles * 1609.34)) }),
+      ...(miles === MAX_DISTANCE_MILES ? {} : { radiusMeters: Math.min(50_000, Math.round(miles * 1609.34)) }),
     });
     const fetchedAt = new Date().toISOString();
     const { error: cacheError } = await supabase.from("contractor_search_cache").upsert(

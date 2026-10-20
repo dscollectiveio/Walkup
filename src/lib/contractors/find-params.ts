@@ -18,15 +18,18 @@ export interface FindParams {
   open?: string;
 }
 
-/** How far the search can look: a slider from 5 to 100 miles in steps of 5. 15 is the usual. */
+/** How far the search can look: a slider from 5 to 100 miles in steps of 5. 20 is the usual. */
 export const MILES_MIN = 5;
 export const MILES_MAX = 100;
 export const MILES_STEP = 5;
-export const DEFAULT_MILES = 15;
+export const DEFAULT_MILES = 20;
+/** What a search starts with: no rating or review count in the link means these; an explicit 0 means "any". */
+export const DEFAULT_MIN_RATING = 3.5;
+export const DEFAULT_MIN_REVIEWS = 10;
 
 /**
  * The miles in the URL (or a number from a caller): a whole number from 1 to 100.
- * Anything that isn't a number falls back to the usual 15; a number outside the
+ * Anything that isn't a number falls back to the usual 20; a number outside the
  * range is held to it.
  */
 export function parseMiles(v: string | number | string[] | undefined): number {
@@ -36,16 +39,21 @@ export function parseMiles(v: string | number | string[] | undefined): number {
 }
 
 /** The minimums the search can be set to; 0 means no minimum. */
-export const MIN_RATING_OPTIONS = [0, 3.5, 4, 4.5] as const;
+export const RATING_STEP = 0.5;
 export const MIN_REVIEWS_OPTIONS = [0, 10, 25, 50] as const;
 
 export function parseMinRating(v: string | number | string[] | undefined): number {
-  const n = Number(Array.isArray(v) ? v[0] : v);
-  return (MIN_RATING_OPTIONS as readonly number[]).includes(n) ? n : 0;
+  const raw = Array.isArray(v) ? v[0] : v;
+  if (raw === undefined || raw === "") return DEFAULT_MIN_RATING;
+  const n = Number(raw);
+  if (n === 0) return 0;
+  return Number.isFinite(n) && n > 0 && n <= 5 && Number.isInteger(n / RATING_STEP) ? n : DEFAULT_MIN_RATING;
 }
 export function parseMinReviews(v: string | number | string[] | undefined): number {
-  const n = Number(Array.isArray(v) ? v[0] : v);
-  return (MIN_REVIEWS_OPTIONS as readonly number[]).includes(n) ? n : 0;
+  const raw = Array.isArray(v) ? v[0] : v;
+  if (raw === undefined || raw === "") return DEFAULT_MIN_REVIEWS;
+  const n = Number(raw);
+  return (MIN_REVIEWS_OPTIONS as readonly number[]).includes(n) ? n : DEFAULT_MIN_REVIEWS;
 }
 export function parseOpenNow(v: string | string[] | undefined): boolean {
   return (Array.isArray(v) ? v[0] : v) === "1";
@@ -81,8 +89,8 @@ export function findHref(p: { ticket?: string | null; task?: string | null; trad
   if (p.trade) q.set("trade", p.trade);
   if (p.phrase) q.set("phrase", p.phrase);
   if (p.miles && p.miles !== DEFAULT_MILES) q.set("miles", String(p.miles));
-  if (p.minRating) q.set("rating", String(p.minRating));
-  if (p.minReviews) q.set("reviews", String(p.minReviews));
+  if (p.minRating != null && p.minRating !== DEFAULT_MIN_RATING) q.set("rating", String(p.minRating));
+  if (p.minReviews != null && p.minReviews !== DEFAULT_MIN_REVIEWS) q.set("reviews", String(p.minReviews));
   if (p.open) q.set("open", "1");
   if (p.wants) {
     if (p.wants.length === 0) q.append("want", NO_WANTS);

@@ -80,7 +80,7 @@ export function FindResults(props: {
     let live = true;
     // Saved results first; when there are none, search Google now, so the list fills in on its own.
     searchPlaces({ trade: props.trade, phrase: props.phrase, miles: props.miles, cacheOnly: true })
-      .then((cached) => (cached.source.state === "idle" ? searchPlaces({ trade: props.trade, phrase: props.phrase }) : cached))
+      .then((cached) => (cached.source.state === "idle" ? searchPlaces({ trade: props.trade, phrase: props.phrase, miles: props.miles }) : cached))
       .then((result) => {
         if (live) setGoogle({ key: searchKey, result });
       })

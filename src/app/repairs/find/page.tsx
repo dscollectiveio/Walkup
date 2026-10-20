@@ -6,7 +6,7 @@ import { linkClass } from "@/components/repairs/styles";
 import { aiConfigured, placesConfigured } from "@/lib/ai/client";
 import { aiUsageToday } from "@/lib/ai/usage";
 import { loadWebSearch, NEEDS_CITY } from "@/lib/contractors/found";
-import { findHref, parseMiles, parseMinRating, parseMinReviews, parseOpenNow, type FindParams } from "@/lib/contractors/find-params";
+import { findHref, parseMiles, parseMinRating, parseMinReviews, parseOpenNow, WANT_LABEL, type FindParams } from "@/lib/contractors/find-params";
 import { rankSaved, type RankContext, type Why } from "@/lib/contractors/ranking";
 import { loadSavedCandidates, resolveJob } from "@/lib/contractors/recommend";
 import { monthYear, moneyText } from "@/lib/repairs/format";
@@ -100,14 +100,60 @@ export default async function FindPage({ searchParams }: { searchParams: Promise
   const searchWords = job.phrase || trade.googleQuery || trade.label.toLowerCase();
   const webUsage = usage ? { used: usage.contractor_search.used, limit: usage.contractor_search.limit } : null;
 
+  // The search on the page, as a history entry (the link that runs it again).
+  const searchNow = {
+    href: findHref({ ticket: ticketId, task: taskId, trade: trade.slug, phrase: job.phrase, wants: job.wants, miles, minRating, minReviews, open: openNow }),
+    job: ticketId ?? taskId ?? "",
+    tradeLabel: trade.label,
+    phrase: trade.slug === "other" ? job.phrase : "",
+    miles,
+    minRating,
+    minReviews,
+    emergency: openNow,
+  };
+
   return (
     <FindProvider trade={trade.slug} ticket={ticket}>
       <div className="space-y-6">
         <div className="space-y-3">
           {header}
-          <Card navy title="Search settings" hint="Change anything here and press Update Search to run it again.">
-            <SearchSettings ticketId={ticketId} taskId={taskId} current={trade.slug} phrase={job.phrase} wants={job.wants} miles={miles} minRating={minRating} minReviews={minReviews} openNow={openNow} submitLabel="Update Search" />
-          </Card>
+          <CollapsibleCard
+            title="Search settings"
+            defaultOpen={false}
+            labels={{ close: "Close", open: "Edit search" }}
+            collapsedSummary={
+              <dl className="grid gap-x-6 gap-y-2 text-[13px] sm:grid-cols-2 lg:grid-cols-4">
+                <div>
+                  <dt className="text-[11px] font-medium uppercase tracking-wide text-mute">Kind of work</dt>
+                  <dd className="text-ink">{trade.slug === "other" && job.phrase ? `Described: "${job.phrase}"` : trade.label}</dd>
+                </div>
+                <div>
+                  <dt className="text-[11px] font-medium uppercase tracking-wide text-mute">Where</dt>
+                  <dd className="text-ink">
+                    Within {miles} miles of {baseAddress ?? city ?? "the building"}
+                  </dd>
+                </div>
+                <div>
+                  <dt className="text-[11px] font-medium uppercase tracking-wide text-mute">What matters</dt>
+                  <dd className="text-ink">{job.wants.length > 0 ? job.wants.map((w) => WANT_LABEL[w]).join(", ") : "Nothing in particular"}</dd>
+                </div>
+                <div>
+                  <dt className="text-[11px] font-medium uppercase tracking-wide text-mute">Narrowed by</dt>
+                  <dd className="text-ink">
+                    {[
+                      minRating ? `${minRating} stars or more` : null,
+                      minReviews ? `${minReviews}+ reviews` : null,
+                      openNow ? "Emergency Services" : null,
+                    ]
+                      .filter(Boolean)
+                      .join(", ") || "Nothing"}
+                  </dd>
+                </div>
+              </dl>
+            }
+          >
+            <SearchSettings ticketId={ticketId} taskId={taskId} current={trade.slug} phrase={job.phrase} wants={job.wants} miles={miles} minRating={minRating} minReviews={minReviews} openNow={openNow} submitLabel="Update Search" searchNow={searchNow} />
+          </CollapsibleCard>
         </div>
 
         <div className="space-y-1 text-[13px]">

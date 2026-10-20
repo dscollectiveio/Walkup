@@ -61,16 +61,16 @@ describe("how far to look", () => {
     expect(parseMiles(["60", "5"])).toBe(60);
   });
 
-  it("falls back to the usual 15 for anything that isn't a distance", () => {
+  it("falls back to the usual 20 for anything that isn't a distance", () => {
     expect(parseMiles(undefined)).toBe(DEFAULT_MILES);
-    expect(parseMiles("")).toBe(15);
-    expect(parseMiles("far")).toBe(15);
-    expect(parseMiles("0")).toBe(15);
-    expect(parseMiles("-3")).toBe(15);
+    expect(parseMiles("")).toBe(DEFAULT_MILES);
+    expect(parseMiles("far")).toBe(DEFAULT_MILES);
+    expect(parseMiles("0")).toBe(DEFAULT_MILES);
+    expect(parseMiles("-3")).toBe(DEFAULT_MILES);
   });
 
   it("is in the link only when it isn't the usual distance", () => {
-    expect(findHref({ trade: "plumbing", miles: 15 })).toBe("/repairs/find?trade=plumbing");
+    expect(findHref({ trade: "plumbing", miles: 20 })).toBe("/repairs/find?trade=plumbing");
     expect(findHref({ trade: "plumbing", miles: 5 })).toBe("/repairs/find?trade=plumbing&miles=5");
   });
 
@@ -83,11 +83,17 @@ describe("how far to look", () => {
 
 describe("narrowing the results", () => {
   it("accepts only the offered minimums and treats anything else as none", () => {
-    expect([3.5, 4, 4.5].map((v) => parseMinRating(String(v)))).toEqual([3.5, 4, 4.5]);
-    expect(parseMinRating("5")).toBe(0);
-    expect(parseMinRating(undefined)).toBe(0);
+    expect([0.5, 3.5, 4, 5].map((v) => parseMinRating(String(v)))).toEqual([0.5, 3.5, 4, 5]);
+    expect(parseMinRating("5.5")).toBe(3.5);
+    expect(parseMinRating("3.3")).toBe(3.5);
+    expect(parseMinRating(undefined)).toBe(3.5);
+    expect(parseMinRating("0")).toBe(0);
     expect([10, 25, 50].map((v) => parseMinReviews(String(v)))).toEqual([10, 25, 50]);
-    expect(parseMinReviews("7")).toBe(0);
+    expect(parseMinReviews("7")).toBe(10);
+    expect(parseMinReviews(undefined)).toBe(10);
+    expect(parseMinReviews("0")).toBe(0);
+    expect(findHref({ trade: "plumbing", minRating: 0, minReviews: 0 })).toBe("/repairs/find?trade=plumbing&rating=0&reviews=0");
+    expect(findHref({ trade: "plumbing", minRating: 3.5, minReviews: 10 })).toBe("/repairs/find?trade=plumbing");
   });
 
   it("reads open-now only from open=1", () => {
@@ -97,7 +103,8 @@ describe("narrowing the results", () => {
   });
 
   it("puts the minimums in the link only when they are set", () => {
-    expect(findHref({ trade: "plumbing", minRating: 0, minReviews: 0, open: false })).toBe("/repairs/find?trade=plumbing");
+    expect(findHref({ trade: "plumbing", minRating: 3.5, minReviews: 10, open: false })).toBe("/repairs/find?trade=plumbing");
+    expect(findHref({ trade: "plumbing", minRating: 0, minReviews: 0 })).toBe("/repairs/find?trade=plumbing&rating=0&reviews=0");
     expect(findHref({ trade: "plumbing", minRating: 4, minReviews: 25, open: true })).toBe("/repairs/find?trade=plumbing&rating=4&reviews=25&open=1");
   });
 });

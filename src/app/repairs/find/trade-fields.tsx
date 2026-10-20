@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
-import { ChevronDown, ChevronUp } from "lucide-react";
+import { ChevronDown, ChevronUp, Pencil } from "lucide-react";
 import { inputClass, labelClass } from "@/components/repairs/styles";
 import { SEARCHABLE_TRADES } from "@/lib/contractors/trades";
 
@@ -45,8 +45,9 @@ export function TradeFields({ current, phrase }: { current: string | null; phras
         <div className="relative mt-2">
         <div ref={box} className={`flex flex-wrap gap-2 ${canCollapse ? "pr-32" : ""} ${expanded ? "" : "max-h-[5.5rem] overflow-hidden"}`}>
           {/* First, set apart in gold: the one that opens a box to describe the work in your own words. */}
-          <label className={`${bubble} !border-brass !bg-warning-tint font-semibold has-[:checked]:!bg-ink`}>
+          <label className={`${bubble} gap-1.5 !border-brass !bg-warning-tint font-semibold has-[:checked]:!bg-ink`}>
             <input type="radio" name="trade" value="other" checked={trade === "other"} onChange={() => setTrade("other")} required className="sr-only" />
+            <Pencil size={14} strokeWidth={2.25} aria-hidden="true" />
             Describe Scope of Work
           </label>
           {trades.map((t) => (
