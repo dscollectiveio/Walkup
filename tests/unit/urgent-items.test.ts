@@ -46,7 +46,7 @@ describe("urgentItems — Worth a minute today", () => {
 
   it("sends one unit behind to Collections too", () => {
     const items = urgentItems({ ...quiet, aging: [unit("Unit 2", 0, 450)] });
-    expect(items[0].action).toEqual({ label: "Open Collections", href: "/delinquency" });
+    expect(items[0].action).toEqual({ label: "Open Collections", href: "/dues#collections" });
   });
 
   it("raises nothing about email when it is healthy or not passed (owners and members never see it)", () => {

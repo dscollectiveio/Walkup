@@ -28,7 +28,8 @@ describe("secret box (Plaid tokens at rest)", () => {
   it("refuses a tampered value and a different key", () => {
     const sealed = sealSecret("secret");
     const parts = sealed.split(":");
-    parts[4] = "A" + parts[4].slice(1);
+    // Always change the first character (it is "A" about 1 time in 64, which would tamper with nothing).
+    parts[4] = (parts[4][0] === "A" ? "B" : "A") + parts[4].slice(1);
     expect(() => openSecret(parts.join(":"))).toThrow();
     vi.stubEnv("BANK_TOKEN_KEY", KEY_B);
     expect(() => openSecret(sealed)).toThrow();

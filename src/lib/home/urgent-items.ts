@@ -208,7 +208,7 @@ export function urgentItems(input: UrgentInputs): UrgentItem[] {
       severity: 1,
       title: `${u.label} is ${u.lateness}: ${money(u.overdue)}`,
       why: "Unpaid dues hurt cash flow. Collections shows who is behind and what has been sent.",
-      action: { label: "Open Collections", href: "/delinquency" },
+      action: { label: "Open Collections", href: "/dues#collections" },
       tone: "bad",
     });
   } else if (behind.length > 1) {
@@ -221,7 +221,7 @@ export function urgentItems(input: UrgentInputs): UrgentItem[] {
       severity: 1,
       title: `${behind.length} units are behind on dues: ${money(total)}`,
       why: `${listed}. Unpaid dues hurt cash flow. Collections shows who is behind and what has been sent.`,
-      action: { label: "Open Collections", href: "/delinquency" },
+      action: { label: "Open Collections", href: "/dues#collections" },
       tone: "bad",
     });
   }

@@ -449,3 +449,24 @@ html { scroll-padding-top: 76px; }
 @keyframes tl-bob { 0%, 100% { transform: translateY(0); } 50% { transform: translateY(-6px); } }
 @keyframes tl-wrench { 0%, 100% { transform: rotate(-14deg); } 50% { transform: rotate(14deg); } }
 @keyframes tl-chip { 0%, 15% { transform: translateY(8px) scale(0.85); opacity: 0; } 35%, 85% { transform: none; opacity: 1; } 100% { transform: translateY(-4px); opacity: 0; } }
+
+/* A small, slow nudge to the right on the button of an urgent "Worth a minute" item. Off for reduced motion. */
+@keyframes nudge-needed {
+  0%, 60%, 100% { transform: translateX(0); }
+  70% { transform: translateX(3px); }
+  80% { transform: translateX(0); }
+  90% { transform: translateX(2px); }
+}
+@media (prefers-reduced-motion: no-preference) {
+  .nudge-needed { animation: nudge-needed 2.4s ease-in-out infinite; }
+  .nudge-needed:hover { animation-play-state: paused; }
+}
+
+/* A quick slide-and-fade for the next announcement in the Dashboard banner. */
+@keyframes announce-in {
+  from { opacity: 0; transform: translateX(14px); }
+  to { opacity: 1; transform: translateX(0); }
+}
+@media (prefers-reduced-motion: no-preference) {
+  .announce-in { animation: announce-in 380ms ease-out both; }
+}

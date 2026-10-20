@@ -70,7 +70,7 @@ export function YourList({
 
   return (
     <section className="rounded-xl border border-line bg-paper">
-      <header className="rounded-t-[7px] band bg-ink px-5 py-4">
+      <header className="rounded-t-[7px] band bg-ink px-5 py-3">
         <div className="flex items-baseline justify-between gap-3">
           <h2 className="eyebrow text-paper">Your list</h2>
           <span className="tabular text-[12px] text-ondark-mute">

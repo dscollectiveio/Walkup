@@ -22,7 +22,8 @@ import { btnPrimary } from "@/components/repairs/styles";
 
 export const dynamic = "force-dynamic";
 
-export default async function BuildingPage() {
+export default async function BuildingPage({ searchParams }: { searchParams: Promise<{ unit?: string }> }) {
+  const { unit: unitParam } = await searchParams;
   const supabase = await createClient();
 
   const { data: associations } = await supabase
@@ -429,6 +430,7 @@ export default async function BuildingPage() {
         />
 
       <UnitsCard
+        initialOpenId={unitList.some((u) => u.id === unitParam) ? (unitParam ?? null) : null}
         canAdd={isBoard}
         people={personOptions}
         canEditRoles={isBoardAdmin}

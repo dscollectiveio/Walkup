@@ -251,9 +251,9 @@ export function assembleReminders({
     // A hand-paid bill's date only moves on when someone marks it paid, so a
     // past date means it hasn't been: keep it, flagged, instead of dropping it.
     if (due < today) {
-      reminders.push({ name: b.name, kind: "Bill to pay by hand", due, overdue: true });
+      reminders.push({ name: b.name, kind: "Bill to pay by hand", due, overdue: true, href: "/bills" });
     } else if (due <= horizon) {
-      reminders.push({ name: b.name, kind: "Bill to pay by hand", due });
+      reminders.push({ name: b.name, kind: "Bill to pay by hand", due, href: "/bills" });
     }
   }
 
@@ -362,6 +362,7 @@ export function assembleReminders({
       name: `Assessments due from ${count} unit${count === 1 ? "" : "s"}`,
       kind: "Owner fees",
       due: new Date(`${firstDue}T00:00:00`),
+      href: "/dues",
     });
   }
 
@@ -377,10 +378,10 @@ export function assembleReminders({
   // out) are nudges, so they keep to the horizon. One that has slipped reads
   // as today, like the quotes and access-review nudges; once the filing itself
   // is overdue its own row says everything.
-  const nudge = (on: string, name: string, kind: string, unverified: boolean) => {
+  const nudge = (on: string, name: string, kind: string, unverified: boolean, href?: string) => {
     const start = asDate(on);
     if (start > horizon) return;
-    reminders.push({ name, kind, due: start < today ? today : start, unverified });
+    reminders.push({ name, kind, due: start < today ? today : start, unverified, ...(href ? { href } : {}) });
   };
 
   const necs = dated.filter((d) => d.formCode === "irs_1099_nec");
@@ -404,6 +405,7 @@ export function assembleReminders({
       unverified,
       overdue: earliest.overdue,
       filingKey: `irs_1099_nec:${earliest.taxYear}`,
+      href: n === 1 ? earliest.href : "/tax#forms",
     });
     if (!earliest.overdue) {
       for (const key of ["send", "start"] as const) {
@@ -411,7 +413,7 @@ export function assembleReminders({
         if (ms.length === 0) continue;
         const k = ms.length;
         const label = k === 1 ? ms[0].label : key === "send" ? `Send ${k} 1099-NECs to your accountant` : `Start ${k} 1099-NECs`;
-        nudge(ms.map((m) => m.on).sort()[0], label, dueWords, unverified);
+        nudge(ms.map((m) => m.on).sort()[0], label, dueWords, unverified, n === 1 ? earliest.href : "/tax#forms");
       }
     }
   }
@@ -419,10 +421,10 @@ export function assembleReminders({
   for (const d of dated) {
     if (d.formCode === "irs_1099_nec") continue;
     const unverified = d.basis !== "verified";
-    reminders.push({ name: d.name, kind: d.kind, due: asDate(d.dueOn), unverified, overdue: d.overdue, filingKey: d.key });
+    reminders.push({ name: d.name, kind: d.kind, due: asDate(d.dueOn), unverified, overdue: d.overdue, filingKey: d.key, href: d.href });
     if (d.overdue) continue;
     for (const m of d.milestones) {
-      nudge(m.on, m.label, `${d.name} due ${formatDueDate(asDate(d.dueOn), today)}`, unverified);
+      nudge(m.on, m.label, `${d.name} due ${formatDueDate(asDate(d.dueOn), today)}`, unverified, d.href);
     }
   }
 
@@ -433,6 +435,7 @@ export function assembleReminders({
       name: `Collect ${contractorsMissingW9} W-9${contractorsMissingW9 === 1 ? "" : "s"}`,
       kind: "Contractors paid this year without one on file",
       due: dec1 < today ? today : dec1,
+      href: "/repairs?view=contractors",
     });
   }
 
@@ -450,6 +453,7 @@ export function assembleReminders({
         name: lastAccessReviewAt ? "Access review" : "First access review",
         kind: "Confirm who can see the books",
         due,
+        href: "/building",
       });
     }
   }

@@ -16,19 +16,26 @@ export interface LinePoint {
 export function LineChart({
   points,
   ariaLabel,
+  title,
+  xTitle,
+  yTitle,
 }: {
   points: LinePoint[];
   ariaLabel: string;
+  /** A heading above the plot, and a title for each axis. */
+  title?: string;
+  xTitle?: string;
+  yTitle?: string;
 }) {
   if (points.length === 0) return null;
 
   const W = 560;
-  const H = 190;
-  const PAD_LEFT = 46;
+  const H = 252;
+  const PAD_LEFT = 62;
   const PAD_RIGHT = 8;
-  const END_LABEL = 90; // room to the right of the last point for its value
-  const PAD_TOP = 14;
-  const PAD_BOTTOM = 26;
+  const END_LABEL = 14; // a little room to the right of the last point
+  const PAD_TOP = 26;
+  const PAD_BOTTOM = 44;
 
   const values = points.map((p) => p.valueCents);
   const axis = niceAxis(Math.min(...values, 0), Math.max(...values, 1));
@@ -49,6 +56,8 @@ export function LineChart({
   const labelEvery = points.length > 8 ? 2 : 1;
 
   return (
+    <div>
+    {title ? <h4 className="mb-1 text-[13px] font-semibold text-ink">{title}</h4> : null}
     <svg viewBox={`0 0 ${W} ${H}`} className="w-full" role="img" aria-label={ariaLabel}>
       {/* Gridlines and the dollar scale */}
       {axis.ticks.map((t) => (
@@ -75,8 +84,9 @@ export function LineChart({
       <path d={linePath} fill="none" stroke="var(--color-series-1)" strokeWidth="2" />
       <circle cx={x(points.length - 1)} cy={y(last.valueCents)} r="3.5" fill="var(--color-series-1)" />
       <text
-        x={x(points.length - 1) + 8}
-        y={y(last.valueCents) + 4}
+        x={x(points.length - 1)}
+        y={y(last.valueCents) - 10}
+        textAnchor="end"
         fontSize="12"
         fontWeight="600"
         fill="var(--color-ink)"
@@ -90,12 +100,29 @@ export function LineChart({
         <g key={i}>
           <line x1={x(i)} x2={x(i)} y1={baseY} y2={baseY + 4} stroke="var(--color-line-strong)" strokeWidth="1" />
           {i % labelEvery === 0 ? (
-            <text x={x(i)} y={H - 8} fontSize="10" fill="var(--color-mute)" textAnchor="middle">
+            <text x={x(i)} y={baseY + 17} fontSize="10" fill="var(--color-mute)" textAnchor="middle">
               {p.label}
             </text>
           ) : null}
         </g>
       ))}
+      {yTitle ? (
+        <text
+          transform={`translate(11 ${(PAD_TOP + baseY) / 2}) rotate(-90)`}
+          fontSize="10"
+          fontWeight="600"
+          fill="var(--color-mute)"
+          textAnchor="middle"
+        >
+          {yTitle}
+        </text>
+      ) : null}
+      {xTitle ? (
+        <text x={(PAD_LEFT + plotRight) / 2} y={H - 4} fontSize="10" fontWeight="600" fill="var(--color-mute)" textAnchor="middle">
+          {xTitle}
+        </text>
+      ) : null}
     </svg>
+    </div>
   );
 }

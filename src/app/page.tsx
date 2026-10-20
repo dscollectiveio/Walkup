@@ -5,6 +5,7 @@ import { toCents } from "@/lib/tax/form1120h";
 import { assembleReminders, homeTaxDeadlines, nextFilingReminder, nextOccurrence } from "@/lib/home/reminders";
 import { urgentItems } from "@/lib/home/urgent-items";
 import {
+  applySetupOverrides,
   buildSetupGuide,
   countSteps,
   isSetupComplete,
@@ -23,7 +24,7 @@ import { bankMonths, loadBankCash } from "@/lib/bank/position";
 import { getConnectionBalance } from "@/app/bank-feed/balances";
 import { buildPlanRows, overBudgetAlerts } from "@/lib/money/plan";
 import { dateOfKey, monthLongLabel, monthShortLabel } from "@/lib/money/months";
-import { WorthAMinute } from "@/components/home/worth-a-minute";
+import { TodoCard } from "@/components/home/todo-card";
 import { AnnouncementsStrip } from "@/components/home/announcements-strip";
 import { BillingNotice } from "@/components/home/billing-notice";
 import { getBilling } from "@/lib/billing/entitlement";
@@ -147,7 +148,7 @@ export default async function HomePage() {
     supabase
       .from("associations")
       .select(
-        "id, display_name, state_code, fiscal_year_end_month, incorporated_on, reserve_target, ein, city, county, dues_payee_name, dues_account_number, dues_zelle_handle, setup_dismissed_at, information_returns_filing, accountant_person_id, board_contact_name, board_contact_email",
+        "id, display_name, state_code, fiscal_year_end_month, incorporated_on, reserve_target, ein, city, county, dues_payee_name, dues_account_number, dues_zelle_handle, setup_dismissed_at, setup_overrides, information_returns_filing, accountant_person_id, board_contact_name, board_contact_email",
       ),
     // Every year, newest first: [0] is the latest, and the tax deadlines pick
     // the one whose return is next to file from the whole list.
@@ -565,7 +566,7 @@ export default async function HomePage() {
 
   // None of these inputs require any posted activity either.
   const currentFyId = currentFy?.id ?? null;
-  const setupSections = buildSetupGuide({
+  const setupSections = applySetupOverrides(buildSetupGuide({
     today,
     association,
     units: unitRows ?? [],
@@ -606,7 +607,7 @@ export default async function HomePage() {
       uploaded_at: d.uploaded_at,
       category_slug: (d.document_categories as unknown as { slug: string } | null)?.slug ?? null,
     })),
-  });
+  }), association.setup_overrides);
   const setupCounts = countSteps(setupSections);
   const showSetupGuide =
     canSetTarget && !isSetupComplete(setupSections) && association.setup_dismissed_at === null;
@@ -837,14 +838,6 @@ export default async function HomePage() {
         </p>
       ) : null}
 
-      <WorthAMinute
-        items={urgent}
-        emptyNote={
-          booksVisible
-            ? "The books balance and every unit is current."
-            : "No activity has been recorded yet, so there's nothing to flag."
-        }
-      />
 
       {ownerInsurance ? (
         <Card navy title="What the building's insurance covers">
@@ -860,9 +853,8 @@ export default async function HomePage() {
         </Card>
       ) : null}
 
-      <div
-        className={`grid items-start gap-4 lg:grid-cols-[3fr_2fr] ${showSetupGuide ? "lg:items-stretch" : ""}`}
-      >
+      {/* Where the association stands first, then To-do and setup (Worth a minute, then setup), half and half. */}
+      <div className="grid items-stretch gap-4 lg:grid-cols-2">
         <Standing
           totalCents={totalCents}
           operatingCents={operatingCents}
@@ -873,24 +865,37 @@ export default async function HomePage() {
           source={bankCash ? "bank" : "books"}
           booksGap={booksGap}
         />
-        {showSetupGuide ? (
-          <SetupGuidePanel
-            sections={setupSections}
-            activeStepKey={nextStep(setupSections)?.key ?? null}
-            done={setupCounts.done}
-            total={setupCounts.total}
+        <div className="flex min-w-0 flex-col gap-4">
+          <TodoCard
+            items={urgent}
+            emptyNote={
+              booksVisible
+                ? "The books balance and every unit is current."
+                : "No activity has been recorded yet, so there's nothing to flag."
+            }
+            setup={
+              showSetupGuide ? (
+                <SetupGuidePanel
+                  sections={setupSections}
+                  activeStepKey={nextStep(setupSections)?.key ?? null}
+                  done={setupCounts.done}
+                  total={setupCounts.total}
+                />
+              ) : null
+            }
           />
-        ) : (
-          <YourList
-            derived={derived}
-            derivedDoneCount={setupCounts.done}
-            manual={manual}
-            persons={(persons ?? []).map((p) => ({ id: p.id, full_name: p.full_name }))}
-          />
-        )}
+          {showSetupGuide ? null : (
+            <YourList
+              derived={derived}
+              derivedDoneCount={setupCounts.done}
+              manual={manual}
+              persons={(persons ?? []).map((p) => ({ id: p.id, full_name: p.full_name }))}
+            />
+          )}
+        </div>
       </div>
 
-      <div className={`grid items-start gap-4 ${reminders.length > 0 ? "lg:grid-cols-[3fr_2fr]" : ""}`}>
+      <div className={`grid items-stretch gap-4 ${reminders.length > 0 ? "lg:grid-cols-[3fr_2fr]" : ""}`}>
         {reminders.length > 0 ? <ComingUp reminders={reminders} today={today} /> : null}
         <Building units={buildingUnits} duesLine={duesLine} />
       </div>

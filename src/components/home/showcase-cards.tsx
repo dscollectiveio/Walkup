@@ -51,6 +51,62 @@ interface View {
   chart: React.ReactNode;
 }
 
+/** Four real figures read straight off the chart's own points, under the line. */
+function CashFacts({ points }: { points: LinePoint[] }) {
+  if (points.length < 2) return null;
+  const values = points.map((p) => p.valueCents);
+  const hi = points[values.indexOf(Math.max(...values))];
+  const lo = points[values.indexOf(Math.min(...values))];
+  const first = points[0];
+  const last = points[points.length - 1];
+  const facts = [
+    { label: `${first.label}, start`, value: first.valueCents },
+    { label: `Highest (${hi.label})`, value: hi.valueCents },
+    { label: `Lowest (${lo.label})`, value: lo.valueCents },
+    { label: `${last.label}, latest`, value: last.valueCents },
+  ];
+  return (
+    <dl className="grid grid-cols-2 gap-2 sm:grid-cols-4">
+      {facts.map((f) => (
+        <div key={f.label} className="rounded-md border border-line bg-fill/40 px-2.5 py-1.5">
+          <dt className="text-[10px] text-mute">{f.label}</dt>
+          <dd className="figures text-[13px] text-ink">{formatMoney(f.value)}</dd>
+        </div>
+      ))}
+    </dl>
+  );
+}
+
+/** Four real figures summed or picked from the bars' own months, under the chart. */
+function InOutFacts({ groups }: { groups: BarGroup[] }) {
+  if (groups.length === 0) return null;
+  const totalIn = groups.reduce((sum, g) => sum + g.aCents, 0);
+  const totalOut = groups.reduce((sum, g) => sum + g.bCents, 0);
+  const net = totalIn - totalOut;
+  const biggestOut = groups.reduce((a, b) => (b.bCents > a.bCents ? b : a));
+  const range = groups.length === 1 ? groups[0].label : `${groups[0].label} to ${groups[groups.length - 1].label}`;
+  const facts = [
+    { label: `Came in, ${range}`, value: formatMoney(totalIn), tone: "text-ink" },
+    { label: `Went out, ${range}`, value: formatMoney(totalOut), tone: "text-ink" },
+    {
+      label: "Difference",
+      value: `${net > 0 ? "+" : net < 0 ? "−" : ""}${formatMoney(Math.abs(net))}`,
+      tone: net < 0 ? "text-bad-text" : "text-good-text",
+    },
+    { label: `Biggest month out (${biggestOut.label})`, value: formatMoney(biggestOut.bCents), tone: "text-ink" },
+  ];
+  return (
+    <dl className="grid grid-cols-2 gap-2 sm:grid-cols-4">
+      {facts.map((f) => (
+        <div key={f.label} className="rounded-md border border-line bg-fill/40 px-2.5 py-1.5">
+          <dt className="text-[10px] text-mute">{f.label}</dt>
+          <dd className={`figures text-[13px] ${f.tone}`}>{f.value}</dd>
+        </div>
+      ))}
+    </dl>
+  );
+}
+
 function buildViews(
   cash: CashCardData | null,
   inOut: InOutCardData | null,
@@ -70,15 +126,19 @@ function buildViews(
       figureCaption: `net change ${cash.sinceLabel.replace(/^Since/, "since")}`,
       button: { label: "See every transaction", href: "/ledger" },
       chart: (
-        <>
+        <div className="flex h-full flex-col justify-between gap-3">
           <LineChart
+            title="Cash balance, all accounts"
+            xTitle="Month"
+            yTitle="Balance (dollars)"
             points={cash.points}
             ariaLabel={`Cash balance ${cash.sinceLabel.toLowerCase()}, ending at ${formatMoney(
               cash.points[cash.points.length - 1].valueCents,
             )}, a net change of ${formatMoney(cash.netChangeCents)}.`}
           />
-          <p className="mt-1 text-right text-[10px] text-mute-soft">{cash.sinceLabel}</p>
-        </>
+          <CashFacts points={cash.points} />
+          <p className="text-right text-[10px] text-mute-soft">{cash.sinceLabel}</p>
+        </div>
       ),
     });
   }
@@ -99,12 +159,18 @@ function buildViews(
           : `spending against budget, ${inOut.fiscalYearLabel} to date`,
       button: { label: "Open the budget", href: "/budget" },
       chart: (
+        <div className="flex h-full flex-col justify-between gap-3">
         <BarChart
+          title="Money in and out, by month"
+          xTitle="Month"
+          yTitle="Dollars per month"
           groups={inOut.groups}
           seriesALabel="came in"
           seriesBLabel="went out"
           ariaLabel={`Monthly money in and out over the last ${inOut.groups.length} months.`}
         />
+        <InOutFacts groups={inOut.groups} />
+        </div>
       ),
     });
   }
@@ -247,8 +313,16 @@ export function ShowcaseCards({
       onMouseLeave={() => setHolding(false)}
       onFocusCapture={() => setHolding(true)}
       onBlurCapture={() => setHolding(false)}
-      className={`relative grid overflow-hidden rounded-xl border md:grid-cols-[minmax(220px,36%)_1fr] ${t.card}`}
+      aria-labelledby="financials-wrapped-title"
+      className={`relative overflow-hidden rounded-xl border ${t.card}`}
     >
+      <header className="flex min-h-[4rem] flex-col justify-center band bg-ink px-5 py-3">
+        <h2 id="financials-wrapped-title" className="eyebrow text-paper">
+          Your HOA Financials, Wrapped
+        </h2>
+        <p className="mt-0.5 text-[12px] text-ondark-mute">Where the money is, how it moved, and where it went.</p>
+      </header>
+      <div className="grid md:grid-cols-[minmax(220px,36%)_1fr]">
       <div className="flex flex-col justify-between gap-5 px-5 py-5">
         <div>
           {views.length > 1 ? (
@@ -295,7 +369,7 @@ export function ShowcaseCards({
           <Stack views={views} activeKey={view.key} animated={animated}>
             {(v) => (
               <>
-                <h2 className={`text-[16px] font-bold tracking-tight ${TONES[v.tone].heading}`}>{v.heading}</h2>
+                <h3 className={`text-[16px] font-bold tracking-tight ${TONES[v.tone].heading}`}>{v.heading}</h3>
                 <p className={`mt-1 text-[12px] leading-relaxed ${TONES[v.tone].heading} opacity-85`}>{v.line}</p>
               </>
             )}
@@ -328,8 +402,9 @@ export function ShowcaseCards({
         className="border-t border-line bg-paper px-4 py-4 md:border-l md:border-t-0"
       >
         <Stack views={views} activeKey={view.key} animated={animated}>
-          {(v) => <div className="rounded-lg border border-line p-3">{v.chart}</div>}
+          {(v) => <div className="h-full rounded-lg border border-line p-3">{v.chart}</div>}
         </Stack>
+      </div>
       </div>
       {rotating ? (
         <div aria-hidden="true" className="absolute inset-x-0 bottom-0 h-0.5 bg-line/60">

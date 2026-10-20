@@ -161,7 +161,7 @@ function reconnectSentence(institution: string, canEdit: boolean): string {
 export function BankAccountsSkeleton() {
   return (
     <section className="rounded-xl border border-line bg-paper" aria-hidden="true">
-      <header className="rounded-t-[7px] band bg-ink px-5 py-4">
+      <header className="rounded-t-[7px] band bg-ink px-5 py-3">
         <h2 className="eyebrow text-paper">Bank accounts</h2>
         <p className="mt-1 text-[13px] text-ondark-mute">Checking balances with your bank…</p>
       </header>
@@ -214,7 +214,7 @@ export async function BankAccountsSection({
   const anyCached = balances.some((b) => b.source === "last_sync" || b.source === "stored");
   return (
     <section className="divide-y divide-line rounded-xl border border-line bg-paper">
-      <header className="flex flex-wrap items-center justify-between gap-x-6 gap-y-2 rounded-t-[7px] band bg-ink px-5 py-4">
+      <header className="flex flex-wrap items-center justify-between gap-x-6 gap-y-2 rounded-t-[7px] band bg-ink px-5 py-3">
         <div>
           <h2 className="eyebrow text-paper">Total bank balance</h2>
           <p className="mt-1.5 text-[13px] text-ondark-mute">

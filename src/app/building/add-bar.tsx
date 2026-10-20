@@ -21,6 +21,7 @@ export function UnitsCard({
   canEditRoles,
   canDelete,
   roster,
+  initialOpenId = null,
   children,
 }: {
   canAdd: boolean;
@@ -28,14 +29,16 @@ export function UnitsCard({
   canEditRoles: boolean;
   canDelete: boolean;
   roster: RosterUnit[];
+  /** A unit to open on arrival (from the Dashboard building or a Collections link). */
+  initialOpenId?: string | null;
   children: React.ReactNode;
 }) {
   const [open, setOpen] = useState(false);
   // One unit open at a time: opening another closes the one that was open.
-  const [openId, setOpenId] = useState<string | null>(null);
+  const [openId, setOpenId] = useState<string | null>(initialOpenId);
   return (
-    <section className="rounded-xl border border-line bg-paper">
-      <header className="rounded-t-[7px] band bg-ink px-5 py-4">
+    <section id="units-and-people" className="scroll-mt-20 rounded-xl border border-line bg-paper">
+      <header className="rounded-t-[7px] band bg-ink px-5 py-3">
         <div className="flex flex-wrap items-start justify-between gap-3">
           <div className="min-w-0">
             <h2 className="eyebrow text-paper">Units and people</h2>

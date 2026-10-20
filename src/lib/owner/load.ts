@@ -49,7 +49,7 @@ export async function loadSummary(supabase: Supabase, unitId: string, todayIso: 
 }
 
 const ANNOUNCEMENT_COLUMNS =
-  "id, title, body, audience, pinned, status, attachment_document_id, expires_on, published_at, edited_at, created_at";
+  "id, title, body, audience, pinned, importance, status, attachment_document_id, expires_on, published_at, edited_at, created_at";
 
 /** Posted, not ended announcements the viewer can see (RLS), pinned first. */
 export async function loadAnnouncements(

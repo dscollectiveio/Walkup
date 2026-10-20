@@ -19,7 +19,7 @@ import { BoardRowActions } from "./board-row";
 export const dynamic = "force-dynamic";
 
 const COLUMNS =
-  "id, title, body, audience, pinned, status, attachment_document_id, expires_on, published_at, edited_at, created_at";
+  "id, title, body, audience, pinned, importance, status, attachment_document_id, expires_on, published_at, edited_at, created_at";
 const TABS: { key: "posted" | "drafts" | "archived"; label: string; status: AnnouncementStatus }[] = [
   { key: "posted", label: "Posted", status: "published" },
   { key: "drafts", label: "Drafts", status: "draft" },

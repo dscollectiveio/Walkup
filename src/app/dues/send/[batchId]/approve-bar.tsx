@@ -40,7 +40,7 @@ export function ApproveBar({
     start(async () => {
       const res = await cancelBatch(batchId);
       if ("error" in res) setError(res.error);
-      else router.push("/delinquency");
+      else router.push("/dues#collections");
     });
   };
 

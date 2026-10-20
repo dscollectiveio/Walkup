@@ -68,13 +68,6 @@ describe("BoardOnly guards (owner-portal-spec 2.4)", () => {
       label: "See your building",
       href: "/owner/building",
     },
-    {
-      file: "src/app/delinquency/page.tsx",
-      what: "Collections",
-      why: "It lists every unit's balance, which is private to the board.",
-      label: "See your own balance",
-      href: "/owner",
-    },
   ];
   for (const c of cases) {
     it(`${c.file} shows an owner the BoardOnly page`, () => {
@@ -107,9 +100,8 @@ describe("BoardOnly guards (owner-portal-spec 2.4)", () => {
     expect(src.indexOf("viewerIsOwnerOnly()")).toBeLessThan(src.indexOf('<Restricted what="this contractor" />;', src.indexOf("canReadFinancials")));
   });
 
-  it("owners are sent to their own pages from /dues and from a unit's ledger", () => {
+  it("owners are sent to their own pages from /dues", () => {
     expect(read("src/app/dues/page.tsx")).toContain('if (!canReadFinancials) redirect("/owner/pay");');
-    expect(read("src/app/units/[unitId]/page.tsx")).toContain("redirect(`/owner/statement/${unitId}`)");
   });
 
   it("Home sends owner-only people to /owner and leaves everyone else on the Dashboard", () => {

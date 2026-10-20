@@ -72,7 +72,6 @@ describe("Sidebar: expanded and rail", () => {
     expect(pageTitleFor("/")).toBe("Dashboard");
     expect(pageTitleFor("/budget")).toBe("Budget & Spending");
     expect(pageTitleFor("/repairs?view=upkeep")).toBe("Repairs & Upkeep");
-    expect(pageTitleFor("/units/abc")).toBe("Unit statement");
     expect(pageTitleFor("/nowhere")).toBeNull();
   });
 
@@ -190,7 +189,6 @@ describe("Sidebar: expanded and rail", () => {
     expect(pageTitleFor("/owner/pay", "owner")).toBe("How to pay");
     expect(pageTitleFor("/announcements", "owner")).toBe("Announcements");
     expect(pageTitleFor("/announcements/abc")).toBe("Announcement");
-    expect(pageTitleFor("/delinquency")).toBe("Collections");
     expect(pageTitleFor("/dues/send/abc")).toBe("Review emails");
     expect(pageTitleFor("/dues/statements")).toBe("Owner statements");
     expect(pageTitleFor("/dues/email")).toBe("Email from Walkup");

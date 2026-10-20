@@ -8,6 +8,9 @@ import { btnPrimary, btnSecondary, choiceRow, errorClass, hintClass, inputClass,
 import {
   ANNOUNCEMENT_BODY_MAX,
   ANNOUNCEMENT_TITLE_MAX,
+  IMPORTANCE_LABEL,
+  IMPORTANCE_LEVELS,
+  type Importance,
   announcementInput,
   attachmentFix,
   ownersReached,
@@ -29,6 +32,7 @@ export interface ComposerInitial {
   audience: "all" | "units";
   unitIds: string[];
   pinned: boolean;
+  importance: Importance;
   attachmentDocumentId: string | null;
   expiresOn: string | null;
   status: "draft" | "published";
@@ -59,6 +63,7 @@ export function Composer({
   const [body, setBody] = useState(initial?.body ?? "");
   const [audience, setAudience] = useState<"all" | "units">(initial?.audience ?? "all");
   const [unitIds, setUnitIds] = useState<string[]>(initial?.unitIds ?? []);
+  const [importance, setImportance] = useState<Importance>(initial?.importance ?? "normal");
   const [pinned, setPinned] = useState(initial?.pinned ?? false);
   const [expiresOn, setExpiresOn] = useState(initial?.expiresOn ?? "");
   const [docs, setDocs] = useState<AttachableDocument[]>(documents);
@@ -91,6 +96,7 @@ export function Composer({
       body,
       audience,
       unitIds: audience === "units" ? unitIds : [],
+      importance,
       pinned: pinned && publish,
       attachmentDocumentId: attachmentId,
       expiresOn: expiresOn || null,
@@ -202,6 +208,40 @@ export function Composer({
           </p>
         ) : null}
       </div>
+
+      <fieldset>
+        <legend className={labelClass}>How important is it?</legend>
+        <div role="radiogroup" className="mt-1 inline-flex flex-wrap gap-2">
+          {IMPORTANCE_LEVELS.map((level) => {
+            const on = importance === level;
+            const tone =
+              level === "urgent"
+                ? "border-bad bg-bad text-paper"
+                : level === "important"
+                  ? "border-warning bg-warning-tint text-warning-text"
+                  : "border-ink bg-ink text-paper";
+            return (
+              <label
+                key={level}
+                className={`inline-flex min-h-[44px] cursor-pointer items-center rounded-full border px-5 text-[13px] font-medium focus-within:outline focus-within:outline-2 focus-within:outline-offset-2 focus-within:outline-brass ${
+                  on ? tone : "border-line-strong bg-paper text-ink hover:bg-fill"
+                }`}
+              >
+                <input
+                  type="radio"
+                  name="importance"
+                  value={level}
+                  checked={on}
+                  onChange={() => setImportance(level)}
+                  className="sr-only"
+                />
+                {IMPORTANCE_LABEL[level]}
+              </label>
+            );
+          })}
+        </div>
+        <p className={hintClass}>Important and Urgent posts carry a label owners can see at a glance.</p>
+      </fieldset>
 
       <fieldset>
         <legend className={labelClass}>Who is this for?</legend>

@@ -136,7 +136,7 @@ export function TopBar({
         }}
         className="m-auto w-[min(32rem,calc(100vw-2rem))] rounded-xl border border-line bg-paper p-0 text-ink shadow-xl backdrop:bg-ink-deep/40"
       >
-        <div className="flex items-start justify-between gap-4 rounded-t-[11px] band bg-ink px-5 py-4">
+        <div className="flex items-start justify-between gap-4 rounded-t-[11px] band bg-ink px-5 py-3">
           <div>
             <h2 id="help-title" className="eyebrow text-paper">
               How Walkup works

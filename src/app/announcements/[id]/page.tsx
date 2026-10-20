@@ -1,3 +1,4 @@
+import { ImportancePill } from "@/components/owner/importance-pill";
 import Link from "next/link";
 import { createClient } from "@/lib/supabase/server";
 import { Card } from "@/components/ui";
@@ -24,7 +25,7 @@ export default async function AnnouncementPage({ params }: { params: Promise<{ i
   const { data } = isUuid(id)
     ? await supabase
         .from("announcements")
-        .select("id, title, body, audience, pinned, status, attachment_document_id, expires_on, published_at, edited_at, created_at")
+        .select("id, title, body, audience, pinned, importance, status, attachment_document_id, expires_on, published_at, edited_at, created_at")
         .eq("id", id)
         .limit(1)
     : { data: null };
@@ -75,6 +76,7 @@ export default async function AnnouncementPage({ params }: { params: Promise<{ i
         </Link>
         <div className="flex flex-wrap items-center gap-2">
           <h1 className="min-w-0 break-words text-[20px] font-bold tracking-tight text-ink">{row.title}</h1>
+          <ImportancePill importance={row.importance} />
           {row.pinned ? <Pill tone="info">Pinned</Pill> : null}
           {row.status === "draft" ? <Pill tone="outline">Draft</Pill> : null}
           {row.status === "archived" ? <Pill tone="outline">Archived</Pill> : null}

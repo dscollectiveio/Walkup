@@ -6,6 +6,7 @@ import { useMemo, useState, useTransition } from "react";
 import { prepareStatements } from "@/app/dues/email-actions";
 import { formatBalanceWords, formatMoney } from "@/lib/email-outbox/format";
 import { btnPrimary, btnSecondary } from "@/components/repairs/styles";
+import { unitHref } from "@/lib/building/unit-href";
 
 export interface StatementRow {
   unitId: string;
@@ -127,7 +128,7 @@ export function StatementsForm({
           <li key={r.unitId} className="rounded-xl border border-line p-4">
             <div className="flex items-start justify-between gap-3">
               <div>
-                <Link href={`/units/${r.unitId}`} className="font-medium text-ink">
+                <Link href={unitHref(r.unitId)} className="font-medium text-ink">
                   {r.label}
                 </Link>
                 <div className="text-[11px] text-mute">

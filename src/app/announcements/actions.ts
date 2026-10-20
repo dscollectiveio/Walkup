@@ -47,6 +47,7 @@ export async function saveAnnouncement(
     p_attachment_document_id: v.attachmentDocumentId,
     p_expires_on: v.expiresOn,
     p_publish: v.publish,
+    p_importance: v.importance,
   });
   if (error) return { error: mapSaveError(error.code, error.hint, error.message) };
   const id = data as string;

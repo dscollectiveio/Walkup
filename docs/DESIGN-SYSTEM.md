@@ -99,7 +99,7 @@ The rule: the page-level card gets the strong navy band; anything inside a card
 gets a soft tint with a gold edge.
 
 1. **Page card header:** `<Card navy title="…" hint="…" action={…}>`. Navy band
-   (`band bg-ink`), eyebrow title, muted hint, light buttons on it. Stays navy in
+   (`band bg-ink`, `px-5 py-3`, about 4rem tall on the Dashboard), eyebrow title, muted hint, light buttons on it. Stays navy in
    dark mode (a lighter, bluer navy).
 2. **Section header:** `SECTION_HEADER` (`src/components/section-header.ts`): 7%
    navy tint, 3px gold left edge, 12px bold uppercase. For sections inside a

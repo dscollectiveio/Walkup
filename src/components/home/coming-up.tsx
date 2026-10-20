@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { ChevronRight } from "lucide-react";
 import { daysUntil, formatDueDate, railFor, type Reminder } from "@/lib/home/reminders";
 import { ESTIMATED_NOTE } from "@/lib/tax/copy";
 
@@ -25,19 +26,22 @@ function daysLate(due: Date, today: Date): number {
  */
 export function ComingUp({ reminders, today }: { reminders: Reminder[]; today: Date }) {
   return (
-    <section className="rounded-xl border border-line bg-paper">
-      <header className="flex min-h-[4.75rem] flex-col justify-center rounded-t-[7px] band bg-ink px-5 py-4">
+    <section className="flex max-h-[30rem] flex-col rounded-xl border border-line bg-paper lg:max-h-none">
+      <header className="flex min-h-[4rem] flex-col justify-center rounded-t-[7px] band bg-ink px-5 py-3">
         <h2 className="eyebrow text-paper">Coming up</h2>
         <p className="mt-0.5 text-[12px] text-ondark-mute">
           Deadlines from your own records, plus the filings every association has.
         </p>
       </header>
-      <ul className="divide-y divide-line px-5">
+      {/* On desktop the list is absolutely positioned so it never sets the row's height: the row is as tall
+          as the building card beside it, and this scrolls when there are more rows than fit. */}
+      <div className="relative min-h-0 flex-1 overflow-y-auto lg:overflow-visible">
+      <ul className="divide-y divide-line px-5 lg:absolute lg:inset-0 lg:overflow-y-auto">
         {reminders.slice(0, 6).map((r, i) => {
           const days = daysUntil(r.due, today);
           const late = r.overdue ? daysLate(r.due, today) : 0;
           return (
-            <li key={`${r.name}-${r.kind}-${r.due.toISOString()}-${i}`} className="flex items-center gap-3 py-3">
+            <li key={`${r.name}-${r.kind}-${r.due.toISOString()}-${i}`} className={`relative flex items-center gap-3 py-3 ${r.href ? "-mx-5 px-5 hover:bg-fill/60" : ""}`}>
               <span className="w-12 shrink-0 text-right">
                 <span className="figures block text-[18px] leading-none text-ink">{r.overdue ? late : days}</span>
                 <span className="block whitespace-nowrap text-[10px] text-mute-soft">
@@ -50,7 +54,7 @@ export function ComingUp({ reminders, today }: { reminders: Reminder[]; today: D
               />
               <span className="min-w-0 flex-1">
                 {r.href ? (
-                  <Link href={r.href} className="block text-[13px] font-medium text-ink underline-offset-2 hover:underline">
+                  <Link href={r.href} className="block text-[13px] font-medium text-ink underline-offset-2 after:absolute after:inset-0 hover:underline focus-visible:outline focus-visible:outline-2 focus-visible:-outline-offset-2 focus-visible:outline-brass">
                     {r.name}
                   </Link>
                 ) : (
@@ -64,10 +68,12 @@ export function ComingUp({ reminders, today }: { reminders: Reminder[]; today: D
               <span className={`tabular shrink-0 text-[12px] ${r.overdue ? "text-bad-text" : "text-mute"}`}>
                 {r.overdue ? `was due ${formatDueDate(r.due, today)}` : formatDueDate(r.due, today)}
               </span>
+              {r.href ? <ChevronRight size={15} strokeWidth={1.8} aria-hidden="true" className="shrink-0 text-mute-soft" /> : null}
             </li>
           );
         })}
       </ul>
+      </div>
     </section>
   );
 }

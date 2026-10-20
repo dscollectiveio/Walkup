@@ -246,11 +246,13 @@ export async function addUnit(_prev: unknown, formData: FormData) {
 
 type Db = Awaited<ReturnType<typeof createClient>>;
 
+// A unit's page is now its row on Building & Owners, so revalidating the building covers it.
 function revalidateUnit(unitId: string) {
+  void unitId;
   revalidateBuilding();
   revalidatePath("/repairs");
-  revalidatePath("/delinquency");
-  revalidatePath(`/units/${unitId}`);
+  revalidatePath("/dues");
+  revalidatePath("/building");
 }
 
 /**
@@ -429,7 +431,7 @@ export async function updateUnit(_prev: unknown, formData: FormData) {
 
   revalidateBuilding();
   revalidatePath("/repairs");
-  revalidatePath(`/units/${unitId}`);
+  revalidatePath("/building");
   return { ok: true };
 }
 
@@ -681,7 +683,7 @@ export async function changeUnitOwner(_prev: unknown, formData: FormData) {
 
   revalidateBuilding();
   revalidatePath("/delinquency");
-  revalidatePath(`/units/${unitId}`);
+  revalidatePath("/building");
   return { ok: true };
 }
 
@@ -705,7 +707,7 @@ export async function endUnitOwnership(_prev: unknown, formData: FormData) {
 
   revalidateBuilding();
   revalidatePath("/delinquency");
-  if (unitId) revalidatePath(`/units/${unitId}`);
+  if (unitId) revalidatePath("/building");
   return { ok: true };
 }
 
@@ -732,7 +734,7 @@ export async function deleteUnitOwner(rowId: string, unitId: string) {
 
   revalidateBuilding();
   revalidatePath("/delinquency");
-  if (unitId) revalidatePath(`/units/${unitId}`);
+  if (unitId) revalidatePath("/building");
   return { ok: true as const };
 }
 

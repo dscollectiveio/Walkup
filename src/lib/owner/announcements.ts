@@ -7,6 +7,10 @@ export const ANNOUNCEMENT_TITLE_MAX = 120;
 export const ANNOUNCEMENT_BODY_MAX = 5000;
 export const MAX_PINNED = 3;
 
+export const IMPORTANCE_LEVELS = ["normal", "important", "urgent"] as const;
+export type Importance = (typeof IMPORTANCE_LEVELS)[number];
+export const IMPORTANCE_LABEL: Record<Importance, string> = { normal: "Normal", important: "Important", urgent: "Urgent" };
+
 export const announcementInput = z
   .object({
     id: z.guid().nullable(),
@@ -14,6 +18,7 @@ export const announcementInput = z
     body: z.string().trim().min(1, "Write the message.").max(ANNOUNCEMENT_BODY_MAX, "Keep the message under 5,000 characters."),
     audience: z.enum(["all", "units"]),
     unitIds: z.array(z.guid()).max(100).default([]),
+    importance: z.enum(IMPORTANCE_LEVELS).default("normal"),
     pinned: z.boolean().default(false),
     attachmentDocumentId: z.guid().nullable().default(null),
     expiresOn: z
@@ -41,6 +46,7 @@ export interface AnnouncementRow {
   body: string;
   audience: "all" | "units";
   pinned: boolean;
+  importance: Importance;
   status: AnnouncementStatus;
   attachment_document_id: string | null;
   expires_on: string | null;

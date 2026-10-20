@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { unitHref } from "@/lib/building/unit-href";
 
 export function money(numeric: string | number | null): string {
   const n = numeric === null ? 0 : Number(numeric);
@@ -72,14 +73,14 @@ export function Card({
     <section className="rounded-xl border border-line bg-paper">
       <header
         className={
-          navy ? "rounded-t-[7px] band bg-ink px-5 py-4" : "border-b border-line px-5 py-4"
+          navy ? "rounded-t-[7px] band bg-ink px-5 py-3" : "border-b border-line px-5 py-4"
         }
       >
         <div className="flex items-start justify-between gap-3">
           <div className="min-w-0">
             <h2 className={`eyebrow ${navy ? "text-paper" : "text-mute"}`}>{title}</h2>
             {hint ? (
-              <p className={`mt-1.5 text-[13px] ${navy ? "text-ondark-mute" : "text-mute"}`}>{hint}</p>
+              <p className={`mt-1 text-[13px] ${navy ? "text-ondark-mute" : "text-mute"}`}>{hint}</p>
             ) : null}
           </div>
           {action ? <div className="shrink-0">{action}</div> : null}
@@ -206,7 +207,7 @@ export function Provisional({ children }: { children?: React.ReactNode }) {
 export function UnitLink({ id, label }: { id: string; label: string }) {
   return (
     <Link
-      href={`/units/${id}`}
+      href={unitHref(id)}
       className="font-medium text-ink underline-offset-2 hover:underline"
     >
       {label}

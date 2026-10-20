@@ -8,6 +8,7 @@ import { PaymentInstructionsForm } from "./payment-instructions-form";
 import { DuesScheduleCard, type ScheduleView } from "./dues-schedule-card";
 import { NeedsYou, type NeedsYouItem, type UnitOption } from "./needs-you";
 import { LateFeeRuleForm, OneOffChargeForm } from "./charge-forms";
+import { CollectionsSection } from "./collections-section";
 import { UnitCard, type UnitPlan } from "./unit-card";
 import { additionalProgress, duesPaidCents, rolledOverCents } from "@/lib/dues/year";
 import { annualFromPeriodCents, nextPeriodStartFor } from "@/lib/dues/plan";
@@ -50,7 +51,8 @@ function nextPeriodStart(frequency: DuesFrequency, today: Date, startsOn: string
   return n < startsOn ? startsOn : n;
 }
 
-export default async function DuesPage() {
+export default async function DuesPage({ searchParams }: { searchParams: Promise<{ select?: string }> }) {
+  const { select: selectParam } = await searchParams;
   const supabase = await createClient();
 
   const { data: associations } = await supabase
@@ -611,7 +613,7 @@ export default async function DuesPage() {
         </p>
         {isBoard ? (
           <p className="mt-2 flex flex-wrap gap-x-4 gap-y-1 text-[13px]">
-            <Link href="/delinquency" className="text-ink underline underline-offset-2">
+            <Link href="#collections" className="text-ink underline underline-offset-2">
               Collections
             </Link>
             <Link href="/dues/statements" className="text-ink underline underline-offset-2">
@@ -769,11 +771,6 @@ export default async function DuesPage() {
                           )}
                         </dd>
                       </div>
-                      <div className="col-span-2">
-                        <Link href={`/units/${u.id}`} className="text-[12px] text-mute underline-offset-2 hover:text-ink hover:underline">
-                          Statement
-                        </Link>
-                      </div>
                     </dl>
                   }
                 />
@@ -781,6 +778,8 @@ export default async function DuesPage() {
             })}
           </div>
         )}
+
+        <CollectionsSection supabase={supabase} associationId={association.id} isBoard={isBoard} preselect={selectParam ?? null} />
 
         {isBoard && unitList.length > 0 && planByUnit.size === 0 ? (
           <p className="mt-3 text-[12px] text-mute">

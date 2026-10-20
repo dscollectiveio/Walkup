@@ -7,7 +7,7 @@ import { revalidatePath } from "next/cache";
  */
 export function revalidateLinked(targetTable: string, targetId: string) {
   revalidatePath("/documents");
-  if (targetTable === "units") revalidatePath(`/units/${targetId}`);
+  if (targetTable === "units") revalidatePath("/building");
   if (targetTable === "tickets") revalidatePath(`/maintenance/${targetId}`);
   if (targetTable === "vendors") revalidatePath(`/contractors/${targetId}`);
   // Policies, quotes and claims all show on pages under /insurance.

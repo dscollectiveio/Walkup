@@ -62,6 +62,40 @@ export async function dismissSetupGuide() {
   return { ok: true };
 }
 
+/**
+ * Ticks a setup step by hand ("done"), unticks one that ticked itself
+ * ("not_done"), or returns it to following the data ("auto"). Stored on the
+ * association; associations_update is board_admin-only, so the policy is the
+ * authorization.
+ */
+export async function setSetupStepOverride(stepKey: string, mode: "done" | "not_done" | "auto") {
+  if (!/^[a-z0-9_]{1,60}$/.test(stepKey)) return { error: "Couldn't change that step." };
+  if (mode !== "done" && mode !== "not_done" && mode !== "auto") return { error: "Couldn't change that step." };
+
+  const supabase = await createClient();
+  const { data: rows } = await supabase.from("associations").select("id, setup_overrides").limit(1);
+  const association = rows?.[0];
+  if (!association) return { error: "No association is visible to you." };
+
+  const current =
+    association.setup_overrides && typeof association.setup_overrides === "object" && !Array.isArray(association.setup_overrides)
+      ? { ...(association.setup_overrides as Record<string, string>) }
+      : {};
+  if (mode === "auto") delete current[stepKey];
+  else current[stepKey] = mode;
+
+  const { data, error } = await supabase
+    .from("associations")
+    .update({ setup_overrides: current })
+    .eq("id", association.id)
+    .select("id");
+  if (error) return { error: "Couldn't save that. Try again." };
+  if (!data || data.length === 0) return { error: "Only a board admin can change setup steps." };
+
+  revalidatePath("/");
+  return { ok: true };
+}
+
 export async function addBoardTask(_prev: unknown, formData: FormData) {
   const title = String(formData.get("title") ?? "").trim();
   const ownerPersonId = String(formData.get("owner_person_id") ?? "").trim() || null;

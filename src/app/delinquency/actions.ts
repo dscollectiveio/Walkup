@@ -89,6 +89,6 @@ export async function recordPayment(_prev: unknown, formData: FormData) {
 
   revalidatePath("/delinquency");
   revalidatePath("/");
-  revalidatePath(`/units/${unitId}`);
+  revalidatePath("/building");
   return { ok: true };
 }

@@ -20,7 +20,6 @@ const PAGES = [
   "src/app/repairs/find/page.tsx",
   "src/app/maintenance/[ticketId]/page.tsx",
   "src/app/contractors/[vendorId]/page.tsx",
-  "src/app/units/[unitId]/page.tsx",
 ];
 
 describe("maxDuration", () => {

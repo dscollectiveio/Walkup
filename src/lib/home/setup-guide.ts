@@ -15,6 +15,10 @@ export interface SetupStep {
   href: string;
   done: boolean;
   doneOn: string | null; // ISO date when known
+  /** What the data says, before any manual override. Set by applySetupOverrides. */
+  autoDone?: boolean;
+  /** A board admin ticked or unticked this step by hand, so `done` differs from the data. */
+  overridden?: boolean;
   /** Ticks on its own as a side effect of another step; never blocks "complete". */
   informational?: boolean;
   /** Shown when this is the step the admin should do next. */
@@ -578,4 +582,25 @@ export function nextStep(sections: SetupSection[]): SetupStep | null {
 /** Still-open steps, flattened, for the small "Your list" card once the guide is hidden. */
 export function openSteps(sections: SetupSection[]): SetupStep[] {
   return sections.flatMap((s) => s.steps).filter((st) => !st.informational && !st.done);
+}
+
+export type SetupOverrides = Record<string, "done" | "not_done">;
+
+/**
+ * Applies a board admin's manual ticks on top of the derived guide. A step with
+ * no override follows the data. A forced step keeps `autoDone` so the panel can
+ * offer "back to automatic", and loses its date (nothing recorded when it was done).
+ */
+export function applySetupOverrides(sections: SetupSection[], overrides: unknown): SetupSection[] {
+  const map: SetupOverrides =
+    overrides && typeof overrides === "object" && !Array.isArray(overrides) ? (overrides as SetupOverrides) : {};
+  return sections.map((section) => ({
+    ...section,
+    steps: section.steps.map((step) => {
+      const o = map[step.key];
+      if (o !== "done" && o !== "not_done") return { ...step, autoDone: step.done };
+      const done = o === "done";
+      return { ...step, autoDone: step.done, overridden: done !== step.done, done, doneOn: done === step.done ? step.doneOn : null };
+    }),
+  }));
 }

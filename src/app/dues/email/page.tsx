@@ -170,7 +170,7 @@ export default async function EmailPage({ searchParams }: { searchParams: Promis
         <p className="mt-3 text-[13px] text-mute">
           Everything Walkup sends is built from a template and your books, plus a short note you may add. Walkup never emails a bank account number.
           <span className="ml-1">
-            <Link href="/delinquency" className="text-ink underline underline-offset-2">
+            <Link href="/dues#collections" className="text-ink underline underline-offset-2">
               Open Collections
             </Link>
           </span>

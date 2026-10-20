@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { Pill } from "@/components/repairs/pills";
 import { announcementPreview, type AnnouncementRow } from "@/lib/owner/announcements";
+import { ImportancePill } from "./importance-pill";
 import { longDate, shortDate } from "@/lib/dates";
 
 /**
@@ -31,6 +32,7 @@ export function AnnouncementItem({
           {row.title}
           {unread ? <span className="sr-only">, not read</span> : null}
         </Link>
+        <ImportancePill importance={row.importance} />
         {row.pinned ? <Pill tone="info">Pinned</Pill> : null}
         {row.status === "draft" ? <Pill tone="outline">Draft</Pill> : null}
         {row.status === "archived" ? <Pill tone="outline">Archived</Pill> : null}

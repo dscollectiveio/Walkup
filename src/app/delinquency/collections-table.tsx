@@ -8,6 +8,7 @@ import { fromCents } from "@/lib/tax/form1120h";
 import { formatMoney } from "@/lib/email-outbox/format";
 import { stageFor, STAGE_WORDS, type LastResult, type Suggestion } from "@/lib/collections/suggest";
 import { prepareLateFeeNotice, prepareReminders } from "@/app/dues/email-actions";
+import { unitHref } from "@/lib/building/unit-href";
 
 export interface HistoryItem {
   date: string;
@@ -56,7 +57,7 @@ const btnGhost =
 function Unit({ r }: { r: CollectionRow }) {
   return (
     <div>
-      <Link href={`/units/${r.unitId}`} className="font-medium text-ink underline-offset-2 hover:underline">
+      <Link href={unitHref(r.unitId)} className="font-medium text-ink underline-offset-2 hover:underline">
         {r.label}
       </Link>
       {r.ownerNames.length ? <div className="text-[11px] text-mute">{r.ownerNames.join(", ")}</div> : null}

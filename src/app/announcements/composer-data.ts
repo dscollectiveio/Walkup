@@ -19,7 +19,7 @@ export async function loadComposerData(viewer: Viewer, todayIso: string, announc
     announcementId
       ? supabase
           .from("announcements")
-          .select("id, title, body, audience, pinned, status, attachment_document_id, expires_on")
+          .select("id, title, body, audience, pinned, importance, status, attachment_document_id, expires_on")
           .eq("id", announcementId)
           .limit(1)
       : Promise.resolve({ data: [] }),
@@ -64,6 +64,7 @@ export async function loadComposerData(viewer: Viewer, todayIso: string, announc
         body: string;
         audience: "all" | "units";
         pinned: boolean;
+        importance: "normal" | "important" | "urgent";
         status: "draft" | "published" | "archived";
         attachment_document_id: string | null;
         expires_on: string | null;
@@ -88,6 +89,7 @@ export async function loadComposerData(viewer: Viewer, todayIso: string, announc
         audience: row.audience,
         unitIds: ((auRes.data ?? []) as { unit_id: string }[]).map((a) => a.unit_id),
         pinned: row.pinned,
+        importance: row.importance,
         attachmentDocumentId: row.attachment_document_id,
         expiresOn: row.expires_on,
         status: row.status,

@@ -20,7 +20,7 @@ const DIRS = [
   "src/app/api/email",
   "src/app/api/cron/email-reminders",
 ];
-const FILES = ["src/app/dues/email-actions.ts", "src/app/delinquency/page.tsx", "src/app/delinquency/collections-table.tsx", "src/app/owner/profile/email-preferences-card.tsx", "src/app/owner/profile/email-preferences-slot.tsx", "src/app/owner/profile/email-preferences-actions.ts"];
+const FILES = ["src/app/dues/email-actions.ts", "src/app/dues/collections-section.tsx", "src/app/delinquency/collections-table.tsx", "src/app/owner/profile/email-preferences-card.tsx", "src/app/owner/profile/email-preferences-slot.tsx", "src/app/owner/profile/email-preferences-actions.ts"];
 
 function walk(dir: string, out: string[] = []): string[] {
   for (const name of readdirSync(dir)) {

@@ -230,7 +230,7 @@ export function NextStepCard(props: NextStepProps) {
 
   return (
     <section aria-labelledby="next-step-title" className="rounded-xl border border-line bg-paper">
-      <header className="rounded-t-[7px] band bg-ink px-5 py-4">
+      <header className="rounded-t-[7px] band bg-ink px-5 py-3">
         <h2 id="next-step-title" className="eyebrow text-paper">
           What happens next
         </h2>

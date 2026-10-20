@@ -19,20 +19,27 @@ export function BarChart({
   seriesALabel,
   seriesBLabel,
   ariaLabel,
+  title,
+  xTitle,
+  yTitle,
 }: {
   groups: BarGroup[];
   seriesALabel: string;
   seriesBLabel: string;
   ariaLabel: string;
+  /** A heading above the plot, and a title for each axis. */
+  title?: string;
+  xTitle?: string;
+  yTitle?: string;
 }) {
   if (groups.length === 0) return null;
 
   const W = 560;
-  const H = 200;
-  const PAD_LEFT = 46;
+  const H = 226;
+  const PAD_LEFT = 62;
   const PAD_RIGHT = 8;
   const PAD_TOP = 12;
-  const PAD_BOTTOM = groups.some((g) => g.caption) ? 44 : 28;
+  const PAD_BOTTOM = groups.some((g) => g.caption) ? 62 : 46;
 
   const axis = niceAxis(0, Math.max(...groups.flatMap((g) => [g.aCents, g.bCents]), 1));
   const plotW = W - PAD_LEFT - PAD_RIGHT;
@@ -45,6 +52,7 @@ export function BarChart({
 
   return (
     <div>
+      {title ? <h4 className="mb-1 text-[13px] font-semibold text-ink">{title}</h4> : null}
       <svg viewBox={`0 0 ${W} ${H}`} className="w-full" role="img" aria-label={ariaLabel}>
         {axis.ticks.map((t) => (
           <g key={t}>
@@ -96,6 +104,22 @@ export function BarChart({
             </g>
           );
         })}
+        {yTitle ? (
+          <text
+            transform={`translate(11 ${PAD_TOP + chartH / 2}) rotate(-90)`}
+            fontSize="10"
+            fontWeight="600"
+            fill="var(--color-mute)"
+            textAnchor="middle"
+          >
+            {yTitle}
+          </text>
+        ) : null}
+        {xTitle ? (
+          <text x={PAD_LEFT + plotW / 2} y={H - 4} fontSize="10" fontWeight="600" fill="var(--color-mute)" textAnchor="middle">
+            {xTitle}
+          </text>
+        ) : null}
       </svg>
       <div className="mt-1 flex flex-wrap gap-x-4 gap-y-1 text-[11px] text-mute">
         <span className="inline-flex items-center gap-1.5">

@@ -3,6 +3,7 @@
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useState } from "react";
+import { unitHref } from "@/lib/building/unit-href";
 
 export interface BuildingUnit {
   id: string;
@@ -67,14 +68,14 @@ export function Building({
   const topDown = [...units].reverse();
 
   function open(id: string) {
-    router.push(`/units/${id}`);
+    router.push(unitHref(id));
   }
 
   return (
     <section className="rounded-xl border border-line bg-paper">
-      <header className="flex min-h-[4.75rem] flex-col justify-center rounded-t-[7px] band bg-ink px-5 py-4">
+      <header className="flex min-h-[4rem] flex-col justify-center rounded-t-[7px] band bg-ink px-5 py-3">
         <h2 className="eyebrow text-paper">The building</h2>
-        <p className="mt-0.5 text-[12px] text-ondark-mute">Click a floor to see its payment history.</p>
+        <p className="mt-0.5 text-[12px] text-ondark-mute">Click a floor to open that unit in Building & Owners.</p>
       </header>
 
       <div className="space-y-4 px-5 py-4">
@@ -149,7 +150,7 @@ export function Building({
             {units.map((u) => (
               <li key={u.id}>
                 <Link
-                  href={`/units/${u.id}`}
+                  href={unitHref(u.id)}
                   onMouseEnter={() => setActiveId(u.id)}
                   onMouseLeave={() => setActiveId(null)}
                   className={`flex items-center justify-between gap-3 rounded px-2 py-2.5 transition-colors ${

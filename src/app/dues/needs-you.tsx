@@ -370,11 +370,8 @@ function BehindLine({
         ) : (
           <span className="text-[12px] text-warning-text">No email on file for the owner</span>
         )}
-        <a href={`/delinquency?select=${item.unitId}`} className={btnGhost} title="Review a reminder email on the Collections page before anything goes out">
+        <a href={`/dues?select=${item.unitId}#collections`} className={btnGhost} title="Review a reminder email on the Collections page before anything goes out">
           Prepare reminder
-        </a>
-        <a href={`/units/${item.unitId}`} className={link}>
-          Statement
         </a>
       </div>
     </>

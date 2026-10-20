@@ -90,11 +90,11 @@ export function buildSnapshot(input: SnapshotInput): SnapshotTile[] {
   const active = input.bankConnections.filter((c) => c.status === "active");
   const broken = input.bankConnections.filter((c) => c.status === "error");
   if (input.bankConnections.length === 0) {
-    tiles.push({ key: "bank", label: "Bank", value: null, note: "Not linked yet", href: "/bank-feed", tone: "neutral" });
+    tiles.push({ key: "bank", label: "Bank connection and sync", value: null, note: "Not linked yet", href: "/bank-feed", tone: "neutral" });
   } else if (active.length === 0) {
     tiles.push({
       key: "bank",
-      label: "Bank",
+      label: "Bank connection and sync",
       value: "Needs reconnecting",
       note: `${broken[0]?.institutionName ?? "Your bank"} stopped syncing`,
       href: "/bank-feed",
@@ -112,7 +112,7 @@ export function buildSnapshot(input: SnapshotInput): SnapshotTile[] {
     const backlog = input.uncategorizedCount;
     tiles.push({
       key: "bank",
-      label: "Bank",
+      label: "Bank connection and sync",
       value: broken.length > 0 ? "Linked, one needs attention" : "Linked",
       note:
         `${where} · ${syncedWords(newest, todayIso)}` +
@@ -125,13 +125,13 @@ export function buildSnapshot(input: SnapshotInput): SnapshotTile[] {
   // ---- Insurance renewal ----------------------------------------------------------
   const renewal = input.insuranceRenewal;
   if (!renewal) {
-    tiles.push({ key: "insurance", label: "Insurance", value: null, note: "No active policy recorded", href: "/insurance", tone: "neutral" });
+    tiles.push({ key: "insurance", label: "Building insurance policy", value: null, note: "No active policy recorded", href: "/insurance", tone: "neutral" });
   } else {
     const endsOn = renewal.policy.effective_to;
     const days = renewal.daysToEnd;
     tiles.push({
       key: "insurance",
-      label: "Insurance renews",
+      label: "Building insurance renewal",
       value: shortDate(endsOn, todayIso),
       // A renewal already on file: nothing to chase, whatever the date.
       note: renewal.renewed ? "renewal saved" : days <= 0 ? "today" : `in ${plural(days, "day")}`,
@@ -142,12 +142,12 @@ export function buildSnapshot(input: SnapshotInput): SnapshotTile[] {
 
   // ---- Next filing ------------------------------------------------------------------
   if (!input.nextFiling) {
-    tiles.push({ key: "filing", label: "Next filing", value: null, note: "No deadline on file yet", href: "/tax", tone: "neutral" });
+    tiles.push({ key: "filing", label: "Next tax filing due", value: null, note: "No deadline on file yet", href: "/tax", tone: "neutral" });
   } else {
     const days = daysBetween(todayIso, input.nextFiling.dueOn);
     tiles.push({
       key: "filing",
-      label: "Next filing",
+      label: "Next tax filing due",
       value: shortDate(input.nextFiling.dueOn, todayIso),
       note: `${input.nextFiling.name}${input.nextFiling.estimated ? " (estimated)" : ""} · ${days < 0 ? "overdue" : days === 0 ? "due today" : `in ${plural(days, "day")}`}`,
       href: "/tax",
@@ -160,7 +160,7 @@ export function buildSnapshot(input: SnapshotInput): SnapshotTile[] {
   // saved from a search but never hired owes nothing yet (repairs-spec §18.4).
   const saved = input.contractors.filter((c) => !c.archived);
   if (saved.length === 0) {
-    tiles.push({ key: "contractors", label: "Contractors", value: null, note: "None added yet", href: "/repairs?view=contractors", tone: "neutral" });
+    tiles.push({ key: "contractors", label: "Contractors on file", value: null, note: "None added yet", href: "/repairs?view=contractors", tone: "neutral" });
   } else {
     const used = saved.filter((c) => c.inUse !== false);
     const missingW9 = used.filter((c) => !c.w9OnFile && !c.is1099Exempt).length;
@@ -175,7 +175,7 @@ export function buildSnapshot(input: SnapshotInput): SnapshotTile[] {
       parts.length === 0
         ? {
             key: "contractors",
-            label: "Contractor paperwork",
+            label: "Contractor W-9s and paperwork",
             value: "In order",
             note: `${plural(saved.length, "contractor")}, all current`,
             href: "/repairs?view=contractors",
@@ -183,7 +183,7 @@ export function buildSnapshot(input: SnapshotInput): SnapshotTile[] {
           }
         : {
             key: "contractors",
-            label: "Contractor paperwork",
+            label: "Contractor W-9s and paperwork",
             value: `${plural(missingW9 + lapsed + lapsedLicense, "gap")}`,
             note: parts.join(" · "),
             href: "/repairs?view=contractors",

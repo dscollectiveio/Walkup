@@ -15,7 +15,7 @@ import {
 const GUID = "aaaa1111-0000-4000-8000-000000000001";
 const valid = { id: null, title: "Water off", body: "From 9 to 11.", audience: "all", publish: true };
 const row = (o: Partial<AnnouncementRow>): AnnouncementRow => ({
-  id: "x", title: "t", body: "b", audience: "all", pinned: false, status: "published", attachment_document_id: null,
+  id: "x", title: "t", body: "b", audience: "all", pinned: false, importance: "normal", status: "published", attachment_document_id: null,
   expires_on: null, published_at: "2026-10-01T10:00:00Z", edited_at: null, created_at: "2026-10-01T10:00:00Z", ...o,
 });
 
