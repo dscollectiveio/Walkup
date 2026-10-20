@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { useRef, useState, useTransition } from "react";
+import { createContext, useContext, useRef, useState, useTransition } from "react";
 import {
   Banknote,
   BookOpen,
@@ -53,6 +53,9 @@ const STEP_ICON: Record<string, LucideIcon> = {
   emergency_info: Siren,
   documents: FolderOpen,
 };
+
+/** A board member sees the guide but only an admin ticks, overrides or skips it. */
+const ReadOnlyContext = createContext(false);
 
 function formatDone(iso: string): string {
   return new Date(`${iso}T00:00:00`).toLocaleDateString("en-US", { month: "short", day: "numeric" });
@@ -122,6 +125,7 @@ function GoButton({ href, label, primary }: { href: string; label: string; prima
  * view of it does.
  */
 function StepCheck({ step, className = "" }: { step: SetupStep; className?: string }) {
+  const readOnly = useContext(ReadOnlyContext);
   const [pending, start] = useTransition();
   const [failed, setFailed] = useState(false);
   const auto = step.autoDone ?? step.done;
@@ -137,7 +141,7 @@ function StepCheck({ step, className = "" }: { step: SetupStep; className?: stri
       aria-checked={step.done}
       aria-label={`${step.name}: ${label}`}
       title={failed ? "Couldn't save that. Try again." : label}
-      disabled={pending}
+      disabled={pending || readOnly}
       onClick={(e) => {
         e.stopPropagation();
         const want = !step.done;
@@ -321,11 +325,13 @@ export function SetupGuidePanel({
   activeStepKey,
   done,
   total,
+  readOnly = false,
 }: {
   sections: SetupSection[];
   activeStepKey: string | null;
   done: number;
   total: number;
+  readOnly?: boolean;
 }) {
   const [pending, start] = useTransition();
   const [error, setError] = useState<string | null>(null);
@@ -341,7 +347,7 @@ export function SetupGuidePanel({
   const next = sections.flatMap((sec) => sec.steps).find((st) => st.key === activeStepKey) ?? null;
 
   return (
-    <>
+    <ReadOnlyContext.Provider value={readOnly}>
     <section id="setup-guide" aria-labelledby="setup-guide-title" className="flex min-h-0 flex-1 scroll-mt-20 flex-col border-t border-line">
       <div
         onClick={() => setFolded((f) => !f)}
@@ -378,6 +384,7 @@ export function SetupGuidePanel({
           >
             <Maximize2 size={14} strokeWidth={1.6} aria-hidden="true" />
           </button>
+          {readOnly ? null : (
           <button
             type="button"
             disabled={pending}
@@ -393,6 +400,7 @@ export function SetupGuidePanel({
           >
             {pending ? "Hiding…" : "Skip for now"}
           </button>
+          )}
           <ShowHide shown={!folded} />
         </div>
       </div>
@@ -575,6 +583,6 @@ export function SetupGuidePanel({
         </div>
       </div>
     </dialog>
-    </>
+    </ReadOnlyContext.Provider>
   );
 }

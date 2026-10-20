@@ -1,6 +1,8 @@
 import Link from "next/link";
 import { redirect } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
+import { BoardOnly } from "@/components/board-only";
+import { getViewer } from "@/lib/owner/viewer";
 import { Card, Empty, HEADER_BUTTON, Restricted, money } from "@/components/ui";
 import { bankFeedHref } from "@/app/bank-feed/href";
 import { PaymentForm } from "@/app/delinquency/payment-form";
@@ -92,7 +94,21 @@ export default async function DuesPage({ searchParams }: { searchParams: Promise
   const canReadFinancials = canReadFinancialsRes === true;
   // Owners have their own pages now (owner-portal-spec 2.4): what they owe,
   // how to pay and the "I paid" report live at /owner/pay.
-  if (!canReadFinancials) redirect("/owner/pay");
+  if (!canReadFinancials) {
+    // The three outside roles (0080) own no unit unless they also hold the owner role: they get the page that
+    // says this is the board's, not an empty "how to pay".
+    const viewer = await getViewer();
+    if (viewer?.isOutside && viewer.ownedUnitIds.length === 0) {
+      return (
+        <BoardOnly
+          what="HOA Dues"
+          why="It shows every unit's balance and the collections work."
+          alternative={{ label: "Go to your home page", href: viewer.homePath }}
+        />
+      );
+    }
+    redirect("/owner/pay");
+  }
   const myUnitIds: string[] = ownedUnitIds ?? [];
 
   // Everyone sees the units; what's attached to them is RLS-scoped below.

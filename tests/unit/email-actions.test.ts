@@ -136,7 +136,8 @@ describe("approveBatch", () => {
   it("refuses a board member who is not an admin, without touching the database", async () => {
     viewer = member;
     expect(await approveBatch(UUID)).toEqual({ error: ADMIN_ONLY });
-    expect(createClient).not.toHaveBeenCalled();
+    // It may look the batch up (the Secretary approves announcement emails) but never approves.
+    expect(rpc).not.toHaveBeenCalledWith("email_approve_batch", expect.anything());
   });
 
   it("approves, then starts the sender in the background under the same session", async () => {

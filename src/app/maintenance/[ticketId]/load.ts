@@ -86,13 +86,14 @@ const TICKET_COLUMNS_BOARD = `${TICKET_COLUMNS}, ticket_board_details(assignee_p
 export async function loadTicketPage(supabase: Supabase, ticketId: string, viewer: RepairsViewer): Promise<TicketPageData | null> {
   const { data: rows } = await supabase
     .from("tickets")
-    .select(viewer.canReadFinancials ? TICKET_COLUMNS_BOARD : TICKET_COLUMNS)
+    .select(viewer.staffView ? TICKET_COLUMNS_BOARD : TICKET_COLUMNS)
     .eq("id", ticketId)
     .limit(1);
   const t = (rows?.[0] ?? null) as Record<string, unknown> | null;
   if (!t) return null;
   const today = viewer.todayIso;
-  const fin = viewer.canReadFinancials;
+  // The staff layout: board details, quotes and contractors. The board, the accountant and a property manager (0080).
+  const fin = viewer.staffView;
 
   const emergencyKind = (EMERGENCY_KINDS as readonly string[]).includes(String(t.emergency_kind)) ? (t.emergency_kind as EmergencyKind) : null;
   const ticket: TicketView = {
@@ -240,8 +241,8 @@ export async function loadTicketPage(supabase: Supabase, ticketId: string, viewe
       bd?.expense_id
         ? supabase.from("expenses").select("paid_on, amount::text, memo").eq("id", bd.expense_id as string).limit(1)
         : Promise.resolve({ data: null }),
-      viewer.isBoard ? loadDraftBasics(supabase, ticket.associationId) : Promise.resolve(null),
-      viewer.isBoard ? loadEmergencyContractors(supabase) : Promise.resolve([]),
+      viewer.canManage ? loadDraftBasics(supabase, ticket.associationId) : Promise.resolve(null),
+      viewer.canManage ? loadEmergencyContractors(supabase) : Promise.resolve([]),
     ]);
 
     persons = new Map((personsRes.data ?? []).map((p) => [p.id as string, (p.full_name as string) ?? ""]));
@@ -556,7 +557,7 @@ export async function loadTicketPage(supabase: Supabase, ticketId: string, viewe
       filename: p.filename,
       caption: p.caption,
       alt: p.alt,
-      canRemove: p.canRemove && viewer.isBoard,
+      canRemove: p.canRemove && viewer.canManage,
     })),
     documents: documents.filter((d) => d.relation !== "photo"),
     emergency,

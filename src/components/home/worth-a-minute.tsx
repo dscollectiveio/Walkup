@@ -18,6 +18,7 @@ import {
   TriangleAlert,
   Users,
   Wrench,
+  UserRound,
   type LucideIcon,
 } from "lucide-react";
 import type { UrgentItem } from "@/lib/home/urgent-items";
@@ -38,6 +39,8 @@ const ICONS: Record<UrgentItem["key"], LucideIcon> = {
   repairs_urgent: Hammer,
   repairs_overdue: CalendarClock,
   upkeep_overdue: Wrench,
+  access_ending: UserRound,
+  term_ending: Users,
   contractor_paperwork: ShieldAlert,
   ai_finished: Sparkles,
   email_key_rejected: Mail,

@@ -1,6 +1,7 @@
 import { createClient } from "@/lib/supabase/server";
 import { Answer, Card, Empty } from "@/components/ui";
 import { ContactLine } from "@/components/owner/contact-line";
+import { OutsideNoUnit } from "@/components/owner/outside-no-unit";
 import { CopyField } from "@/components/owner/copy-field";
 import { ReportPaymentForm } from "@/app/dues/report-payment-form";
 import { buildingTodayIso } from "@/lib/dates";
@@ -28,6 +29,15 @@ export default async function OwnerPayPage() {
       <p className="mt-1 text-mute">You can pay however the board has set up, for example through your bank&rsquo;s bill pay. Check with your bank about any fees.</p>
     </div>
   );
+
+  if (units.length === 0 && viewer.isOutside) {
+    return (
+      <div className="mx-auto w-full max-w-[760px] space-y-6">
+        {heading}
+        <OutsideNoUnit firstName={viewer.firstName} associationName={viewer.associationName} topRole={viewer.topRole} />
+      </div>
+    );
+  }
 
   if (units.length === 0) {
     return (

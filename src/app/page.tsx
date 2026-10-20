@@ -97,7 +97,9 @@ export default async function HomePage() {
   // (owner-portal-spec 2.2). getViewer() is null for a person with no record
   // or a session that is not two-step yet; they fall through as before.
   const viewer = await getViewer();
-  if (viewer && !viewer.isStaff) redirect("/owner");
+  // The three outside roles have their own front doors (a property manager lands on Repairs, an attorney on
+  // Documents, an observer on Home); everyone else who is not staff lands on the owner Home.
+  if (viewer && !viewer.isStaff) redirect(viewer.homePath);
   const supabase = await createClient();
   // The building's calendar day (America/Chicago), never the server's: Vercel
   // runs on UTC, so at 8pm in Chicago on Oct 31 the server already says Nov 1.
@@ -148,7 +150,7 @@ export default async function HomePage() {
     supabase
       .from("associations")
       .select(
-        "id, display_name, state_code, fiscal_year_end_month, incorporated_on, reserve_target, ein, city, county, dues_payee_name, dues_account_number, dues_zelle_handle, setup_dismissed_at, setup_overrides, information_returns_filing, accountant_person_id, board_contact_name, board_contact_email",
+        "id, display_name, state_code, fiscal_year_end_month, incorporated_on, reserve_target, city, county, dues_payee_name, dues_account_number, dues_zelle_handle, setup_dismissed_at, setup_overrides, information_returns_filing, accountant_person_id, board_contact_name, board_contact_email",
       ),
     // Every year, newest first: [0] is the latest, and the tax deadlines pick
     // the one whose return is next to file from the whole list.
@@ -255,6 +257,9 @@ export default async function HomePage() {
   if (!association) {
     return <Empty>No association is visible to you.</Empty>;
   }
+  // The EIN is kept apart from the association row (owners can read that); board and accountant read it here.
+  const { data: taxIdRows } = await supabase.from("association_tax_ids").select("ein").limit(1);
+  const ein = (taxIdRows?.[0]?.ein as string | null | undefined) ?? null;
 
   const t = totals?.[0];
   const booksVisible = (t?.visible_tb_rows ?? 0) > 0;
@@ -475,6 +480,32 @@ export default async function HomePage() {
   const possible = openTickets.filter((t) => possibleEmergency(t) !== null);
   const overdueUpkeep = (finance?.upkeep ?? []).filter((t) => t.next_due_on < todayLocal);
 
+  // Time-boxed grants (the accountant's and the outside roles': property manager, attorney, observer) ending within 14 days,
+  // or that ended within the last 14. Every non-owner grant with an end date counts, so a new timed role needs no change here.
+  const endingGrants = (roleGrants ?? [])
+    .filter((g) => g.expires_on && !(g.role === "owner"))
+    .map((g) => ({ g, days: Math.round((new Date(`${g.expires_on as string}T00:00:00`).getTime() - new Date(`${buildingToday}T00:00:00`).getTime()) / 86_400_000) }))
+    .filter(({ g, days }) => days <= 14 && days >= -14 && (g.revoked_at === null || days < 0))
+    .sort((a, b) => a.days - b.days);
+  const accessEndingSoon = {
+    count: endingGrants.length,
+    firstName: endingGrants[0] ? ((persons ?? []).find((p) => p.id === endingGrants[0].g.person_id)?.full_name as string | undefined) ?? null : null,
+    firstDays: endingGrants[0]?.days ?? 0,
+  };
+
+  // Officer terms ending within 30 days, or ended and not handed on (admins only).
+  const termRows = isAdmin === true ? ((await supabase.from("board_positions").select("person_id, position, term_end").is("ended_at", null).not("term_end", "is", null)).data ?? []) : [];
+  const endingTerms = termRows
+    .map((t) => ({ t, days: Math.round((new Date(`${t.term_end as string}T00:00:00`).getTime() - new Date(`${buildingToday}T00:00:00`).getTime()) / 86_400_000) }))
+    .filter(({ days }) => days <= 30)
+    .sort((a, b) => a.days - b.days);
+  const termEndingSoon = {
+    count: endingTerms.length,
+    firstName: endingTerms[0] ? ((persons ?? []).find((p) => p.id === endingTerms[0].t.person_id)?.full_name as string | undefined) ?? null : null,
+    firstPosition: endingTerms[0] ? String(endingTerms[0].t.position).replace("_", " ").replace(/^./, (c) => c.toUpperCase()) : null,
+    firstDays: endingTerms[0]?.days ?? 0,
+  };
+
   const urgent = urgentItems({
     booksVisible,
     booksBalance: booksBalanced,
@@ -496,6 +527,7 @@ export default async function HomePage() {
           repairsUrgent: openTickets.filter((t) => t.priority === "urgent" && t.emergency_kind === null).length,
           repairsOverdue: openTickets.filter((t) => t.due_on !== null && t.due_on < todayLocal).length,
           upkeepOverdue: { count: overdueUpkeep.length, firstName: overdueUpkeep[0]?.name ?? null },
+          ...(isAdmin === true ? { accessEnding: accessEndingSoon, termEnding: termEndingSoon } : {}),
           contractorPaperwork: {
             expired: expiredPaperwork.length,
             firstName: (expiredPaperwork[0]?.v.name as string | undefined) ?? null,
@@ -564,7 +596,7 @@ export default async function HomePage() {
   const currentFyId = currentFy?.id ?? null;
   const setupSections = applySetupOverrides(buildSetupGuide({
     today,
-    association,
+    association: { ...association, ein },
     units: unitRows ?? [],
     unitOwners: unitOwners ?? [],
     persons: persons ?? [],
@@ -606,7 +638,7 @@ export default async function HomePage() {
   }), association.setup_overrides);
   const setupCounts = countSteps(setupSections);
   const showSetupGuide =
-    canSetTarget && !isSetupComplete(setupSections) && association.setup_dismissed_at === null;
+    isBoard && !isSetupComplete(setupSections) && association.setup_dismissed_at === null;
   // Setup steps are the board's to do; an accountant can neither act on them
   // nor see the invites, imports and email settings they're judged from.
   const derived = isBoard ? openSteps(setupSections) : [];
@@ -873,6 +905,7 @@ export default async function HomePage() {
                   activeStepKey={nextStep(setupSections)?.key ?? null}
                   done={setupCounts.done}
                   total={setupCounts.total}
+                  readOnly={!canSetTarget}
                 />
               ) : null
             }
@@ -883,6 +916,7 @@ export default async function HomePage() {
               derivedDoneCount={setupCounts.done}
               manual={manual}
               persons={(persons ?? []).map((p) => ({ id: p.id, full_name: p.full_name }))}
+              canAdd={isBoard}
             />
           )}
         </div>

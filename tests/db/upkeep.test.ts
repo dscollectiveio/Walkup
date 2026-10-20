@@ -26,8 +26,10 @@ describe("upkeep (0045)", () => {
   it("a board member adds a task; an owner can read it but not add one", async () => {
     const { rows } = await addTask(f.cyUser);
     expect(rows).toHaveLength(1);
-    const seen = await asUser(db, f.adaUser, () => db.query(`select id from public.upkeep_tasks`));
+    // Owners read the schedule through the member view (0074); the table itself holds estimates and contractors.
+    const seen = await asUser(db, f.adaUser, () => db.query(`select id from public.upkeep_tasks_member`));
     expect(seen.rows).toHaveLength(1);
+    expect((await asUser(db, f.adaUser, () => db.query(`select id from public.upkeep_tasks`))).rows).toHaveLength(0);
     await expect(addTask(f.adaUser)).rejects.toThrow();
   });
 
@@ -46,7 +48,7 @@ describe("upkeep (0045)", () => {
       db.query(`update public.upkeep_tasks set last_done_on = '2026-09-14', next_due_on = '2027-09-01' where id = $1::uuid`, [id]),
     );
     expect(rolled.affectedRows).toBe(1);
-    const ownerSees = await asUser(db, f.adaUser, () => db.query(`select note from public.upkeep_log where task_id = $1::uuid`, [id]));
+    const ownerSees = await asUser(db, f.adaUser, () => db.query(`select note from public.upkeep_log_member where task_id = $1::uuid`, [id]));
     expect(ownerSees.rows).toHaveLength(1);
     const ownerLogs = await asUser(db, f.adaUser, () =>
       db.query(`insert into public.upkeep_log (association_id, task_id, done_on) values ($1::uuid, $2::uuid, '2026-09-15')`, [f.damen, id]),

@@ -8,7 +8,9 @@
  * card. Every stop only points at pages that role can open. No em dashes.
  */
 
-export type TourRole = "board_admin" | "board_member" | "accountant" | "owner";
+import { topRole, type AppRole } from "@/lib/access/outside-roles";
+
+export type TourRole = AppRole;
 
 export interface TourStep {
   id: string;
@@ -151,6 +153,67 @@ const STEPS: Record<string, TourStep> = {
     title: "Documents",
     body: "Every document in one place: the declaration, insurance, statements and receipts.",
   },
+  // The three outside roles (0080). Each stop points at a page that role can open.
+  buildingManager: {
+    id: "building",
+    target: "building",
+    title: "Building & Owners",
+    body: "Units, owners and how to reach them. You can look everything up here. Changes go through the board.",
+  },
+  repairsManager: {
+    id: "repairs",
+    target: "repairs",
+    title: "Repairs & Upkeep",
+    body: "Problems people report, quotes from contractors and the upkeep calendar. Work them like a board member: plan, schedule, add notes and photos, close them out. Bills and payments stay with the board.",
+  },
+  documentsManager: {
+    id: "documents",
+    target: "documents",
+    title: "Documents",
+    body: "The maintenance, permit, vendor, contract and insurance records you need, and anything shared with all owners.",
+  },
+  documentsAttorney: {
+    id: "documents",
+    target: "documents",
+    title: "Documents",
+    body: "The legal notices, contracts and correspondence a board admin has shared with you, and anything shared with all owners. Read only.",
+  },
+  collections: {
+    id: "collections",
+    target: "collections",
+    title: "Collections",
+    body: "Where the units shared with you stand on dues, and how to reach each owner. Only the units a board admin shared appear here.",
+  },
+  ownerFinances: {
+    id: "owner-finances",
+    target: "owner-finances",
+    title: "Finances",
+    body: "The association's income, spending, cash and reserve in plain words. Totals only, no individual transactions.",
+  },
+  repairsObserver: {
+    id: "repairs",
+    target: "repairs",
+    title: "Repairs",
+    body: "Problems in shared areas and how they are going. You can read them but not report or change them.",
+  },
+  observerHome: {
+    id: "dashboard",
+    target: "dashboard",
+    title: "Home",
+    body: "Your starting page: what the board has posted, and the pages you can open.",
+  },
+  insuranceObserver: {
+    id: "insurance",
+    target: "insurance",
+    title: "Insurance",
+    body: "A summary of what the building's master policy covers, as the board publishes it.",
+  },
+  budgetObserver: {
+    id: "budget",
+    target: "budget",
+    title: "Budget",
+    body: "The budget plan for the year. How spending compares is on the Finances page.",
+  },
 };
 
 const FINISH_ADMIN: TourStep = {
@@ -201,6 +264,24 @@ export function tourStepsFor(role: TourRole, opts: { stateCode?: string | null }
       ];
     case "accountant":
       return [WELCOME, s.statements, s.budget, s.taxes, s.insuranceAccountant, s.documents, s.account, FINISH];
+    case "property_manager":
+      return [WELCOME, s.announcements, s.repairsManager, s.buildingManager, s.documentsManager, s.account, FINISH];
+    case "attorney":
+      return [WELCOME, s.documentsAttorney, s.collections, s.account, FINISH];
+    case "observer":
+      return [
+        WELCOME,
+        s.observerHome,
+        s.announcements,
+        s.repairsObserver,
+        s.budgetObserver,
+        s.ownerFinances,
+        s.insuranceObserver,
+        s.ownerBuilding,
+        s.documents,
+        s.account,
+        FINISH,
+      ];
     case "owner":
       return [
         WELCOME,
@@ -217,10 +298,7 @@ export function tourStepsFor(role: TourRole, opts: { stateCode?: string | null }
   }
 }
 
-/** The person's highest role, for picking a tour. Null when they have none. */
+/** The person's highest role, for picking a tour. Null when they have none this app knows (access ended). */
 export function tourRoleFrom(roles: string[]): TourRole | null {
-  for (const r of ["board_admin", "board_member", "accountant", "owner"] as const) {
-    if (roles.includes(r)) return r;
-  }
-  return null;
+  return topRole(roles);
 }

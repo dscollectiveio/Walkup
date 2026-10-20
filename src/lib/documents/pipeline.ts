@@ -135,11 +135,13 @@ export async function runExtraction(
   }
 
   // --- the model -----------------------------------------------------------
-  const { data: categories } = await supabase
+  const { data: allCategories } = await supabase
     .from("document_categories")
     .select("slug, label")
     .eq("association_id", doc.association_id)
     .order("sort_order");
+  // Owner unit uploads are filed by the person who adds them, never guessed by the reader (0079).
+  const categories = (allCategories ?? []).filter((c) => c.slug !== "unit_owner_upload");
 
   const result = await classifyDocument({
     supabase,

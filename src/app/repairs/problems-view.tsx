@@ -40,8 +40,8 @@ export async function ProblemsView({ supabase, viewer, params }: { supabase: Sup
       key={problemsHref(p)}
       params={p}
       trades={trades}
-      isBoard={viewer.isBoard}
-      canReadFinancials={viewer.canReadFinancials}
+      isBoard={viewer.canManage}
+      canReadFinancials={viewer.staffView}
       canReport={viewer.canReport}
       clearHref={clearHref}
       listHref={listHref}
@@ -74,7 +74,7 @@ export async function ProblemsView({ supabase, viewer, params }: { supabase: Sup
       <Answer status="good" headline="Nothing outstanding" detail="No open problems." />
     );
 
-  if (p.layout === "board" && viewer.canReadFinancials) {
+  if (p.layout === "board" && viewer.staffView) {
     const rows = await loadProblems(supabase, viewer, p, { mode: "board" });
     return (
       <div className="space-y-6">
@@ -102,7 +102,7 @@ export async function ProblemsView({ supabase, viewer, params }: { supabase: Sup
             </h2>
             <div className="flex items-center gap-2">
               <ProblemViewControls
-                canReadFinancials={viewer.canReadFinancials}
+                canReadFinancials={viewer.staffView}
                 canReport={viewer.canReport}
                 isBoardLayout={false}
                 listHref={listHref}
@@ -117,8 +117,8 @@ export async function ProblemsView({ supabase, viewer, params }: { supabase: Sup
               key={problemsHref(p)}
               params={p}
               trades={trades}
-              isBoard={viewer.isBoard}
-              canReadFinancials={viewer.canReadFinancials}
+              isBoard={viewer.canManage}
+              canReadFinancials={viewer.staffView}
               clearHref={clearHref}
               listHref={listHref}
               boardHref={boardHref}
@@ -221,9 +221,9 @@ const URGENCY_PILL = { low: "good", normal: "warning", urgent: "bad" } as const;
 export function ProblemListRow({ t, viewer }: { t: ProblemRow; viewer: RepairsViewer }) {
   const today = viewer.todayIso;
   const open = !isDone(t.status);
-  const overdue = viewer.isBoard && t.dueOn && t.dueOn < today && open;
+  const overdue = viewer.canManage && t.dueOn && t.dueOn < today && open;
   const visit = t.scheduledFor && open ? ` · visit ${humanDate(t.scheduledFor, today)}` : "";
-  const money = viewer.canReadFinancials ? (t.actualCost ? moneyText(t.actualCost) : t.estimatedCost ? `~${moneyText(t.estimatedCost)}` : null) : null;
+  const money = viewer.staffView ? (t.actualCost ? moneyText(t.actualCost) : t.estimatedCost ? `~${moneyText(t.estimatedCost)}` : null) : null;
   const status = effectiveWorkStatus(t.workStatus, t.stage);
   return (
     <ExpandableRow
@@ -232,7 +232,7 @@ export function ProblemListRow({ t, viewer }: { t: ProblemRow; viewer: RepairsVi
       title={t.title}
       workStatus={status}
       todayIso={today}
-      canExpand={viewer.isBoard}
+      canExpand={viewer.canManage}
     >
     <div className="flex flex-wrap items-center gap-x-4 gap-y-2 xl:grid xl:grid-cols-[minmax(0,1fr)_10.5rem_9.5rem_4.5rem_7.5rem] xl:gap-x-3">
       <Link href={`/maintenance/${t.id}`} className="group min-w-0 basis-full xl:basis-auto">
@@ -252,7 +252,7 @@ export function ProblemListRow({ t, viewer }: { t: ProblemRow; viewer: RepairsVi
         </span>
       </Link>
       <div className="text-center">
-        {viewer.isBoard ? (
+        {viewer.canManage ? (
           <ProblemStatusSelect id={t.id} reference={t.reference} value={status} />
         ) : (
           <span className="text-[12px] text-mute">{numberedWorkStatus(status)}</span>
@@ -264,7 +264,7 @@ export function ProblemListRow({ t, viewer }: { t: ProblemRow; viewer: RepairsVi
           reference={t.reference}
           title={t.title}
           status={status}
-          canWrite={viewer.isBoard}
+          canWrite={viewer.canManage}
           open={open}
           contractorEmail={t.contractorEmail}
           contractorPhone={t.contractorPhone}

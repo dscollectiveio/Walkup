@@ -182,6 +182,7 @@ export async function BankAccountsSection({
   balancesPromise,
   active,
   canEdit,
+  isAdmin = canEdit,
   cashAccounts,
   checkingIds = [],
   flow,
@@ -190,7 +191,10 @@ export async function BankAccountsSection({
 }: {
   balancesPromise: Promise<ConnectionBalance[]>;
   active: ActiveConnection[];
+  /** Categorizing and fund mapping: the Treasurer's duty as well as an admin's. */
   canEdit: boolean;
+  /** Connecting, reconnecting, syncing and disconnecting banks: board admin only. */
+  isAdmin?: boolean;
   cashAccounts: { id: string; label: string }[];
   /** Connections the page kicked off a sync for after responding (stale by 12+ hours). */
   checkingIds?: string[];
@@ -280,8 +284,8 @@ export async function BankAccountsSection({
                       />
                     ) : null}
                     <div className="flex shrink-0 items-start gap-x-4">
-                      <SyncButton connectionId={c.id} />
-                      {canEdit && c.cash_account_id ? <ManageLink /> : null}
+                      {isAdmin ? <SyncButton connectionId={c.id} /> : null}
+                      {isAdmin && c.cash_account_id ? <ManageLink /> : null}
                     </div>
                   </li>
                 ))}
@@ -290,7 +294,7 @@ export async function BankAccountsSection({
           ) : null;
 
         const managePanel =
-          canEdit && c.cash_account_id ? (
+          isAdmin && c.cash_account_id ? (
             <div className="flex flex-wrap items-center gap-3">
               <LedgerAccountSelect connectionId={c.id} cashAccounts={cashAccounts} currentId={c.cash_account_id} />
               {process.env.PLAID_WEBHOOK_URL ? <BankAlertsButton connectionId={c.id} /> : null}
@@ -325,7 +329,7 @@ export async function BankAccountsSection({
               <p className="mt-3 text-[12px] text-mute-soft">{balance.error}</p>
             ) : null}
 
-            {canEdit && !c.cash_account_id ? (
+            {isAdmin && !c.cash_account_id ? (
               <div className="mt-3">
                 <LedgerAccountSelect connectionId={c.id} cashAccounts={cashAccounts} currentId={c.cash_account_id} />
               </div>
@@ -334,13 +338,13 @@ export async function BankAccountsSection({
             {/* A bank that wants a sign-in has one thing to do, so that one thing replaces the button row. */}
             {needsReconnect(c, balance) ? (
               <div className="mt-3 flex flex-wrap items-center justify-between gap-3 rounded-lg border border-warning-line bg-warning-tint px-3 py-2">
-                <p className="text-[13px] text-warning-text">{reconnectSentence(c.institution_name, canEdit)}</p>
-                {canEdit ? <ReconnectButton connectionId={c.id} institutionName={c.institution_name} /> : null}
+                <p className="text-[13px] text-warning-text">{reconnectSentence(c.institution_name, isAdmin)}</p>
+                {isAdmin ? <ReconnectButton connectionId={c.id} institutionName={c.institution_name} /> : null}
               </div>
             ) : (
               <BankCardActions
                 header={header}
-                sync={<SyncButton connectionId={c.id} />}
+                sync={isAdmin ? <SyncButton connectionId={c.id} /> : null}
                 accountsPanel={accountsPanel}
                 managePanel={managePanel}
                 accountCount={accts.length}
@@ -349,7 +353,7 @@ export async function BankAccountsSection({
           </div>
         );
       })}
-      {canEdit ? (
+      {isAdmin ? (
         <div className="flex flex-wrap items-center justify-between gap-3 bg-fill/40 px-5 py-3">
           <p className="text-[12px] text-mute">
             Have money at another bank too (say, the reserve)? Add it here. For new transactions at a bank

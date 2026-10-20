@@ -1,6 +1,5 @@
-import Link from "next/link";
 import { createClient } from "@/lib/supabase/server";
-import { Card, Empty, Restricted } from "@/components/ui";
+import { Empty, Restricted } from "@/components/ui";
 import {
   currentAssociationId,
   listCategories,
@@ -8,8 +7,11 @@ import {
   type DocumentRow,
 } from "@/lib/documents/access";
 import { UploadForm } from "./upload-form";
+import { DocumentFilters } from "./document-filters";
 import { DocumentListRow } from "./document-row";
 import { ReviewRow } from "./review-row";
+import { NewFromOwners, type OwnerDocumentNotice } from "./new-from-owners";
+import { shortDate, todayIso as todayIsoOf } from "@/lib/dates";
 
 export const dynamic = "force-dynamic";
 // Uploads and re-reads run the document reader in after(); give it the
@@ -20,35 +22,7 @@ interface Search {
   category?: string;
   q?: string;
   view?: string;
-}
-
-/** A view rail entry. `href` carries the whole filter, so views are linkable. */
-function ViewLink({
-  label,
-  count,
-  active,
-  href,
-  tone = "quiet",
-}: {
-  label: string;
-  count: number;
-  active: boolean;
-  href: string;
-  tone?: "quiet" | "attention";
-}) {
-  const base = "rounded-full border px-3 py-1 text-[12px] whitespace-nowrap";
-  const style = active
-    ? "border-ink bg-ink text-paper"
-    : tone === "attention"
-      ? "border-warning-line bg-warning-tint text-warning-text hover:bg-warning-tint/70"
-      : "border-line-strong bg-paper text-ink hover:bg-fill";
-
-  return (
-    <Link href={href} className={`${base} ${style}`} aria-current={active ? "page" : undefined}>
-      {label}
-      <span className={`figures ml-1.5 ${active ? "text-paper/70" : "text-mute"}`}>{count}</span>
-    </Link>
-  );
+  sort?: string;
 }
 
 export default async function DocumentHubPage({
@@ -56,7 +30,8 @@ export default async function DocumentHubPage({
 }: {
   searchParams: Promise<Search>;
 }) {
-  const { category, q, view } = await searchParams;
+  const { category, q, view, sort: sortParam } = await searchParams;
+  const sort = sortParam === "oldest" || sortParam === "title" ? sortParam : "newest";
   const supabase = await createClient();
 
   const associationId = await currentAssociationId(supabase);
@@ -107,15 +82,49 @@ export default async function DocumentHubPage({
   });
   const canWrite = boardCheck === true;
 
+  // What owners added for their units since the board last looked (0079). In-app only. A failed read is
+  // simply an empty strip: the documents themselves are in the list below either way.
+  let ownerNotices: OwnerDocumentNotice[] = [];
+  if (canWrite) {
+    const { data: noticeRows } = await supabase.rpc("list_owner_document_notices", { p_association_id: associationId });
+    const today = todayIsoOf();
+    ownerNotices = ((noticeRows ?? []) as {
+      notice_id: string;
+      document_id: string;
+      title: string | null;
+      filename: string;
+      kind: string | null;
+      unit_label: string;
+      uploaded_by_name: string | null;
+      added_at: string;
+    }[]).map((n) => ({
+      noticeId: n.notice_id,
+      documentId: n.document_id,
+      title: n.title || n.filename,
+      kind: n.kind,
+      unitLabel: n.unit_label,
+      uploadedByName: n.uploaded_by_name,
+      dateText: shortDate(n.added_at, today),
+    }));
+  }
+
   const qs = (next: Partial<Search>) => {
     const p = new URLSearchParams();
-    const merged = { category, q, view, ...next };
+    const merged = { category, q, view, sort: sortParam, ...next };
     if (merged.category) p.set("category", merged.category);
     if (merged.q) p.set("q", merged.q);
     if (merged.view) p.set("view", merged.view);
+    if (merged.sort) p.set("sort", merged.sort);
     const s = p.toString();
     return s ? `/documents?${s}` : "/documents";
   };
+
+  const shownDocs =
+    sort === "oldest"
+      ? [...documents].sort((x, y) => x.uploaded_at.localeCompare(y.uploaded_at))
+      : sort === "title"
+        ? [...documents].sort((x, y) => x.title.localeCompare(y.title, undefined, { sensitivity: "base" }))
+        : documents;
 
   const nothingAtAll = live.length === 0 && binnedCount === 0;
 
@@ -129,106 +138,41 @@ export default async function DocumentHubPage({
         </p>
       </div>
 
+      {canWrite ? <NewFromOwners notices={ownerNotices} /> : null}
+
       {canWrite ? <UploadForm categories={categories} /> : null}
 
-      {!nothingAtAll ? (
-        <>
-          {/* Below 860px this scrolls sideways rather than wrapping into a
-              block that pushes the list off the screen. */}
-          <div className="-mx-1 overflow-x-auto px-1 pb-1">
-            <div className="flex items-center gap-2">
-              <ViewLink
-                label="All"
-                count={live.length}
-                active={!category && !view}
-                href="/documents"
-              />
-              {reviewCount > 0 ? (
-                <ViewLink
-                  label="Needs review"
-                  count={reviewCount}
-                  active={isReview}
-                  href={qs({ view: "review", category: undefined })}
-                  tone="attention"
-                />
-              ) : null}
-              {unfiledCount > 0 ? (
-                <ViewLink
-                  label="Unfiled"
-                  count={unfiledCount}
-                  active={category === "unfiled"}
-                  href={qs({ category: "unfiled", view: undefined })}
-                />
-              ) : null}
-              {categories
-                .filter((c) => (perCategory.get(c.id) ?? 0) > 0)
-                .map((c) => (
-                  <ViewLink
-                    key={c.id}
-                    label={c.label}
-                    count={perCategory.get(c.id) ?? 0}
-                    active={category === c.id}
-                    href={qs({ category: c.id, view: undefined })}
-                  />
-                ))}
-              {canWrite && binnedCount > 0 ? (
-                <ViewLink
-                  label="Binned"
-                  count={binnedCount}
-                  active={isBinned}
-                  href={qs({ view: "binned", category: undefined })}
-                />
-              ) : null}
-            </div>
-          </div>
-
-          <form action="/documents" className="flex flex-wrap items-center gap-2">
-            {category ? <input type="hidden" name="category" value={category} /> : null}
-            {view ? <input type="hidden" name="view" value={view} /> : null}
-            <input
-              type="search"
-              name="q"
-              defaultValue={q ?? ""}
-              placeholder="Search titles and what's inside the files"
-              aria-label="Search documents"
-              className="w-full max-w-[420px] rounded-lg border border-line-strong bg-paper px-3 py-2 text-[13px] text-ink"
+      <section className="rounded-xl border border-line bg-paper">
+        <header className="rounded-t-[7px] band bg-ink px-5 py-3">
+          <h2 className="eyebrow text-paper">
+            {isBinned ? "Binned" : isReview ? "Waiting on you" : q ? `Matching “${q}”` : "All Documents"}
+          </h2>
+          {isBinned ? (
+            <p className="mt-1.5 text-[13px] text-ondark-mute">Binned documents stay here so a mistake is recoverable. Nothing is destroyed until someone says so.</p>
+          ) : isReview ? (
+            <p className="mt-1.5 text-[13px] text-ondark-mute">
+              Walkup guessed at these and wasn&rsquo;t sure. Confirm or correct each one. It only takes a moment, and nothing is filed on a guess alone.
+            </p>
+          ) : null}
+        </header>
+        {!nothingAtAll ? (
+          <div className="border-b-2 border-line-strong bg-fill/40">
+            <DocumentFilters
+              key={qs({})}
+              category={category ?? ""}
+              view={view ?? ""}
+              sort={sort}
+              q={q ?? ""}
+              total={live.length}
+              reviewCount={reviewCount}
+              unfiledCount={unfiledCount}
+              binnedCount={canWrite ? binnedCount : null}
+              categories={categories.filter((c) => (perCategory.get(c.id) ?? 0) > 0).map((c) => ({ id: c.id, label: c.label, count: perCategory.get(c.id) ?? 0 }))}
+              clearHref={category || q || view || sortParam ? "/documents" : null}
             />
-            <button
-              type="submit"
-              className="rounded-md border border-line-strong px-3 py-2 text-[13px] text-ink hover:bg-fill"
-            >
-              Search
-            </button>
-            {q ? (
-              <Link
-                href={qs({ q: undefined })}
-                className="text-[12px] text-mute underline-offset-2 hover:underline"
-              >
-                Clear
-              </Link>
-            ) : null}
-          </form>
-        </>
-      ) : null}
-
-      <Card navy
-        title={
-          isBinned
-            ? "Binned"
-            : isReview
-              ? "Waiting on you"
-              : q
-                ? `Matching “${q}”`
-                : "Everything stored"
-        }
-        hint={
-          isBinned
-            ? "Binned documents stay here so a mistake is recoverable. Nothing is destroyed until someone says so."
-            : isReview
-              ? "Walkup guessed at these and wasn't sure. Confirm or correct each one. It only takes a moment, and nothing is filed on a guess alone."
-              : undefined
-        }
-      >
+          </div>
+        ) : null}
+        <div className="px-5 py-4">
         {documents.length === 0 ? (
           <Empty>
             {nothingAtAll
@@ -243,7 +187,7 @@ export default async function DocumentHubPage({
           </Empty>
         ) : (
           <ul className="divide-y divide-line">
-            {documents.map((d) =>
+            {shownDocs.map((d) =>
               isReview && canWrite ? (
                 <ReviewRow key={d.id} doc={d} categories={categories} />
               ) : (
@@ -252,7 +196,8 @@ export default async function DocumentHubPage({
             )}
           </ul>
         )}
-      </Card>
+        </div>
+      </section>
     </div>
   );
 }

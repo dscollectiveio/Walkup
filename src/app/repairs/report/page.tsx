@@ -20,14 +20,14 @@ export default async function ReportPage() {
     return (
       <div className="space-y-3">
         <Restricted what="reporting problems" />
-        <p className="text-center text-[13px] text-mute">Accountants can read problems but not report them.</p>
+        <p className="text-center text-[13px] text-mute">Accountants, observers and attorneys can read problems but not report them.</p>
       </div>
     );
   }
 
   const [unitsRes, ownedRes, openRes, info, contractors] = await Promise.all([
     supabase.from("units").select("id, label, sort_order").order("sort_order"),
-    viewer.isBoard ? Promise.resolve({ data: null }) : supabase.rpc("owned_unit_ids", { assoc: viewer.associationId }),
+    viewer.canManage ? Promise.resolve({ data: null }) : supabase.rpc("owned_unit_ids", { assoc: viewer.associationId }),
     supabase
       .from("tickets")
       .select("id, reference, title, unit_id")
@@ -35,12 +35,12 @@ export default async function ReportPage() {
       .order("created_at", { ascending: false })
       .limit(100),
     loadEmergencyInfo(supabase, viewer.associationId),
-    viewer.isBoard ? loadEmergencyContractors(supabase) : Promise.resolve([]),
+    viewer.canManage ? loadEmergencyContractors(supabase) : Promise.resolve([]),
   ]);
 
   const allUnits = (unitsRes.data ?? []).map((u) => ({ id: u.id as string, label: u.label as string }));
   const owned = new Set<string>(((ownedRes.data as string[] | null) ?? []).map(String));
-  const units = viewer.isBoard ? allUnits : allUnits.filter((u) => owned.has(u.id));
+  const units = viewer.canManage ? allUnits : allUnits.filter((u) => owned.has(u.id));
 
   return (
     <div className="mx-auto w-full max-w-[640px] space-y-6">
@@ -60,9 +60,9 @@ export default async function ReportPage() {
           unit_id: (t.unit_id as string | null) ?? null,
         }))}
         building={info.building}
-        contacts={viewer.isBoard ? [] : info.contacts}
+        contacts={viewer.canManage ? [] : info.contacts}
         boardContractors={contractors}
-        isBoard={viewer.isBoard}
+        isBoard={viewer.canManage}
       />
     </div>
   );

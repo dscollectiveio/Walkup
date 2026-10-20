@@ -22,8 +22,8 @@ const render = (initialMode: "expanded" | "rail", extra: Record<string, unknown>
     }),
   );
 
-// Find a Contractor is board-only, so the role-less renders below do not show it.
-const items = [...UNGROUPED_NAV, ...NAV_GROUPS.flatMap((g) => g.items), ...TRAILING_NAV].filter((i) => i.href !== "/repairs/find");
+// Find a Contractor and People & Access are board-only, so the role-less renders below do not show them.
+const items = [...UNGROUPED_NAV, ...NAV_GROUPS.flatMap((g) => g.items), ...TRAILING_NAV].filter((i) => i.href !== "/repairs/find" && i.href !== "/access");
 
 describe("Sidebar: expanded and rail", () => {
   it("expanded: 288px, labels and group headings visible, numbered badge", () => {

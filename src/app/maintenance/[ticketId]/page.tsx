@@ -60,11 +60,11 @@ export default async function TicketPage({
   // "Mark fixed" only makes sense on a problem that is still open.
   const open = sp.open === "quotes" || (sp.open === "fix" && !done) || sp.open === "go-ahead" ? sp.open : null;
 
-  if (!viewer.canReadFinancials) return <OwnerView data={data} viewer={viewer} reported={reported} failed={failed} />;
+  if (!viewer.staffView) return <OwnerView data={data} viewer={viewer} reported={reported} failed={failed} />;
 
   const [{ data: units }, auth] = await Promise.all([
-    viewer.isBoard ? supabase.from("units").select("id, label").order("sort_order") : Promise.resolve({ data: [] as { id: string; label: string }[] }),
-    viewer.isBoard ? supabase.auth.getUser() : Promise.resolve(null),
+    viewer.canManage ? supabase.from("units").select("id, label").order("sort_order") : Promise.resolve({ data: [] as { id: string; label: string }[] }),
+    viewer.canManage ? supabase.auth.getUser() : Promise.resolve(null),
   ]);
   return (
     <BoardView
@@ -72,7 +72,7 @@ export default async function TicketPage({
       viewer={viewer}
       reported={reported}
       failed={failed}
-      open={viewer.isBoard ? open : null}
+      open={viewer.canManage ? open : null}
       units={(units ?? []).map((u) => ({ id: u.id as string, label: u.label as string }))}
       senderEmail={auth?.data?.user?.email ?? null}
     />
@@ -186,7 +186,7 @@ function BoardView(props: {
   const t = data.ticket;
   const b = data.board;
   const today = viewer.todayIso;
-  const canWrite = viewer.isBoard;
+  const canWrite = viewer.canManage;
   const done = isDone(t.status);
   const where = whereLabel(t.unitLabel, t.locationDetail);
   const people = data.meTooCount > 0 ? ` · ${data.meTooCount + 1} people reported this` : "";

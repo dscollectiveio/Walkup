@@ -56,7 +56,8 @@ const str = (v: unknown): string | null => (typeof v === "string" && v.trim() ? 
  * the accountant reads, the board writes.
  */
 export async function ContractorsView({ supabase, viewer, params }: { supabase: Supabase; viewer: RepairsViewer; params: DirectoryParams }) {
-  if (!viewer.canReadFinancials) return <Restricted what="contractors" />;
+  // The board and the accountant, and a property manager who reads the list (0080). The write controls below stay with the board.
+  if (!viewer.staffView) return <Restricted what="contractors" />;
   const today = viewer.todayIso;
   const isBoard = viewer.isBoard;
 

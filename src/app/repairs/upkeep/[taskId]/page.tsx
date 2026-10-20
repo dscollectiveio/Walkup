@@ -31,24 +31,32 @@ export default async function UpkeepTaskPage({ params }: { params: Promise<{ tas
   const viewer = await loadViewer(supabase);
   if (!viewer || !viewer.isMember) return <Restricted what="this upkeep job" />;
 
-  const { data: rows } = await supabase
-    .from("upkeep_tasks")
-    .select("id, name, description, interval_months, due_month, last_done_on, next_due_on, trade, vendor_id, estimated_cost::text, is_active, vendors(name)")
+  // Estimates and the usual contractor are only readable by board and accountant; everyone else reads the member view.
+  const { data: rows } = await (viewer.staffView
+    ? supabase
+        .from("upkeep_tasks")
+        .select("id, name, description, interval_months, due_month, last_done_on, next_due_on, trade, vendor_id, estimated_cost::text, is_active, vendors(name)")
+    : supabase
+        .from("upkeep_tasks_member")
+        .select("id, name, description, interval_months, due_month, last_done_on, next_due_on, trade, is_active")
+  )
     .eq("id", taskId)
-    .limit(1);
+    .limit(1) as unknown as { data: Record<string, unknown>[] | null };
   const t = rows?.[0];
   if (!t) return <Restricted what="this upkeep job" />;
 
   const today = viewer.todayIso;
-  const seesMoney = viewer.canReadFinancials;
-  const isBoard = viewer.isBoard;
+  const seesMoney = viewer.staffView;
+  // "Runs the upkeep": the board and a property manager.
+  const isBoard = viewer.canManage;
   const [{ data: log }, { data: tickets }, { data: vendors }] = await Promise.all([
-    supabase
-      .from("upkeep_log")
-      .select("id, done_on, cost::text, note, vendor_id, vendors(name), ticket_id, tickets(id, reference)")
+    (seesMoney
+      ? supabase.from("upkeep_log").select("id, done_on, cost::text, note, vendor_id, vendors(name), ticket_id, tickets(id, reference)")
+      : supabase.from("upkeep_log_member").select("id, done_on, note, ticket_id")
+    )
       .eq("task_id", taskId)
       .order("done_on", { ascending: false })
-      .order("created_at", { ascending: false }),
+      .order("created_at", { ascending: false }) as unknown as PromiseLike<{ data: Record<string, unknown>[] | null }>,
     isBoard
       ? supabase.from("tickets").select("id, reference, title, status, opened_on").eq("upkeep_task_id", taskId).order("opened_on", { ascending: false })
       : Promise.resolve({ data: [] as { id: string; reference: number; title: string; status: string; opened_on: string }[] }),

@@ -93,6 +93,12 @@ export default async function ReviewPage({ params }: { params: Promise<{ batchId
   const replyName = (a?.board_contact_name as string | null)?.trim() || "The board";
   const replyEmail = (a?.board_contact_email as string | null) ?? "";
   const kind = batch.kind as EmailKind;
+  // The Secretary also approves announcement emails (0076); everything else is the admin's.
+  let canApprove = viewer.isBoardAdmin;
+  if (!canApprove && kind === "announcement") {
+    const { data: secretary } = await supabase.rpc("has_position", { p_association_id: viewer.associationId, p_position: "secretary" });
+    canApprove = secretary === true;
+  }
 
   const config = sendConfig();
   const status = emailStatus(config.ok, (settings as SettingsRow | null) ?? null);
@@ -238,7 +244,7 @@ export default async function ReviewPage({ params }: { params: Promise<{ batchId
         canSendFromWalkup ? (
           <>
             <ReviewList drafts={drafts} editable />
-            <ApproveBar batchId={batchId} ready={summary.ready} isAdmin={viewer.isBoardAdmin} blockedReason={blockedReason} />
+            <ApproveBar batchId={batchId} ready={summary.ready} isAdmin={canApprove} blockedReason={blockedReason} />
           </>
         ) : (
           <>

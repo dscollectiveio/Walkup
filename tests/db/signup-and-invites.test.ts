@@ -136,12 +136,13 @@ describe("signup and invites (0027)", () => {
   // --------------------------------------------------------------------------
 
   describe("redeem_invite", () => {
-    async function createInvite(role = "owner") {
+    // An invite for anyone but an owner carries the email it is for (0075).
+    async function createInvite(role = "owner", email: string | null = role === "owner" ? null : "invited@example.test") {
       const { rows } = await asUser(db, f.cyUser, () =>
         db.query<{ id: string; token: string }>(
-          `insert into public.invites (association_id, role, created_by)
-           values ($1::uuid, $2::public.app_role, $3::uuid) returning id, token`,
-          [f.damen, role, f.cyUser],
+          `insert into public.invites (association_id, role, email, created_by)
+           values ($1::uuid, $2::public.app_role, $3, $4::uuid) returning id, token`,
+          [f.damen, role, email, f.cyUser],
         ),
       );
       return rows[0];
@@ -164,6 +165,19 @@ describe("signup and invites (0027)", () => {
         );
         expect(roleRows.map((r) => r.role)).toEqual(["board_member"]);
       });
+    });
+
+    it("a board member or accountant link only works for the email it was made for, and lasts 3 days (0075)", async () => {
+      const invite = await createInvite("accountant", "sue@example.test");
+      await newAuthUser(freshUser, "someone-else@example.test");
+      await expect(
+        asUser(db, freshUser, () => db.query(`select public.redeem_invite($1, $2)`, [invite.token, "Someone Else"])),
+      ).rejects.toThrow(/email address this invite was sent to/i);
+      const { rows } = await db.query<{ days: number }>(`select extract(day from expires_at - created_at)::int as days from public.invites where id = $1::uuid`, [invite.id]);
+      expect(rows[0].days).toBeLessThanOrEqual(3);
+      await expect(
+        asUser(db, f.cyUser, () => db.query(`insert into public.invites (association_id, role, created_by) values ($1::uuid, 'board_admin', $2::uuid)`, [f.damen, f.cyUser])),
+      ).rejects.toThrow(/needs the email address/i);
     });
 
     it("rejects a second redemption of the same invite", async () => {

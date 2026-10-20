@@ -6,6 +6,8 @@ import { MfaSetupForm } from "./mfa-setup-form";
 
 export const dynamic = "force-dynamic";
 
+const enrolledJustNow = (createdAt: string) => Date.now() - new Date(createdAt).getTime() < 10 * 60 * 1000;
+
 /**
  * Forced enrollment step. proxy.ts sends every signed-in user here until
  * they have a verified TOTP factor — Walkup requires MFA for everyone, not
@@ -20,7 +22,15 @@ export default async function MfaSetupPage() {
 
   const verified = totpFactors.find((f) => f.status === "verified");
   if (verified) {
-    redirect("/");
+    // Just enrolled (this render follows the verify action): stay, so the
+    // recovery codes on screen survive. Anyone else with a factor has no
+    // business here.
+    if (!enrolledJustNow(verified.created_at)) redirect("/");
+    return (
+      <AuthShell step={1} title="Secure your account" footer={<BackToSignIn />}>
+        <MfaSetupForm factorId="" qrCode="" secret="" completed />
+      </AuthShell>
+    );
   }
 
   // Clear abandoned attempts before starting fresh — Supabase caps how many

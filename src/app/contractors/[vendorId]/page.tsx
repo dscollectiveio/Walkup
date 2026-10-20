@@ -79,7 +79,8 @@ export default async function ContractorPage({ params }: { params: Promise<{ ven
   if (!isUuid(vendorId)) return <Restricted what="this contractor" />;
   const supabase = await createClient();
   const viewer = await loadViewer(supabase);
-  if (!viewer || !viewer.canReadFinancials) {
+  // The board, the accountant and a property manager read a contractor's profile (0080); only the first two read the books.
+  if (!viewer || !viewer.staffView) {
     if (await viewerIsOwnerOnly()) {
       return (
         <BoardOnly
@@ -99,8 +100,10 @@ export default async function ContractorPage({ params }: { params: Promise<{ ven
     )
     .eq("id", vendorId)
     .limit(1);
-  const v = rows?.[0];
-  if (!v) return <Restricted what="this contractor" />;
+  const row = rows?.[0];
+  if (!row) return <Restricted what="this contractor" />;
+  // A property manager works with the contractor, not their tax identity: the last four digits of the TIN stay with the books.
+  const v = viewer.canReadFinancials ? row : { ...row, tin_last4: null };
 
   const canEdit = viewer.isBoard;
   const today = viewer.todayIso;

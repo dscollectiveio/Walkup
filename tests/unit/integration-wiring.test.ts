@@ -97,16 +97,18 @@ describe("BoardOnly guards (owner-portal-spec 2.4)", () => {
   it("the contractor page shows non-financial readers BoardOnly, not a bare Restricted", () => {
     const src = read("src/app/contractors/[vendorId]/page.tsx");
     expect(src).toContain('what="Contractor details"');
-    expect(src.indexOf("viewerIsOwnerOnly()")).toBeLessThan(src.indexOf('<Restricted what="this contractor" />;', src.indexOf("canReadFinancials")));
+    expect(src.indexOf("viewerIsOwnerOnly()")).toBeLessThan(src.indexOf('<Restricted what="this contractor" />;', src.indexOf("staffView")));
   });
 
   it("owners are sent to their own pages from /dues", () => {
-    expect(read("src/app/dues/page.tsx")).toContain('if (!canReadFinancials) redirect("/owner/pay");');
+    const src = read("src/app/dues/page.tsx");
+    expect(src).toContain("if (!canReadFinancials) {");
+    expect(src).toContain('redirect("/owner/pay");');
   });
 
   it("Home sends owner-only people to /owner and leaves everyone else on the Dashboard", () => {
     const src = read("src/app/page.tsx");
-    expect(src).toContain('if (viewer && !viewer.isStaff) redirect("/owner");');
+    expect(src).toContain("if (viewer && !viewer.isStaff) redirect(viewer.homePath);");
     expect(src.indexOf("getViewer()")).toBeLessThan(src.indexOf("await Promise.all(["));
   });
 });

@@ -88,3 +88,33 @@ export function parseStoragePath(
   }
   return null;
 }
+
+/**
+ * Documents an owner (or the board) adds for one unit (0079):
+ * `<association>/units/<unit>/<same file part>`. Kept out of buildStoragePath()/parseStoragePath() on purpose,
+ * because those mirror SQL storage_path_kind() case for case; this pair mirrors SQL unit_document_path().
+ */
+export function buildUnitDocumentPath(a: {
+  associationId: string;
+  unitId: string;
+  now: number;
+  suffix: string;
+  filename: string;
+}): string {
+  return `${a.associationId}/units/${a.unitId}/${a.now}-${a.suffix}-${safeStorageName(a.filename)}`;
+}
+
+/** Mirror of SQL unit_document_path(). Null for anything it doesn't recognise. */
+export function parseUnitDocumentPath(path: string): { associationId: string; unitId: string } | null {
+  const parts = (path ?? "").split("/");
+  if (
+    parts.length === 4 &&
+    UUID.test(parts[0]) &&
+    parts[1] === "units" &&
+    UUID.test(parts[2]) &&
+    FILE_PART.test(parts[3])
+  ) {
+    return { associationId: parts[0], unitId: parts[2] };
+  }
+  return null;
+}

@@ -73,8 +73,8 @@ export async function loadProblems(
     ]);
     return [...open, ...done];
   }
-  const fin = viewer.canReadFinancials;
-  const select = !fin ? BASE : p.mine && viewer.isBoard ? BOARD_MINE : BOARD;
+  const fin = viewer.staffView;
+  const select = !fin ? BASE : p.mine && viewer.canManage ? BOARD_MINE : BOARD;
   let q = supabase.from("tickets").select(select);
 
   const status = opts.status ?? p.status;
@@ -90,7 +90,7 @@ export async function loadProblems(
   else if (p.where === "units") q = q.not("unit_id", "is", null);
   if (p.trades.length) q = q.in("trade", p.trades);
   if (p.mine) {
-    if (viewer.isBoard && viewer.personId) q = q.eq("ticket_board_details.assignee_person_id", viewer.personId);
+    if (viewer.canManage && viewer.personId) q = q.eq("ticket_board_details.assignee_person_id", viewer.personId);
     else if (viewer.personId) q = q.eq("reported_by", viewer.personId);
   }
   if (p.q) {
@@ -165,7 +165,7 @@ export async function loadProblems(
     return { ...row, stage: ticketStage({ status: row.status, assigned_vendor_id: row.assignedVendorId, scheduled_for: row.scheduledFor }, bids, today) };
   });
 
-  if (p.stage && viewer.isBoard) out = out.filter((r) => r.stage === p.stage);
+  if (p.stage && viewer.canManage) out = out.filter((r) => r.stage === p.stage);
   return out;
 }
 

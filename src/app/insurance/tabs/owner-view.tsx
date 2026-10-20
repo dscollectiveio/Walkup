@@ -10,7 +10,7 @@ import { ProofRequestCard } from "./proof-request-card";
  * summary and the owner's own proof requests, each through its SECURITY
  * DEFINER function. No tabs.
  */
-export async function OwnerView({ supabase, ctx }: { supabase: Supabase; ctx: InsuranceContext }) {
+export async function OwnerView({ supabase, ctx, canAsk = true }: { supabase: Supabase; ctx: InsuranceContext; canAsk?: boolean }) {
   const [summaryRes, requestsRes] = await Promise.all([
     supabase.rpc("owner_insurance_summary", { p_association: ctx.association.id }),
     supabase.rpc("my_insurance_proof_requests", { p_association: ctx.association.id }),
@@ -20,7 +20,8 @@ export async function OwnerView({ supabase, ctx }: { supabase: Supabase; ctx: In
   const summary = parsed?.success ? parsed.data : null;
   const publishedAt = typeof raw?.published_at === "string" ? raw.published_at : null;
   const requests = ((requestsRes.data ?? []) as { id: string; kind: string; status: string; created_at: string; handled_at: string | null }[]);
-  const ask = <ProofRequestCard requests={requests} todayIso={ctx.todayIso} />;
+  // The property manager, attorney and observer roles read the summary but do not file requests (0080).
+  const ask = canAsk ? <ProofRequestCard requests={requests} todayIso={ctx.todayIso} /> : null;
 
   return (
     <div className="space-y-6">

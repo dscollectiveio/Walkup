@@ -17,6 +17,18 @@ export const ROLE_WORDS: Record<ViewerRole, { name: string; what: string }> = {
     name: "Accountant",
     what: "Read-only access to the books, statements, budget, taxes and board documents, to prepare filings. Can't change records.",
   },
+  property_manager: {
+    name: "Property manager",
+    what: "Works the repairs and upkeep for the whole building, and can see units and owners with their contact details, the maintenance and vendor documents, and each unit's dues standing. Can't change the books, the bank feed, roles or email. Access ends on its own after 90 days unless a board admin renews it.",
+  },
+  attorney: {
+    name: "Attorney",
+    what: "Read-only access to the legal notices, contracts and correspondence a board admin has shared with you, and to the collections standing and owner contact details for the units shared with you. Access ends on its own after 90 days unless a board admin renews it.",
+  },
+  observer: {
+    name: "Observer",
+    what: "Sees what an owner sees (announcements, the budget plan, the insurance summary and shared documents) plus the association's finances summary. Read-only. Access ends on its own after 90 days unless a board admin renews it.",
+  },
   owner: {
     name: "Owner",
     what: "Your unit's dues and statement, building announcements and shared documents, and reporting repairs.",

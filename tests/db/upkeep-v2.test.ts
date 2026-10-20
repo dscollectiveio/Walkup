@@ -173,7 +173,9 @@ describe("upkeep v2 (0053)", () => {
       [EXTRA.damenTask],
     );
     expect(r).toEqual({ name: "Boiler tune-up", created_by: null, association_id: f.damen, touched: true });
-    expect(await rows(f.adaUser, `select id from public.upkeep_tasks where id = $1::uuid`, [EXTRA.damenTask])).toHaveLength(1);
+    // Owners read the schedule through the member view (0074), not the table.
+    expect(await rows(f.adaUser, `select id from public.upkeep_tasks_member where id = $1::uuid`, [EXTRA.damenTask])).toHaveLength(1);
+    expect(await rows(f.adaUser, `select id from public.upkeep_tasks where id = $1::uuid`, [EXTRA.damenTask])).toHaveLength(0);
   });
 });
 

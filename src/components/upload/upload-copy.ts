@@ -8,7 +8,7 @@
  */
 import { readableSize } from "@/lib/documents/format";
 
-export type UploadPurpose = "document" | "ticket_photo";
+export type UploadPurpose = "document" | "ticket_photo" | "unit_document";
 
 export const SLOW_UPLOAD_SECONDS = 15;
 
@@ -18,6 +18,9 @@ export const UPLOAD_COPY = {
   groupNote: "Taking photos of a paper policy? Pick all the pages at once.",
   dropZone: "Drop files here, or",
   notBoard: "Only the board can add documents.",
+  cantAddUnitDocument: "You can't add documents for this unit.",
+  unitDocumentLimit: "This unit already has 100 uploaded documents. Remove one first.",
+  unitDocumentDaily: "You've added 20 documents today. Try again tomorrow.",
   noAssociation: "No association is visible to you.",
   cantAddPhotos: "You can't add photos to this problem.",
   problemClosed: "This problem is closed. Report a new one if it's back.",
@@ -135,6 +138,11 @@ export function rowText(row: RowState): string {
         : "Added";
     case "duplicate":
       if (row.purpose === "document") return "Already in your documents, so nothing new was added.";
+      if (row.purpose === "unit_document") {
+        return row.alreadyStored
+          ? "Walkup already has this exact file, so it wasn't added again."
+          : "Already added for your unit, so nothing new was added.";
+      }
       if (row.onThisProblem) return "This photo is already on this problem.";
       if (row.narrowerAudience) return "This photo is already on another problem with a smaller audience.";
       return "Walkup already has this exact photo, so it wasn't added again. If it belongs on this problem, ask your board to attach it.";

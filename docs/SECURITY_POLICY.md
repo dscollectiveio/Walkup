@@ -71,6 +71,30 @@ responsibilities below:
   `auth_user_id = auth.uid()` path — documented in #26 rather than closed
   silently.
 
+### 4d. Recovery codes, idle timeout and fresh sign-in
+
+Added 2026-10-20 (`docs/DECISIONS.md` #46, migration `0078`).
+
+- **Recovery codes.** Ten single-use codes per account, made when an
+  authenticator is enrolled and on request (Account > Sign-in and security,
+  behind a fresh authenticator code). Shown once. Only salted scrypt hashes are
+  stored; users cannot read hashes. A person who lost their authenticator spends
+  a code on the sign-in code page, which removes their authenticator so they can
+  enrol a new one. Five wrong codes lock redemption for 15 minutes (counted in
+  the database). Codes are never logged.
+- **Idle timeout.** 12 hours without a request ends the session; the next request
+  signs out and goes to `/login` with a notice. Tracked by an httpOnly cookie
+  (`walkup.activity`) refreshed at most once a minute, set in `src/proxy.ts`
+  via `src/lib/supabase/proxy.ts`. No database call. The cookie is a convenience
+  layer; the sign-out itself revokes the session on the server.
+- **Fresh sign-in for access changes.** Changing a person's roles, creating an
+  invite, and extending accountant access require an authenticator code entered
+  within the last 15 minutes. Otherwise the action refuses and points to
+  `/confirm-sign-in`.
+- **Limits.** The fresh sign-in rule is enforced in the application, not in the
+  database. Browser prefetch counts as activity. A recovery code replaces the
+  second factor, so codes must be stored as carefully as a password.
+
 ### 4a. Periodic access reviews
 
 Every 90 days a board admin reviews who holds access to their association

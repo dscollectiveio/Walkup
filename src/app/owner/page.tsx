@@ -10,6 +10,10 @@ import { loadAnnouncements, loadOwnedUnits, loadSummary } from "@/lib/owner/load
 import { ownerRepairsSummary } from "@/lib/owner/repairs-summary";
 import { ViewerUnavailable } from "@/components/owner/viewer-unavailable";
 import { getViewer } from "@/lib/owner/viewer";
+import { OutsideNoUnit } from "@/components/owner/outside-no-unit";
+import { UnitDocumentsCard } from "@/components/owner/unit-documents-card";
+import { loadUnitDocuments } from "@/lib/owner/unit-documents-load";
+import { UNIT_DOCUMENT_CATEGORY } from "@/lib/owner/unit-documents";
 
 export const dynamic = "force-dynamic";
 
@@ -48,6 +52,8 @@ export default async function OwnerHomePage() {
               </Link>
             </p>
           </Card>
+        ) : viewer.isOutside ? (
+          <OutsideNoUnit firstName={viewer.firstName} associationName={viewer.associationName} topRole={viewer.topRole} />
         ) : (
           <Card navy title="No unit is linked to your account yet">
             <p className="text-[14px] leading-relaxed text-ink">
@@ -63,20 +69,27 @@ export default async function OwnerHomePage() {
     );
   }
 
-  const [units, announcements, repairs, docsRes] = await Promise.all([
+  const [units, announcements, repairs, docsRes, unitDocs] = await Promise.all([
     loadOwnedUnits(supabase, viewer),
     loadAnnouncements(supabase, today, 3),
     ownerRepairsSummary(supabase, viewer, today),
     supabase
       .from("documents")
-      .select("id, title, filename, uploaded_at")
+      .select("id, title, filename, uploaded_at, category:document_categories(slug)")
       .is("deleted_at", null)
       .or(`visibility.eq.all_owners,restricted_to_unit_id.in.(${viewer.ownedUnitIds.join(",")})`)
       .order("uploaded_at", { ascending: false })
-      .limit(5),
+      // A few extra, because the unit documents (shown in their own card below) are filtered out.
+      .limit(15),
+    loadUnitDocuments(supabase, viewer.ownedUnitIds, today),
   ]);
   const summaries = await Promise.all(units.map((u) => loadSummary(supabase, u.id, today)));
-  const docs = docsRes.data ?? [];
+  const docs = (docsRes.data ?? [])
+    .filter((d) => {
+      const c = d.category as unknown as { slug: string } | { slug: string }[] | null;
+      return (Array.isArray(c) ? c[0]?.slug : c?.slug) !== UNIT_DOCUMENT_CATEGORY;
+    })
+    .slice(0, 5);
 
   return (
     <div className="mx-auto w-full max-w-[900px] space-y-6">
@@ -184,6 +197,8 @@ export default async function OwnerHomePage() {
           </p>
         </Card>
       </div>
+
+      <UnitDocumentsCard units={units.map((u) => ({ id: u.id, label: u.label }))} docs={unitDocs} />
     </div>
   );
 }

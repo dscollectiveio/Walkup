@@ -12,7 +12,14 @@ export interface Viewer {
   isBoard: boolean;
   /** Board plus the accountant. */
   canReadFinancials: boolean;
+  /** May work the repairs: the board and a property manager (0080). Defaults to isBoard. */
+  canManage?: boolean;
+  /** Gets the staff layout: board, accountant and property manager. Defaults to canReadFinancials. */
+  staffView?: boolean;
 }
+
+const manages = (v: Viewer) => v.canManage ?? v.isBoard;
+const staffLayout = (v: Viewer) => v.staffView ?? v.canReadFinancials;
 
 export type SearchParams = Record<string, string | string[] | undefined>;
 
@@ -22,7 +29,9 @@ const all = (v: string | string[] | undefined): string[] => (Array.isArray(v) ? 
 /** The views this viewer may open, in nav order. */
 export function viewsFor(viewer: Viewer): RepairsView[] {
   return REPAIRS_VIEWS.filter((v) => {
-    if (v === "contractors" || v === "bills") return viewer.canReadFinancials;
+    // A property manager reads the contractors; the bills are the books', so they stay with the board and the accountant.
+    if (v === "contractors") return staffLayout(viewer);
+    if (v === "bills") return viewer.canReadFinancials;
     return true;
   });
 }
@@ -65,18 +74,18 @@ export interface ProblemParams {
 
 export function parseProblemParams(sp: SearchParams, viewer: Viewer): ProblemParams {
   const layoutRaw = first(sp.layout);
-  const layoutOk = layoutRaw === "list" || (layoutRaw === "board" && viewer.canReadFinancials);
+  const layoutOk = layoutRaw === "list" || (layoutRaw === "board" && staffLayout(viewer));
   const status = first(sp.status);
   const stage = first(sp.stage);
   const where = first(sp.where);
   const sort = first(sp.sort);
-  const sortOk = sort === "priority" || sort === "newest" || sort === "updated" || (sort === "due" && viewer.isBoard);
+  const sortOk = sort === "priority" || sort === "newest" || sort === "updated" || (sort === "due" && manages(viewer));
   return {
     layout: layoutOk ? (layoutRaw as ProblemLayout) : "list",
     layoutFromUrl: layoutOk,
     q: (first(sp.q) ?? "").trim().slice(0, 100),
     status: status === "open" || status === "done" ? status : "all",
-    stage: viewer.isBoard && stage && (STAGES as string[]).includes(stage) ? (stage as Stage) : null,
+    stage: manages(viewer) && stage && (STAGES as string[]).includes(stage) ? (stage as Stage) : null,
     trades: [...new Set(all(sp.trade).filter(isTradeSlug))].slice(0, 10),
     where: where === "shared" || where === "units" ? where : null,
     urgency: first(sp.priority) === "low" || first(sp.priority) === "normal" || first(sp.priority) === "urgent" ? (first(sp.priority) as "low" | "normal" | "urgent") : null,

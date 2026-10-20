@@ -55,7 +55,7 @@ export default async function RepairsPage({ searchParams }: { searchParams: Prom
         <div>
           <h1 className="text-[20px] font-bold tracking-tight text-ink">Repairs &amp; Upkeep</h1>
           <p className="mt-1 text-mute">
-            {view === "problems" && viewer.isBoard
+            {view === "problems" && viewer.canManage
               ? "What needs you this week, then every problem in the building and where it stands."
               : BLURB[view]}
           </p>
@@ -100,14 +100,14 @@ export default async function RepairsPage({ searchParams }: { searchParams: Prom
       ) : null}
       </div>
 
-      {view === "problems" && viewer.canReadFinancials ? (
+      {view === "problems" && viewer.staffView ? (
         <LayoutMemory layout={problemParams.layout} fromUrl={problemParams.layoutFromUrl} boardHref={problemsHref(problemParams, { layout: "board" })} />
       ) : null}
 
       {view === "problems" ? (
-        viewer.canReadFinancials ? (
+        viewer.staffView ? (
           <>
-            {viewer.isBoard ? <TodayView supabase={supabase} viewer={viewer} since={since} /> : null}
+            {viewer.canManage ? <TodayView supabase={supabase} viewer={viewer} since={since} /> : null}
             <ProblemsView supabase={supabase} viewer={viewer} params={problemParams} />
           </>
         ) : (
@@ -135,7 +135,9 @@ async function loadBadges(supabase: Supabase, viewer: RepairsViewer): Promise<Pa
   const today = viewer.todayIso;
   const [y, m, d] = today.split("-").map(Number);
   const in14 = new Date(Date.UTC(y, m - 1, d + 14)).toISOString().slice(0, 10);
-  const fin = viewer.canReadFinancials;
+  // fin: the staff layout (full upkeep table, contractor paperwork); books: bills, which a property manager does not read.
+  const fin = viewer.staffView;
+  const books = viewer.canReadFinancials;
   const [open, urgent, overdue, expired, bills] = await Promise.all([
     supabase.from("tickets").select("id", { count: "exact", head: true }).not("status", "in", '("resolved","closed")'),
     supabase
@@ -143,7 +145,7 @@ async function loadBadges(supabase: Supabase, viewer: RepairsViewer): Promise<Pa
       .select("id", { count: "exact", head: true })
       .not("status", "in", '("resolved","closed")')
       .or("priority.eq.urgent,emergency_kind.not.is.null"),
-    supabase.from("upkeep_tasks").select("id", { count: "exact", head: true }).eq("is_active", true).lt("next_due_on", today),
+    supabase.from(fin ? "upkeep_tasks" : "upkeep_tasks_member").select("id", { count: "exact", head: true }).eq("is_active", true).lt("next_due_on", today),
     fin
       ? supabase
           .from("vendors")
@@ -152,7 +154,7 @@ async function loadBadges(supabase: Supabase, viewer: RepairsViewer): Promise<Pa
           .neq("status", "do_not_use")
           .or(`insured_until.lt.${today},license_expires_on.lt.${today}`)
       : Promise.resolve({ count: 0 }),
-    fin
+    books
       ? supabase
           .from("recurring_bills")
           .select("id", { count: "exact", head: true })

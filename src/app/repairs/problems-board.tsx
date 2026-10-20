@@ -51,7 +51,7 @@ export function ProblemsBoard({ rows, params, viewer }: { rows: ProblemRow[]; pa
               ) : (
                 <ul className="space-y-2">
                   {cards.slice(0, PER_COLUMN).map((t) => (
-                    <BoardCard key={t.id} t={t} today={today} canWrite={viewer.isBoard} />
+                    <BoardCard key={t.id} t={t} today={today} canWrite={viewer.canManage} />
                   ))}
                 </ul>
               )}

@@ -26,6 +26,8 @@ export interface UrgentItem {
     | "repairs_urgent"
     | "repairs_overdue"
     | "upkeep_overdue"
+    | "access_ending"
+    | "term_ending"
     | "contractor_paperwork"
     | "ai_finished"
     | "email_key_rejected"
@@ -68,6 +70,10 @@ interface UrgentInputs {
   /** Open problems past their target date (ticket_board_details.due_on). */
   repairsOverdue?: number;
   upkeepOverdue?: { count: number; firstName: string | null };
+  /** Board admins only: people whose time-boxed access (an accountant's, a property manager's, an attorney's or an observer's) ends within 14 days, or ended within the last 14 days. */
+  accessEnding?: { count: number; firstName: string | null; firstDays: number };
+  /** Board admins only: officer terms ending within 30 days (or already ended and not filled). */
+  termEnding?: { count: number; firstName: string | null; firstPosition: string | null; firstDays: number };
   /** Contractors in use whose insurance certificate or license has expired. */
   contractorPaperwork?: { expired: number; firstName: string | null; firstKind?: "coi" | "license" };
   /** Background AI runs that finished recently, for whoever left the page (finished-runs.ts). */
@@ -158,6 +164,38 @@ export function urgentItems(input: UrgentInputs): UrgentItem[] {
       title: upkeep.count === 1 && upkeep.firstName ? `${upkeep.firstName} is overdue` : `${upkeep.count} upkeep jobs are overdue`,
       why: "Overdue upkeep is easier to fix before it becomes a repair.",
       action: { label: "Open upkeep", href: "/repairs?view=upkeep&show=overdue" },
+      tone: "warning",
+    });
+  }
+  const ending = input.accessEnding;
+  if (ending && ending.count > 0) {
+    const name = ending.firstName ?? "Someone";
+    const when = ending.firstDays > 0 ? `in ${ending.firstDays} ${ending.firstDays === 1 ? "day" : "days"}` : ending.firstDays === 0 ? "today" : "recently";
+    items.push({
+      key: "access_ending",
+      severity: 2,
+      title: ending.count === 1 ? `${name}'s access ends ${when}` : `${ending.count} people's access ends soon`,
+      why: "Access that is time-boxed lapses on its own. Give another 90 days from Building & Owners if they still need it.",
+      action: { label: "Open Building & Owners", href: "/building#units-and-people" },
+      tone: "warning",
+    });
+  }
+  const term = input.termEnding;
+  if (term && term.count > 0) {
+    const name = term.firstName ?? "An officer";
+    const pos = term.firstPosition ?? "their office";
+    const when = term.firstDays > 0 ? `in ${term.firstDays} ${term.firstDays === 1 ? "day" : "days"}` : term.firstDays === 0 ? "today" : "has ended";
+    items.push({
+      key: "term_ending",
+      severity: 2,
+      title:
+        term.count === 1
+          ? term.firstDays < 0
+            ? `${name}'s term as ${pos} has ended`
+            : `${name}'s term as ${pos} ends ${when}`
+          : `${term.count} officer terms end soon`,
+      why: "Use Change of board to hand the office to the next person, or set a new term end.",
+      action: { label: "Open People & Access", href: "/access" },
       tone: "warning",
     });
   }

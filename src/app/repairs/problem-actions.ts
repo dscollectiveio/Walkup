@@ -19,7 +19,7 @@ export async function setProblemWorkStatus(ticketId: string, workStatus: string)
   if (!isUuid(ticketId) || !isWorkStatus(workStatus)) return { error: "Couldn't change that. Try again." };
   const viewer = await getViewer();
   if (!viewer) return { error: "Please sign in again." };
-  if (!viewer.isBoard) return { error: "Only a board member can change the status." };
+  if (!viewer.canManageRepairs) return { error: "Only a board member or property manager can change the status." };
 
   const supabase = await createClient();
   const { data, error } = await supabase
@@ -83,7 +83,7 @@ const first = <T,>(v: One<T>): T | null => (Array.isArray(v) ? (v[0] ?? null) : 
 export async function loadProblemPanel(ticketId: string): Promise<({ ok: true } & ProblemPanelData) | { error: string }> {
   if (!isUuid(ticketId)) return { error: "That problem isn't visible to you." };
   const viewer = await getViewer();
-  if (!viewer?.isBoard) return { error: "Only a board member can do this." };
+  if (!viewer?.canManageRepairs) return { error: "Only a board member or property manager can do this." };
   const supabase = await createClient();
 
   const [ticketRes, vendorsRes] = await Promise.all([

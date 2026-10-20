@@ -85,6 +85,7 @@ beforeEach(() => {
     { id: NOPE, association_id: ASSOC, name: "Leaky Larry", contact_name: null, email: "larry@example.com", phone: null, status: "do_not_use", do_not_use_reason: "Left the job half done", archived_at: null, google_place_id: null, website_url: null },
   ];
   db.rpcHandlers.is_board = () => ({ data: board, error: null });
+  db.rpcHandlers.can_manage_repairs = () => ({ data: board, error: null });
   db.rpcHandlers.is_member = () => ({ data: true, error: null });
   db.rpcHandlers.can_read_financials = () => ({ data: board, error: null });
   db.rpcHandlers.current_person_id = () => ({ data: "person-1", error: null });

@@ -6,7 +6,7 @@ import { useEffect, useRef, useState } from "react";
 import { PanelLeftClose, PanelLeftOpen, X } from "lucide-react";
 import { WalkupMark } from "@/components/mark";
 import { ThemeToggle } from "./theme-toggle";
-import { isNavItemActive, navFor, type NavItemConfig, type NavRole } from "./config";
+import { isNavItemActive, MY_UNIT_NAV, navFor, withOwnerFinances, type NavItemConfig, type NavRole } from "./config";
 import { primeServerMode, setDrawerOpen, setSidebarMode, useSidebarState, type SidebarMode } from "./sidebar-state";
 
 /** Badge colour by what it counts: rust for bank work waiting, gold for repairs to look at. */
@@ -113,6 +113,9 @@ export function Sidebar({
   uncategorizedCount,
   repairsCount = 0,
   announcementsCount = 0,
+  ownsUnit = false,
+  ownerFinances = false,
+  accessEnded = false,
   role = null,
   userEmail,
   initialMode = "expanded",
@@ -124,6 +127,11 @@ export function Sidebar({
   /** Announcements the viewer has not opened (owner-portal-spec 7.2); 0 for anyone with nothing new. */
   announcementsCount?: number;
   /** A board member or accountant who also owns a unit gets a "My unit" item. */
+  ownsUnit?: boolean;
+  /** An owner sees "Finances" only while a board admin has switched the page on (0079). */
+  ownerFinances?: boolean;
+  /** The person has no active role (their access ended): the page says so and the navigation lists nothing. */
+  accessEnded?: boolean;
   /** The viewer's highest role, for the role-dependent labels. */
   role?: NavRole | null;
   userEmail: string;
@@ -197,7 +205,12 @@ export function Sidebar({
   }, [pathname]);
 
   const badges = { uncategorized: uncategorizedCount, repairs: repairsCount, announcements: announcementsCount };
-  const nav = navFor(role);
+  const base = navFor(role);
+  // A board member or accountant who also owns a unit gets "My unit" after the Dashboard and Announcements.
+  // (An observer's navigation starts with Home, which is the same page, so it gets no second item.)
+  const staffNav = ownsUnit && role !== "owner" && role !== "observer" ? { ...base, ungrouped: [...base.ungrouped, ...MY_UNIT_NAV] } : base;
+  const fullNav = role === "owner" && ownerFinances ? withOwnerFinances(staffNav) : staffNav;
+  const nav = accessEnded ? { ungrouped: [], groups: [], trailing: [] } : fullNav;
   const navGroups = nav.groups;
   const initials = userEmail.slice(0, 2).toUpperCase();
   const toggle = () => setSidebarMode(state.mode === "expanded" ? "rail" : "expanded");

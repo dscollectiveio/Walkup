@@ -36,11 +36,12 @@ describe("access reviews, deprovisioning, redaction (0037)", () => {
         `update unit_owners set effective_to = '2025-01-01' where person_id = $1::uuid`,
         [f.boPerson],
       );
+      // Closing the ownership ends the owner role at once (0075); the daily run then has nothing left to do.
+      expect(await activeGrant(f.boPerson, "owner")).toBe(false);
       const { rows } = await db.query<{ deprovision_stale_access: number }>(
         `select public.deprovision_stale_access(null)`,
       );
-      expect(rows[0].deprovision_stale_access).toBeGreaterThanOrEqual(2); // Bo + Vic
-      expect(await activeGrant(f.boPerson, "owner")).toBe(false);
+      expect(rows[0].deprovision_stale_access).toBe(0);
       expect(await activeGrant(f.adaPerson, "owner")).toBe(true);
       expect(await activeGrant(f.cyPerson, "owner")).toBe(true);
     });

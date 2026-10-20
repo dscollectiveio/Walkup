@@ -53,6 +53,9 @@ export interface UploadFileOptions {
   purpose: UploadPurpose;
   categorySlug?: string;
   ticketId?: string;
+  /** unit_document: the unit the file is for, and which kind of document it is (src/lib/owner/unit-documents.ts). */
+  unitId?: string;
+  unitKind?: string;
   link?: { targetTable: LinkableTable; targetId: string; relation?: string };
   read?: boolean;
   /** Default true for ticket photos, false for documents. */
@@ -165,6 +168,7 @@ export async function uploadFile(
         mime: verdict.mime,
         purpose,
         ticketId: opts.ticketId,
+        unitId: opts.unitId,
       });
     } catch {
       return failed(networkError(original));
@@ -206,6 +210,8 @@ export async function uploadFile(
       categorySlug: opts.categorySlug,
       purpose,
       ticketId: opts.ticketId,
+      unitId: opts.unitId,
+      unitKind: opts.unitKind,
       link: opts.link,
       read: opts.read,
     });

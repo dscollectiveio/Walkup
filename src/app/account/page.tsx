@@ -90,9 +90,14 @@ export default async function AccountPage({ searchParams }: { searchParams: Prom
         return <UnitsTab units={ownedUnits} summaries={summaries} todayIso={today} />;
       }
       case "security": {
-        const [factorsRes, userRes] = await Promise.all([supabase.auth.mfa.listFactors(), supabase.auth.getUser()]);
+        const [factorsRes, userRes, recoveryRes] = await Promise.all([
+          supabase.auth.mfa.listFactors(),
+          supabase.auth.getUser(),
+          supabase.rpc("mfa_recovery_status"),
+        ]);
+        const rec = (recoveryRes.data ?? {}) as { total?: number; remaining?: number };
         const totp = factorsRes.data?.all.find((f) => f.factor_type === "totp" && f.status === "verified") ?? null;
-        return <SecurityTab totpSince={totp?.created_at ?? null} lastSignIn={userRes.data.user?.last_sign_in_at ?? null} />;
+        return <SecurityTab totpSince={totp?.created_at ?? null} lastSignIn={userRes.data.user?.last_sign_in_at ?? null} recovery={{ remaining: Number(rec.remaining ?? 0), total: Number(rec.total ?? 0) }} />;
       }
       case "billing":
         return <BillingTab viewer={viewer!} view={billing} checkout={sp.checkout} />;

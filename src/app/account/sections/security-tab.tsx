@@ -4,6 +4,7 @@ import { SUPPORT_EMAIL } from "@/lib/site-config";
 import { signOut } from "@/app/login/actions";
 import { btnSecondary } from "@/components/repairs/styles";
 import { ChangePasswordForm, SignOutOthersButton } from "../account-forms";
+import { RecoveryCodesCard } from "../recovery-codes-card";
 import { Pill, linkClass } from "./shared";
 
 /**
@@ -14,9 +15,11 @@ import { Pill, linkClass } from "./shared";
 export function SecurityTab({
   totpSince,
   lastSignIn,
+  recovery,
 }: {
   totpSince: string | null;
   lastSignIn: string | null;
+  recovery: { remaining: number; total: number };
 }) {
   return (
     <>
@@ -51,12 +54,17 @@ export function SecurityTab({
         </p>
         <p className="mt-1 text-[13px] leading-relaxed text-mute">
           Every Walkup account uses it, because Walkup holds an association&rsquo;s books and owners&rsquo; details. It
-          can&rsquo;t be turned off. Got a new phone? Email{" "}
+          can&rsquo;t be turned off. Lost your phone? Use a recovery code on the sign-in code page. Got a new phone and
+          still have the old one? Email{" "}
           <a href={`mailto:${SUPPORT_EMAIL}?subject=${encodeURIComponent("Move my two-step sign-in to a new phone")}`} className={linkClass}>
             {SUPPORT_EMAIL}
           </a>{" "}
           and we&rsquo;ll help you move it.
         </p>
+      </Card>
+
+      <Card navy title="Recovery codes" hint="For the day you lose your phone.">
+        <RecoveryCodesCard remaining={recovery.remaining} total={recovery.total} />
       </Card>
 
       <Card navy title="Signed-in devices" hint="Lost a phone or used a shared computer? Sign out everywhere except this browser.">

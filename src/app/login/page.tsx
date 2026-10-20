@@ -50,6 +50,10 @@ export default async function LoginPage({
           That reset link was opened in a different browser. Ask for a new one from this browser, or sign in here if you
           remember your password.
         </p>
+      ) : notice === "idle" ? (
+        <p className="mb-5 rounded-lg border border-warning-line bg-warning-tint px-3.5 py-2.5 text-[13px] text-warning-text">
+          You were signed out after 12 hours of inactivity. Sign in again to pick up where you left off.
+        </p>
       ) : null}
 
       <LoginForm />

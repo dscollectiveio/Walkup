@@ -26,6 +26,7 @@ import {
 } from "@/components/upload/upload-copy";
 import { isLinkableTable, type LinkableTable } from "./link-targets";
 import { revalidateLinked } from "./link-revalidate";
+import { createUnitDocumentTarget, registerUnitDocument } from "./unit-document";
 
 /**
  * Direct uploads (foundation-spec 6.3). Files go browser -> Storage with a
@@ -42,7 +43,7 @@ import { revalidateLinked } from "./link-revalidate";
 export type { LinkableTable };
 
 type Supabase = Awaited<ReturnType<typeof createClient>>;
-type Purpose = "document" | "ticket_photo";
+type Purpose = "document" | "ticket_photo" | "unit_document";
 
 type PhotoRow = { document_id: string };
 
@@ -78,14 +79,16 @@ export async function createUploadTarget(input: {
   mime: string;
   purpose: Purpose;
   ticketId?: string;
+  /** unit_document only: the unit the file is for. */
+  unitId?: string;
 }): Promise<{ ok: true; path: string; token: string } | { error: string }> {
-  const { filename, size, purpose, ticketId } = input ?? ({} as typeof input);
+  const { filename, size, purpose, ticketId, unitId } = input ?? ({} as typeof input);
   const mime = mimeEssence(input?.mime);
 
   if (!validFilename(filename)) return { error: UPLOAD_COPY.couldNotStart };
   if (!Number.isInteger(size) || size <= 0) return { error: UPLOAD_COPY.couldNotStart };
 
-  if (purpose === "document") {
+  if (purpose === "document" || purpose === "unit_document") {
     if (size > MAX_DOCUMENT_BYTES) return { error: tooBig(purpose, filename) };
     if (!(ACCEPTED_TYPES as readonly string[]).includes(mime)) return { error: wrongType(purpose, filename) };
   } else if (purpose === "ticket_photo") {
@@ -99,7 +102,12 @@ export async function createUploadTarget(input: {
   const supabase = await createClient();
   let path: string;
 
-  if (purpose === "document") {
+  if (purpose === "unit_document") {
+    // The unit is checked in the database: an owner of it, or the board.
+    const target = await createUnitDocumentTarget(supabase, { unitId, filename });
+    if ("error" in target) return target;
+    path = target.path;
+  } else if (purpose === "document") {
     const associationId = await currentAssociationId(supabase);
     if (!associationId) return { error: UPLOAD_COPY.noAssociation };
     const { data: board } = await supabase.rpc("is_board", { assoc: associationId });
@@ -157,6 +165,9 @@ export async function registerUpload(input: {
   categorySlug?: string;
   purpose: Purpose;
   ticketId?: string;
+  /** unit_document only: the unit the file is for, and the kind of document (src/lib/owner/unit-documents.ts). */
+  unitId?: string;
+  unitKind?: string;
   title?: string;
   /** Document only: attach the new (or matching) document to this record. */
   link?: { targetTable: LinkableTable; targetId: string; relation?: string };
@@ -174,9 +185,15 @@ export async function registerUpload(input: {
     }
   | { error: string }
 > {
-  const { path, filename, categorySlug, purpose, ticketId, title, link, read } =
+  const { path, filename, categorySlug, purpose, ticketId, unitId, unitKind, title, link, read } =
     input ?? ({} as typeof input);
   if (!validFilename(filename) || typeof path !== "string") return { error: UPLOAD_COPY.pathMismatch };
+
+  // Documents an owner or the board adds for one unit have their own path, checks and RPC (0079).
+  if (purpose === "unit_document") {
+    if (link || categorySlug || ticketId) return { error: UPLOAD_COPY.pathMismatch };
+    return registerUnitDocument(await createClient(), { path, filename, unitId, unitKind, title });
+  }
 
   // 1. The path must be one we would have issued for this purpose.
   const parsed = parseStoragePath(path);

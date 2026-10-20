@@ -30,15 +30,21 @@ describe("document hub (0020)", () => {
       visibility?: string;
       unit?: string | null;
       checksum?: string | null;
+      category?: string;
     } = {},
   ) {
     const assoc = f.damen;
     const filename = opts.filename ?? "doc.pdf";
     const { rows } = await asUser(db, f.cyUser, () =>
       db.query<{ id: string }>(
+        // Documents shared with every owner are governing documents, minutes or financial statements (0074).
         `insert into documents
-           (association_id, storage_path, filename, visibility, restricted_to_unit_id, checksum)
-         values ($1, $2, $3, $4, $5, $6)
+           (association_id, storage_path, filename, visibility, restricted_to_unit_id, checksum, category_id)
+         values ($1, $2, $3, $4, $5, $6,
+           case when $7::text is not null
+                then (select id from document_categories where association_id = $1::uuid and slug = $7::text)
+                when $4 = 'all_owners' and $5::uuid is null
+                then (select id from document_categories where association_id = $1::uuid and slug = 'governing') end)
          returning id`,
         [
           assoc,
@@ -47,6 +53,7 @@ describe("document hub (0020)", () => {
           opts.visibility ?? "board_only",
           opts.unit ?? null,
           opts.checksum ?? null,
+          opts.category ?? null,
         ],
       ),
     );
@@ -114,8 +121,8 @@ describe("document hub (0020)", () => {
     expect(await visibleTo(f.boUser)).not.toContain(id);
   });
 
-  it("lets the accountant read everything the board can", async () => {
-    const id = await file({ filename: "bank-statement.pdf" });
+  it("lets the accountant read the accounting and tax records the board can (0074)", async () => {
+    const id = await file({ filename: "bank-statement.pdf", category: "bank_statement" });
     // Nia's accountant grant is current; Vic's expired in 2024.
     expect(await visibleTo(f.niaUser)).toContain(id);
     expect(await visibleTo(f.vicUser)).not.toContain(id);
@@ -236,14 +243,14 @@ describe("document hub (0020)", () => {
       `select association_id, count(*)::int as n
          from document_categories group by 1 order by 1`,
     );
-    expect(rows.map((r) => r.n)).toEqual([16, 16]);
+    expect(rows.map((r) => r.n)).toEqual([17, 17]);
   });
 
   it("gives owners the category labels, since they file nothing but read some", async () => {
     const { rows } = await asUser(db, f.adaUser, () =>
       db.query(`select slug from document_categories`),
     );
-    expect(rows.length).toBe(16);
+    expect(rows.length).toBe(17);
   });
 
   it("refuses to delete a seeded category that documents may be filed under", async () => {

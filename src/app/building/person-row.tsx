@@ -6,6 +6,7 @@ import { PhoneInput } from "@/components/phone-input";
 import { InviteToSignIn } from "./invite-to-sign-in";
 import { AddressInput } from "@/components/address-input";
 import { longDate } from "@/lib/dates";
+import { APP_ROLES, ROLE_HINT, ROLE_LABEL as ROLE_NAMES } from "@/lib/access/outside-roles";
 
 export interface PersonRecord {
   id: string;
@@ -15,19 +16,15 @@ export interface PersonRecord {
   mailing_address: string | null;
 }
 
-const ROLE_LABEL: Record<string, string> = {
-  board_admin: "Board admin",
-  board_member: "Board member",
-  accountant: "Accountant",
-  owner: "Owner",
-};
+const ROLE_LABEL: Record<string, string> = ROLE_NAMES;
 
-export const ROLE_OPTIONS: { value: string; label: string; hint: string }[] = [
-  { value: "board_admin", label: "Board admin", hint: "full read/write" },
-  { value: "board_member", label: "Board member", hint: "full read, limited write" },
-  { value: "accountant", label: "Accountant", hint: "financials, expires after 90 days" },
-  { value: "owner", label: "Owner", hint: "read-only, own unit" },
-];
+// The four original roles and the three outside roles (property manager, attorney, observer), highest first.
+// The outside roles and the accountant end after 90 days unless a board admin renews them (0080).
+export const ROLE_OPTIONS: { value: string; label: string; hint: string }[] = APP_ROLES.map((value) => ({
+  value,
+  label: ROLE_NAMES[value],
+  hint: ROLE_HINT[value],
+}));
 
 export function PersonRow({
   person,
@@ -37,7 +34,7 @@ export function PersonRow({
   canRedact = false,
   canDeleteFormer = false,
   invite = null,
-  accountantUntil = null,
+  accessEnds = null,
 }: {
   person: PersonRecord;
   roles: string[];
@@ -52,8 +49,8 @@ export function PersonRow({
    * offers "Invite to sign in" (owner-portal-spec 5.3).
    */
   invite?: { associationName: string; boardContactName: string | null } | null;
-  /** The day an accountant's access ends (yyyy-mm-dd), when this person is one. */
-  accountantUntil?: string | null;
+  /** When this person holds a role that ends by itself (accountant or an outside role): the day it ends (yyyy-mm-dd) and whose it is. */
+  accessEnds?: { on: string; label: string } | null;
 }) {
   const [confirmingDelete, setConfirmingDelete] = useState(false);
   const [deleting, startDelete] = useTransition();
@@ -189,9 +186,9 @@ export function PersonRow({
         {person.mailing_address ? (
           <div className="text-[11px] text-mute-soft">{person.mailing_address}</div>
         ) : null}
-        {accountantUntil ? (
+        {accessEnds ? (
           <div className="mt-1 text-[11px] text-mute">
-            Accountant access ends {longDate(accountantUntil)}.
+            {accessEnds.label} access ends {longDate(accessEnds.on)}.
             {canEditRoles ? (
               <>
                 {" "}

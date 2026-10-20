@@ -32,11 +32,14 @@ export function YourList({
   derivedDoneCount,
   manual,
   persons,
+  canAdd = true,
 }: {
   derived: SetupStep[];
   derivedDoneCount: number;
   manual: ManualTask[];
   persons: { id: string; full_name: string }[];
+  /** Only the board adds to the list; the accountant reads it. */
+  canAdd?: boolean;
 }) {
   const [, startTransition] = useTransition();
   const [toggleError, setToggleError] = useState<string | null>(null);
@@ -197,7 +200,7 @@ export function YourList({
               <p className="w-full text-[12px] text-bad-text">{addState.error}</p>
             ) : null}
           </form>
-        ) : (
+        ) : canAdd ? (
           <button
             type="button"
             onClick={() => setAdding(true)}
@@ -205,7 +208,7 @@ export function YourList({
           >
             Add a task
           </button>
-        )}
+        ) : null}
       </div>
     </section>
   );

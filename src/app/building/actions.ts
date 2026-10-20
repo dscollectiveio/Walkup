@@ -9,8 +9,11 @@ import { buildingTodayIso } from "@/lib/dates";
 import { parsePeople, type PersonEntry } from "@/lib/building/unit-people";
 import { parseUnitType } from "@/lib/building/unit-types";
 import { saveBuildingFacts } from "@/app/insurance/facts-actions";
+import { freshSignInError } from "@/lib/security/fresh-signin";
+import { APP_ROLES, TIMED_ACCESS_DAYS, TIMED_ROLES, isTimedRole } from "@/lib/access/outside-roles";
 
-const ROLES = ["board_admin", "board_member", "accountant", "owner"] as const;
+// Every role a person can be given here: the four original ones and the three outside roles (0077, 0080).
+const ROLES = APP_ROLES;
 
 /** The day before a yyyy-mm-dd date. */
 function dayBefore(iso: string): string {
@@ -19,8 +22,11 @@ function dayBefore(iso: string): string {
   return d.toISOString().slice(0, 10);
 }
 
-/** An accountant's access runs this many days, then ends unless a board admin extends it. */
-const ACCOUNTANT_DAYS = 90;
+/**
+ * The accountant's access and the three outside roles' (property manager, attorney, observer) run this many
+ * days, then end unless a board admin renews it.
+ */
+const ACCOUNTANT_DAYS = TIMED_ACCESS_DAYS;
 
 function inDays(n: number): string {
   const d = new Date();
@@ -144,7 +150,6 @@ export async function updateAssociationProfile(_prev: unknown, formData: FormDat
       construction_type: constructionType,
       stories,
       roof_replaced_year: roofYear,
-      ein,
       incorporated_on: incorporatedOn,
       fiscal_year_end_month: fyEndMonth,
       capitalization_threshold: capThreshold,
@@ -160,6 +165,12 @@ export async function updateAssociationProfile(_prev: unknown, formData: FormDat
   if (!data || data.length === 0) {
     return { error: "Only a board admin can edit the association's profile." };
   }
+
+  // The EIN lives apart from the association row, where owners can't read it.
+  const { error: einError } = await supabase
+    .from("association_tax_ids")
+    .upsert({ association_id: associationId, ein, updated_at: new Date().toISOString() }, { onConflict: "association_id" });
+  if (einError) return { error: einError.message };
 
   revalidateBuilding();
   return { ok: true };
@@ -592,12 +603,22 @@ async function syncPersonRoles(
   const selected = new Set(selectedRoles);
   const currentRoles = new Set((currentGrants ?? []).map((g) => g.role));
 
+  // Only an actual change needs a recent two-step code; saving a form with the
+  // roles untouched does not.
+  const changes =
+    [...selected].some((r) => !currentRoles.has(r)) || [...currentRoles].some((r) => !selected.has(r));
+  if (changes) {
+    const stale = await freshSignInError(supabase);
+    if (stale) return stale;
+  }
+
   for (const role of selected) {
     if (currentRoles.has(role)) continue;
 
     // "accountant grants expire; default 90d set in app" — see the comment
-    // on role_grants.expires_on in 0001_core_schema.sql.
-    const expiresOn = role === "accountant" ? inDays(ACCOUNTANT_DAYS) : null;
+    // on role_grants.expires_on in 0001_core_schema.sql. The outside roles always end too (0080 refuses
+    // one without an end date).
+    const expiresOn = isTimedRole(role) ? inDays(ACCOUNTANT_DAYS) : null;
 
     const { error } = await supabase.from("role_grants").upsert(
       {
@@ -835,6 +856,10 @@ export async function createInvite(_prev: unknown, formData: FormData) {
   const personId = role === "owner" && personRaw !== "" ? personRaw : null;
 
   if (!ROLES.includes(role as (typeof ROLES)[number])) return { error: "Choose a role." };
+  // Any link for a role other than owner only works for the email it was made for (0075).
+  if (role !== "owner" && (!email || !/^[^@\s]+@[^@\s]+$/.test(email))) {
+    return { error: "Enter the email address this person will sign in with. The link only works for that email." };
+  }
   if (personId && !/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(personId)) {
     return { error: "Choose someone from the list, or leave it blank." };
   }
@@ -845,6 +870,9 @@ export async function createInvite(_prev: unknown, formData: FormData) {
 
   const user = await getUser();
   if (!user) return { error: "Not signed in." };
+
+  const stale = await freshSignInError(supabase);
+  if (stale) return { error: stale };
 
   const { error } = await supabase.from("invites").insert({
     association_id: associationId,
@@ -860,16 +888,22 @@ export async function createInvite(_prev: unknown, formData: FormData) {
   return { ok: true };
 }
 
-/** Gives an accountant another 90 days from today. Board admins only (role_grants RLS). */
+/**
+ * Gives an accountant, property manager, attorney or observer another 90 days from today. Board admins only
+ * (role_grants RLS). The name is kept from when the accountant was the only role that ends.
+ */
 export async function extendAccountantAccess(personId: string): Promise<{ ok?: true; error?: string }> {
   if (!/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(personId)) return { error: "Missing person." };
   const supabase = await createClient();
+  const stale = await freshSignInError(supabase);
+  if (stale) return { error: stale };
   const { data, error } = await supabase
     .from("role_grants")
-    .update({ expires_on: inDays(ACCOUNTANT_DAYS) })
+    .update({ expires_on: inDays(ACCOUNTANT_DAYS), revoked_at: null, revoked_by: null })
     .eq("person_id", personId)
-    .eq("role", "accountant")
-    .is("revoked_at", null)
+    .in("role", [...TIMED_ROLES])
+    // Also brings back access the daily clean-up just ended (revoked by the system, not by a person).
+    .or("revoked_at.is.null,revoked_by.is.null")
     .select("id");
   if (error) return { error: "Couldn't extend that. Try again." };
   if (!data || data.length === 0) return { error: "Only a board admin can extend access." };
@@ -883,7 +917,7 @@ export async function deleteInvite(inviteId: string): Promise<{ ok?: true; error
 
   if (error) return { error: error.message };
   if (!data || data.length === 0) {
-    return { error: "That invite is already gone, or you can't remove it." };
+    return { error: "That invite is already gone, or only a board admin can remove it." };
   }
 
   revalidateBuilding();

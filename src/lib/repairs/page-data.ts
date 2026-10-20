@@ -14,11 +14,16 @@ export interface RepairsViewer {
   associationId: string;
   displayName: string;
   isMember: boolean;
+  /** The board (board admin or board member), strictly. Contractor, emergency-info and Find a Contractor controls. */
   isBoard: boolean;
+  /** May work the repairs: the board and a property manager (can_manage_repairs, 0080). Not a finance check. */
+  canManage: boolean;
   isAdmin: boolean;
-  /** Board plus the accountant. */
+  /** Board plus the accountant: the books, bills and payments. A property manager is not in it. */
   canReadFinancials: boolean;
-  /** Board or owner: may report problems and add notes (the accountant is read-only in Repairs). */
+  /** Gets the staff layout of Repairs (costs, quotes, contractors): the board, the accountant and a property manager. */
+  staffView: boolean;
+  /** Board, property manager or owner: may report problems and add notes (the accountant is read-only in Repairs). */
   canReport: boolean;
   personId: string | null;
   todayIso: string;
@@ -29,22 +34,29 @@ export async function loadViewer(supabase: Supabase): Promise<RepairsViewer | nu
   const a = associations?.[0];
   if (!a) return null;
   const assoc = a.id as string;
-  const [member, board, admin, financials, reporter, person] = await Promise.all([
+  const [member, board, admin, financials, reporter, person, manager] = await Promise.all([
     supabase.rpc("is_member", { assoc }),
     supabase.rpc("is_board", { assoc }),
     supabase.rpc("has_role_in", { assoc, roles: ["board_admin"] }),
     supabase.rpc("can_read_financials", { assoc }),
     supabase.rpc("has_role_in", { assoc, roles: ["board_admin", "board_member", "owner"] }),
     supabase.rpc("current_person_id", { assoc }),
+    supabase.rpc("can_manage_repairs", { assoc }),
   ]);
+  const isBoard = board.data === true;
+  const canManage = isBoard || manager.data === true;
+  const canReadFinancials = financials.data === true;
   return {
     associationId: assoc,
     displayName: ((a.display_name as string | null)?.trim() || (a.legal_name as string | null)?.trim() || "your building"),
     isMember: member.data === true,
-    isBoard: board.data === true,
+    isBoard,
+    canManage,
     isAdmin: admin.data === true,
-    canReadFinancials: financials.data === true,
-    canReport: reporter.data === true,
+    canReadFinancials,
+    staffView: canReadFinancials || canManage,
+    // (A property manager reports through can_manage_repairs, so this call never names a role the database may not know yet.)
+    canReport: reporter.data === true || canManage,
     personId: typeof person.data === "string" ? person.data : null,
     todayIso: buildingTodayIso(),
   };

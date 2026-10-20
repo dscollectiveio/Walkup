@@ -22,6 +22,7 @@ import {
   dbError,
   firstIssue,
   isBoard,
+  canManageRepairs,
   isUuid,
   NO_ASSOCIATION,
   type Err,
@@ -67,7 +68,7 @@ export async function requestQuotes(
     .limit(1);
   const ticket = tickets?.[0];
   if (!ticket) return { error: NOT_VISIBLE };
-  if (!(await isBoard(supabase, ticket.association_id))) return { error: "Only a board member can ask for quotes." };
+  if (!(await canManageRepairs(supabase, ticket.association_id))) return { error: "Only a board member can ask for quotes." };
 
   const [basics, { data: vendors }, photoCount] = await Promise.all([
     loadDraftBasics(supabase, ticket.association_id),
@@ -144,7 +145,7 @@ export async function recordBid(input: BidInput): Promise<Ok<{ bidId: string }> 
   const { data: tickets } = await supabase.from("tickets").select("id, association_id").eq("id", v.ticket_id).limit(1);
   const ticket = tickets?.[0];
   if (!ticket) return { error: NOT_VISIBLE };
-  if (!(await isBoard(supabase, ticket.association_id))) return { error: "Only a board member can record a quote." };
+  if (!(await canManageRepairs(supabase, ticket.association_id))) return { error: "Only a board member can record a quote." };
 
   const fields = {
     amount: v.amount,

@@ -1,14 +1,19 @@
 import { describe, expect, it } from "vitest";
-import { MY_UNIT_NAV, NAV_GROUPS, TRAILING_NAV, UNGROUPED_NAV } from "@/components/sidebar/config";
+import { MY_UNIT_NAV, NAV_GROUPS, TRAILING_NAV, UNGROUPED_NAV, navFor } from "@/components/sidebar/config";
 import { ownerNavItems } from "@/lib/owner/nav";
 import { tourRoleFrom, tourStepsFor, type TourRole } from "@/lib/tour/steps";
 
-const ROLES: TourRole[] = ["board_admin", "board_member", "accountant", "owner"];
+const ROLES: TourRole[] = ["board_admin", "board_member", "accountant", "owner", "property_manager", "attorney", "observer"];
 const navTourIds = new Set(
   [...UNGROUPED_NAV, ...MY_UNIT_NAV, ...NAV_GROUPS.flatMap((g) => g.items), ...TRAILING_NAV, ...ownerNavItems()]
     .map((i) => i.tourId)
     .filter(Boolean),
 );
+// The three outside roles (0080) have their own navigation.
+for (const role of ["property_manager", "attorney", "observer"] as const) {
+  const n = navFor(role);
+  for (const i of [...n.ungrouped, ...n.groups.flatMap((g) => g.items), ...n.trailing]) navTourIds.add(i.tourId);
+}
 // Top-bar targets: the profile circle.
 navTourIds.add("account");
 
@@ -97,6 +102,10 @@ describe("first-login tour", () => {
     expect(tourRoleFrom(["owner", "board_admin"])).toBe("board_admin");
     expect(tourRoleFrom(["owner", "accountant"])).toBe("accountant");
     expect(tourRoleFrom([])).toBeNull();
+    // The outside roles sit between the accountant and the owner.
+    expect(tourRoleFrom(["owner", "observer"])).toBe("observer");
+    expect(tourRoleFrom(["observer", "attorney", "property_manager"])).toBe("property_manager");
+    expect(tourRoleFrom(["property_manager", "accountant"])).toBe("accountant");
   });
 
   it("gives each role its own insurance stop, naming Illinois law only for Illinois", () => {

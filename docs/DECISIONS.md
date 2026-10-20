@@ -2087,3 +2087,135 @@ notices are built. Do not turn on `BILLING_ENFORCE` before they are.
 - A manager's contact details are visible to the board, the accountant and that
   unit's owner only.
 
+
+---
+
+## 46. MFA recovery codes, the idle timeout, and a fresh sign-in before access changes
+
+*Approved by Doug, 2026-10-20 (access audit, round 2). Extends #26. Migration
+0078.*
+
+**The gap.** #26 made a verified authenticator mandatory, with no way back in
+for someone who loses the phone. Support had to move the factor by hand.
+
+**Recovery codes.**
+- Ten single-use codes of 10 characters (alphabet without 0, 1, O, I; 50 bits),
+  shown as `XXXXX-XXXXX`. Made when a person finishes enrolling an authenticator,
+  and again on request under Account, Sign-in and security. Making a new set
+  cancels the old one. The set is shown once, with copy, download and a
+  "store these somewhere safe" note.
+- Only a salted scrypt hash is stored (`node:crypto`, N=16384, 16-byte salt).
+  The database cannot run scrypt, so the app hashes and the database compares:
+  a signed-in person can read their salts and used flags, never the hashes
+  (column-level grants plus RLS; `mfa_recovery_salts()`). The app hashes the
+  typed code against each unused salt and submits the digests to
+  `mfa_recovery_redeem`, which matches, spends the code and answers. Plaintext
+  is never stored, logged or echoed.
+- Creating a set needs a two-step code entered in the last 15 minutes (the
+  `amr` claim, read in SQL by `mfa_totp_age_seconds()`) and AAL2, so a borrowed
+  signed-in browser cannot mint codes. Regenerating asks for a fresh code first.
+- **Redeeming** (the sign-in code page, "Lost your authenticator?"): a good code
+  is spent and the function deletes that login's rows in `auth.mfa_factors`,
+  exactly what unenrolling does. The person is then sent to enrol a new
+  authenticator (and receives a new set of codes), and their other sessions are
+  signed out. Wrong codes are counted in the database
+  (`mfa_recovery_lockouts`): five wrong, then a 15 minute lock that also refuses
+  a right code. Unlocking is by waiting; there is no override.
+
+**Why no service-role path.** Supabase's own unenroll needs an AAL2 session, which
+is exactly what a person without their phone lacks, and the admin API would need
+the service key. The allowed service-key pattern (#28, #36, #37, #41) is for
+unattended callers with no user; here there is a signed-in caller who can be
+authorized in SQL. So the narrow path is one `SECURITY DEFINER` function
+(`search_path` empty, execute granted to `authenticated` only) that deletes
+only `auth.uid()`'s own factor rows after a valid code. No new key, route or
+allowlist. **To verify on Supabase before relying on it (#21):** that the
+function owner may delete from `auth.mfa_factors` there. PGlite has no Auth
+schema, so the DB test uses a stand-in table.
+
+**Accepted trade-off.** A recovery code stands in for the second factor, so a
+stolen password plus a stolen code opens the account. Mitigations: 50-bit codes,
+slow hashes, the lock, single use, and the sign-out of other sessions on use.
+
+**Idle timeout.** After 12 hours with no request the next request signs the
+person out (`supabase.auth.signOut()`, which revokes the session server-side)
+and sends them to `/login?notice=idle`. The proxy keeps `walkup.activity`, an
+httpOnly cookie holding the last request time, rewritten at most once a minute.
+No database call. A session with no cookie is stamped, not expired. The cookie
+is not signed: editing it can only help the person who already holds the
+session, and the real sign-out is the server-side revoke. Requests the browser
+makes on its own (prefetch) count as activity.
+
+**Fresh sign-in before access changes.** Saving a change to a person's roles
+(`syncPersonRoles`, only when a role is actually added or removed),
+`createInvite` and `extendAccountantAccess` need a two-step code entered in the
+last 15 minutes (the verified token's `amr` claim; `freshSignInError`). If not,
+the action returns an error pointing to `/confirm-sign-in`, a small page that
+asks for the current authenticator code and sends the person back. A password
+re-entry was not used: the code is already supported, can be verified without
+adding a password path, and is the stronger proof. Not applied elsewhere in this
+change (revoking an invite, redaction) and not enforced in the database.
+
+## 47. Access hardening, officer positions and outside roles (2026-10-20)
+
+Decided with Doug after the access audit (docs/specs/access-audit-2026-10-20.md). Migrations 0074 to 0080.
+
+- **Accountant reach.** The accountant reads financials, estimates, accounting and tax records only: the documents in
+  the financial statement, tax form, invoice, receipt, bank statement, insurance and vendor document categories, plus
+  whatever every member reads. Not the board's legal notices, contracts, correspondence or unfiled documents.
+  *Deferred:* the accountant can still read every owner's contact details through the database (board and accountant
+  share one database role, so hiding them needs the contact columns moved to a board-only table). Decide separately.
+- **Owner-visible documents.** Only governing documents, minutes and financial statements can be made visible to all
+  owners, checked in the database on direct edits. The definer functions that file shared-area ticket photos are not
+  touched.
+- **Upkeep money and the EIN.** Estimates, costs and contractors on upkeep are read through board/accountant tables;
+  everyone else reads member views without them. The EIN lives in `association_tax_ids` (board and accountant read,
+  admin writes), not on the association row owners can read.
+- **Invites.** A board member's invite for an existing person is refused when that person holds any role other than
+  owner. Board admin, board member and accountant (and outside-role) invites need the invitee's email, only redeem for
+  that email, and expire in 3 days (owners: 7). Only a board admin revokes an invite. Extending an accountant also
+  brings back access the daily clean-up just ended; the dashboard warns 14 days before it ends.
+- **Ending access.** A former owner's role ends the moment ownership is closed (trigger), not at the next daily run.
+  A login cannot be removed from the last board admin who can sign in. A signed-in person with no active role sees one
+  "Your access has ended" page. Board and admin roles do not expire with an officer term.
+- **Positions.** President, Vice President, Secretary, Treasurer, Director with a term (default 2 years, editable);
+  one person may hold two offices; Vice President and Director are titles only. Board admin stays a separate switch.
+  The Treasurer also carries the books duty (categorize, post and un-post bank transactions, categorization rules, fund
+  mapping, budget categories) but not connecting the bank, roles, billing or email approval. The Secretary also
+  approves announcement emails. A board admin has every duty. A Change of board moves an office in one step; the
+  dashboard warns 30 days before a term ends. Owners see officer titles on Your building.
+- **People & Access** (`/access`, board): officers, everyone with access beyond owners (with expiry and extend), invites,
+  a "see what a role sees" preview, the access review, and an activity feed built from the audit log.
+- **Not built as emails.** The plan listed an email to a person whose access changed. Walkup sends email only after a
+  board admin approves it (#36), so this stays a draft the board sends; no automatic email.
+- **Still deferred:** one login across several buildings; open signup stays (revisit before launch).
+
+## 48. The three outside roles: property manager, attorney, observer (2026-10-20)
+
+**Built at the product owner's request** (migrations 0077 and 0080; `src/lib/access/outside-roles.ts`). They finish what #43
+promised, with deliberately small scopes. All three: invited by a board admin only; the invite needs the invitee's email,
+lasts 3 days and only redeems for that email (0075); the grant always has an end date (a check constraint), is 90 days from an
+invite or a role checkbox, and is renewed by the same "Extend 90 days" as the accountant's; the daily clean-up and the
+Dashboard's "access ends soon" item already cover any role with an end date; two-step sign-in applies as to everyone. None can
+approve email, change roles, connect banks, or read the ledger, bank feed, statements, taxes or budget actuals.
+
+- **Observer.** A member (announcements, budget plan, published insurance summary, documents shared with all owners,
+  emergency info) plus the Finances summary page, whether or not the board switched it on for owners
+  (`owner_finances_enabled` answers true for an observer). Read only: no reports, no notes, no insurance certificate request.
+- **Property manager** (a management company for the whole building). A member plus, on **repairs only**, a board member's
+  powers: problems, notes (internal ones too), photos, upkeep, quotes, visits, through `can_manage_repairs()` (board or
+  property manager) in the repairs policies and RPCs. Reads the contractor list, reviews and notes but does not add or edit
+  one (the last four digits of a TIN are blanked on their view). Reads units and people **with contact details**, and the
+  documents in the maintenance, permit, vendor, contract, insurance and unit record categories. Each unit's dues standing
+  comes through one read-only summary function (`manager_unit_standing`); no charge, payment or ledger row is readable.
+  Not theirs, by design: ticket payments (`set_ticket_payments`, linking an expense when closing a problem), bills,
+  announcements, email, the other board tools.
+- **Attorney.** A member plus the documents in the legal notice, contract and correspondence categories that a board admin
+  shared with them in `attorney_shares`: a unit (documents pinned to that unit) or the whole building (documents pinned to no
+  unit). For the units shared, owner contact details and the collections standing, through two narrow functions
+  (`attorney_shared_owners`, `attorney_shared_units`) and the Collections page. A building-wide share opens documents only,
+  not owner details. The board shares from Building & Owners.
+- **Where they land.** Property manager: Repairs. Attorney: Documents. Observer: Home. Every page that is not theirs answers
+  "Restricted" or "This part is for the board"; a person with no live grant sees one "Your access has ended" page.
+- **To confirm.** A property manager's notes and photos show to owners as "The board". The manager cannot pick themselves as
+  a problem's assignee (assignees are board members).

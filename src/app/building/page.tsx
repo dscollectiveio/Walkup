@@ -1,6 +1,10 @@
 import { createClient } from "@/lib/supabase/server";
 import { Card, Empty, Restricted } from "@/components/ui";
 import { BoardOnly, viewerIsOwnerOnly } from "@/components/board-only";
+import { getViewer } from "@/lib/owner/viewer";
+import { ManagerBuildingView } from "./manager-view";
+import { AttorneySharesPanel } from "./attorney-shares-panel";
+import { APP_ROLES, ROLE_LABEL, isTimedRole, type AppRole } from "@/lib/access/outside-roles";
 import type { AssociationProfile } from "./association-profile-form";
 import { AssociationSummary } from "./association-summary";
 import { UnitsCard, AddOtherPerson } from "./add-bar";
@@ -14,6 +18,7 @@ import { OwnerRecordsHistory, type OwnershipRecord } from "./owner-records";
 import { GenerateInviteForm } from "./generate-invite-form";
 import { InviteRow, type InviteRecord } from "./invite-row";
 import { AccessReviewCard, type AccessReviewRecord } from "./access-review-card";
+import { OwnerFinancesCard } from "./owner-finances-card";
 import Link from "next/link";
 import { aiConfigured } from "@/lib/ai/client";
 import { inForce } from "@/lib/insurance/status";
@@ -29,10 +34,13 @@ export default async function BuildingPage({ searchParams }: { searchParams: Pro
   const { data: associations } = await supabase
     .from("associations")
     .select(
-      "id, legal_name, display_name, state_code, county, city, street_address, postal_code, year_built, construction_type, stories, roof_replaced_year, ein, incorporated_on, fiscal_year_end_month, capitalization_threshold, capitalization_threshold_source, board_contact_name, board_contact_email, board_contact_phone, accountant_person_id, accountant_firm, il_sos_file_number, information_returns_filing",
+      "id, legal_name, display_name, state_code, county, city, street_address, postal_code, year_built, construction_type, stories, roof_replaced_year, incorporated_on, fiscal_year_end_month, capitalization_threshold, capitalization_threshold_source, board_contact_name, board_contact_email, board_contact_phone, accountant_person_id, accountant_firm, il_sos_file_number, information_returns_filing",
     );
   const association = associations?.[0];
   if (!association) return <Restricted what="building settings" />;
+
+  const { data: taxIdRows } = await supabase.from("association_tax_ids").select("ein").eq("association_id", association.id).limit(1);
+  const ein = (taxIdRows?.[0]?.ein as string | null | undefined) ?? null;
 
   const { data: isBoardRes } = await supabase.rpc("has_role_in", {
     assoc: association.id,
@@ -40,6 +48,11 @@ export default async function BuildingPage({ searchParams }: { searchParams: Pro
   });
   const isBoard = isBoardRes === true;
   if (!isBoard) {
+    // A property manager (0080) reads the units, owners and contact details, read only.
+    const viewer = await getViewer();
+    if (viewer?.roles.includes("property_manager")) {
+      return <ManagerBuildingView supabase={supabase} associationId={association.id} />;
+    }
     // An owner (not the board or the accountant) gets the page that says so
     // and points at the owner's building page (owner-portal-spec 2.4).
     if (await viewerIsOwnerOnly()) {
@@ -79,6 +92,14 @@ export default async function BuildingPage({ searchParams }: { searchParams: Pro
   const isBoardAdmin = isBoardAdminRes === true;
 
   const todayIso = new Date().toISOString().slice(0, 10);
+
+  // Whether owners can see the Finances page (0079). Only an admin sees the switch, so only an admin asks.
+  // A failed read shows the switch as off, which is also what a database without 0079 means.
+  let ownerFinancesOn = false;
+  if (isBoardAdmin) {
+    const { data: ownerFinancesRes } = await supabase.rpc("owner_finances_enabled", { p_association_id: association.id });
+    ownerFinancesOn = ownerFinancesRes === true;
+  }
 
   const [
     { data: units },
@@ -171,7 +192,7 @@ export default async function BuildingPage({ searchParams }: { searchParams: Pro
     construction_type: association.construction_type,
     stories: association.stories,
     roof_replaced_year: association.roof_replaced_year,
-    ein: association.ein,
+    ein,
     incorporated_on: association.incorporated_on,
     fiscal_year_end_month: association.fiscal_year_end_month,
     capitalization_threshold: Number(association.capitalization_threshold),
@@ -185,11 +206,15 @@ export default async function BuildingPage({ searchParams }: { searchParams: Pro
   const personOptions = (persons ?? []).map((p) => ({ id: p.id, full_name: p.full_name }));
 
   const rolesByPerson = new Map<string, string[]>();
-  const accountantUntil = new Map<string, string>();
+  // People whose access ends by itself (the accountant and the outside roles): the day, and which role it is.
+  const accessEnds = new Map<string, { on: string; label: string }>();
   for (const g of roleGrantRows ?? []) {
     if (g.revoked_at) continue;
     if (g.expires_on && g.expires_on < todayIso) continue;
-    if (g.role === "accountant" && g.expires_on) accountantUntil.set(g.person_id, g.expires_on);
+    if (isTimedRole(g.role) && g.expires_on) {
+      const earlier = accessEnds.get(g.person_id);
+      if (!earlier || g.expires_on > earlier.on) accessEnds.set(g.person_id, { on: g.expires_on, label: ROLE_LABEL[g.role as AppRole] });
+    }
     const list = rolesByPerson.get(g.person_id) ?? [];
     list.push(g.role);
     rolesByPerson.set(g.person_id, list);
@@ -251,12 +276,7 @@ export default async function BuildingPage({ searchParams }: { searchParams: Pro
   });
 
   // The account owner: the signed-in person, with their highest HOA title.
-  const TITLES: [string, string][] = [
-    ["board_admin", "Board admin"],
-    ["board_member", "Board member"],
-    ["accountant", "Accountant"],
-    ["owner", "Owner"],
-  ];
+  const TITLES: [string, string][] = APP_ROLES.map((r) => [r, ROLE_LABEL[r]]);
   const { data: authData } = await supabase.auth.getUser();
   const me = (persons ?? []).find((p) => p.auth_user_id && p.auth_user_id === authData.user?.id);
   const myRoles = me ? (rolesByPerson.get(me.id) ?? []) : [];
@@ -318,7 +338,7 @@ export default async function BuildingPage({ searchParams }: { searchParams: Pro
       roles={rolesByPerson.get(p.id) ?? []}
       canEdit={isBoard}
       canEditRoles={isBoardAdmin}
-      accountantUntil={accountantUntil.get(p.id) ?? null}
+      accessEnds={accessEnds.get(p.id) ?? null}
       invite={
         isBoard && !p.auth_user_id && ((rolesByPerson.get(p.id) ?? []).includes("owner") || currentOwnerIds.has(p.id))
           ? { associationName: association.display_name, boardContactName: association.board_contact_name ?? null }
@@ -440,11 +460,17 @@ export default async function BuildingPage({ searchParams }: { searchParams: Pro
         <div className="space-y-5">
           {unitList.length === 0 ? (
             <Empty>
-              No units yet. Add them one at a time, or{" "}
-              <Link href="/building/import" className="underline underline-offset-2">
-                import a spreadsheet
-              </Link>
-              .
+              {isBoardAdmin ? (
+                <>
+                  No units yet. Add them one at a time, or{" "}
+                  <Link href="/building/import" className="underline underline-offset-2">
+                    import a spreadsheet
+                  </Link>
+                  .
+                </>
+              ) : (
+                "No units yet. Add them one at a time."
+              )}
             </Empty>
           ) : null}
 
@@ -497,7 +523,7 @@ export default async function BuildingPage({ searchParams }: { searchParams: Pro
                 ) : (
                   <ul className="divide-y divide-line">
                     {invites.map((i) => (
-                      <InviteRow key={i.id} invite={i} />
+                      <InviteRow key={i.id} invite={i} canRevokeInvites={isBoardAdmin} />
                     ))}
                   </ul>
                 )}
@@ -517,6 +543,22 @@ export default async function BuildingPage({ searchParams }: { searchParams: Pro
             activeGrantCount={activeGrantCount}
             daysSince={daysSinceReview === null ? null : Math.max(0, daysSinceReview)}
           />
+        </Card>
+      ) : null}
+
+      {isBoardAdmin ? (
+        <Card
+          navy
+          title="Share with an attorney"
+          hint="An attorney opens only the legal notices, contracts and correspondence you share, and sees owner contact details and dues for the units you share."
+        >
+          <AttorneySharesPanel supabase={supabase} todayIso={todayIso} />
+        </Card>
+      ) : null}
+
+      {isBoardAdmin ? (
+        <Card navy title="Finances page for owners" hint="Off until you turn it on.">
+          <OwnerFinancesCard enabled={ownerFinancesOn} />
         </Card>
       ) : null}
 

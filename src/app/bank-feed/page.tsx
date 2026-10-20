@@ -332,7 +332,12 @@ export default async function BankFeedPage({
     supabase.from("funds").select("id, name, kind").order("name"),
     supabase.from("bank_account_funds").select("bank_connection_id, plaid_account_id, fund_id"),
   ]);
-  const canEdit = isBoardAdminRes === true;
+  const isAdmin = isBoardAdminRes === true;
+  // Categorizing and posting are also the Treasurer's duty (0076); connecting and syncing stay with admins.
+  const { data: booksDuty } = associationId
+    ? await supabase.rpc("has_duty", { p_association_id: associationId, p_duty: "books" })
+    : { data: false };
+  const canEdit = booksDuty === true || isAdmin;
 
   if (!connections) return <Restricted what="the bank feed" />;
 
@@ -561,7 +566,11 @@ export default async function BankFeedPage({
               .
             </p>
           </div>
-          <ConnectBankButton />
+          {isAdmin ? (
+            <ConnectBankButton />
+          ) : (
+            <p className="text-[13px] font-medium text-ink">A board admin connects the bank account.</p>
+          )}
         </Card>
       ) : null}
 
@@ -571,6 +580,7 @@ export default async function BankFeedPage({
             balancesPromise={balancesPromise}
             active={active}
             canEdit={canEdit}
+            isAdmin={isAdmin}
             cashAccounts={pickers.cashAccounts}
             checkingIds={checking.map((c) => c.id)}
             flow={flow}

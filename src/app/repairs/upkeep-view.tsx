@@ -54,27 +54,31 @@ export async function UpkeepView({
     } else if (o.show && o.show !== "all") qs.set("show", o.show);
     return `/repairs?${qs.toString()}`;
   };
-  const isBoard = viewer.isBoard;
-  const seesMoney = viewer.canReadFinancials;
+  // isBoard here means "runs the upkeep": the board and a property manager. seesMoney: the full table, estimates included.
+  const isBoard = viewer.canManage;
+  const seesMoney = viewer.staffView;
 
-  if (archived) return <ArchivedJobs supabase={supabase} isBoard={isBoard} />;
+  if (archived) return <ArchivedJobs supabase={supabase} isBoard={isBoard} seesMoney={seesMoney} />;
 
   const [{ data: tasks }, { data: vendors }, { data: recentLog }, { count: archivedCount }, { data: openTickets }] = await Promise.all([
-    supabase
-      .from("upkeep_tasks")
-      .select("id, name, description, interval_months, due_month, last_done_on, next_due_on, trade, vendor_id, estimated_cost::text, vendors(name)")
+    // Estimates and contractors are only readable by board and accountant; everyone else reads the member views.
+    (seesMoney
+      ? supabase.from("upkeep_tasks").select("id, name, description, interval_months, due_month, last_done_on, next_due_on, trade, vendor_id, estimated_cost::text, vendors(name)")
+      : supabase.from("upkeep_tasks_member").select("id, name, description, interval_months, due_month, last_done_on, next_due_on, trade")
+    )
       .eq("is_active", true)
-      .order("next_due_on"),
+      .order("next_due_on") as unknown as PromiseLike<{ data: Record<string, unknown>[] | null }>,
     isBoard
       ? supabase.from("vendors").select("id, name").is("archived_at", null).neq("status", "do_not_use").order("name")
       : Promise.resolve({ data: [] as { id: string; name: string }[] }),
-    supabase
-      .from("upkeep_log")
-      .select("id, task_id, done_on, cost::text, note, vendors(name), upkeep_tasks(name)")
+    (seesMoney
+      ? supabase.from("upkeep_log").select("id, task_id, done_on, cost::text, note, vendors(name), upkeep_tasks(name)")
+      : supabase.from("upkeep_log_member").select("id, task_id, done_on, note, task_name")
+    )
       .order("done_on", { ascending: false })
       .order("created_at", { ascending: false })
-      .limit(8),
-    supabase.from("upkeep_tasks").select("id", { count: "exact", head: true }).eq("is_active", false),
+      .limit(8) as unknown as PromiseLike<{ data: Record<string, unknown>[] | null }>,
+    supabase.from(seesMoney ? "upkeep_tasks" : "upkeep_tasks_member").select("id", { count: "exact", head: true }).eq("is_active", false),
     isBoard
       ? supabase.from("tickets").select("id, reference, upkeep_task_id").not("upkeep_task_id", "is", null).not("status", "in", '("resolved","closed")')
       : Promise.resolve({ data: [] as { id: string; reference: number; upkeep_task_id: string }[] }),
@@ -215,7 +219,7 @@ export async function UpkeepView({
         <Card navy title="Recently done">
           <ul className="divide-y divide-line text-[13px]">
             {(recentLog ?? []).map((l) => {
-              const task = one(l.upkeep_tasks as { name: string } | { name: string }[] | null);
+              const task = seesMoney ? one(l.upkeep_tasks as { name: string } | { name: string }[] | null) : { name: (l.task_name as string | null) ?? "" };
               const vendor = seesMoney ? one(l.vendors as { name: string } | { name: string }[] | null) : null;
               return (
                 <li key={l.id as string} className="flex flex-wrap items-baseline justify-between gap-3 py-2">
@@ -261,9 +265,9 @@ function ArchivedLink({ n }: { n: number }) {
   );
 }
 
-async function ArchivedJobs({ supabase, isBoard }: { supabase: Supabase; isBoard: boolean }) {
+async function ArchivedJobs({ supabase, isBoard, seesMoney }: { supabase: Supabase; isBoard: boolean; seesMoney: boolean }) {
   const { data } = await supabase
-    .from("upkeep_tasks")
+    .from(seesMoney ? "upkeep_tasks" : "upkeep_tasks_member")
     .select("id, name, interval_months, due_month, last_done_on")
     .eq("is_active", false)
     .order("name");

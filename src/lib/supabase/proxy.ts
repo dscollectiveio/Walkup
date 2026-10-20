@@ -1,6 +1,7 @@
 import { createServerClient } from "@supabase/ssr";
 import { NextResponse, type NextRequest } from "next/server";
 import { PENDING_INVITE_COOKIE } from "@/lib/invite-cookie";
+import { ACTIVITY_COOKIE, idleDecision, parseActivity } from "@/lib/security/session-policy";
 
 // Set once we've seen this user's persons row, so later requests skip that
 // query. Convenience only (like the redirect it feeds): pages already degrade
@@ -60,6 +61,32 @@ const ONBOARDING_EXEMPT_PATHS = ["/onboarding", "/invite", "/api/address"];
 // email preferences (0055), so it needs neither check.
 const ALWAYS_REACHABLE_PREFIXES = ["/unsubscribe/"];
 
+// After an idle sign-out these public pages stay where they are; every other
+// path goes to /login with a notice.
+const STAY_PUT_PUBLIC = (path: string) =>
+  !(path === "/" || path === "/login" || path === "/signup" || path === "/forgot-password");
+
+const activityCookieOptions = {
+  path: "/",
+  httpOnly: true,
+  sameSite: "lax" as const,
+  secure: process.env.NODE_ENV === "production",
+  // Longer than the timeout so the proxy, not the browser, decides.
+  maxAge: 60 * 60 * 24 * 30,
+};
+
+function isPublicPath(path: string): boolean {
+  return path === "/" || PUBLIC_PATHS.some((p) => path.startsWith(p));
+}
+
+function idleLoginUrl(request: NextRequest): URL {
+  const url = request.nextUrl.clone();
+  url.pathname = "/login";
+  url.search = "";
+  url.searchParams.set("notice", "idle");
+  return url;
+}
+
 /**
  * Refreshes the auth token on every request and redirects unauthenticated
  * traffic to /login, signed-in-but-not-MFA'd traffic to enrollment or a
@@ -80,6 +107,9 @@ export async function updateSession(request: NextRequest) {
   // The root layout reads this to give the landing page the whole width.
   request.headers.set("x-walkup-path", request.nextUrl.pathname);
   let response = NextResponse.next({ request });
+  // Set once a signed-in request is seen, and re-applied if the Supabase
+  // client swaps `response` for a new one while refreshing the token.
+  let stampActivity: string | null = null;
 
   const supabase = createServerClient(
     process.env.NEXT_PUBLIC_SUPABASE_URL!,
@@ -97,6 +127,7 @@ export async function updateSession(request: NextRequest) {
           for (const { name, value, options } of cookiesToSet) {
             response.cookies.set(name, value, options);
           }
+          if (stampActivity) response.cookies.set(ACTIVITY_COOKIE, stampActivity, activityCookieOptions);
         },
       },
     },
@@ -113,7 +144,40 @@ export async function updateSession(request: NextRequest) {
   const path = request.nextUrl.pathname;
   // "/" is the landing page for signed-out visitors (and the Dashboard for
   // everyone else), so it is public on its own — never as a prefix.
-  const isPublic = path === "/" || PUBLIC_PATHS.some((p) => path.startsWith(p));
+  const isPublic = isPublicPath(path);
+
+  const now = Date.now();
+
+  if (user) {
+    // Idle timeout (SECURITY_POLICY 4d): a cookie, not a database call. It is
+    // rewritten at most once a minute. A missing cookie is stamped, not
+    // treated as expired, so sessions that began before this shipped survive.
+    const decision = idleDecision(parseActivity(request.cookies.get(ACTIVITY_COOKIE)?.value, now), now);
+    if (decision.action === "expire") {
+      try {
+        await supabase.auth.signOut();
+      } catch {
+        // The cookies are cleared below either way.
+      }
+      const expired = isPublicPath(path) && STAY_PUT_PUBLIC(path)
+        ? response
+        : NextResponse.redirect(idleLoginUrl(request));
+      if (expired !== response) {
+        for (const c of response.cookies.getAll()) expired.cookies.set(c);
+      }
+      expired.cookies.delete(ACTIVITY_COOKIE);
+      expired.cookies.delete(MEMBER_COOKIE);
+      return expired;
+    }
+    if (decision.action === "stamp") {
+      stampActivity = String(now);
+      response.cookies.set(ACTIVITY_COOKIE, stampActivity, activityCookieOptions);
+    }
+  } else if (request.cookies.get(ACTIVITY_COOKIE)) {
+    // Signed out: drop the stamp so the next sign-in starts clean instead of
+    // inheriting a stale one.
+    response.cookies.delete(ACTIVITY_COOKIE);
+  }
 
   if (!user) {
     if (isPublic) return response;

@@ -192,11 +192,19 @@ export async function approveBatch(
   // Before any database call: no key, no address, or the kill switch means drafts only.
   const config = sendConfig();
   if (!config.ok) return { error: notConfiguredCopy(config.reason) };
-  const who = await adminViewer();
-  if ("error" in who) return who;
   if (!isUuid(batchId)) return { error: SOMETHING_WRONG };
-
   const supabase = await createClient();
+  const who = await adminViewer();
+  if ("error" in who) {
+    // The Secretary may approve announcement emails (0076); the database decides, this only lets the call through.
+    const { data: b } = await supabase.from("email_batches").select("association_id, kind").eq("id", batchId).maybeSingle();
+    const { data: secretary } =
+      b?.kind === "announcement"
+        ? await supabase.rpc("has_position", { p_association_id: b.association_id as string, p_position: "secretary" })
+        : { data: false };
+    if (secretary !== true) return who;
+  }
+
   const { data, error } = await supabase.rpc("email_approve_batch", { p_batch_id: batchId });
   if (error) {
     const hint = error.hint === "sending_off" || error.hint === "no_reply_to" ? error.hint : undefined;

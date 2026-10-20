@@ -15,9 +15,13 @@ import {
   LifeBuoy,
   UserSearch,
   CreditCard,
+  UserCog,
+  PiggyBank,
+  Scale,
   type LucideIcon,
 } from "lucide-react";
-import { OWNER_NAV, STAFF_ANNOUNCEMENTS, STAFF_MY_UNIT, type OwnerNavItem } from "@/lib/owner/nav";
+import type { AppRole } from "@/lib/access/outside-roles";
+import { OWNER_FINANCES_NAV, OWNER_NAV, STAFF_ANNOUNCEMENTS, STAFF_MY_UNIT, type OwnerNavItem } from "@/lib/owner/nav";
 
 export interface NavItemConfig {
   href: string;
@@ -56,6 +60,7 @@ const OWNER_ICONS: Record<string, LucideIcon> = {
   documents: Folder,
   "owner-profile": UserRound,
   "my-unit": UserRound,
+  "owner-finances": PiggyBank,
 };
 
 function toNavItem(i: OwnerNavItem): NavItemConfig {
@@ -102,6 +107,7 @@ export const NAV_GROUPS: NavGroupConfig[] = [
       },
       { href: "/repairs/find", label: "Find a Contractor", icon: UserSearch, tourId: "find-contractor" },
       { href: "/documents", label: "Documents", icon: Folder, tourId: "documents" },
+      { href: "/access", label: "People & Access", icon: UserCog, tourId: "access" },
     ],
   },
 ];
@@ -126,8 +132,74 @@ export const OWNER_UNGROUPED_NAV: NavItemConfig[] = OWNER_SECTIONS[0].items;
 export const OWNER_NAV_GROUPS: NavGroupConfig[] = OWNER_SECTIONS.slice(1, -1).map((g) => ({ label: g.label ?? "", items: g.items }));
 export const OWNER_TRAILING_NAV: NavItemConfig[] = OWNER_SECTIONS[OWNER_SECTIONS.length - 1].items;
 
+/**
+ * An owner's navigation with "Finances" added right after Budget, for when a board admin has switched the
+ * page on. Leaves the navigation untouched if there is no Budget item to put it after.
+ */
+export function withOwnerFinances<T extends { groups: NavGroupConfig[] }>(nav: T): T {
+  const item = toNavItem(OWNER_FINANCES_NAV);
+  let placed = false;
+  const groups = nav.groups.map((g) => {
+    const at = g.items.findIndex((i) => i.href === "/budget");
+    if (placed || at < 0) return g;
+    placed = true;
+    return { ...g, items: [...g.items.slice(0, at + 1), item, ...g.items.slice(at + 1)] };
+  });
+  return placed ? { ...nav, groups } : nav;
+}
+
 /** Who is looking, for the few labels that depend on it. */
-export type NavRole = "board_admin" | "board_member" | "accountant" | "owner";
+export type NavRole = AppRole;
+
+/**
+ * The three outside roles (0080) each get their own small navigation, built only from pages that role can
+ * open (src/lib/access/outside-roles.ts OUTSIDE_PATHS, held by a test). Every other page answers
+ * "Restricted" or "This part is for the board" for them.
+ *
+ * A property manager: announcements, the repairs and upkeep they run, the building's units and people
+ * (read only, with contact details) and the documents they may read.
+ */
+export const MANAGER_UNGROUPED_NAV: NavItemConfig[] = [toNavItem(STAFF_ANNOUNCEMENTS)];
+export const MANAGER_NAV_GROUPS: NavGroupConfig[] = [
+  {
+    label: "Building",
+    items: [
+      {
+        href: "/repairs",
+        label: "Repairs & Upkeep",
+        icon: Hammer,
+        badgeKey: "repairs",
+        tourId: "repairs",
+        activePrefixes: ["/repairs", "/maintenance", "/contractors"],
+        excludePrefixes: ["/repairs/find"],
+      },
+      { href: "/building", label: "Building & Owners", icon: Building2, tourId: "building" },
+      { href: "/documents", label: "Documents", icon: Folder, tourId: "documents" },
+    ],
+  },
+];
+
+/** An attorney: the documents the board shared, and the collections standing of the units shared with them. */
+export const ATTORNEY_NAV_GROUPS: NavGroupConfig[] = [
+  {
+    label: "Shared with you",
+    items: [
+      { href: "/documents", label: "Documents", icon: Folder, tourId: "documents" },
+      { href: "/collections", label: "Collections", icon: Scale, tourId: "collections" },
+    ],
+  },
+];
+
+/**
+ * An observer: the owner navigation without the "My unit" run (an observer owns nothing unless they also
+ * hold the owner role, in which case Home shows it), with Finances after Budget whether or not the board
+ * switched the page on for owners.
+ */
+const OBSERVER_NAV = withOwnerFinances({
+  ungrouped: OWNER_UNGROUPED_NAV,
+  groups: OWNER_NAV_GROUPS.filter((g) => g.label !== "My unit"),
+  trailing: OWNER_TRAILING_NAV,
+});
 
 /**
  * "Insurance" for the board and the accountant (the Marketplace is one tab
@@ -146,6 +218,8 @@ export function navGroupsFor(role: NavRole | null | undefined): NavGroupConfig[]
     ...g,
     items: g.items
       .filter((i) => boardRole || i.href !== "/repairs/find")
+      // People & Access is the board's page.
+      .filter((i) => boardRole || i.href !== "/access")
       // The Building & Owners page is the board's; an accountant would only see "Restricted".
       .filter((i) => role !== "accountant" || i.href !== "/building")
       .map((i) => (i.href === "/insurance" ? { ...i, label: insuranceNavLabel(role) } : i)),
@@ -163,6 +237,9 @@ export function navFor(
   if (role === "owner") {
     return { ungrouped: OWNER_UNGROUPED_NAV, groups: OWNER_NAV_GROUPS, trailing: OWNER_TRAILING_NAV };
   }
+  if (role === "observer") return OBSERVER_NAV;
+  if (role === "property_manager") return { ungrouped: MANAGER_UNGROUPED_NAV, groups: MANAGER_NAV_GROUPS, trailing: [] };
+  if (role === "attorney") return { ungrouped: [], groups: ATTORNEY_NAV_GROUPS, trailing: [] };
   return {
     // "My unit" and Billing live in the Your account page (top-right profile button), not here.
     ungrouped: UNGROUPED_NAV,
@@ -188,6 +265,8 @@ export function isNavItemActive(pathname: string, item: Pick<NavItemConfig, "hre
  */
 const EXTRA_TITLES: { prefix: string; label: string }[] = [
   { prefix: "/owner/statement/", label: "Statement" },
+  { prefix: "/owner/finances", label: "Finances" },
+  { prefix: "/collections", label: "Collections" },
   { prefix: "/announcements/", label: "Announcement" },
   { prefix: "/building/import", label: "Import" },
   { prefix: "/dues/send", label: "Review emails" },

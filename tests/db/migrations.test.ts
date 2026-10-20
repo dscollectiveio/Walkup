@@ -63,6 +63,7 @@ describe("migrations", () => {
     // platform_admins, insurance_partners (0041), tax_form_templates (0042)
     // and tax_form_links (0048) are global by design and writable only by a
     // platform admin. billing_webhook_events (0062) is Stripe's event-id log:
+    // mfa_recovery_codes and mfa_recovery_lockouts (0078) belong to a login, not an association.
     // global because an event can arrive before its association is known; it
     // carries a nullable association_id, so it passes without an entry here.
     const { rows } = await db.query<{ table_name: string }>(
@@ -70,7 +71,7 @@ describe("migrations", () => {
          from information_schema.tables t
         where t.table_schema = 'public'
           and t.table_type = 'BASE TABLE'
-          and t.table_name not in ('associations', 'tax_parameters', 'platform_admins', 'insurance_partners', 'tax_form_templates', 'tax_form_links', 'state_waitlist')
+          and t.table_name not in ('associations', 'tax_parameters', 'platform_admins', 'insurance_partners', 'tax_form_templates', 'tax_form_links', 'state_waitlist', 'mfa_recovery_codes', 'mfa_recovery_lockouts')
           and not exists (
             select 1 from information_schema.columns c
              where c.table_schema = 'public'

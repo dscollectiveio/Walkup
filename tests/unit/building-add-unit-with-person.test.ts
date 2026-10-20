@@ -4,6 +4,7 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
 vi.mock("server-only", () => ({}));
 vi.mock("next/cache", () => ({ revalidatePath: vi.fn() }));
 vi.mock("@/lib/google/places", () => ({ geocode: vi.fn() }));
+vi.mock("@/lib/security/fresh-signin", () => ({ freshSignInError: async () => null }));
 
 type Call = { table: string; op: string; row?: Record<string, unknown> };
 const calls: Call[] = [];

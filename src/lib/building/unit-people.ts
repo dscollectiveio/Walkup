@@ -9,7 +9,9 @@
  * Pure, so it can be tested without a database. Money-free; only names, contact details and dates.
  */
 
-export const HOA_ROLES = ["board_admin", "board_member", "accountant", "owner"] as const;
+import { APP_ROLES } from "@/lib/access/outside-roles";
+
+export const HOA_ROLES = APP_ROLES;
 
 export interface PersonFieldsInput {
   full_name: string;

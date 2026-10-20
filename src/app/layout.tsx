@@ -4,6 +4,7 @@ import { SITE_URL } from "@/lib/site-config";
 import "./globals.css";
 import { createClient, sessionUser } from "@/lib/supabase/server";
 import { signOut } from "./login/actions";
+import { AccessEnded } from "@/components/access-ended";
 import Link from "next/link";
 import { Sidebar } from "@/components/sidebar/sidebar";
 import { AppFrame } from "@/components/app-frame";
@@ -67,8 +68,11 @@ export default async function RootLayout({
   let uncategorizedCount = 0;
   let repairsCount = 0;
   let announcementsCount = 0;
+  let ownsUnit = false;
+  let ownerFinances = false;
   let stateCode: string | null = null;
   let tourRole: TourRole | null = null;
+  let accessEnded = false;
 
   if (showChrome && user) {
     // Lightweight queries the sidebar needs on every page: the association
@@ -101,6 +105,9 @@ export default async function RootLayout({
     tourRole = tourRoleFrom(
       (myGrants ?? []).filter((g) => !g.expires_on || g.expires_on >= today).map((g) => g.role as string),
     );
+    // A person with a record but no active role (an accountant whose access ended): one page says so.
+    // Only judged on a fully signed-in session, so the grants are readable and the MFA pages are untouched.
+    accessEnded = claimsData?.claims?.aal === "aal2" && Boolean(me?.[0]) && !tourRole;
     const associationId = (associations?.[0]?.id as string | undefined) ?? null;
     if (associationId && tourRole) {
       const [counts, repairs] = await Promise.all([
@@ -108,6 +115,8 @@ export default async function RootLayout({
         loadRepairsCount(supabase, associationId, tourRole, (me?.[0]?.id as string | undefined) ?? null, user.id),
       ]);
       announcementsCount = counts.announcements;
+      ownsUnit = counts.ownsUnit;
+      ownerFinances = counts.ownerFinances;
       repairsCount = repairs;
     }
   }
@@ -133,6 +142,9 @@ export default async function RootLayout({
             uncategorizedCount={uncategorizedCount}
             repairsCount={repairsCount}
             announcementsCount={announcementsCount}
+            ownsUnit={ownsUnit}
+            ownerFinances={ownerFinances}
+            accessEnded={accessEnded}
             role={tourRole}
             userEmail={user.email ?? ""}
             initialMode={sidebarMode}
@@ -173,7 +185,7 @@ export default async function RootLayout({
           </footer>
           }
         >
-          {children}
+          {accessEnded ? <AccessEnded signOutAction={signOut} /> : children}
         </AppFrame>
       </body>
     </html>
@@ -193,18 +205,20 @@ async function loadPortalCounts(
   supabase: Supabase,
   associationId: string,
   role: TourRole,
-): Promise<{ announcements: number; ownsUnit: boolean }> {
+): Promise<{ announcements: number; ownsUnit: boolean; ownerFinances: boolean }> {
   try {
-    const [unread, owned] = await Promise.all([
+    const [unread, owned, finances] = await Promise.all([
       supabase.rpc("announcements_unread", { p_association_id: associationId }),
       role === "owner" ? Promise.resolve(null) : supabase.rpc("owned_unit_ids", { assoc: associationId }),
+      // Whether the board switched the owner Finances page on (0079). Only owners get its sidebar item.
+      role === "owner" ? supabase.rpc("owner_finances_enabled", { p_association_id: associationId }) : Promise.resolve(null),
     ]);
     const n = typeof unread.data === "number" && !unread.error ? unread.data : 0;
     const ownsUnit = Array.isArray(owned?.data) && owned.data.length > 0;
-    return { announcements: n, ownsUnit };
+    return { announcements: n, ownsUnit, ownerFinances: finances?.data === true && !finances.error };
   } catch (e) {
     console.error("[layout] portal counts", e instanceof Error ? e.name : "unknown");
-    return { announcements: 0, ownsUnit: false };
+    return { announcements: 0, ownsUnit: false, ownerFinances: false };
   }
 }
 
@@ -223,7 +237,8 @@ async function loadRepairsCount(
   userId: string,
 ): Promise<number> {
   try {
-    if (role === "board_admin" || role === "board_member") {
+    // A property manager works the same list as a board member (0080).
+    if (role === "board_admin" || role === "board_member" || role === "property_manager") {
       const [{ data: tickets }, { count: overdueUpkeep }, since] = await Promise.all([
         supabase
           .from("tickets")

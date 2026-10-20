@@ -10,6 +10,7 @@ import { CheckTab } from "./tabs/check";
 import { MarketTab } from "./tabs/market";
 import { OverviewTab } from "./tabs/overview";
 import { OwnerView } from "./tabs/owner-view";
+import { getViewer } from "@/lib/owner/viewer";
 import { PoliciesTab } from "./tabs/policies";
 import { QuotesTab, type QuotesSearch } from "./tabs/quotes";
 
@@ -34,7 +35,12 @@ export default async function InsurancePage({
   const ctx = await loadInsuranceContext(supabase);
   if (!ctx) return <Restricted what="insurance records" />;
   if (!ctx.canRead) {
-    if (ctx.isMember) return <OwnerView supabase={supabase} ctx={ctx} />;
+    if (ctx.isMember) {
+      // The outside roles (0080) read the published summary; asking the board for a certificate is an owner's request.
+      const viewer = await getViewer();
+      const canAsk = !viewer || viewer.roles.some((r) => r === "owner" || r === "board_admin" || r === "board_member" || r === "accountant");
+      return <OwnerView supabase={supabase} ctx={ctx} canAsk={canAsk} />;
+    }
     return <Restricted what="insurance records" />;
   }
 

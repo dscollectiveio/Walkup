@@ -29,6 +29,12 @@ export async function isBoard(supabase: Supabase, associationId: string): Promis
   return data === true;
 }
 
+/** The board, or a property manager: who may work the repairs (problems, notes, photos, upkeep, quotes). Not a finance check. */
+export async function canManageRepairs(supabase: Supabase, associationId: string): Promise<boolean> {
+  const { data } = await supabase.rpc("can_manage_repairs", { assoc: associationId });
+  return data === true;
+}
+
 export async function isBoardAdmin(supabase: Supabase, associationId: string): Promise<boolean> {
   const { data } = await supabase.rpc("has_role_in", { assoc: associationId, roles: ["board_admin"] });
   return data === true;

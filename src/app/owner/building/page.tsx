@@ -27,7 +27,7 @@ export default async function OwnerBuildingPage() {
     | { display_name: string; street_address: string | null; city: string | null; state_code: string | null; postal_code: string | null }
     | undefined;
   const cityLine = [a?.city, [a?.state_code, a?.postal_code].filter(Boolean).join(" ")].filter((s) => s && s.trim()).join(", ");
-  const roster = rosterRes.error ? [] : ((rosterRes.data ?? []) as { full_name: string; role: string }[]);
+  const roster = rosterRes.error ? [] : ((rosterRes.data ?? []) as { full_name: string; role: string; title: string | null }[]);
 
   const b = emergency.building;
   const facts: { label: string; text: string; tel: string | null }[] = [];
@@ -68,7 +68,7 @@ export default async function OwnerBuildingPage() {
               {roster.map((m, i) => (
                 <li key={`${m.full_name}-${i}`} className="flex items-baseline justify-between gap-3 py-2 text-[14px]">
                   <span className="text-ink">{m.full_name}</span>
-                  <span className="text-[12px] text-mute">{m.role === "board_admin" ? "Board admin" : "Board member"}</span>
+                  <span className="text-[12px] text-mute">{m.title ?? (m.role === "board_admin" ? "Board admin" : "Board member")}</span>
                 </li>
               ))}
             </ul>

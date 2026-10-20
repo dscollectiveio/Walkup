@@ -24,12 +24,16 @@ import {
  * background read. Starts on selection: there is no submit button.
  */
 export interface DirectUploadProps {
-  purpose: "document" | "ticket_photo";
+  purpose: "document" | "ticket_photo" | "unit_document";
   categorySlug?: string;
   /** Shown per row: "Filing as Insurance". */
   categoryLabel?: string;
   /** Required for ticket_photo. */
   ticketId?: string;
+  /** Required for unit_document: the unit the files are for. */
+  unitId?: string;
+  /** Required for unit_document: one of UNIT_DOCUMENT_KINDS. */
+  unitKind?: string;
   /** ticket_photo on a shared-area problem: shows the audience note. */
   sharedTicket?: boolean;
   link?: { targetTable: LinkableTable; targetId: string; relation?: string };
@@ -47,6 +51,8 @@ export interface DirectUploadProps {
   help?: string | null;
   /** Default true for documents, false for photos. Only shown on devices with a fine pointer. */
   dropZone?: boolean;
+  /** A larger drop area with its text, button and help centered (the Documents page). */
+  centered?: boolean;
   disabled?: boolean;
   /** Runs once on the picked or dropped list, before the count check (Insurance joins photos into one PDF). */
   prepareFiles?: (files: File[]) => Promise<File[] | { error: string }>;
@@ -123,6 +129,8 @@ export function DirectUpload(props: DirectUploadProps) {
     categorySlug,
     categoryLabel,
     ticketId,
+    unitId,
+    unitKind,
     sharedTicket,
     link,
     read,
@@ -184,7 +192,7 @@ export function DirectUpload(props: DirectUploadProps) {
   async function runOne(row: Row): Promise<UploadOutcome> {
     const outcome = await uploadFile(
       row.file,
-      { purpose, categorySlug, ticketId, link, read, normaliseImages, prepare },
+      { purpose, categorySlug, ticketId, unitId, unitKind, link, read, normaliseImages, prepare },
       (stage, bytes) =>
         patch(row.key, {
           status: statusFor(stage, bytes ?? row.size),
@@ -326,19 +334,21 @@ export function DirectUpload(props: DirectUploadProps) {
             const dropped = Array.from(e.dataTransfer.files ?? []);
             void start(multiple ? dropped : dropped.slice(0, 1));
           }}
-          className={`flex flex-wrap items-center gap-3 rounded-lg border border-dashed border-line-strong px-4 py-4 text-[13px] text-mute ${
-            dragging ? "bg-fill" : ""
-          }`}
+          className={`flex rounded-lg border border-dashed border-line-strong text-[13px] text-mute ${
+            props.centered ? "flex-col items-center justify-center gap-4 px-6 py-12 text-center text-[14px]" : "flex-wrap items-center gap-3 px-4 py-4"
+          } ${dragging ? "bg-fill" : ""}`}
         >
           <span>{UPLOAD_COPY.dropZone}</span>
           {button}
         </div>
+      ) : props.centered ? (
+        <div className="flex justify-center">{button}</div>
       ) : (
         button
       )}
 
       {help ? (
-        <p id={helpId} className="text-[12px] text-mute">
+        <p id={helpId} className={`text-[12px] text-mute ${props.centered ? "text-center" : ""}`}>
           {help}
         </p>
       ) : null}

@@ -34,7 +34,8 @@ export async function GET(request: NextRequest) {
   const today = buildingTodayIso();
   const [tasks, visits, policies] = await Promise.all([
     supabase
-      .from("upkeep_tasks")
+      // Members who can't read the financials get the calendar through the member view (no costs or contractors).
+      .from(financial === true ? "upkeep_tasks" : "upkeep_tasks_member")
       .select("id, name, next_due_on, interval_months, due_month, description, updated_at")
       .eq("association_id", association.id)
       .eq("is_active", true)

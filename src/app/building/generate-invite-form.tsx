@@ -7,11 +7,14 @@ import { btnPrimary } from "@/components/repairs/styles";
 const ROLES = [
   { value: "board_admin", label: "Board admin: full read/write" },
   { value: "board_member", label: "Board member: full read, most write" },
-  { value: "accountant", label: "Accountant: read-only, ends after 90 days" },
+  { value: "accountant", label: "Accountant: financials and tax, read-only, ends after 90 days" },
+  { value: "property_manager", label: "Property manager: runs repairs, sees units and owners, read-only elsewhere, ends after 90 days" },
+  { value: "attorney", label: "Attorney: only the legal documents you share with them, read-only, ends after 90 days" },
+  { value: "observer", label: "Observer: sees what an owner sees plus the finances summary, read-only, ends after 90 days" },
   { value: "owner", label: "Owner: read-only, own unit" },
 ];
 
-/** A board admin can invite any role; any other board member can invite owners only (0060). */
+/** A board admin can invite any role; any other board member can invite owners only (0060). Every role but owner needs the invitee's email, and its link lasts 3 days (0075). */
 export function GenerateInviteForm({
   people = [],
   canGiveAnyRole = false,
@@ -70,12 +73,15 @@ export function GenerateInviteForm({
         <div>
           <label htmlFor="invite_email" className="block text-[12px] font-medium text-ink">
             Email
-            <span className="ml-1 font-normal text-mute-soft">optional, just a label</span>
+            <span className="ml-1 font-normal text-mute-soft">
+              {role && role !== "owner" ? "required: they must sign in with it" : "optional, just a label"}
+            </span>
           </label>
           <input
             id="invite_email"
             name="email"
             type="email"
+            required={role !== "" && role !== "owner"}
             className="mt-1 w-full rounded-lg border border-line-strong bg-paper px-3 py-2 text-[13px] text-ink"
           />
         </div>

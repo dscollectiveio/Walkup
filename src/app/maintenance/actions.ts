@@ -16,7 +16,7 @@ import {
   canReadFinancials,
   dbError,
   firstIssue,
-  isBoard,
+  canManageRepairs,
   isUuid,
   NO_ASSOCIATION,
   SOMETHING_WRONG,
@@ -207,7 +207,7 @@ export async function updateTicketDetails(ticketId: string, input: z.input<typeo
   const supabase = await createClient();
   const ticket = await loadTicket(supabase, ticketId);
   if (!ticket) return { error: NOT_VISIBLE };
-  if (!(await isBoard(supabase, ticket.association_id))) return { error: "Only a board member can edit a problem." };
+  if (!(await canManageRepairs(supabase, ticket.association_id))) return { error: "Only a board member can edit a problem." };
 
   const unitId = v.where === "shared" ? null : v.where;
   let accessNotes = v.access_notes;
@@ -365,7 +365,7 @@ export async function closeFixedTickets(ticketIds: string[]): Promise<Ok<{ close
   const supabase = await createClient();
   const associationId = await currentAssociationId(supabase);
   if (!associationId) return { error: NO_ASSOCIATION };
-  if (!(await isBoard(supabase, associationId))) return { error: "Only a board member can close problems." };
+  if (!(await canManageRepairs(supabase, associationId))) return { error: "Only a board member can close problems." };
 
   const cutoff = new Date(Date.now() - 30 * 86_400_000).toISOString();
   const { data, error } = await supabase
@@ -571,7 +571,7 @@ export async function retriageTicket(ticketId: string): Promise<Ok<{ triage: Sto
   const supabase = await createClient();
   const ticket = await loadTicket(supabase, ticketId);
   if (!ticket) return { error: NOT_VISIBLE };
-  if (!(await isBoard(supabase, ticket.association_id))) return { error: BOARD_ONLY };
+  if (!(await canManageRepairs(supabase, ticket.association_id))) return { error: BOARD_ONLY };
   if (!aiConfigured()) return { error: aiFailure("not_configured", "ticket_triage").reason };
 
   const triage = await triageTicket({
@@ -599,7 +599,7 @@ export async function createTicketFromUpkeep(taskId: string): Promise<Ok<{ ticke
     .limit(1);
   const task = tasks?.[0];
   if (!task) return { error: "That upkeep job isn't visible to you." };
-  if (!(await isBoard(supabase, task.association_id))) return { error: "Only a board member can turn upkeep into a problem." };
+  if (!(await canManageRepairs(supabase, task.association_id))) return { error: "Only a board member can turn upkeep into a problem." };
 
   const usual = task.vendors as { status?: string; archived_at?: string | null } | null;
   const vendorUsable = task.vendor_id && usual && usual.status !== "do_not_use" && !usual.archived_at;
@@ -692,7 +692,7 @@ export async function ownerNoticeRecipients(ticketId: string): Promise<
   const supabase = await createClient();
   const ticket = await loadTicket(supabase, ticketId);
   if (!ticket) return { error: NOT_VISIBLE };
-  if (!(await isBoard(supabase, ticket.association_id))) return { error: BOARD_ONLY };
+  if (!(await canManageRepairs(supabase, ticket.association_id))) return { error: BOARD_ONLY };
 
   const today = buildingTodayIso();
   let q = supabase
@@ -743,7 +743,7 @@ export async function markOwnersTold(ticketId: string, visitDate: string): Promi
   const supabase = await createClient();
   const ticket = await loadTicket(supabase, ticketId);
   if (!ticket) return { error: NOT_VISIBLE };
-  if (!(await isBoard(supabase, ticket.association_id))) return { error: BOARD_ONLY };
+  if (!(await canManageRepairs(supabase, ticket.association_id))) return { error: BOARD_ONLY };
   const { error } = await supabase.from("ticket_comments").insert({
     association_id: ticket.association_id,
     ticket_id: ticketId,

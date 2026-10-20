@@ -46,6 +46,12 @@ export const OWNER_NAV: OwnerNavGroup[] = [
   },
 ];
 
+/**
+ * The owner Finances page (migration 0079). Not part of OWNER_NAV: it is added after Budget only while a board
+ * admin has switched the page on, so the default navigation never links to it.
+ */
+export const OWNER_FINANCES_NAV: OwnerNavItem = { href: "/owner/finances", label: "Finances", tourId: "owner-finances" };
+
 /** The one extra item a board member or accountant gets when they also own a unit. */
 export const STAFF_MY_UNIT: OwnerNavItem = { href: "/owner", label: "My unit", tourId: "my-unit" };
 

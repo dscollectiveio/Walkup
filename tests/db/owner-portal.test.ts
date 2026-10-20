@@ -578,8 +578,8 @@ describe("invites and profile", () => {
     await boBoard(db, f);
     await db.query(`insert into public.role_grants (association_id, person_id, role, granted_on, expires_on) values ($1::uuid, $2::uuid, 'board_member', '2020-01-01', '2021-01-01')`, [f.damen, f.vicPerson]);
     await db.query(`insert into public.role_grants (association_id, person_id, role, granted_on, revoked_at) values ($1::uuid, $2::uuid, 'board_member', '2020-01-01', now())`, [f.damen, f.adaPerson]);
-    const r = await rows<{ full_name: string; role: string }>(f.adaUser, `select * from public.board_roster($1::uuid)`, [f.damen]);
-    expect(r).toEqual([{ full_name: "Cy Ferreira", role: "board_admin" }, { full_name: "Bo Lindqvist", role: "board_member" }]);
+    const r = await rows<{ full_name: string; role: string; title: string | null }>(f.adaUser, `select * from public.board_roster($1::uuid)`, [f.damen]);
+    expect(r).toEqual([{ full_name: "Cy Ferreira", role: "board_admin", title: null }, { full_name: "Bo Lindqvist", role: "board_member", title: null }]);
     expect(await rows(f.zaraUser, `select * from public.board_roster($1::uuid)`, [f.damen])).toEqual([]);
     expect(await rows(DEE_USER, `select * from public.board_roster($1::uuid)`, [f.damen])).toEqual([]);
   });

@@ -99,6 +99,9 @@ export default async function BudgetPage({ searchParams }: { searchParams: Promi
       supabase.from("accounts").select("id, code, name, type, is_cash_account").eq("is_active", true).order("code"),
     ]);
   const canEdit = isBoardRes === true;
+  // Adding a category is an admin's or the Treasurer's (create_expense_account, 0076); other board members edit the lines.
+  const { data: booksDuty } = await supabase.rpc("has_duty", { p_association_id: association.id, p_duty: "books" });
+  const canAddCategory = booksDuty === true;
   const canSeeActuals = canReadFinancialsRes === true;
 
   const today = new Date();
@@ -269,7 +272,7 @@ export default async function BudgetPage({ searchParams }: { searchParams: Promi
           </table>
         </div>
       )}
-      {canEdit ? <AddCategoryForm associationId={association.id} /> : null}
+      {canAddCategory ? <AddCategoryForm associationId={association.id} /> : null}
     </>
   );
 

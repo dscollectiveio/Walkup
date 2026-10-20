@@ -2,6 +2,7 @@
 
 import { useState, useTransition } from "react";
 import { deleteInvite } from "./actions";
+import { ROLE_LABEL as ROLE_NAMES } from "@/lib/access/outside-roles";
 
 export interface InviteRecord {
   id: string;
@@ -12,12 +13,7 @@ export interface InviteRecord {
   redeemedAt: string | null;
 }
 
-const ROLE_LABEL: Record<string, string> = {
-  board_admin: "Board admin",
-  board_member: "Board member",
-  accountant: "Accountant",
-  owner: "Owner",
-};
+const ROLE_LABEL: Record<string, string> = ROLE_NAMES;
 
 function status(invite: InviteRecord): { label: string; className: string } {
   if (invite.redeemedAt) return { label: "Joined", className: "text-good-text" };
@@ -27,13 +23,14 @@ function status(invite: InviteRecord): { label: string; className: string } {
   return { label: "Pending", className: "text-mute" };
 }
 
-export function InviteRow({ invite }: { invite: InviteRecord }) {
+export function InviteRow({ invite, canRevokeInvites = false }: { invite: InviteRecord; canRevokeInvites?: boolean }) {
   const [confirming, setConfirming] = useState(false);
   const [pending, startDelete] = useTransition();
   const [error, setError] = useState<string | null>(null);
   const [copied, setCopied] = useState(false);
   const { label, className } = status(invite);
-  const canRevoke = !invite.redeemedAt;
+  // Only a board admin can revoke a pending invite (0075).
+  const canRevoke = !invite.redeemedAt && canRevokeInvites;
   const link =
     typeof window !== "undefined" ? `${window.location.origin}/invite/${invite.token}` : "";
 

@@ -3,6 +3,7 @@ import { redirect } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
 import { Card } from "@/components/ui";
 import { ContactLine } from "@/components/owner/contact-line";
+import { OutsideNoUnit } from "@/components/owner/outside-no-unit";
 import { buildingTodayIso } from "@/lib/dates";
 import { loadOwnedUnits, loadSummary } from "@/lib/owner/load";
 import { balanceWords } from "@/lib/owner/statement";
@@ -19,6 +20,15 @@ export default async function OwnerStatementIndex() {
   const units = await loadOwnedUnits(supabase, viewer);
 
   if (units.length === 1) redirect(`/owner/statement/${units[0].id}`);
+
+  if (units.length === 0 && viewer.isOutside) {
+    return (
+      <div className="mx-auto w-full max-w-[760px] space-y-6">
+        <h1 className="text-[20px] font-bold tracking-tight text-ink">Statement</h1>
+        <OutsideNoUnit firstName={viewer.firstName} associationName={viewer.associationName} topRole={viewer.topRole} />
+      </div>
+    );
+  }
 
   if (units.length === 0) {
     return (

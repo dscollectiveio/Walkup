@@ -253,11 +253,11 @@ export async function loadTaxContext(supabase: Supabase, opts: LoadTaxContextOpt
   const today = opts.today ?? new Date();
   const todayIso = localToday(today);
 
-  const [{ data: associations }, { data: fiscalYearRows }, { data: formRows }, { data: lockedRows }] = await Promise.all([
+  const [{ data: associations }, { data: fiscalYearRows }, { data: formRows }, { data: lockedRows }, { data: taxIdRows }] = await Promise.all([
     supabase
       .from("associations")
       .select(
-        "id, legal_name, display_name, ein, state_code, incorporated_on, street_address, city, postal_code, fiscal_year_end_month, accountant_person_id, accountant_firm, il_sos_file_number, information_returns_filing",
+        "id, legal_name, display_name, state_code, incorporated_on, street_address, city, postal_code, fiscal_year_end_month, accountant_person_id, accountant_firm, il_sos_file_number, information_returns_filing",
       )
       .limit(1),
     supabase.from("fiscal_years").select("id, label, starts_on, ends_on").order("starts_on", { ascending: false }),
@@ -268,8 +268,10 @@ export async function loadTaxContext(supabase: Supabase, opts: LoadTaxContextOpt
       )
       .order("tax_year", { ascending: false }),
     supabase.from("tax_filings").select("fiscal_year_id").eq("form", "1120-H").not("locked_at", "is", null),
+    supabase.from("association_tax_ids").select("ein").limit(1),
   ]);
   const association = associations?.[0];
+  const ein = (taxIdRows?.[0]?.ein as string | null | undefined) ?? null;
   const fiscalYears: TaxFiscalYear[] = (fiscalYearRows ?? []).map((f) => ({
     id: f.id,
     label: f.label,
@@ -511,7 +513,7 @@ export async function loadTaxContext(supabase: Supabase, opts: LoadTaxContextOpt
     association: {
       stateCode: association.state_code,
       incorporatedOn: association.incorporated_on,
-      ein: association.ein,
+      ein,
       informationReturnsFiling: settings.informationReturnsFiling,
     },
     fiscalYear: { label: fy.label, endsOn: fy.ends_on, taxYear },
@@ -553,7 +555,7 @@ export async function loadTaxContext(supabase: Supabase, opts: LoadTaxContextOpt
       id: association.id,
       legal_name: association.legal_name,
       display_name: association.display_name,
-      ein: association.ein,
+      ein,
       state_code: association.state_code,
       incorporated_on: association.incorporated_on,
       street_address: association.street_address,

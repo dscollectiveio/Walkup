@@ -24,8 +24,8 @@ describe("access fixes (0065)", () => {
   async function redeemAs(role: string) {
     const { rows } = await asUser(db, f.cyUser, () =>
       db.query<{ token: string }>(
-        `insert into public.invites (association_id, role, created_by)
-         values ($1::uuid, $2::public.app_role, $3::uuid) returning token`,
+        `insert into public.invites (association_id, role, email, created_by)
+         values ($1::uuid, $2::public.app_role, 'new@example.test', $3::uuid) returning token`,
         [f.damen, role, f.cyUser],
       ),
     );
