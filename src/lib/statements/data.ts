@@ -3,6 +3,23 @@ import type { Supabase } from "@/lib/repairs/server";
 import { buildingTodayIso } from "@/lib/dates";
 import type { StatementLine } from "@/lib/owner/statement";
 import { totalsOf, type StatementTotals } from "./summary";
+import { loadContactDetails } from "@/lib/people/contact-details";
+
+/** Owners' full names and (when the caller may read them) mailing addresses, from the unit_owners rows. */
+async function ownersWithAddresses(
+  supabase: Supabase,
+  rows: { effective_to: unknown; person_id: unknown; persons: unknown }[],
+  today: string,
+  withAddresses: boolean,
+): Promise<{ full_name: string; mailing_address: string | null }[]> {
+  const current = rows.filter((o) => !o.effective_to || (o.effective_to as string) >= today);
+  // The accountant reads statements but not owners' addresses (0082): their pages never ask.
+  const contacts = withAddresses ? await loadContactDetails(supabase, current.map((o) => o.person_id as string)) : new Map();
+  return current.flatMap((o) => {
+    const p = o.persons as unknown as { full_name: string } | null;
+    return p ? [{ full_name: p.full_name, mailing_address: (contacts.get(o.person_id as string)?.mailing_address as string | null | undefined) ?? null }] : [];
+  });
+}
 
 /**
  * Everything the statement PDF and the board's statements page need, read
@@ -35,7 +52,7 @@ export async function loadStatementData(
   unitId: string,
   from: string,
   to: string,
-  opts: { allHistory?: boolean } = {},
+  opts: { allHistory?: boolean; /** The accountant may not read owners' mailing addresses (0082). */ skipAddresses?: boolean } = {},
 ): Promise<StatementData | null> {
   const summary = await supabase.rpc("unit_statement_summary", { p_unit_id: unitId, p_as_of: to });
   if (summary.error) {
@@ -52,7 +69,7 @@ export async function loadStatementData(
     supabase.from("associations").select("display_name, legal_name").limit(1),
     supabase
       .from("unit_owners")
-      .select("effective_to, persons(full_name, mailing_address)")
+      .select("effective_to, person_id, persons(full_name)")
       .eq("unit_id", unitId)
       .order("effective_from"),
   ]);
@@ -62,10 +79,7 @@ export async function loadStatementData(
   }
   const lines = ((stmt.data ?? []) as unknown as StatementLine[]).map((l) => ({ ...l }));
   const today = buildingTodayIso();
-  const current = (owners.data ?? []).filter((o) => !o.effective_to || (o.effective_to as string) >= today);
-  const people = current
-    .map((o) => o.persons as unknown as { full_name: string; mailing_address: string | null } | null)
-    .filter((p): p is { full_name: string; mailing_address: string | null } => p !== null);
+  const people = await ownersWithAddresses(supabase, owners.data ?? [], today, opts.skipAddresses !== true);
 
   return {
     associationName: (assoc.data?.[0]?.display_name as string) || (assoc.data?.[0]?.legal_name as string) || "Your association",
@@ -112,16 +126,14 @@ export async function loadLateFeeLetter(supabase: Supabase, chargeId: string): P
       .limit(1),
     supabase
       .from("unit_owners")
-      .select("effective_to, persons(full_name, mailing_address)")
+      .select("effective_to, person_id, persons(full_name)")
       .eq("unit_id", charge.unit_id)
       .order("effective_from"),
   ]);
   const srow = (Array.isArray(summary.data) ? summary.data[0] : summary.data) as { owed: string } | undefined;
   if (!srow) return null;
-  const current = (owners.data ?? []).filter((o) => !o.effective_to || (o.effective_to as string) >= today);
-  const people = current
-    .map((o) => o.persons as unknown as { full_name: string; mailing_address: string | null } | null)
-    .filter((p): p is { full_name: string; mailing_address: string | null } => p !== null);
+  // Board only (the letter route checks), so the addresses are always asked for.
+  const people = await ownersWithAddresses(supabase, owners.data ?? [], today, true);
   if (people.length === 0) return null;
   const a = assoc.data?.[0];
   const unit = charge.units as unknown as { label: string } | null;

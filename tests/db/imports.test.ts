@@ -843,8 +843,12 @@ describe("imports (0056)", () => {
       const staged = await stage("units_owners", [uo({ phone: "312-555-0142", dues_amount: "350.00" })], opts({ dues_frequency: "monthly", dues_starts_on: "2026-11-01" }));
       expect(staged.summary).toMatchObject({ new_units: 1, new_people: 1, owners_assigned: 1, dues_plans: 1 });
       await commit(staged.id, staged.summary.digest);
-      const person = await one<{ id: string; auth_user_id: string | null; phone: string }>(null, `select id, auth_user_id, phone from public.persons where email = 'dee@example.test'`);
+      const person = await one<{ id: string; auth_user_id: string | null; phone: string }>(
+        null,
+        `select p.id, p.auth_user_id, d.phone from public.persons p left join public.person_contact_details d on d.person_id = p.id where p.email = 'dee@example.test'`,
+      );
       expect(person.auth_user_id).toBeNull();
+      // The phone goes to person_contact_details, not persons (0082).
       expect(person.phone).toBe("312-555-0142");
       expect(await count(`select 1 from public.role_grants where person_id = '${person.id}'`)).toBe(0);
       expect(await count(`select 1 from public.unit_owners uo join public.units u on u.id = uo.unit_id where u.label = 'Unit 7' and uo.person_id = '${person.id}' and uo.effective_to is null`)).toBe(1);

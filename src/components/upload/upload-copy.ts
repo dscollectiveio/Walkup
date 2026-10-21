@@ -17,7 +17,7 @@ export const UPLOAD_COPY = {
   sharedAreaNote: "Everyone in your building can see photos on shared-area problems.",
   groupNote: "Taking photos of a paper policy? Pick all the pages at once.",
   dropZone: "Drop files here, or",
-  notBoard: "Only the board can add documents.",
+  notBoard: "Only the board and the accountant can add documents.",
   cantAddUnitDocument: "You can't add documents for this unit.",
   unitDocumentLimit: "This unit already has 100 uploaded documents. Remove one first.",
   unitDocumentDaily: "You've added 20 documents today. Try again tomorrow.",

@@ -1,3 +1,4 @@
+import { taxFlag, vendorColumns, vendorRows, vendorSource } from "@/lib/contractors/vendor-source";
 import Link from "next/link";
 import { ChevronRight } from "lucide-react";
 import { Card, Restricted } from "@/components/ui";
@@ -61,10 +62,15 @@ export async function ContractorsView({ supabase, viewer, params }: { supabase: 
   const today = viewer.todayIso;
   const isBoard = viewer.isBoard;
 
+  // A property manager reads contractors through vendors_manager: no W-9 flags, no tax identity (0081).
+  const fin = viewer.canReadFinancials;
   let vendorQuery = supabase
-    .from("vendors")
+    .from(vendorSource(fin))
     .select(
-      "id, name, status, contact_name, trades, phone, email, website_url, google_rating, google_review_count, insured_until, license_expires_on, license_number, w9_on_file, is_1099_exempt, emergency_service, archived_at, last_used_on",
+      vendorColumns(
+        "id, name, status, contact_name, trades, phone, email, website_url, google_rating, google_review_count, insured_until, license_expires_on, license_number, w9_on_file, is_1099_exempt, emergency_service, archived_at, last_used_on",
+        fin,
+      ),
     )
     .order("name")
     .limit(1000);
@@ -118,7 +124,7 @@ export async function ContractorsView({ supabase, viewer, params }: { supabase: 
     reviews.set(r.vendor_id as string, cur);
   }
 
-  const all: Row[] = vendorsRes.data.map((v) => {
+  const all: Row[] = vendorRows(vendorsRes.data).map((v) => {
     const id = v.id as string;
     const trades = (v.trades as string[] | null) ?? [];
     const lastUsed = [last.get(id), (v.last_used_on as string | null) ?? undefined].filter(Boolean).sort().pop() ?? null;
@@ -129,8 +135,9 @@ export async function ContractorsView({ supabase, viewer, params }: { supabase: 
         insured_until: (v.insured_until as string | null) ?? null,
         license_number: (v.license_number as string | null) ?? null,
         license_expires_on: (v.license_expires_on as string | null) ?? null,
-        w9_on_file: v.w9_on_file === true,
-        is_1099_exempt: v.is_1099_exempt === true,
+        // Not shown to a property manager, so never read as "missing".
+        w9_on_file: taxFlag(v.w9_on_file, fin),
+        is_1099_exempt: taxFlag(v.is_1099_exempt, fin),
         status: v.status as string,
         archived_at: (v.archived_at as string | null) ?? null,
         inUse,
@@ -159,8 +166,8 @@ export async function ContractorsView({ supabase, viewer, params }: { supabase: 
       insuredUntil: (v.insured_until as string | null) ?? null,
       licenseNumber: str(v.license_number),
       licenseExpiresOn: (v.license_expires_on as string | null) ?? null,
-      w9OnFile: v.w9_on_file === true,
-      exempt1099: v.is_1099_exempt === true,
+      w9OnFile: taxFlag(v.w9_on_file, fin),
+      exempt1099: fin && v.is_1099_exempt === true,
       openProblems: openCount.get(id) ?? 0,
     };
   });
@@ -182,7 +189,7 @@ export async function ContractorsView({ supabase, viewer, params }: { supabase: 
     params.sort,
   );
   // Counted on its own: the list above leaves archived contractors out unless "Show archived" is on.
-  const { count: archivedTotal } = await supabase.from("vendors").select("id", { count: "exact", head: true }).not("archived_at", "is", null);
+  const { count: archivedTotal } = await supabase.from(vendorSource(fin)).select("id", { count: "exact", head: true }).not("archived_at", "is", null);
   const archivedCount = archivedTotal ?? 0;
 
   const tradesInUse = new Set(all.flatMap((r) => r.trades));

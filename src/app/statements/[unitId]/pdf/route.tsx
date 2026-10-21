@@ -6,6 +6,7 @@ import { safeFilename } from "@/lib/email-outbox/sanitize";
 import { loadStatementData } from "@/lib/statements/data";
 import { OwnerStatementPdf } from "@/lib/statements/pdf-document";
 import { buildingTodayIso } from "@/lib/dates";
+import { getViewer } from "@/lib/owner/viewer";
 import { ALL_HISTORY_FROM, isAnnual, isValidIso, parsePeriod, rangeLabel } from "@/lib/statements/period";
 
 export const dynamic = "force-dynamic";
@@ -30,7 +31,12 @@ export async function GET(request: NextRequest, context: { params: Promise<{ uni
   }
 
   const supabase = await createClient();
-  const data = await loadStatementData(supabase, unitId, period.from, period.to, { allHistory });
+  // The accountant may read statements but not owners' mailing addresses (0082), so the PDF leaves the address out for them.
+  const viewer = await getViewer();
+  const data = await loadStatementData(supabase, unitId, period.from, period.to, {
+    allHistory,
+    skipAddresses: Boolean(viewer?.isStaff && !viewer.isBoard),
+  });
   if (!data) return NextResponse.json({ error: "Not authorized." }, { status: 403 });
 
   const annual = !allHistory && isAnnual(period.from, period.to);

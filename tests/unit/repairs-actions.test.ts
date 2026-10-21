@@ -73,7 +73,9 @@ beforeEach(() => {
     id: ASSOC, display_name: "Damen", legal_name: "2158 N. Damen Condominium Association", street_address: "2158 N Damen Ave",
     city: "Chicago", state_code: "IL", postal_code: "60647", latitude: 41.92, longitude: -87.678,
   }];
-  db.tables.persons = [{ id: "person-1", association_id: ASSOC, full_name: "Doug Smart", phone: "312-555-0100", email: "doug@example.com", auth_user_id: "user-1" }];
+  db.tables.persons = [{ id: "person-1", association_id: ASSOC, full_name: "Doug Smart", email: "doug@example.com", auth_user_id: "user-1" }];
+  // The caller's phone lives in person_contact_details (0082).
+  db.tables.person_contact_details = [{ person_id: "person-1", association_id: ASSOC, phone: "312-555-0100", mailing_address: null }];
   db.tables.tickets = [{
     id: TICKET, association_id: ASSOC, reference: 14, title: "Water coming through bathroom ceiling", description: "From the light fixture",
     unit_id: UNIT, units: { label: "Unit 1" }, location_detail: "bathroom", access_notes: "Key with Bo", status: "open", priority: "normal",
@@ -84,6 +86,8 @@ beforeEach(() => {
     { id: PHONEONLY, association_id: ASSOC, name: "Phone Only Drains", contact_name: null, email: null, phone: "312-555-0199", status: "okay", do_not_use_reason: null, archived_at: null, google_place_id: null, website_url: null },
     { id: NOPE, association_id: ASSOC, name: "Leaky Larry", contact_name: null, email: "larry@example.com", phone: null, status: "do_not_use", do_not_use_reason: "Left the job half done", archived_at: null, google_place_id: null, website_url: null },
   ];
+  // The manager view (0081) answers with the same rows as the table.
+  db.tables.vendors_manager = db.tables.vendors;
   db.rpcHandlers.is_board = () => ({ data: board, error: null });
   db.rpcHandlers.can_manage_repairs = () => ({ data: board, error: null });
   db.rpcHandlers.is_member = () => ({ data: true, error: null });

@@ -27,6 +27,8 @@ import {
 import { isLinkableTable, type LinkableTable } from "./link-targets";
 import { revalidateLinked } from "./link-revalidate";
 import { createUnitDocumentTarget, registerUnitDocument } from "./unit-document";
+import { registerAccountantDocument } from "./accountant-document";
+import { ACCOUNTANT_UPLOAD_COPY, isAccountantUploadCategory } from "@/lib/documents/accountant-uploads";
 
 /**
  * Direct uploads (foundation-spec 6.3). Files go browser -> Storage with a
@@ -81,8 +83,10 @@ export async function createUploadTarget(input: {
   ticketId?: string;
   /** unit_document only: the unit the file is for. */
   unitId?: string;
+  /** document only: the category being filed under. Required for the accountant, who may use five. */
+  categorySlug?: string;
 }): Promise<{ ok: true; path: string; token: string } | { error: string }> {
-  const { filename, size, purpose, ticketId, unitId } = input ?? ({} as typeof input);
+  const { filename, size, purpose, ticketId, unitId, categorySlug } = input ?? ({} as typeof input);
   const mime = mimeEssence(input?.mime);
 
   if (!validFilename(filename)) return { error: UPLOAD_COPY.couldNotStart };
@@ -111,7 +115,12 @@ export async function createUploadTarget(input: {
     const associationId = await currentAssociationId(supabase);
     if (!associationId) return { error: UPLOAD_COPY.noAssociation };
     const { data: board } = await supabase.rpc("is_board", { assoc: associationId });
-    if (board !== true) return { error: UPLOAD_COPY.notBoard };
+    if (board !== true) {
+      // The accountant may add documents in five categories (0081). Anyone else is refused.
+      const { data: accountant } = await supabase.rpc("has_role_in", { assoc: associationId, roles: ["accountant"] });
+      if (accountant !== true) return { error: UPLOAD_COPY.notBoard };
+      if (!isAccountantUploadCategory(categorySlug)) return { error: ACCOUNTANT_UPLOAD_COPY.notThatCategory };
+    }
     path = buildStoragePath({
       purpose,
       associationId,
@@ -219,6 +228,17 @@ export async function registerUpload(input: {
     return { error: UPLOAD_COPY.pathMismatch };
   }
   const associationId = parsed.associationId;
+
+  // Anyone who is not on the board is the accountant (0081): their own path, with its own function. The
+  // database refuses anyone else.
+  if (purpose === "document") {
+    const { data: board } = await supabase.rpc("is_board", { assoc: associationId });
+    if (board !== true) {
+      if (link) return { error: UPLOAD_COPY.pathMismatch };
+      return registerAccountantDocument(supabase, { path, associationId, filename, categorySlug, title });
+    }
+  }
+
   const discard = () =>
     purpose === "document" ? removeIfUnregistered(supabase, associationId, path) : Promise.resolve();
 

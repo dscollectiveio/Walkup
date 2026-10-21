@@ -12,6 +12,7 @@ import { DetailsPanel } from "./details-panel";
 import type { Resident } from "./unit-card";
 import type { UnitRecord } from "./unit-fields";
 import { PersonRow } from "./person-row";
+import { loadAllContactDetails } from "@/lib/people/contact-details";
 import { OwnershipAmendmentForm } from "./ownership-amendment-form";
 import { AmendmentHistory, type AmendmentHistoryEntry } from "./amendment-history";
 import { OwnerRecordsHistory, type OwnershipRecord } from "./owner-records";
@@ -121,7 +122,7 @@ export default async function BuildingPage({ searchParams }: { searchParams: Pro
       .order("label"),
     supabase
       .from("persons")
-      .select("id, full_name, email, phone, mailing_address, auth_user_id")
+      .select("id, full_name, email, auth_user_id")
       .order("full_name"),
     supabase
       .from("role_grants")
@@ -220,7 +221,13 @@ export default async function BuildingPage({ searchParams }: { searchParams: Pro
     rolesByPerson.set(g.person_id, list);
   }
 
-  const personRecords = persons ?? [];
+  // Phone and mailing address are in their own table (0082); this page is the board's, which reads them all.
+  const contactByPerson = await loadAllContactDetails(supabase);
+  const personRecords = (persons ?? []).map((p) => ({
+    ...p,
+    phone: contactByPerson.get(p.id)?.phone ?? null,
+    mailing_address: contactByPerson.get(p.id)?.mailing_address ?? null,
+  }));
 
   const currentOwnerIds = new Set((unitOwnerRows ?? []).map((r) => r.person_id));
   const nameByAuthUser = new Map(

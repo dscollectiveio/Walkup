@@ -49,11 +49,15 @@ export async function loadDraftBasics(
   if (userId) {
     const { data: me } = await supabase
       .from("persons")
-      .select("full_name, phone")
+      .select("id, full_name")
       .eq("association_id", associationId)
       .eq("auth_user_id", userId)
       .limit(1);
-    if (me?.[0]) sender = { name: me[0].full_name ?? null, phone: me[0].phone ?? null };
+    if (me?.[0]) {
+      // The caller's own phone, from person_contact_details (0082).
+      const { data: contact } = await supabase.from("person_contact_details").select("phone").eq("person_id", me[0].id).limit(1);
+      sender = { name: me[0].full_name ?? null, phone: (contact?.[0]?.phone as string | null | undefined) ?? null };
+    }
   }
   const displayName = (a.display_name as string | null)?.trim() || (a.legal_name as string | null)?.trim() || "our building";
   return {

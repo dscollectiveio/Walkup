@@ -7,6 +7,7 @@ import { geocode } from "@/lib/google/places";
 import { validateBoardContact } from "@/lib/owner/board-contact";
 import { buildingTodayIso } from "@/lib/dates";
 import { parsePeople, type PersonEntry } from "@/lib/building/unit-people";
+import { saveContactDetails } from "@/lib/people/contact-details";
 import { parseUnitType } from "@/lib/building/unit-types";
 import { saveBuildingFacts } from "@/app/insurance/facts-actions";
 import { freshSignInError } from "@/lib/security/fresh-signin";
@@ -21,6 +22,22 @@ function dayBefore(iso: string): string {
   d.setUTCDate(d.getUTCDate() - 1);
   return d.toISOString().slice(0, 10);
 }
+
+/**
+ * Splits a person's form fields: name and email stay on persons; phone and mailing address live in
+ * person_contact_details (0082), which only the board, the person and a property manager can read.
+ */
+function splitPerson(fields: { full_name: string; email: string | null; phone: string | null; mailing_address: string | null }) {
+  return {
+    person: { full_name: fields.full_name, email: fields.email },
+    contact: { phone: fields.phone, mailing_address: fields.mailing_address },
+  };
+}
+
+/** A brand-new person with no phone or address has no contact row to write. */
+const hasContact = (c: { phone: string | null; mailing_address: string | null }) => Boolean(c.phone || c.mailing_address);
+
+const CONTACT_PROBLEM = "their phone and address couldn't be saved";
 
 /**
  * The accountant's access and the three outside roles' (property manager, attorney, observer) run this many
@@ -284,9 +301,10 @@ async function addPeopleToUnit(
     let name: string;
     if (e.kind === "new") {
       name = e.fields.full_name;
+      const split = splitPerson(e.fields);
       const { data: created, error } = await supabase
         .from("persons")
-        .insert({ association_id: associationId, ...e.fields })
+        .insert({ association_id: associationId, ...split.person })
         .select("id")
         .single();
       if (error || !created) {
@@ -295,6 +313,8 @@ async function addPeopleToUnit(
           : `${name} couldn't be saved: ${error?.message ?? "try again."}`;
       }
       personId = created.id;
+      const contactError = hasContact(split.contact) ? await saveContactDetails(supabase, associationId, personId, split.contact) : null;
+      if (contactError) return `${name} was saved, but ${CONTACT_PROBLEM}: ${contactError.message} You can add them on their row.`;
       if (e.rolesSubmitted) {
         const roleError = await syncPersonRoles(supabase, personId, e.roles);
         if (roleError) return `${name}'s role couldn't be saved: ${roleError} You can set it on their row.`;
@@ -403,13 +423,16 @@ export async function saveUnitAndPeople(_prev: unknown, formData: FormData) {
       }
       continue;
     }
-    const { data, error } = await supabase.from("persons").update(e.fields).eq("id", e.personId).select("id");
+    const split = splitPerson(e.fields);
+    const { data, error } = await supabase.from("persons").update(split.person).eq("id", e.personId).select("id");
     if (error) {
       return stop(
         error.code === "23505" ? `${e.fields.full_name}'s email is already used by someone else on file.` : `${e.fields.full_name} couldn't be saved: ${error.message}`,
       );
     }
     if (!data || data.length === 0) return stop(`${e.fields.full_name} couldn't be saved: only the board can edit contact details.`);
+    const contactError = await saveContactDetails(supabase, associationId, e.personId, split.contact);
+    if (contactError) return stop(`${e.fields.full_name}'s name and email were saved, but ${CONTACT_PROBLEM}: ${contactError.message}`);
     if (e.rolesSubmitted) {
       const roleError = await syncPersonRoles(supabase, e.personId, e.roles);
       if (roleError) return stop(`${e.fields.full_name}'s role couldn't be saved: ${roleError}`);
@@ -495,9 +518,10 @@ export async function addPerson(_prev: unknown, formData: FormData) {
   const associationId = await currentAssociationId(supabase);
   if (!associationId) return { error: "No association is visible to you." };
 
+  const split = splitPerson(fields);
   const { data: created, error } = await supabase
     .from("persons")
-    .insert({ association_id: associationId, ...fields })
+    .insert({ association_id: associationId, ...split.person })
     .select("id")
     .single();
 
@@ -510,7 +534,9 @@ export async function addPerson(_prev: unknown, formData: FormData) {
 
   // The person is saved from here on; a later step failing says so rather than implying nothing happened.
   let problem: string | null = null;
-  if (rolesSubmitted) {
+  const contactError = hasContact(split.contact) ? await saveContactDetails(supabase, associationId, created.id, split.contact) : null;
+  if (contactError) problem = `${CONTACT_PROBLEM}: ${contactError.message} You can add them on their row.`;
+  if (!problem && rolesSubmitted) {
     const roleError = await syncPersonRoles(supabase, created.id, roles);
     if (roleError) problem = `their role couldn't be saved: ${roleError} You can set it on their row.`;
   }
@@ -537,9 +563,12 @@ export async function updatePerson(_prev: unknown, formData: FormData) {
   if (!fields.full_name) return { error: "Give this person a name." };
 
   const supabase = await createClient();
+  const associationId = await currentAssociationId(supabase);
+  if (!associationId) return { error: "No association is visible to you." };
+  const split = splitPerson(fields);
   const { data, error } = await supabase
     .from("persons")
-    .update(fields)
+    .update(split.person)
     .eq("id", personId)
     .select("id");
 
@@ -550,7 +579,16 @@ export async function updatePerson(_prev: unknown, formData: FormData) {
     return { error: error.message };
   }
   if (!data || data.length === 0) {
-    return { error: "You can only edit your own contact details, or you're not on the board." };
+    return { error: "You're not on the board, so you can't edit this person." };
+  }
+  const contactError = await saveContactDetails(supabase, associationId, personId, split.contact);
+  if (contactError) {
+    return {
+      error:
+        contactError.code === "42501"
+          ? "Only the board can edit phone numbers and addresses. Owners change their own under Your account."
+          : `Name and email were saved, but ${CONTACT_PROBLEM}: ${contactError.message}`,
+    };
   }
 
   // Roles inputs only render for a board_admin (person-row.tsx) — this

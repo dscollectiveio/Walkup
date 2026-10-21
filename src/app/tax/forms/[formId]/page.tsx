@@ -544,8 +544,8 @@ export default async function TaxFormPage({ params }: { params: Promise<{ formId
         const byAccount = ctx.nonexemptByAccount.map((a) => `${a.name} ${formatMoney(a.cents)}`).join(", ");
         return (
           <section key={section} className="rounded-xl border border-line bg-paper">
-            <h2 className="flex flex-wrap items-center justify-between gap-2 border-b border-line px-5 py-3 font-bold tracking-tight text-ink">
-              <span>{section}</span>
+            <h2 className="band flex flex-wrap items-center justify-between gap-2 rounded-t-[7px] bg-ink px-5 py-3 text-paper">
+              <span className="eyebrow text-paper">{section}</span>
               {open > 0 && !locked ? (
                 <span className="rounded-full border border-warning-line bg-warning-tint px-2 py-0.5 text-[11px] font-medium text-warning-text">
                   Needs you: {open} line{open === 1 ? "" : "s"}
@@ -577,9 +577,9 @@ export default async function TaxFormPage({ params }: { params: Promise<{ formId
 
       {!hasPdf ? (
         <section className="rounded-xl border border-line bg-paper">
-          <header className="border-b border-line px-5 py-4">
-            <h2 className="eyebrow text-mute">Your figures</h2>
-            <p className="mt-1.5 text-[13px] text-mute">
+          <header className="band rounded-t-[7px] bg-ink px-5 py-3">
+            <h2 className="eyebrow text-paper">Your figures</h2>
+            <p className="mt-1.5 text-[13px] text-ondark-mute">
               From your records, for your accountant or the official form. The same rows as the worksheet. Nobody has checked them against this
               year&rsquo;s instructions yet.
             </p>

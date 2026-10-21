@@ -4,6 +4,8 @@ import { useState } from "react";
 import { UnitCard, type Resident } from "./unit-card";
 import { specsLine, type UnitRecord } from "./unit-fields";
 import { unitTypeLabel } from "@/lib/building/unit-types";
+import { UnitDocumentsPanel } from "./unit-documents-panel";
+import { BOARD_UNIT_DOCUMENT_COPY } from "@/lib/owner/unit-documents";
 
 export interface RosterUnit {
   unit: UnitRecord;
@@ -78,7 +80,16 @@ export function UnitsRoster({
   }
 
   const list = (
-    <ul className="min-w-0 flex-1 space-y-2">
+    <div className="min-w-0 flex-1 space-y-2">
+    {canEdit && units.length > 0 ? (
+      <details className="rounded-lg border border-line bg-paper">
+        <summary className="cursor-pointer px-4 py-2.5 text-[13px] font-medium text-ink">{BOARD_UNIT_DOCUMENT_COPY.addTitle}</summary>
+        <div className="border-t border-line px-4 py-3">
+          <UnitDocumentsPanel units={units.map((r) => ({ id: r.unit.id, label: r.unit.label }))} />
+        </div>
+      </details>
+    ) : null}
+    <ul className="space-y-2">
       {units.map((r) => (
         <UnitCard
           key={r.unit.id}
@@ -97,6 +108,7 @@ export function UnitsRoster({
         />
       ))}
     </ul>
+    </div>
   );
 
   if (!drawable) return list;

@@ -52,9 +52,14 @@ async function loadContact(supabase: Supabase, id: string | null | undefined): P
 async function sender(supabase: Supabase, associationId: string): Promise<{ name: string; contact: string }> {
   const { data: personId } = await supabase.rpc("current_person_id", { assoc: associationId });
   if (typeof personId !== "string") return { name: "The board", contact: "" };
-  const { data } = await supabase.from("persons").select("full_name, email, phone").eq("id", personId).maybeSingle();
-  const p = data as { full_name: string; email: string | null; phone: string | null } | null;
-  return { name: p?.full_name?.trim() || "The board", contact: senderContact(p?.email ?? null, p?.phone ?? null) };
+  const [{ data }, { data: contact }] = await Promise.all([
+    supabase.from("persons").select("full_name, email").eq("id", personId).maybeSingle(),
+    // The caller's own phone (person_contact_details, 0082).
+    supabase.from("person_contact_details").select("phone").eq("person_id", personId).maybeSingle(),
+  ]);
+  const p = data as { full_name: string; email: string | null } | null;
+  const phone = (contact as { phone: string | null } | null)?.phone ?? null;
+  return { name: p?.full_name?.trim() || "The board", contact: senderContact(p?.email ?? null, phone) };
 }
 
 export async function composeInsuranceEmail(input: {

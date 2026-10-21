@@ -1,8 +1,8 @@
-import Link from "next/link";
 import { headers } from "next/headers";
+import { CollapsibleCard } from "@/components/collapsible-card";
 import { createClient } from "@/lib/supabase/server";
 import { BoardOnly, viewerIsOwnerOnly } from "@/components/board-only";
-import { Answer, Card, Empty, Jargon, Provisional, Restricted, money, moneyRounded } from "@/components/ui";
+import { Answer, Empty, Jargon, Provisional, Restricted, money, moneyRounded } from "@/components/ui";
 import {
   computeForm1120h,
   formatMoney,
@@ -18,12 +18,15 @@ import { ProvenancePanel, type ProvenanceRow, type ResolvedLine } from "./proven
 import { loadTaxContext, parametersAsOf, type TaxContext, type TaxParameterRow } from "./data";
 import { ClassifyIncomeRow, FormCard, type CardAction, type CardLink, type FormCardView } from "./tax-client";
 import { ThisYear, type ThisYearInput } from "./this-year";
+import { FiscalYearSelect } from "./fiscal-year-select";
+import { SetupChecklist } from "./setup-checklist";
 import { AccountantCard } from "./accountant-card";
-import { FilingMethodChooser, SosFileNumber } from "./filing-settings";
+import { SosFileNumber } from "./filing-settings";
 import { startForm } from "./form-actions";
 import { btnSecondary } from "@/components/repairs/styles";
-import { FORM_LABEL, FORM_PLAIN, run1120hTests, type FormOutcome } from "@/lib/tax/determine";
+import { FORM_PLAIN, run1120hTests, type FormOutcome } from "@/lib/tax/determine";
 import { addDays } from "@/lib/tax/deadlines";
+import { dueGuide } from "@/lib/tax/due-guide";
 import { accountantEmail, mailtoHref, type AccountantEmailInput } from "@/lib/tax/accountant-email";
 import { LINK_KIND_LABEL, linkStatusWords, linksFor, type LinkFormCode, type LinkKind, type LinkView } from "@/lib/tax/links";
 import { LINKS_NOT_CHECKED, TAX_FOOTER, dateWords } from "@/lib/tax/copy";
@@ -239,6 +242,17 @@ const toCardLink = (v: LinkView): CardLink => ({
   words: linkStatusWords(v),
 });
 
+/** The EIN on a federal or state return, the Secretary of State file number on the annual report: shown with a copy button. */
+function copyablesFor(ctx: TaxContext, formCode: string, notRequired: boolean): FormCardView["copyables"] {
+  if (notRequired) return [];
+  if (formCode === "il_sos_annual_report") {
+    const n = ctx.settings.ilSosFileNumber?.trim();
+    return n ? [{ label: "Illinois file number", value: n }] : [];
+  }
+  const ein = ctx.association.ein?.trim();
+  return ein ? [{ label: "EIN", value: ein }] : [];
+}
+
 /** Everything one form card says, worded here so the cards, the deadlines and the form page agree. */
 function cardViewFor(ctx: TaxContext, o: FormOutcome, canWrite: boolean): FormCardView {
   const vendorId = o.vendorId ?? null;
@@ -284,6 +298,19 @@ function cardViewFor(ctx: TaxContext, o: FormOutcome, canWrite: boolean): FormCa
 
   const views = linkViewsFor(ctx, o.formCode, o.taxYear);
   const fileOnlineView = views.find((v) => v.kind === "file_online") ?? null;
+
+  // The date on its own, for the right of the card: the same date the line above words.
+  let dueDate: FormCardView["dueDate"] = null;
+  const dueIso = !notRequired && !filed && !lockedYear ? (deadline?.dueOn ?? (deadline ? null : (o.dueOn ?? null))) : null;
+  if (dueIso) {
+    const verified = deadline ? deadline.basis === "verified" : true;
+    const overdue = deadline?.overdue === true;
+    dueDate = {
+      label: dateWords(dueIso),
+      tone: overdue ? (verified ? "bad" : "warning") : "ink",
+      caption: overdue ? (verified ? "Overdue" : "May be overdue, estimated") : verified ? "Checked date" : "Estimated, not yet checked",
+    };
+  }
 
   let status: FormCardView["status"];
   if (lockedYear) {
@@ -337,6 +364,20 @@ function cardViewFor(ctx: TaxContext, o: FormOutcome, canWrite: boolean): FormCa
     note: o.note,
     warnings: o.warnings,
     due,
+    dueDate,
+    // The numbers the board types into the form or the portal.
+    copyables: copyablesFor(ctx, o.formCode, notRequired),
+    // Only for a form still to file whose date is not a checked one.
+    dueGuide:
+      !notRequired && !filed && !lockedYear
+        ? dueGuide({
+            formCode: o.formCode,
+            verified: dueDate !== null && deadline?.basis === "verified",
+            hasDate: dueDate !== null,
+            incorporatedOn: ctx.association.incorporated_on,
+            fiscalYearEnd: ctx.fiscalYear.ends_on,
+          })
+        : null,
     links: views.map(toCardLink),
     linksWords: linksWords(views),
     status,
@@ -413,24 +454,6 @@ function boardDraft(ctx: TaxContext, taxUrl: string, senderName: string): { subj
   return { subject, body: lines.join("\n") };
 }
 
-/** "Ask for a W-9": a draft to the contractor, with the registry's W-9 link. */
-function w9Href(ctx: TaxContext, contractor: { name: string; email: string | null }, w9Url: string | null, senderName: string): string {
-  const subject = `${ctx.association.display_name}: W-9 request`;
-  const lines = [
-    `Hi ${contractor.name},`,
-    "",
-    `${ctx.association.legal_name} needs a completed Form W-9 from you for our records before we can prepare a 1099-NEC. ${
-      w9Url ? `The form is here: ${w9Url}` : "You can download the form from irs.gov (search for Form W-9)."
-    }`,
-    "",
-    "You can reply to this email with it attached.",
-    "",
-    "Thanks,",
-    [senderName, ctx.association.display_name].filter(Boolean).join(", "),
-  ];
-  return mailtoHref(contractor.email, subject, lines.join("\n"));
-}
-
 export default async function TaxPage({ searchParams }: { searchParams: Promise<{ fy?: string }> }) {
   const { fy: fyParam } = await searchParams;
   const supabase = await createClient();
@@ -458,7 +481,6 @@ export default async function TaxPage({ searchParams }: { searchParams: Promise<
   const [
     { data: receipts },
     { data: disbursements },
-    { data: filedForms },
     { data: filingRows },
     { data: rawReceipts },
     { data: rawDisbursements },
@@ -481,11 +503,6 @@ export default async function TaxPage({ searchParams }: { searchParams: Promise<
       .eq("fiscal_year_id", fy.id)
       .order("is_exempt", { ascending: false })
       .order("total", { ascending: false }),
-    supabase
-      .from("tax_forms")
-      .select("id, form_code, tax_year, filed_on, filed_proof_document_id, signable_document_id, vendors(name)")
-      .eq("status", "filed")
-      .order("tax_year", { ascending: false }),
     supabase
       .from("tax_filings")
       .select("id, computed_at, filed_on, locked_at")
@@ -625,7 +642,6 @@ export default async function TaxPage({ searchParams }: { searchParams: Promise<
   const contractorRows = ctx.contractorRows;
   const owesForm = thresholdCents === null ? [] : contractorRows.filter((c) => c.totalCents >= thresholdCents);
   const missingW9 = owesForm.filter((c) => !c.w9OnFile);
-  const w9Url = linkViewsFor(ctx, "irs_w9", ctx.contractorYear).find((v) => v.kind === "form" || v.kind === "about")?.url ?? null;
 
   // ---- This year ----------------------------------------------------------------
   const thisYear: ThisYearInput = {
@@ -668,33 +684,26 @@ export default async function TaxPage({ searchParams }: { searchParams: Promise<
         return mailtoHref(ctx.accountant.email, draft.subject, draft.body);
       })()
     : null;
-  const pastForms = filedForms ?? [];
 
   return (
     <div className="space-y-6">
       <div>
         <h1 className="text-[20px] font-bold tracking-tight text-ink">Taxes</h1>
         <p className="mt-1 text-mute">
-          Fiscal year {ctx.fiscalYear.label} ({ctx.fiscalYear.starts_on} to {ctx.fiscalYear.ends_on}): which forms you
+          Fiscal year {ctx.fiscalYear.label} ({dateWords(ctx.fiscalYear.starts_on)} - {dateWords(ctx.fiscalYear.ends_on)}): which forms you
           need, why, and when.
         </p>
         {ctx.fiscalYears.length > 1 ? (
-          <nav aria-label="Fiscal year" className="mt-3 inline-flex flex-wrap rounded-full border border-line bg-paper p-0.5">
-            {ctx.fiscalYears.map((f) => (
-              <Link
-                key={f.id}
-                href={`/tax?fy=${f.id}`}
-                aria-current={f.id === fy.id ? "page" : undefined}
-                className={`inline-flex min-h-[36px] items-center rounded-full px-3 text-[12px] font-medium ${
-                  f.id === fy.id ? "bg-ink text-paper" : "text-mute hover:text-ink"
-                }`}
-              >
-                {f.label}
-              </Link>
-            ))}
-          </nav>
+          <FiscalYearSelect current={fy.id} years={ctx.fiscalYears.map((f) => ({ id: f.id, label: f.label }))} />
         ) : null}
       </div>
+
+      <SetupChecklist
+        ein={Boolean(ctx.association.ein)}
+        incomeAccounts={ctx.incomeAccounts.length}
+        unconfirmedIncome={thisYear.unconfirmedIncomeAccounts.length}
+        missingW9={thisYear.missingW9}
+      />
 
       <ThisYear
         input={thisYear}
@@ -706,17 +715,13 @@ export default async function TaxPage({ searchParams }: { searchParams: Promise<
       />
 
       <section id="forms" className="scroll-mt-20">
-        <Card navy title="Your forms" hint="What this association files, soonest first.">
+        <CollapsibleCard title="Your forms" hint="What this association files, soonest first.">
           <div className="space-y-3">
-            <div className="grid gap-3 md:grid-cols-2">
+            <div className="grid gap-3">
               {cards.map((v) => (
                 <FormCard key={v.key} view={v} canWrite={canWrite}>
                   {v.formCode === "il_sos_annual_report" && isIllinois ? (
                     <SosFileNumber current={ctx.settings.ilSosFileNumber} canWrite={canWrite} />
-                  ) : v.formCode === "irs_1096" && v.determination === "ask_cpa" ? (
-                    <a href="#filing-method" className="text-[12px] text-ink underline underline-offset-2">
-                      Say how you file 1099s ↓
-                    </a>
                   ) : null}
                 </FormCard>
               ))}
@@ -740,7 +745,7 @@ export default async function TaxPage({ searchParams }: { searchParams: Promise<
               </Answer>
             ) : null}
           </div>
-        </Card>
+        </CollapsibleCard>
       </section>
 
       <div id="accountant">
@@ -751,7 +756,7 @@ export default async function TaxPage({ searchParams }: { searchParams: Promise<
         />
       </div>
 
-      <Card navy
+      <CollapsibleCard
         title="Your income, classified"
         hint="The 1120-H tests depend on which income is from members (dues, assessments) and which isn't (interest, rentals). Walkup suggests a classification; a board member confirms each one once."
       >
@@ -773,7 +778,7 @@ export default async function TaxPage({ searchParams }: { searchParams: Promise<
             ))}
           </ul>
         )}
-      </Card>
+      </CollapsibleCard>
 
       <div className="border-t border-line pt-6">
         <h2 className="text-[16px] font-bold tracking-tight text-ink">1120-H check</h2>
@@ -843,7 +848,7 @@ export default async function TaxPage({ searchParams }: { searchParams: Promise<
             />
           </div>
 
-          <Card navy
+          <CollapsibleCard
             title="What you might owe (estimate, before deductions)"
             hint="Owner fees are not taxed. Only other income (bank interest, laundry, renting out common space) is."
           >
@@ -873,14 +878,14 @@ export default async function TaxPage({ searchParams }: { searchParams: Promise<
               The {formatMoney(result.exemptIncomeCents)} you collected in owner fees
               is not taxed at all.
             </p>
-          </Card>
+          </CollapsibleCard>
         </>
       ) : null}
 
       <ProvenancePanel rows={provenanceRows} lineIndex={lineIndex} />
 
       <div className="grid gap-4 lg:grid-cols-2">
-        <Card navy title="Money you collected" hint="What Rule 1 is worked out from.">
+        <CollapsibleCard title="Money you collected" hint="What Rule 1 is worked out from.">
           <ul className="divide-y divide-line text-[13px]">
             {(receipts ?? []).map((r) => (
               <li key={r.account_name} className="py-2.5">
@@ -908,9 +913,9 @@ export default async function TaxPage({ searchParams }: { searchParams: Promise<
               </li>
             ))}
           </ul>
-        </Card>
+        </CollapsibleCard>
 
-        <Card navy title="Money you spent" hint="What Rule 2 is worked out from.">
+        <CollapsibleCard title="Money you spent" hint="What Rule 2 is worked out from.">
           <ul className="divide-y divide-line text-[13px]">
             {(disbursements ?? []).map((d) => (
               <li key={d.account_name} className="py-2.5">
@@ -943,10 +948,10 @@ export default async function TaxPage({ searchParams }: { searchParams: Promise<
               </li>
             ))}
           </ul>
-        </Card>
+        </CollapsibleCard>
       </div>
 
-      <Card navy
+      <CollapsibleCard
         title="Where these tax rules come from"
         hint={`Every rate and threshold is stored with the dates it applies to and its source, so an out-of-date figure is visible rather than silent. "This year" marks the rows in force for a fiscal year ending ${dateWords(ctx.fiscalYear.ends_on)} and for payments made in ${ctx.contractorYear}.`}
       >
@@ -981,151 +986,7 @@ export default async function TaxPage({ searchParams }: { searchParams: Promise<
             </li>
           ))}
         </ul>
-      </Card>
-
-      <div className="border-t border-line pt-6">
-        <div>
-          <h2 className="text-[16px] font-bold tracking-tight text-ink">
-            Contractors and 1099s: payments in {ctx.contractorYear}
-          </h2>
-          <p className="mt-1 text-mute">
-            1099-NEC is a calendar-year form: contractors paid for services during {ctx.contractorYear} at or above the
-            threshold need one early in {ctx.contractorYear + 1}.
-          </p>
-        </div>
-
-        <div className="mt-4">
-          {thresholdCents === null ? (
-            <Answer
-              status="attention"
-              headline="Ask your CPA which contractors need a 1099"
-              detail={`The 1099-NEC reporting threshold for payments made in ${ctx.contractorYear} isn't on file in Walkup, so it can't tell you which contractors cross it.`}
-            />
-          ) : contractorRows.length === 0 ? (
-            <Answer status="good" headline="Nothing to file" detail={`No contractor was paid for services in ${ctx.contractorYear}.`} />
-          ) : missingW9.length > 0 ? (
-            <Answer
-              status="bad"
-              headline={`${missingW9.length} contractor${missingW9.length === 1 ? " needs" : "s need"} a W-9 before you can file`}
-              detail={`${missingW9.map((v) => v.name).join(", ")}: get these on file now rather than chasing them in January.`}
-            />
-          ) : (
-            <Answer
-              status="good"
-              headline={`${owesForm.length} contractor${owesForm.length === 1 ? "" : "s"} will need a 1099-NEC`}
-              detail="Everyone who crosses the threshold already has a W-9 on file."
-            />
-          )}
-        </div>
-
-        <div className="mt-4">
-          <FilingMethodChooser current={ctx.settings.informationReturnsFiling} canWrite={canWrite} />
-        </div>
-
-        <div className="mt-4">
-          <Card navy
-            title="Everyone paid for services"
-            hint={
-              thresholdParam && thresholdCents !== null
-                ? `The threshold for payments made in ${ctx.contractorYear} is ${formatMoney(thresholdCents)} per contractor, ${
-                    thresholdParam.verifiedOn ? `checked ${dateWords(thresholdParam.verifiedOn, "short")}` : "not yet checked against this year's instructions"
-                  }.`
-                : undefined
-            }
-          >
-            {contractorRows.length === 0 ? (
-              <Empty>No service payments recorded for {ctx.contractorYear}.</Empty>
-            ) : (
-              <div className="overflow-x-auto">
-                <table className="w-full min-w-[28rem] text-[13px]">
-                  <thead>
-                    <tr className="border-b border-line text-left text-mute">
-                      <th className="pb-2 font-medium">Contractor</th>
-                      <th className="pb-2 text-right font-medium">Paid in {ctx.contractorYear}</th>
-                      <th className="pb-2 text-right font-medium">W-9</th>
-                      <th className="pb-2 text-right font-medium">1099 needed</th>
-                    </tr>
-                  </thead>
-                  <tbody className="divide-y divide-line">
-                    {contractorRows.map((v) => {
-                      const needsForm = thresholdCents !== null && v.totalCents >= thresholdCents;
-                      return (
-                        <tr key={v.vendorId}>
-                          <td className="py-3">
-                            <a href={`/contractors/${v.vendorId}`} className="font-medium text-ink underline-offset-2 hover:underline">
-                              {v.name}
-                            </a>
-                            <div className="text-[11px] text-mute-soft">
-                              {v.paymentCount} payment{v.paymentCount === 1 ? "" : "s"}
-                            </div>
-                          </td>
-                          <td className="figures py-3 text-right text-ink">{formatMoney(v.totalCents)}</td>
-                          <td className="py-3 text-right text-[12px]">
-                            {v.w9OnFile ? (
-                              <span className="text-good-text">On file</span>
-                            ) : (
-                              <span className="inline-flex flex-col items-end gap-0.5">
-                                <span className="text-bad-text">Missing</span>
-                                <a
-                                  href={w9Href(ctx, v, w9Url, senderName)}
-                                  title={v.email ? `Opens a draft to ${v.email}. Nothing is sent.` : "No email on file. Opens a draft with no recipient."}
-                                  className="text-[11px] text-ink underline underline-offset-2"
-                                >
-                                  Ask for a W-9
-                                </a>
-                              </span>
-                            )}
-                          </td>
-                          <td className="py-3 text-right text-[12px]">
-                            {thresholdCents === null ? (
-                              <span className="text-mute">Ask your CPA</span>
-                            ) : needsForm ? (
-                              <span className="font-medium text-ink">Yes</span>
-                            ) : (
-                              <span className="text-mute-soft">No</span>
-                            )}
-                          </td>
-                        </tr>
-                      );
-                    })}
-                  </tbody>
-                </table>
-              </div>
-            )}
-          </Card>
-        </div>
-
-        <p className="mt-4 text-[11px] leading-relaxed text-mute">
-          Corporations are usually exempt from 1099-NEC. Mark a contractor exempt on the Contractors page rather than
-          assuming from the totals here. &ldquo;Ask for a W-9&rdquo; opens a draft in your email app; nothing is sent.
-        </p>
-      </div>
-
-      <Card navy title="Past years" hint="Forms marked as filed, with their proof.">
-        {pastForms.length === 0 ? (
-          <Empty>Nothing marked as filed yet.</Empty>
-        ) : (
-          <ul className="divide-y divide-line text-[13px]">
-            {pastForms.map((t) => (
-              <li key={t.id} className="flex flex-wrap items-center justify-between gap-2 py-2.5">
-                <a href={`/tax/forms/${t.id}`} className="text-ink underline-offset-2 hover:underline">
-                  {FORM_LABEL[t.form_code as keyof typeof FORM_LABEL] ?? t.form_code} · {t.tax_year}
-                  {(t.vendors as unknown as { name: string } | null)?.name ? ` · ${(t.vendors as unknown as { name: string }).name}` : ""}
-                </a>
-                <span className="flex items-center gap-3 text-[12px] text-mute">
-                  Filed on {t.filed_on ? dateWords(t.filed_on) : "—"}
-                  {t.filed_proof_document_id ? (
-                    <a href={`/documents/${t.filed_proof_document_id}`} className="underline underline-offset-2">Proof</a>
-                  ) : null}
-                  {t.signable_document_id ? (
-                    <a href={`/documents/${t.signable_document_id}`} className="underline underline-offset-2">The form</a>
-                  ) : null}
-                </span>
-              </li>
-            ))}
-          </ul>
-        )}
-      </Card>
+      </CollapsibleCard>
 
       <p className="text-[11px] text-mute">{TAX_FOOTER}</p>
     </div>

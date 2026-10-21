@@ -147,7 +147,7 @@ beforeEach(() => {
     { id: C1, association_id: ASSOC, name: "Acme Insurance Agency", person_name: "Pat Lee", kind: "agency", email: "quotes@acme.example", partner_id: null, is_current_agent: true, archived_at: null },
     { id: C2, association_id: ASSOC, name: "Lakeside Brokers", person_name: null, kind: "broker", email: "info@lakeside.example", partner_id: null, is_current_agent: false, archived_at: null },
   ];
-  state.db.tables.persons = [{ id: "person-1", full_name: "Doug Smart", email: "doug@example.com", phone: null }];
+  state.db.tables.persons = [{ id: "person-1", full_name: "Doug Smart", email: "doug@example.com" }];
   state.db.rpcResults.current_person_id = { data: "person-1", error: null };
 });
 

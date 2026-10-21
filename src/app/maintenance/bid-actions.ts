@@ -1,5 +1,6 @@
 "use server";
 
+import { VENDOR_MANAGER_VIEW } from "@/lib/contractors/vendor-source";
 import { createClient } from "@/lib/supabase/server";
 import { runStructured } from "@/lib/ai/structured";
 import { extractDocumentText } from "@/lib/documents/extract-text";
@@ -72,7 +73,7 @@ export async function requestQuotes(
 
   const [basics, { data: vendors }, photoCount] = await Promise.all([
     loadDraftBasics(supabase, ticket.association_id),
-    supabase.from("vendors").select("id, name, contact_name, email, phone").in("id", unique.map((p) => p.vendorId)),
+    supabase.from(VENDOR_MANAGER_VIEW).select("id, name, contact_name, email, phone").in("id", unique.map((p) => p.vendorId)),
     attachPhotos
       ? supabase.rpc("ticket_photos", { p_ticket_id: ticketId }).then((r) => (Array.isArray(r.data) ? r.data.length : 0))
       : Promise.resolve(0),
@@ -284,7 +285,7 @@ export async function draftNotChosen(bidId: string): Promise<
   const { supabase, bid } = await bidRow(bidId);
   if (!bid) return { error: "That quote isn't visible to you." };
   const [{ data: vendors }, { data: tickets }, basics] = await Promise.all([
-    supabase.from("vendors").select("id, name, contact_name, email").eq("id", bid.vendor_id).limit(1),
+    supabase.from(VENDOR_MANAGER_VIEW).select("id, name, contact_name, email").eq("id", bid.vendor_id).limit(1),
     supabase.from("tickets").select("title").eq("id", bid.ticket_id).limit(1),
     loadDraftBasics(supabase, bid.association_id),
   ]);

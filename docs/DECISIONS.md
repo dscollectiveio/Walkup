@@ -2219,3 +2219,85 @@ approve email, change roles, connect banks, or read the ledger, bank feed, state
   "Restricted" or "This part is for the board"; a person with no live grant sees one "Your access has ended" page.
 - **To confirm.** A property manager's notes and photos show to owners as "The board". The manager cannot pick themselves as
   a problem's assignee (assignees are board members).
+
+## 49. Accountant uploads, board unit documents, and contractors without their tax identity (2026-10-21)
+
+Three changes the product owner approved after the access audit. Migration 0081 (not yet applied anywhere; the rest is
+code and tests). It builds on #47 (accountant reach) and #48 (property manager).
+
+- **The accountant adds documents, in five categories only.** Tax form, financial statement, bank statement, invoice,
+  receipt: exactly the categories the accountant already reads (`accountant_document_category`, 0074). Never pinned to a
+  unit, always **board only** (a financial statement is not shared with all owners even though that category defaults
+  to it), always filed as the accountant's own choice (`tag_source = 'manual'`). There is no "Decide later" for them.
+  Mechanism: three narrow storage policies for their own uploads under the association path, and one definer function,
+  `register_accountant_document`, with the same checksum, duplicate, size, type and stored-object checks as
+  `register_unit_document`, a 20 a day limit, and a "30 unregistered uploads a day" rate limit on the storage side. **No
+  policy on `documents` changed**: the accountant still cannot insert, update or delete a row directly, so they cannot
+  rename, refile, change visibility, bin or touch anyone else's document.
+- **They remove their own for 30 days.** `remove_accountant_upload` is a soft delete (the board still sees it in the
+  bin and can restore it), only for a document they uploaded, only while their grant is live, only in the five
+  categories, only unpinned, only within 30 days. After that the board removes it.
+- **The AI reader does not run on their uploads.** The reader is a board job end to end (`claim_ai_call` is board only,
+  and the extraction writes need the board's update policy), and making it run for an accountant would mean a new
+  write path. So the row is stored `skipped` ("Added by the accountant. A board member can have it read.") and a board
+  member presses "Read it again", the existing action. *To confirm:* if the owner wants it automatic, that is a small
+  definer function that lets the accountant write only the extraction columns of their own recent upload.
+- **Board members and admins add a document for any unit** from Building & Owners: an "Add a unit document" control above
+  the unit list (unit picker and kind picker) and a "Documents for this unit" section on each expanded unit card (kind
+  picker, upload, the unit's documents with Remove). No database change: 0079 already accepts any unit for the board.
+  Same kinds, same board-only, unit-pinned filing, never read by the AI, no notice to the board for its own uploads. The
+  general building documents upload on the Documents page is unchanged.
+- **A property manager no longer reads the `vendors` table.** It holds each contractor's tax identity (`entity_type`,
+  `tin_last4`, `w9_on_file`, `w9_received_on`, `is_1099_exempt`). `vendors_select` is now `can_read_financials` only (board
+  and accountant). A manager reads contractors through `vendors_manager`, a definer, security-barrier view with every
+  column except those five (the column list is explicit, so a column added to `vendors` later stays hidden from a manager
+  until someone adds it). `address` stays: it is where the contractor works from, not a taxpayer record; say if the owner
+  disagrees. Board and accountant also read the view, with the same rows. `request_ticket_quotes` and `set_ticket_plan`,
+  the two invoker functions that look a contractor up for a manager, now read the view (patched from the catalog, like
+  0080), so a manager's quote requests still refuse an archived or do-not-use contractor.
+- **App.** `src/lib/contractors/vendor-source.ts` is the one place that decides table or view (`vendorSource`), drops the
+  tax columns from a select list (`vendorColumns`) and answers "unknown, not missing" for a tax flag (`taxFlag`), so a
+  manager never sees a false "No W-9 on file". Embedded `vendors(name)` selects on tickets and upkeep became a second
+  query by id (`vendorNames`), because an embed reads the table under the caller's policy. A manager's Problems list
+  shows no "W-9 collected" column; the contractor page hides the W-9 and business type lines. A unit test lists every file
+  that reads the table and fails when a new one appears.
+- **Accepted.** (1) The accountant's uploads sit unread by the AI until a board member asks. (2) A removed upload's file
+  stays in storage with its row, like every other soft delete.
+
+## 50. Phone and mailing address move to a table the accountant cannot read (2026-10-21)
+
+Closes the item #47 deferred: "the accountant can still read every owner's contact details through the database."
+Approved scope; migration 0082.
+
+- **What moved.** Only `phone` and `mailing_address`, from `public.persons` to `public.person_contact_details`
+  (`person_id` primary key, cascade on delete; `association_id` filled from the person by a trigger, never trusted from
+  the caller; `updated_at`). Existing values were copied across and the two columns dropped (the drop has no CASCADE, so
+  it would fail loudly if a view or index depended on them; none did). **`email` stays on `persons`**: sign-in, invites,
+  email sending and about thirty pages read it, and the owner decided not to move it. So the accountant still reads
+  names and email (the books and the tax accountant record need them), and no longer reads a phone number or a home
+  address.
+- **Who reads it.** The board (`is_board`: board admin and board member); the person themselves (their own row); a
+  property manager (as in #48, units and people with contact details); an attorney **only** through
+  `attorney_shared_owners()` for the units shared with them (the function now reads the new table; an owner with no
+  details still appears, with blanks). Not the accountant, not other owners, not observers, not another building.
+- **Who writes it.** The board (insert, update, delete). The person themselves **only through `update_my_profile()`**,
+  which keeps its signature, its checks (phone 40 characters, address 300, a person on file in that building) and now
+  removes the row when both fields are blank. There is no direct self-write policy. `update_my_profile` never had a
+  rate limit and still has none.
+- **Audited.** Same `tg_audit()` trigger as other tables. The audit table's record id is the person's id (a generated
+  `id` column equal to `person_id`), so one id finds a person's history. Only a board admin reads the audit log.
+- **Functions rewritten from their current definitions.** `redact_person` (clears the row and scrubs its audit rows,
+  including the delete the clearing just logged), `delete_former_member` (refuses while the row holds a phone or an
+  address; an empty row goes with the person), `import_commit` (a new person's phone and address go to the new table),
+  `update_my_profile`, `attorney_shared_owners`. The three long ones are patched in the migration from
+  `pg_get_functiondef()` and fail if the expected text is not found.
+- **App.** `src/lib/people/contact-details.ts` reads (`loadContactDetails`, `loadAllContactDetails`) and writes
+  (`saveContactDetails`) the table. Embedded selects such as `persons(full_name, phone)` became a second query. The
+  accountant's pages never request it: HOA Dues asks for a property manager's phone only when the viewer is the board,
+  and the statement PDF leaves the owner's address out for an accountant. A person's own data export includes their
+  details. The board adds a person in two steps (person, then details); if the second fails the message says the
+  person was saved.
+- **Accepted.** (1) A person's own row is readable at AAL1, as `persons_select` already was (0025 note). (2) Audit rows
+  written before this change keep the old phone and address inside `persons` entries, readable by a board admin only;
+  `redact_person` still scrubs them for a removed person. (3) A property manager keeps reading every person's details,
+  as #48 decided. (4) The board's two-step create is not atomic.

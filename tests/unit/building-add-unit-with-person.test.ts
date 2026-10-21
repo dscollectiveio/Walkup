@@ -161,8 +161,10 @@ describe("saveUnitAndPeople (the single Edit)", () => {
       ]),
     );
     expect(result).toEqual({ ok: true });
-    expect(ops()).toEqual(["units:update", "persons:update", "role_grants:upsert", "persons:insert", "unit_owners:insert"]);
-    expect(calls[1].row).toMatchObject({ full_name: "Ada Okonkwo", phone: "(312) 555-0100" });
+    expect(ops()).toEqual(["units:update", "persons:update", "person_contact_details:upsert", "role_grants:upsert", "persons:insert", "unit_owners:insert"]);
+    // Name and email stay on persons; the phone goes to person_contact_details (0082).
+    expect(calls[1].row).toEqual({ full_name: "Ada Okonkwo", email: null });
+    expect(calls[2].row).toMatchObject({ person_id: "per-1", phone: "(312) 555-0100", mailing_address: null });
   });
 
   it("takes someone off the unit by ending their ownership, and leaves the person on file", async () => {
@@ -253,6 +255,19 @@ describe("addPerson (Add a person)", () => {
     expect(calls).toEqual([]);
     failures.persons = { code: "23505", message: "dup" };
     expect(await addPerson(null, form([["full_name", "A"]]))).toEqual({ error: "Someone with that email is already on file." });
+  });
+
+  it("keeps phone and address off the persons row and writes them to person_contact_details (0082)", async () => {
+    expect(await addPerson(null, form([["full_name", "Fay"], ["email", "fay@example.test"], ["phone", "312-555-0100"], ["mailing_address", "1 Main St"]]))).toEqual({ ok: true });
+    expect(ops()).toEqual(["persons:insert", "person_contact_details:upsert"]);
+    expect(calls[0].row).toEqual({ association_id: "assoc-1", full_name: "Fay", email: "fay@example.test" });
+    expect(calls[1].row).toEqual({ person_id: "persons-1", association_id: "assoc-1", phone: "312-555-0100", mailing_address: "1 Main St" });
+  });
+
+  it("says the person was saved when their phone and address could not be", async () => {
+    failures.person_contact_details = { message: "boom" };
+    const result = await addPerson(null, form([["full_name", "Gus"], ["phone", "312-555-0100"]]));
+    expect(result).toMatchObject({ error: expect.stringMatching(/^Gus was added, but their phone and address couldn't be saved: boom/) });
   });
 
   it("says the person was saved when putting them in the unit fails", async () => {

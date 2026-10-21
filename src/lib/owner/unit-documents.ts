@@ -82,3 +82,17 @@ export function noticeLine(n: OwnerDocumentNoticeLike): string {
   const kind = n.kind?.trim();
   return `${who} added a document for ${n.unitLabel}${kind ? `: ${kind}` : ""}`;
 }
+
+/** The board's side of unit documents: Building & Owners, for any unit (0079 already lets the board add for any unit). */
+export const BOARD_UNIT_DOCUMENT_COPY = {
+  addTitle: "Add a unit document",
+  sectionTitle: "Documents for this unit",
+  hint: "Only the board and the owners of that unit can see it. Other owners and the accountant cannot.",
+  unitLabel: "Which unit?",
+  kindLabel: "What is it?",
+  button: "Add a document",
+  empty: "Nothing added for this unit yet.",
+  loading: "Loading documents…",
+  loadFailed: "Couldn't load this unit's documents. Try again.",
+  tryAgain: "Try again",
+} as const;

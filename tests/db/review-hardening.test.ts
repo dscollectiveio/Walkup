@@ -85,10 +85,11 @@ describe("REVIEW-1 #1: board_member to board_admin escalation", () => {
     expect(loginless.affectedRows).toBe(1);
   });
 
-  it("1b. what still works: owner phone edits, board edits of others' phones, an admin repointing a login", async () => {
+  it("1b. what still works: owner profile edits, board edits of others' phones, an admin repointing a login", async () => {
     await setup();
-    expect((await q(f.adaUser, `update public.persons set phone = '312-555-0100' where id = $1::uuid`, [f.adaPerson])).affectedRows).toBe(1);
-    expect((await q(f.boUser, `update public.persons set phone = '312-555-0101' where id = $1::uuid`, [f.adaPerson])).affectedRows).toBe(1);
+    // Phone and address moved to person_contact_details in 0082: an owner edits theirs through update_my_profile.
+    await q(f.adaUser, `select public.update_my_profile($1::uuid, '312-555-0100', null)`, [f.damen]);
+    expect((await q(f.boUser, `insert into public.person_contact_details (person_id, association_id, phone) values ($1::uuid, $2::uuid, '312-555-0101') on conflict (person_id) do update set phone = excluded.phone`, [f.adaPerson, f.damen])).affectedRows).toBe(1);
     expect((await q(f.boUser, `update public.persons set full_name = 'Ada O.' where id = $1::uuid`, [f.adaPerson])).affectedRows).toBe(1);
     expect((await q(f.cyUser, `update public.persons set auth_user_id = $1::uuid where id = $2::uuid`, [EVE, f.vicPerson])).affectedRows).toBe(1);
   });

@@ -169,6 +169,7 @@ export async function uploadFile(
         purpose,
         ticketId: opts.ticketId,
         unitId: opts.unitId,
+        categorySlug: opts.categorySlug,
       });
     } catch {
       return failed(networkError(original));

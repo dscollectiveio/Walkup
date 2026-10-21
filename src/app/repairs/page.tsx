@@ -1,3 +1,4 @@
+import { vendorSource } from "@/lib/contractors/vendor-source";
 import Link from "next/link";
 import { createClient } from "@/lib/supabase/server";
 import { Restricted } from "@/components/ui";
@@ -148,7 +149,8 @@ async function loadBadges(supabase: Supabase, viewer: RepairsViewer): Promise<Pa
     supabase.from(fin ? "upkeep_tasks" : "upkeep_tasks_member").select("id", { count: "exact", head: true }).eq("is_active", true).lt("next_due_on", today),
     fin
       ? supabase
-          .from("vendors")
+          // A property manager reads contractors through vendors_manager (no tax identity, 0081).
+          .from(vendorSource(viewer.canReadFinancials))
           .select("id", { count: "exact", head: true })
           .is("archived_at", null)
           .neq("status", "do_not_use")

@@ -16,13 +16,16 @@ export async function GET() {
   if (!viewer) return NextResponse.json({ error: "Please sign in again." }, { status: 401 });
   const supabase = await createClient();
 
-  const [personRes, claimsRes, units, prefsRes] = await Promise.all([
-    supabase.from("persons").select("full_name, email, phone, mailing_address, created_at").eq("id", viewer.personId).limit(1),
+  const [personRes, contactRes, claimsRes, units, prefsRes] = await Promise.all([
+    supabase.from("persons").select("full_name, email, created_at").eq("id", viewer.personId).limit(1),
+    // Phone and mailing address live in person_contact_details (0082); the person's own export includes them.
+    supabase.from("person_contact_details").select("phone, mailing_address").eq("person_id", viewer.personId).limit(1),
     supabase.auth.getClaims(),
     loadOwnedUnits(supabase, viewer),
     supabase.rpc("my_email_preferences", { p_association_id: viewer.associationId }),
   ]);
   const person = personRes.data?.[0] ?? null;
+  const contact = contactRes.data?.[0] ?? null;
   const prefs = (Array.isArray(prefsRes.data) ? prefsRes.data[0] : prefsRes.data) as Record<string, unknown> | undefined;
 
   const body = {
@@ -33,8 +36,8 @@ export async function GET() {
       ? {
           name: person.full_name,
           email: person.email,
-          phone: person.phone,
-          mailing_address: person.mailing_address,
+          phone: contact?.phone ?? null,
+          mailing_address: contact?.mailing_address ?? null,
           on_file_since: person.created_at,
         }
       : null,

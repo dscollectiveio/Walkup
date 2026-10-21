@@ -1,11 +1,11 @@
 "use client";
 
 import { useActionState, useState, useTransition } from "react";
-import { Card } from "@/components/ui";
+import { CollapsibleCard } from "@/components/collapsible-card";
 import { btnPrimary, btnSecondary } from "@/components/repairs/styles";
 import { clearAccountant, setAccountant } from "./form-actions";
 
-const inputClass = "mt-1 w-full rounded-lg border border-line-strong bg-paper px-3 py-2 text-[13px] text-ink";
+const inputClass = "mt-1 h-[40px] w-full rounded-lg border border-line-strong bg-paper px-3 text-[13px] text-ink";
 const primary = btnPrimary;
 const secondary = btnSecondary;
 
@@ -40,7 +40,7 @@ export function AccountantCard({
   const showForm = canWrite && (editing || !accountant);
 
   return (
-    <Card navy
+    <CollapsibleCard
       title="Your accountant"
       hint="Walkup drafts the emails and you send them from your own email app, so their replies come back to you."
     >
@@ -100,8 +100,8 @@ export function AccountantCard({
               with no recipient.
             </p>
           ) : null}
-          <div className="grid gap-3 sm:grid-cols-3">
-            <div>
+          <div className="flex flex-wrap items-end gap-3">
+            <div className="min-w-[10rem] flex-1">
               <label htmlFor="accountant_full_name" className="block text-[12px] font-medium text-ink">
                 Name
               </label>
@@ -114,13 +114,13 @@ export function AccountantCard({
                 autoComplete="off"
               />
             </div>
-            <div>
+            <div className="min-w-[10rem] flex-1">
               <label htmlFor="accountant_firm" className="block text-[12px] font-medium text-ink">
                 Firm <span className="font-normal text-mute-soft">optional</span>
               </label>
               <input id="accountant_firm" name="firm" defaultValue={accountant?.firm ?? ""} className={inputClass} autoComplete="off" />
             </div>
-            <div>
+            <div className="min-w-[12rem] flex-[1.3]">
               <label htmlFor="accountant_email" className="block text-[12px] font-medium text-ink">
                 Email
               </label>
@@ -134,20 +134,20 @@ export function AccountantCard({
                 autoComplete="off"
               />
             </div>
+            <div className="flex items-center gap-2">
+              <button type="submit" disabled={pending} className={`${primary} !h-[40px] !min-h-[40px]`}>
+                {pending ? "Saving…" : accountant ? "Save" : "Add your accountant"}
+              </button>
+              {accountant ? (
+                <button type="button" onClick={() => setEditing(false)} className={`${secondary} !h-[40px] !min-h-[40px]`}>
+                  Cancel
+                </button>
+              ) : null}
+            </div>
           </div>
           {state?.error ? <p className="text-[12px] text-bad-text">{state.error}</p> : null}
-          <div className="flex flex-wrap items-center gap-2">
-            <button type="submit" disabled={pending} className={primary}>
-              {pending ? "Saving…" : accountant ? "Save" : "Add your accountant"}
-            </button>
-            {accountant ? (
-              <button type="button" onClick={() => setEditing(false)} className={secondary}>
-                Cancel
-              </button>
-            ) : null}
-          </div>
         </form>
       ) : null}
-    </Card>
+    </CollapsibleCard>
   );
 }

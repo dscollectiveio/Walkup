@@ -8,6 +8,8 @@ import { unitTypeLabel } from "@/lib/building/unit-types";
 import { AddPersonForm } from "./add-person-form";
 import { UnitFields, specsLine, type UnitRecord } from "./unit-fields";
 import { SECTION_HEADER } from "./section-header";
+import { UnitDocumentsPanel } from "./unit-documents-panel";
+import { BOARD_UNIT_DOCUMENT_COPY } from "@/lib/owner/unit-documents";
 
 const ROLE_LABEL: Record<string, string> = {
   board_admin: "Board admin",
@@ -237,6 +239,13 @@ export function UnitCard({
               ))}
             </ul>
           )}
+
+          {canEdit ? (
+            <div className="space-y-2 border-t border-line px-4 py-3">
+              <h4 className="text-[13px] font-bold text-ink">{BOARD_UNIT_DOCUMENT_COPY.sectionTitle}</h4>
+              <UnitDocumentsPanel units={[{ id: unit.id, label: unit.label }]} unitId={unit.id} showList />
+            </div>
+          ) : null}
 
           {canEdit || canDelete ? (
             <div className="space-y-3 border-t border-line px-4 py-3">

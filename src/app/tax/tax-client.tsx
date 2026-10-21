@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useTransition } from "react";
-import { btnPrimary, btnSecondary } from "@/components/repairs/styles";
+import { btnPrimary } from "@/components/repairs/styles";
 import { confirmIncomeClassification, startForm } from "./form-actions";
 
 /** The determination pill. `eligible` is the 1120-H election: both tests pass, the board chooses to file it. */
@@ -58,6 +58,12 @@ export interface FormCardView {
   warnings: string[];
   /** "Due April 15, 2027 (citation)" / "Estimated … — not yet checked" / "Due date not on file — ask your CPA." */
   due: { text: string; tone: CardTone } | null;
+  /** The date alone, for the column on the right of the card; null when there is no date to show. */
+  dueDate: { label: string; tone: CardTone; caption: string } | null;
+  /** How to find the real date, and what to set in Walkup so it can be worked out; null for a checked date. */
+  dueGuide: { how: string; set: { label: string; href: string }[] } | null;
+  /** Numbers to type into the form or the portal, shown with a copy button (EIN, Illinois file number). */
+  copyables: { label: string; value: string }[];
   links: CardLink[];
   /** The words after the links: "checked Oct 11, 2026" / "retrieved … · not yet checked by a person". */
   linksWords: string | null;
@@ -70,13 +76,18 @@ export interface FormCardView {
 }
 
 const primaryBtn = btnPrimary;
-const secondaryBtn = btnSecondary;
+// Every button on a form card is a filled blue button with white text.
+const secondaryBtn = btnPrimary;
 
 export function FormCard({ view, canWrite, children }: { view: FormCardView; canWrite: boolean; children?: React.ReactNode }) {
   const [pending, start] = useTransition();
   const [error, setError] = useState<string | null>(null);
   const d = DETERMINATION[view.determination] ?? DETERMINATION.ask_cpa;
   const a = view.action;
+  // The reason can run long (it carries the test figures): the first sentence shows, the rest sits under "More".
+  const reasonSplit = view.reason.match(/^(.+?[.!?])(\s+[\s\S]*)?$/);
+  const reasonFirst = reasonSplit ? reasonSplit[1] : view.reason;
+  const reasonRest = reasonSplit?.[2]?.trim() ?? "";
 
   let action: React.ReactNode = null;
   if (a.kind === "filed") {
@@ -111,52 +122,147 @@ export function FormCard({ view, canWrite, children }: { view: FormCardView; can
   }
 
   return (
-    <div className={`flex flex-col justify-between gap-3 rounded-xl border border-line bg-paper px-4 py-4 ${view.muted ? "opacity-70" : ""}`}>
-      <div>
-        <div className="flex flex-wrap items-center justify-between gap-2">
-          <span className="text-[14px] font-medium text-ink">{view.title}</span>
-          <span className={`rounded-full border px-2 py-0.5 text-[11px] ${d.cls}`}>{d.label}</span>
-        </div>
-        <p className="mt-0.5 text-[12px] text-mute">{view.plain}</p>
-        <p className="mt-2 text-[12px] text-ink">{view.reason}</p>
-        {view.due ? <p className={`mt-1 text-[12px] ${TONE[view.due.tone]}`}>{view.due.text}</p> : null}
-        {view.note ? <p className="mt-1 text-[12px] text-mute">{view.note}</p> : null}
-        {view.warnings.map((w) => (
-          <p key={w} className="mt-1 text-[12px] text-warning-text">
-            {w}
-          </p>
-        ))}
-        <p className="mt-2 text-[12px] text-mute">
-          {view.links.length === 0 ? (
-            "Walkup has no links on file for this form yet."
+    <div className={`overflow-hidden rounded-xl border border-line bg-paper ${view.muted ? "opacity-70" : ""}`}>
+      {/* A lighter blue header band for each form, so the cards read as a list of forms. */}
+      <div className="flex flex-wrap items-center gap-x-3 gap-y-1 border-b border-line bg-ink/[0.09] px-4 py-2.5">
+        <span className="text-[15px] font-bold text-ink">{view.title}</span>
+        <span className={`rounded-full border px-2 py-0.5 text-[11px] ${d.cls}`}>{d.label}</span>
+        {/* The due date, on the right of the header bar. */}
+        <div className="ml-auto text-right">
+          {view.dueDate ? (
+            <p className={`text-[14px] font-bold tabular ${TONE[view.dueDate.tone]}`}>
+              <span className="mr-1.5 text-[11px] font-medium uppercase tracking-wide text-mute">Due</span>
+              {view.dueDate.label}
+              <span className="ml-2 text-[11px] font-normal text-mute">{view.dueDate.caption}</span>
+            </p>
           ) : (
-            <>
-              {view.links.map((l, i) => (
-                <span key={l.href}>
-                  {i > 0 ? " · " : ""}
-                  <a href={l.href} target="_blank" rel="noreferrer" title={l.words} className="text-ink underline-offset-2 hover:underline">
-                    {l.label} ↗<span className="sr-only"> ({l.words})</span>
+            <p className="text-[12px] text-mute">{view.muted ? "Not required" : "No due date on file"}</p>
+          )}
+        </div>
+      </div>
+      <div className="flex flex-col md:flex-row md:items-stretch">
+        {/* Left: plain words, in short blocks. */}
+        <div className="min-w-0 flex-1 divide-y divide-line px-4">
+          <div className="space-y-1 py-3 text-[13px]">
+            <p className="text-ink">
+              <span className="font-semibold">What this does:</span> {view.plain}.
+            </p>
+            <p className="text-ink">
+              <span className="font-semibold">Why it applies:</span> {reasonFirst}
+            </p>
+            {reasonRest || view.note ? (
+              <details className="text-mute">
+                <summary className="cursor-pointer text-[12px] font-medium text-ink underline underline-offset-2">More</summary>
+                {reasonRest ? <p className="mt-1">{reasonRest}</p> : null}
+                {view.note ? <p className="mt-1">{view.note}</p> : null}
+              </details>
+            ) : null}
+          </div>
+          {view.warnings.length > 0 ? (
+            <div className="space-y-1 py-3 text-[13px] text-warning-text">
+              {view.warnings.map((w) => (
+                <p key={w}>
+                  <span className="font-semibold">Watch out:</span> {w}
+                </p>
+              ))}
+            </div>
+          ) : null}
+          <div className="py-3 text-[13px] text-mute">
+            <span className="font-semibold text-ink">Official links:</span>{" "}
+            {view.links.length === 0 ? (
+              "none on file yet."
+            ) : (
+              <>
+                {view.links.map((l, i) => (
+                  <span key={l.href}>
+                    {i > 0 ? " · " : ""}
+                    <a href={l.href} target="_blank" rel="noreferrer" title={l.words} className="text-ink underline underline-offset-2 hover:no-underline">
+                      {l.label} ↗<span className="sr-only"> ({l.words})</span>
+                    </a>
+                  </span>
+                ))}
+                {view.linksWords ? <span className="text-mute-soft"> ({view.linksWords})</span> : null}
+              </>
+            )}
+          </div>
+          <div className={`py-3 text-[13px] ${TONE[view.status.tone]}`}>
+            <span className="font-semibold">Where you are:</span> {view.status.text}
+            {children ? <div className="mt-2">{children}</div> : null}
+          </div>
+        </div>
+        {/* Right: the date, the numbers to copy, and the buttons. */}
+        <div className="flex shrink-0 flex-col gap-3 border-t border-line px-4 py-3 md:w-72 md:border-l md:border-t-0">
+          {view.dueGuide ? (
+            <p className="text-[12px] text-ink">
+              {view.dueGuide.how}
+              {view.dueGuide.set.map((st) => (
+                <span key={st.href}>
+                  {" "}
+                  <a href={st.href} className="font-medium text-ink underline underline-offset-2 hover:no-underline">
+                    {st.label} →
                   </a>
                 </span>
               ))}
-              {view.linksWords ? <span className="text-mute-soft">: {view.linksWords}</span> : null}
-            </>
-          )}
-        </p>
-        <p className={`mt-2 text-[12px] font-medium ${TONE[view.status.tone]}`}>{view.status.text}</p>
-        {children ? <div className="mt-2">{children}</div> : null}
-      </div>
-      {action || view.fileOnline ? (
-        <div className="flex flex-wrap items-center gap-2">
-          {view.fileOnline && a.kind !== "filed" ? (
-            <a href={view.fileOnline.href} target="_blank" rel="noreferrer" title={view.fileOnline.words} className={a.kind === "none" ? primaryBtn : secondaryBtn}>
-              File online ↗
-            </a>
+            </p>
           ) : null}
-          {action}
+          {view.copyables.length > 0 ? (
+            <ul className="space-y-1.5">
+              {view.copyables.map((c) => (
+                <li key={c.label}>
+                  <CopyValue label={c.label} value={c.value} />
+                </li>
+              ))}
+            </ul>
+          ) : null}
+          {action || view.fileOnline ? (
+            <div className="flex flex-wrap items-center gap-2">
+              {view.fileOnline && a.kind !== "filed" ? (
+                <a href={view.fileOnline.href} target="_blank" rel="noreferrer" title={view.fileOnline.words} className={a.kind === "none" ? primaryBtn : secondaryBtn}>
+                  File online ↗
+                </a>
+              ) : null}
+              {action}
+            </div>
+          ) : null}
+          {error ? <p className="text-[12px] text-bad-text">{error}</p> : null}
         </div>
-      ) : null}
-      {error ? <p className="text-[12px] text-bad-text">{error}</p> : null}
+      </div>
+    </div>
+  );
+}
+
+/** A number the board types into a form or a portal (an EIN, a file number), with a one-click copy. */
+export function CopyValue({ label, value }: { label: string; value: string }) {
+  const [copied, setCopied] = useState(false);
+  async function copy() {
+    try {
+      await navigator.clipboard.writeText(value);
+    } catch {
+      // Older browsers: select-and-copy through a temporary field.
+      const t = document.createElement("textarea");
+      t.value = value;
+      document.body.appendChild(t);
+      t.select();
+      document.execCommand("copy");
+      document.body.removeChild(t);
+    }
+    setCopied(true);
+    setTimeout(() => setCopied(false), 1800);
+  }
+  return (
+    <div className="flex items-center justify-between gap-2 rounded-lg border border-line bg-fill/40 px-2.5 py-1.5">
+      <div className="min-w-0">
+        <p className="text-[10px] font-medium uppercase tracking-wide text-mute">{label}</p>
+        <p className="figures truncate text-[13px] font-medium text-ink">{value}</p>
+      </div>
+      <button
+        type="button"
+        onClick={copy}
+        aria-label={`Copy ${label}`}
+        className="shrink-0 rounded-md border border-line-strong bg-paper px-2 py-1 text-[11px] font-medium text-ink hover:bg-fill"
+      >
+        {copied ? "Copied" : "Copy"}
+      </button>
     </div>
   );
 }

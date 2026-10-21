@@ -1,3 +1,5 @@
+import { vendorSource } from "@/lib/contractors/vendor-source";
+import { vendorNames } from "@/lib/contractors/vendor-names";
 import Link from "next/link";
 import { createClient } from "@/lib/supabase/server";
 import { Card, Restricted } from "@/components/ui";
@@ -35,7 +37,7 @@ export default async function UpkeepTaskPage({ params }: { params: Promise<{ tas
   const { data: rows } = await (viewer.staffView
     ? supabase
         .from("upkeep_tasks")
-        .select("id, name, description, interval_months, due_month, last_done_on, next_due_on, trade, vendor_id, estimated_cost::text, is_active, vendors(name)")
+        .select("id, name, description, interval_months, due_month, last_done_on, next_due_on, trade, vendor_id, estimated_cost::text, is_active")
     : supabase
         .from("upkeep_tasks_member")
         .select("id, name, description, interval_months, due_month, last_done_on, next_due_on, trade, is_active")
@@ -51,7 +53,7 @@ export default async function UpkeepTaskPage({ params }: { params: Promise<{ tas
   const isBoard = viewer.canManage;
   const [{ data: log }, { data: tickets }, { data: vendors }] = await Promise.all([
     (seesMoney
-      ? supabase.from("upkeep_log").select("id, done_on, cost::text, note, vendor_id, vendors(name), ticket_id, tickets(id, reference)")
+      ? supabase.from("upkeep_log").select("id, done_on, cost::text, note, vendor_id, ticket_id, tickets(id, reference)")
       : supabase.from("upkeep_log_member").select("id, done_on, note, ticket_id")
     )
       .eq("task_id", taskId)
@@ -61,14 +63,18 @@ export default async function UpkeepTaskPage({ params }: { params: Promise<{ tas
       ? supabase.from("tickets").select("id, reference, title, status, opened_on").eq("upkeep_task_id", taskId).order("opened_on", { ascending: false })
       : Promise.resolve({ data: [] as { id: string; reference: number; title: string; status: string; opened_on: string }[] }),
     isBoard
-      ? supabase.from("vendors").select("id, name").is("archived_at", null).neq("status", "do_not_use").order("name")
+      ? supabase.from(vendorSource(viewer.canReadFinancials)).select("id, name").is("archived_at", null).neq("status", "do_not_use").order("name")
       : Promise.resolve({ data: [] as { id: string; name: string }[] }),
   ]);
 
   const active = t.is_active === true;
   const dueMonth = (t.due_month as number | null) ?? null;
   const when = whenLabel(t.next_due_on as string, dueMonth, today);
-  const vendorName = seesMoney ? (one(t.vendors as { name: string } | { name: string }[] | null)?.name ?? null) : null;
+  // Contractor names are read by id, not embedded: a property manager has no vendors table (0081).
+  const names = seesMoney
+    ? await vendorNames(supabase, [t.vendor_id as string | null, ...(log ?? []).map((l) => l.vendor_id as string | null)], viewer.canReadFinancials)
+    : new Map<string, string>();
+  const vendorName = seesMoney ? (names.get((t.vendor_id as string | null) ?? "") ?? null) : null;
   const history: LogRow[] = (log ?? []).map((l) => {
     const ticket = one(l.tickets as { id: string; reference: number } | { id: string; reference: number }[] | null);
     return {
@@ -76,7 +82,7 @@ export default async function UpkeepTaskPage({ params }: { params: Promise<{ tas
       doneOn: l.done_on as string,
       cost: seesMoney ? ((l.cost as string | null) ?? null) : null,
       vendorId: seesMoney ? ((l.vendor_id as string | null) ?? null) : null,
-      vendorName: seesMoney ? (one(l.vendors as { name: string } | { name: string }[] | null)?.name ?? null) : null,
+      vendorName: seesMoney ? (names.get((l.vendor_id as string | null) ?? "") ?? null) : null,
       note: (l.note as string | null) ?? null,
       ticket: ticket ? { id: ticket.id, reference: ticket.reference } : null,
     };

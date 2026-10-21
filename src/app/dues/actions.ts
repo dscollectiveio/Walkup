@@ -3,6 +3,7 @@
 import { revalidatePath } from "next/cache";
 import { createClient } from "@/lib/supabase/server";
 import { buildingTodayIso } from "@/lib/dates";
+import { saveContactDetails } from "@/lib/people/contact-details";
 import { currentPeriodStart, periodLabel, perUnitAmount, type DuesFrequency } from "@/lib/dues/period";
 import { PLAN_FREQUENCIES, perPeriodCents, periodStartFor, planStartsOn } from "@/lib/dues/plan";
 import { applyCategorizations } from "@/app/bank-feed/actions";
@@ -866,9 +867,11 @@ export async function savePropertyManager(_prev: unknown, formData: FormData) {
   if (personId) {
     const { error } = await supabase
       .from("persons")
-      .update({ full_name: name, email: email || null, phone: phone || null })
+      .update({ full_name: name, email: email || null })
       .eq("id", personId);
     if (error) return { error: error.code === "42501" ? "Only a board member can change a manager." : friendly(error) };
+    const phoneError = await saveContactDetails(supabase, associationId, personId, { phone: phone || null, mailing_address: null, keepAddress: true });
+    if (phoneError) return { error: phoneError.code === "42501" ? "Only a board member can change a manager." : phoneError.message };
     const { error: linkError } = await supabase
       .from("unit_property_managers")
       // With no email the manager cannot be the main contact, so it goes back to the owner.
@@ -878,13 +881,15 @@ export async function savePropertyManager(_prev: unknown, formData: FormData) {
   } else {
     const { data: created, error } = await supabase
       .from("persons")
-      .insert({ association_id: associationId, full_name: name, email: email || null, phone: phone || null })
+      .insert({ association_id: associationId, full_name: name, email: email || null })
       .select("id")
       .limit(1);
     if (error || !created?.[0]) {
       return { error: error?.code === "42501" ? "Only a board member can add a manager." : error ? friendly(error) : "Couldn't add the manager." };
     }
     personId = created[0].id as string;
+    const phoneError = await saveContactDetails(supabase, associationId, personId, { phone: phone || null, mailing_address: null });
+    if (phoneError) return { error: `The manager was added, but the phone number couldn't be saved: ${phoneError.message}` };
     const { error: linkError } = await supabase.from("unit_property_managers").insert({
       unit_id: unitId,
       association_id: associationId,

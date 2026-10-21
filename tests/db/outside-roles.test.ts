@@ -302,7 +302,9 @@ describe("property manager", () => {
       const r = await pat(`select * from public.request_ticket_quotes($1::uuid, $2::jsonb)`, [f.ticketCommon, JSON.stringify([{ vendor_id: EXTRA.damenVendor, by_phone: true }])]);
       expect(r.rows).toHaveLength(1);
       expect(await rows(PAT_USER, `select 1 from public.ticket_bids`)).toHaveLength(1);
-      expect((await rows(PAT_USER, `select 1 from public.vendors`)).length).toBeGreaterThan(0);
+      // The contractor list comes through vendors_manager (0081); the table, with its tax identity, is not theirs.
+      expect((await rows(PAT_USER, `select 1 from public.vendors_manager`)).length).toBeGreaterThan(0);
+      expect(await rows(PAT_USER, `select 1 from public.vendors`)).toHaveLength(0);
       expect(await rows(OLA_USER, `select 1 from public.ticket_bids`)).toHaveLength(0);
       expect(await rows(LEE_USER, `select 1 from public.vendors`)).toHaveLength(0);
     });
@@ -343,11 +345,15 @@ describe("property manager", () => {
 
   describe("units and people, with contact details", () => {
     it("reads every person's email and phone, the owners of each unit and a unit's own property manager", async () => {
-      const mgr = await one<{ id: string }>(null, `insert into public.persons (association_id, full_name, email, phone) values ($1::uuid, 'Unit Manager', 'um@example.test', '555-0100') returning id`, [f.damen]);
+      const mgr = await one<{ id: string }>(null, `insert into public.persons (association_id, full_name, email) values ($1::uuid, 'Unit Manager', 'um@example.test') returning id`, [f.damen]);
+      await db.query(`insert into public.person_contact_details (person_id, association_id, phone) values ($1::uuid, $2::uuid, '555-0100')`, [mgr.id, f.damen]);
       await db.query(`insert into public.unit_property_managers (unit_id, association_id, person_id, company) values ($1::uuid, $2::uuid, $3::uuid, 'Lakeside Mgmt')`, [f.unit1, f.damen, mgr.id]);
       const people = await rows<{ email: string | null }>(PAT_USER, `select email from public.persons`);
       expect(people.length).toBeGreaterThanOrEqual(7);
       expect(people.map((p) => p.email)).toContain("bo@example.test");
+      // The phone is in person_contact_details (0082), which a property manager reads and the other outside roles do not.
+      expect((await rows<{ phone: string | null }>(PAT_USER, `select phone from public.person_contact_details`)).map((r) => r.phone)).toContain("555-0100");
+      for (const user of [LEE_USER, OLA_USER]) expect(await rows(user, `select 1 from public.person_contact_details`)).toHaveLength(0);
       expect((await rows(PAT_USER, `select 1 from public.unit_owners`)).length).toBeGreaterThanOrEqual(3);
       expect(await rows(PAT_USER, `select 1 from public.unit_property_managers`)).toHaveLength(1);
       expect(await rows(LEE_USER, `select 1 from public.unit_property_managers`)).toHaveLength(0);
@@ -490,7 +496,12 @@ describe("attorney", () => {
       expect(units[0]).toMatchObject({ unit_label: "Unit 2", owed: "750.00", overdue: "750.00" });
       expect(units[0].oldest_overdue_on).not.toBeNull();
       const owners = await rows<{ unit_label: string; full_name: string; email: string }>(LEE_USER, `select * from public.attorney_shared_owners($1::uuid)`, [f.damen]);
-      expect(owners).toEqual([expect.objectContaining({ unit_label: "Unit 2", full_name: "Bo Lindqvist", email: "bo@example.test" })]);
+      expect(owners).toEqual([expect.objectContaining({ unit_label: "Unit 2", full_name: "Bo Lindqvist", email: "bo@example.test", phone: null, mailing_address: null })]);
+      // With details on file (0082) the function returns them; the table itself stays closed to the attorney.
+      await db.query(`insert into public.person_contact_details (person_id, association_id, phone, mailing_address) values ($1::uuid, $2::uuid, '312-555-0142', '2 Elm St')`, [f.boPerson, f.damen]);
+      const withDetails = await rows<{ phone: string; mailing_address: string }>(LEE_USER, `select * from public.attorney_shared_owners($1::uuid)`, [f.damen]);
+      expect(withDetails).toEqual([expect.objectContaining({ phone: "312-555-0142", mailing_address: "2 Elm St" })]);
+      expect(await rows(LEE_USER, `select 1 from public.person_contact_details`)).toHaveLength(0);
     });
 
     it("get nothing from a building-wide share alone, and nothing once the grant ends", async () => {

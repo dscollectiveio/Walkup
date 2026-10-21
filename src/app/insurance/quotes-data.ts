@@ -303,9 +303,13 @@ export async function loadRequestFlow(
   ]);
   let replyTo = { name: "", email: "", phone: "" };
   if (typeof personId.data === "string") {
-    const { data } = await supabase.from("persons").select("full_name, email, phone").eq("id", personId.data).maybeSingle();
-    const p = data as { full_name: string | null; email: string | null; phone: string | null } | null;
-    replyTo = { name: p?.full_name ?? "", email: p?.email ?? "", phone: p?.phone ?? "" };
+    const [{ data }, { data: contact }] = await Promise.all([
+      supabase.from("persons").select("full_name, email").eq("id", personId.data).maybeSingle(),
+      // The caller's own phone (person_contact_details, 0082).
+      supabase.from("person_contact_details").select("phone").eq("person_id", personId.data).maybeSingle(),
+    ]);
+    const p = data as { full_name: string | null; email: string | null } | null;
+    replyTo = { name: p?.full_name ?? "", email: p?.email ?? "", phone: (contact as { phone: string | null } | null)?.phone ?? "" };
   }
 
   const illinois = (assoc.state_code ?? "").toUpperCase() === "IL";

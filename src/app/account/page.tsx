@@ -106,7 +106,8 @@ export default async function AccountPage({ searchParams }: { searchParams: Prom
       case "privacy":
         return <PrivacyTab viewer={viewer!} />;
       default: {
-        const { data } = await supabase.from("persons").select("phone, mailing_address").eq("id", viewer!.personId).limit(1);
+        // Your own phone and address, from person_contact_details (0082): you may always read your own row.
+        const { data } = await supabase.from("person_contact_details").select("phone, mailing_address").eq("person_id", viewer!.personId).limit(1);
         const person = data?.[0] as { phone: string | null; mailing_address: string | null } | undefined;
         return <ProfileTab viewer={viewer!} email={email} phone={person?.phone ?? ""} mailingAddress={person?.mailing_address ?? ""} />;
       }

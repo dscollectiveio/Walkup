@@ -1,5 +1,6 @@
 "use server";
 
+import { vendorSource } from "@/lib/contractors/vendor-source";
 import { revalidatePath } from "next/cache";
 import { createClient } from "@/lib/supabase/server";
 import { getViewer } from "@/lib/owner/viewer";
@@ -93,7 +94,8 @@ export async function loadProblemPanel(ticketId: string): Promise<({ ok: true } 
       .eq("id", ticketId)
       .limit(1),
     supabase
-      .from("vendors")
+      // A property manager reads contractors through vendors_manager (no tax identity, 0081).
+      .from(vendorSource(viewer.canReadFinancials))
       .select("id, name, trades")
       .is("archived_at", null)
       .neq("status", "do_not_use")

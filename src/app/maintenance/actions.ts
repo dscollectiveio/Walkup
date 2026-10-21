@@ -1,5 +1,6 @@
 "use server";
 
+import { VENDOR_MANAGER_VIEW } from "@/lib/contractors/vendor-source";
 import { after } from "next/server";
 import type { z } from "zod";
 import { createClient } from "@/lib/supabase/server";
@@ -273,8 +274,9 @@ export async function setTicketPlan(ticketId: string, input: z.input<typeof tick
   if (!isUuid(ticketId)) return { error: NOT_VISIBLE };
 
   if (fields.assigned_vendor_id) {
+    // vendors_manager: the same rows for the board, and the only contractor read a property manager has (0081).
     const { data: vendors } = await supabase
-      .from("vendors")
+      .from(VENDOR_MANAGER_VIEW)
       .select("name, status, do_not_use_reason, archived_at")
       .eq("id", fields.assigned_vendor_id)
       .limit(1);
@@ -333,7 +335,7 @@ export async function closeOutTicket(ticketId: string, input: z.input<typeof clo
   if (ticket.assigned_vendor_id) {
     const [{ data: auth }, { data: vendors }] = await Promise.all([
       supabase.auth.getUser(),
-      supabase.from("vendors").select("id, name").eq("id", ticket.assigned_vendor_id).limit(1),
+      supabase.from(VENDOR_MANAGER_VIEW).select("id, name").eq("id", ticket.assigned_vendor_id).limit(1),
     ]);
     const userId = auth?.user?.id;
     const vendor = vendors?.[0];
@@ -594,14 +596,19 @@ export async function createTicketFromUpkeep(taskId: string): Promise<Ok<{ ticke
   const supabase = await createClient();
   const { data: tasks } = await supabase
     .from("upkeep_tasks")
-    .select("id, association_id, name, description, trade, vendor_id, estimated_cost::text, vendors(status, archived_at)")
+    .select("id, association_id, name, description, trade, vendor_id, estimated_cost::text")
     .eq("id", taskId)
     .limit(1);
   const task = tasks?.[0];
   if (!task) return { error: "That upkeep job isn't visible to you." };
   if (!(await canManageRepairs(supabase, task.association_id))) return { error: "Only a board member can turn upkeep into a problem." };
 
-  const usual = task.vendors as { status?: string; archived_at?: string | null } | null;
+  // The usual contractor's status, by id: an embed would read the vendors table, which a property manager does not (0081).
+  const usual = task.vendor_id
+    ? ((await supabase.from(VENDOR_MANAGER_VIEW).select("status, archived_at").eq("id", task.vendor_id).limit(1)).data?.[0] as
+        | { status?: string; archived_at?: string | null }
+        | undefined) ?? null
+    : null;
   const vendorUsable = task.vendor_id && usual && usual.status !== "do_not_use" && !usual.archived_at;
   const name = String(task.name ?? "").trim();
   const title = (name.length >= 4 ? name : `Upkeep: ${name}`).slice(0, 120);

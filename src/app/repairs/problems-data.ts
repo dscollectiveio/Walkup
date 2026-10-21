@@ -1,4 +1,5 @@
 import "server-only";
+import { vendorSource } from "@/lib/contractors/vendor-source";
 import type { ProblemParams } from "@/lib/repairs/problems-params";
 import { referenceFromQuery, postgrestIlikeValue } from "@/lib/repairs/search";
 import { compareForTriage, ticketStage, type BidCounts, type Stage } from "@/lib/repairs/stage";
@@ -52,6 +53,10 @@ const BASE =
   "id, reference, title, status, priority, emergency_kind, trade, unit_id, units(label), location_detail, opened_on, created_at, scheduled_for, scheduled_window, assigned_vendor_id, reported_by, resolved_at";
 const BOARD = `${BASE}, vendors(name, w9_on_file, email, phone), ticket_board_details(due_on, assignee_person_id, estimated_cost::text, actual_cost::text, expense_id, work_status), ticket_bids(status)`;
 const BOARD_MINE = `${BASE}, vendors(name, w9_on_file, email, phone), ticket_board_details!inner(due_on, assignee_person_id, estimated_cost::text, actual_cost::text, expense_id, work_status), ticket_bids(status)`;
+// A property manager has no vendors table (0081), so their query has no vendors embed: the contractor's name,
+// email and phone are read by id from vendors_manager below.
+const MANAGER = `${BASE}, ticket_board_details(due_on, assignee_person_id, estimated_cost::text, actual_cost::text, expense_id, work_status), ticket_bids(status)`;
+const MANAGER_MINE = `${BASE}, ticket_board_details!inner(due_on, assignee_person_id, estimated_cost::text, actual_cost::text, expense_id, work_status), ticket_bids(status)`;
 
 const one = <T,>(v: T | T[] | null | undefined): T | null => (Array.isArray(v) ? (v[0] ?? null) : (v ?? null));
 
@@ -74,7 +79,9 @@ export async function loadProblems(
     return [...open, ...done];
   }
   const fin = viewer.staffView;
-  const select = !fin ? BASE : p.mine && viewer.canManage ? BOARD_MINE : BOARD;
+  const books = viewer.canReadFinancials;
+  const mine = p.mine && viewer.canManage;
+  const select = !fin ? BASE : books ? (mine ? BOARD_MINE : BOARD) : mine ? MANAGER_MINE : MANAGER;
   let q = supabase.from("tickets").select(select);
 
   const status = opts.status ?? p.status;
@@ -122,6 +129,16 @@ export async function loadProblems(
     }
   }
 
+  // A property manager: the contractor's name and contact details by id, through vendors_manager.
+  const managerVendors = new Map<string, { name: string; email: string | null; phone: string | null }>();
+  if (fin && !books) {
+    const ids = [...new Set(rows.map((r) => r.assigned_vendor_id as string | null).filter((id): id is string => Boolean(id)))];
+    if (ids.length) {
+      const { data: vs } = await supabase.from(vendorSource(false)).select("id, name, email, phone").in("id", ids);
+      for (const v of (vs ?? []) as { id: string; name: string; email: string | null; phone: string | null }[]) managerVendors.set(v.id, v);
+    }
+  }
+
   const today = viewer.todayIso;
   let out: ProblemRow[] = rows.map((r) => {
     const bd = one(r.ticket_board_details as Record<string, unknown> | Record<string, unknown>[] | null);
@@ -149,17 +166,28 @@ export async function loadProblems(
       assignedVendorId: (r.assigned_vendor_id as string | null) ?? null,
       reportedBy: (r.reported_by as string | null) ?? null,
       resolvedAt: (r.resolved_at as string | null) ?? null,
-      contractorName: fin
-        ? ((one(r.vendors as { name: string } | { name: string }[] | null)?.name as string | undefined) ?? null)
-        : (names.get(r.id as string) ?? null),
+      contractorName: !fin
+        ? (names.get(r.id as string) ?? null)
+        : books
+          ? ((one(r.vendors as { name: string } | { name: string }[] | null)?.name as string | undefined) ?? null)
+          : (managerVendors.get((r.assigned_vendor_id as string | null) ?? "")?.name ?? null),
       dueOn: (bd?.due_on as string | null) ?? null,
       estimatedCost: (bd?.estimated_cost as string | null) ?? null,
       actualCost: (bd?.actual_cost as string | null) ?? null,
       expenseId: (bd?.expense_id as string | null) ?? null,
       workStatus: (bd?.work_status as string | null) ?? null,
-      vendorW9: fin && r.assigned_vendor_id ? ((one(r.vendors as { w9_on_file: boolean } | { w9_on_file: boolean }[] | null)?.w9_on_file as boolean | undefined) ?? false) : null,
-      contractorEmail: fin ? ((one(r.vendors as { email: string | null } | { email: string | null }[] | null)?.email as string | null | undefined) ?? null) : null,
-      contractorPhone: fin ? ((one(r.vendors as { phone: string | null } | { phone: string | null }[] | null)?.phone as string | null | undefined) ?? null) : null,
+      // The W-9 flag is tax identity: the board and accountant only (a manager's view has no such column).
+      vendorW9: books && r.assigned_vendor_id ? ((one(r.vendors as { w9_on_file: boolean } | { w9_on_file: boolean }[] | null)?.w9_on_file as boolean | undefined) ?? false) : null,
+      contractorEmail: !fin
+        ? null
+        : books
+          ? ((one(r.vendors as { email: string | null } | { email: string | null }[] | null)?.email as string | null | undefined) ?? null)
+          : (managerVendors.get((r.assigned_vendor_id as string | null) ?? "")?.email ?? null),
+      contractorPhone: !fin
+        ? null
+        : books
+          ? ((one(r.vendors as { phone: string | null } | { phone: string | null }[] | null)?.phone as string | null | undefined) ?? null)
+          : (managerVendors.get((r.assigned_vendor_id as string | null) ?? "")?.phone ?? null),
       bids,
     };
     return { ...row, stage: ticketStage({ status: row.status, assigned_vendor_id: row.assignedVendorId, scheduled_for: row.scheduledFor }, bids, today) };

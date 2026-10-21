@@ -188,7 +188,9 @@ export function ThisYear({
   /** startForm, passed from the page so this module stays free of server imports. */
   onStart: (formCode: string, taxYear: number, vendorId: string | null) => Promise<{ error?: string } | undefined>;
 }) {
-  const answer = thisYearAnswer(input);
+  // The things to do before the tab works well (EIN, income classification, W-9s) have their own section
+  // above (SetupChecklist), so this banner speaks to the dates.
+  const answer = thisYearAnswer({ ...input, ein: input.ein ?? "on file", unconfirmedIncomeAccounts: [], missingW9: [] });
   const [showAll, setShowAll] = useState(false);
   const [pending, start] = useTransition();
   const [error, setError] = useState<string | null>(null);
@@ -222,7 +224,6 @@ export function ThisYear({
 
   return (
     <section id="this-year" className="space-y-3">
-      <h2 className="text-[11px] font-medium uppercase tracking-[0.07em] text-section-label">This year</h2>
       <Answer status={answer.status} headline={answer.headline} detail={answer.detail ?? undefined}>
         <div className="flex flex-wrap items-center gap-2">
           {stepButton}

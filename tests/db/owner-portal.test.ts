@@ -546,12 +546,13 @@ describe("invites and profile", () => {
     expect(await count(`select 1 from public.role_grants where person_id = '${NOLOGIN_PERSON}' and role = 'owner'`)).toBe(1);
   });
 
-  it("34. a non-board person edits only phone and mailing address; the board edits anything; definer functions still work", async () => {
+  it("34. a non-board person cannot change name, email or login; the board edits anything; definer functions still work", async () => {
     for (const col of ["full_name = 'Ada Renamed'", "email = 'new@example.test'", `auth_user_id = '${DEE_USER}'`]) {
       const e = await pgError(q(f.adaUser, `update public.persons set ${col} where id = $1::uuid`, [f.adaPerson]));
       expect(e.code, col).toBe("42501");
     }
-    const ok = await q(f.adaUser, `update public.persons set phone = '312-555-0100', mailing_address = '1 Main St' where id = $1::uuid`, [f.adaPerson]);
+    // Their own row is still theirs to touch (phone and address moved to person_contact_details in 0082).
+    const ok = await q(f.adaUser, `update public.persons set full_name = full_name where id = $1::uuid`, [f.adaPerson]);
     expect(ok.affectedRows).toBe(1);
     const board = await q(f.cyUser, `update public.persons set full_name = 'Bo L.', email = 'bo2@example.test' where id = $1::uuid`, [f.boPerson]);
     expect(board.affectedRows).toBe(1);
@@ -564,10 +565,10 @@ describe("invites and profile", () => {
 
   it("35. update_my_profile changes only the caller's phone and address", async () => {
     await q(f.adaUser, `select public.update_my_profile($1::uuid, '  312-555-0100 ', ' 1 Main St ')`, [f.damen]);
-    expect(await one(null, `select phone, mailing_address from public.persons where id = $1::uuid`, [f.adaPerson])).toEqual({ phone: "312-555-0100", mailing_address: "1 Main St" });
-    expect(await one(null, `select phone from public.persons where id = $1::uuid`, [f.boPerson])).toEqual({ phone: null });
+    expect(await one(null, `select phone, mailing_address from public.person_contact_details where person_id = $1::uuid`, [f.adaPerson])).toEqual({ phone: "312-555-0100", mailing_address: "1 Main St" });
+    expect(await one(null, `select phone from public.person_contact_details where person_id = $1::uuid`, [f.boPerson])).toBeUndefined();
     await q(f.adaUser, `select public.update_my_profile($1::uuid, '', '   ')`, [f.damen]);
-    expect(await one(null, `select phone, mailing_address from public.persons where id = $1::uuid`, [f.adaPerson])).toEqual({ phone: null, mailing_address: null });
+    expect(await one(null, `select phone, mailing_address from public.person_contact_details where person_id = $1::uuid`, [f.adaPerson])).toBeUndefined();
     expect((await pgError(q(f.adaUser, `select public.update_my_profile($1::uuid, $2, null)`, [f.damen, "9".repeat(41)]))).code).toBe("22023");
     expect((await pgError(q(f.adaUser, `select public.update_my_profile($1::uuid, null, $2)`, [f.damen, "x".repeat(301)]))).code).toBe("22023");
     expect((await pgError(q(DEE_USER, `select public.update_my_profile($1::uuid, '1', '2')`, [f.damen]))).code).toBe("42501");

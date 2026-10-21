@@ -12,6 +12,7 @@ import { DocumentListRow } from "./document-row";
 import { ReviewRow } from "./review-row";
 import { NewFromOwners, type OwnerDocumentNotice } from "./new-from-owners";
 import { shortDate, todayIso as todayIsoOf } from "@/lib/dates";
+import { canAccountantRemove } from "@/lib/documents/accountant-uploads";
 
 export const dynamic = "force-dynamic";
 // Uploads and re-reads run the document reader in after(); give it the
@@ -82,6 +83,17 @@ export default async function DocumentHubPage({
   });
   const canWrite = boardCheck === true;
 
+  // The accountant adds documents in five categories and removes their own for 30 days (0081). Nothing
+  // else on this page is theirs to change.
+  let isAccountant = false;
+  let userId: string | null = null;
+  if (!canWrite) {
+    const { data: accountantCheck } = await supabase.rpc("has_role_in", { assoc: associationId, roles: ["accountant"] });
+    isAccountant = accountantCheck === true;
+    if (isAccountant) userId = (await supabase.auth.getUser()).data.user?.id ?? null;
+  }
+  const slugOf = new Map(categories.map((c) => [c.id, c.slug]));
+
   // What owners added for their units since the board last looked (0079). In-app only. A failed read is
   // simply an empty strip: the documents themselves are in the list below either way.
   let ownerNotices: OwnerDocumentNotice[] = [];
@@ -141,6 +153,7 @@ export default async function DocumentHubPage({
       {canWrite ? <NewFromOwners notices={ownerNotices} /> : null}
 
       {canWrite ? <UploadForm categories={categories} /> : null}
+      {isAccountant ? <UploadForm categories={categories} accountant /> : null}
 
       <section className="rounded-xl border border-line bg-paper">
         <header className="rounded-t-[7px] band bg-ink px-5 py-3">
@@ -191,7 +204,25 @@ export default async function DocumentHubPage({
               isReview && canWrite ? (
                 <ReviewRow key={d.id} doc={d} categories={categories} />
               ) : (
-                <DocumentListRow key={d.id} doc={d} categories={categories} canWrite={canWrite} />
+                <DocumentListRow
+                  key={d.id}
+                  doc={d}
+                  categories={categories}
+                  canWrite={canWrite}
+                  canRemoveOwn={
+                    isAccountant &&
+                    canAccountantRemove(
+                      {
+                        uploadedBy: d.uploaded_by,
+                        uploadedAt: d.uploaded_at,
+                        deletedAt: d.deleted_at,
+                        restrictedToUnitId: d.restricted_to_unit_id,
+                        categorySlug: d.category_id ? (slugOf.get(d.category_id) ?? null) : null,
+                      },
+                      userId,
+                    )
+                  }
+                />
               ),
             )}
           </ul>

@@ -48,9 +48,9 @@ export function SendPanel({ formId, canEdit, locked, downloads, draft, accountan
 
   return (
     <section id="send" className="rounded-xl border border-line bg-paper">
-      <header className="border-b border-line px-5 py-4">
-        <h2 className="eyebrow text-mute">Send to your accountant</h2>
-        <p className="mt-1.5 text-[13px] text-mute">
+      <header className="band rounded-t-[7px] bg-ink px-5 py-3">
+        <h2 className="eyebrow text-paper">Send to your accountant</h2>
+        <p className="mt-1.5 text-[13px] text-ondark-mute">
           Three steps: download the files, open the draft, then tell Walkup you sent it. Walkup never emails anyone for you.
         </p>
       </header>

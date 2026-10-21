@@ -135,7 +135,7 @@ export async function ProblemsView({ supabase, viewer, params }: { supabase: Sup
                   <span className="text-center">Status</span>
                   <span className="text-center">Links</span>
                   <span className="text-center">Cost</span>
-                  <span className="text-center">W-9 collected</span>
+                  <span className="text-center">{viewer.canReadFinancials ? "W-9 collected" : ""}</span>
                 </div>
               </div>
             </div>
@@ -272,7 +272,10 @@ export function ProblemListRow({ t, viewer }: { t: ProblemRow; viewer: RepairsVi
       </div>
       <div className="figures text-center text-[13px] text-mute xl:min-h-[1px]">{money}</div>
       <div className="flex flex-col items-center gap-0.5">
-        <ProblemW9Check key={`${t.id}-${t.vendorW9}`} vendorId={t.assignedVendorId} collected={t.vendorW9} contractorName={t.contractorName} canEdit={viewer.isBoard} />
+        {/* The W-9 flag is tax identity: not part of a property manager's view (0081). */}
+        {viewer.canReadFinancials ? (
+          <ProblemW9Check key={`${t.id}-${t.vendorW9}`} vendorId={t.assignedVendorId} collected={t.vendorW9} contractorName={t.contractorName} canEdit={viewer.isBoard} />
+        ) : null}
         {/* Once a contractor is chosen, and until their W-9 is in, a way straight to the request email. */}
         {viewer.isBoard && t.assignedVendorId && t.vendorW9 !== true && atOrPastContractorSelected(status) ? (
           <WriteToContractor

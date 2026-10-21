@@ -1,3 +1,5 @@
+import { taxFlag, vendorColumns, vendorRows, vendorSource } from "@/lib/contractors/vendor-source";
+import { vendorNames } from "@/lib/contractors/vendor-names";
 import Link from "next/link";
 import { Card } from "@/components/ui";
 import { complianceFor } from "@/lib/contractors/compliance";
@@ -45,7 +47,7 @@ export async function TodayView({ supabase, viewer, since }: { supabase: Supabas
     supabase
       .from("tickets")
       .select(
-        "id, reference, title, status, priority, emergency_kind, unit_id, units(label), location_detail, opened_on, created_at, scheduled_for, scheduled_window, assigned_vendor_id, reported_by, resolved_at, vendors(name), ticket_board_details(due_on, triage, emergency_suggestion_dismissed_at), ticket_bids(status, valid_until)",
+        "id, reference, title, status, priority, emergency_kind, unit_id, units(label), location_detail, opened_on, created_at, scheduled_for, scheduled_window, assigned_vendor_id, reported_by, resolved_at, ticket_board_details(due_on, triage, emergency_suggestion_dismissed_at), ticket_bids(status, valid_until)",
       )
       .or(`status.neq.closed,created_at.gt.${sinceIso}`)
       .order("created_at", { ascending: false })
@@ -54,8 +56,14 @@ export async function TodayView({ supabase, viewer, since }: { supabase: Supabas
     supabase.from("contractor_messages").select("id", { count: "exact", head: true }).eq("kind", "quote_request").eq("status", "draft"),
     supabase.from("upkeep_tasks").select("id, name, next_due_on, vendor_id").eq("is_active", true),
     supabase
-      .from("vendors")
-      .select("id, name, status, archived_at, trades, insured_until, license_number, license_expires_on, w9_on_file, is_1099_exempt, last_used_on")
+      // A property manager reads contractors through vendors_manager, which has no W-9 or tax columns (0081).
+      .from(vendorSource(viewer.canReadFinancials))
+      .select(
+        vendorColumns(
+          "id, name, status, archived_at, trades, insured_until, license_number, license_expires_on, w9_on_file, is_1099_exempt, last_used_on",
+          viewer.canReadFinancials,
+        ),
+      )
       .is("archived_at", null)
       .neq("status", "do_not_use"),
     supabase.from("tickets").select("assigned_vendor_id, status, opened_on").not("assigned_vendor_id", "is", null),
@@ -73,6 +81,13 @@ export async function TodayView({ supabase, viewer, since }: { supabase: Supabas
     const prev = reopened.get(e.ticket_id as string);
     if (!prev || (e.created_at as string) > prev) reopened.set(e.ticket_id as string, e.created_at as string);
   }
+
+  // The assigned contractor's name: read by id, not embedded in the tickets query (a manager has no vendors table).
+  const contractorNames = await vendorNames(
+    supabase,
+    (ticketsRes.data ?? []).map((r) => r.assigned_vendor_id as string | null),
+    viewer.canReadFinancials,
+  );
 
   const in7 = addDays(today, 7);
   const tickets: TodayTicket[] = (ticketsRes.data ?? []).map((r) => {
@@ -94,7 +109,7 @@ export async function TodayView({ supabase, viewer, since }: { supabase: Supabas
       scheduled_for: (r.scheduled_for as string | null) ?? null,
       scheduled_window: (r.scheduled_window as string | null) ?? null,
       assigned_vendor_id: (r.assigned_vendor_id as string | null) ?? null,
-      contractor_name: (one(r.vendors as unknown as { name: string } | null)?.name as string | undefined) ?? null,
+      contractor_name: contractorNames.get((r.assigned_vendor_id as string | null) ?? "") ?? null,
       resolved_at: (r.resolved_at as string | null) ?? null,
       opened_on: r.opened_on as string,
       created_at: r.created_at as string,
@@ -125,7 +140,7 @@ export async function TodayView({ supabase, viewer, since }: { supabase: Supabas
   }
   const upkeepUse = new Set((tasksRes.data ?? []).map((t) => t.vendor_id as string | null).filter(Boolean) as string[]);
   const yearAgo = addDays(today, -365);
-  const contractors = (vendorsRes.data ?? [])
+  const contractors = vendorRows(vendorsRes.data)
     .map((v) => {
       const id = v.id as string;
       const last = [v.last_used_on as string | null, lastUse.get(id) ?? null].filter(Boolean).sort().pop() ?? null;
@@ -140,8 +155,9 @@ export async function TodayView({ supabase, viewer, since }: { supabase: Supabas
             insured_until: (v.insured_until as string | null) ?? null,
             license_number: (v.license_number as string | null) ?? null,
             license_expires_on: (v.license_expires_on as string | null) ?? null,
-            w9_on_file: v.w9_on_file === true,
-            is_1099_exempt: v.is_1099_exempt === true,
+            // Not shown to a property manager, so never read as "missing".
+            w9_on_file: taxFlag(v.w9_on_file, viewer.canReadFinancials),
+            is_1099_exempt: taxFlag(v.is_1099_exempt, viewer.canReadFinancials),
             status: v.status as string,
             archived_at: null,
             inUse,

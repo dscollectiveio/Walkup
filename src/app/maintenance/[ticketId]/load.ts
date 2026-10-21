@@ -1,4 +1,5 @@
 import "server-only";
+import { taxFlag, vendorColumns, vendorRows, vendorSource } from "@/lib/contractors/vendor-source";
 import { listLinkedDocuments, type LinkedDocument } from "@/lib/documents/access";
 import { complianceFor } from "@/lib/contractors/compliance";
 import { rankSaved, type SavedCandidate } from "@/lib/contractors/ranking";
@@ -207,9 +208,13 @@ export async function loadTicketPage(supabase: Supabase, ticketId: string, viewe
         .in("role", ["board_admin", "board_member"])
         .is("revoked_at", null),
       supabase
-        .from("vendors")
+        // A property manager reads contractors through vendors_manager: no W-9 flags, no tax identity (0081).
+        .from(vendorSource(viewer.canReadFinancials))
         .select(
-          "id, name, status, archived_at, email, phone, trades, insured_until, license_number, license_expires_on, w9_on_file, is_1099_exempt, emergency_service, google_rating, google_review_count, board_rating, last_used_on, job_tags, rate_hourly::text, rate_trip_fee::text, rate_after_hours::text, rates_as_of, website_url",
+          vendorColumns(
+            "id, name, status, archived_at, email, phone, trades, insured_until, license_number, license_expires_on, w9_on_file, is_1099_exempt, emergency_service, google_rating, google_review_count, board_rating, last_used_on, job_tags, rate_hourly::text, rate_trip_fee::text, rate_after_hours::text, rates_as_of, website_url",
+            viewer.canReadFinancials,
+          ),
         )
         .order("name"),
       supabase.from("contractor_reviews").select("vendor_id, rating, tags"),
@@ -276,7 +281,8 @@ export async function loadTicketPage(supabase: Supabase, ticketId: string, viewe
       used.set(id, cur);
     }
 
-    const raw = vendorsRes.data ?? [];
+    const raw = vendorRows(vendorsRes.data);
+    const books = viewer.canReadFinancials;
     const savedCandidates: SavedCandidate[] = [];
     vendors = raw.map((v) => {
       const id = v.id as string;
@@ -291,8 +297,9 @@ export async function loadTicketPage(supabase: Supabase, ticketId: string, viewe
           insured_until: (v.insured_until as string | null) ?? null,
           license_number: (v.license_number as string | null) ?? null,
           license_expires_on: (v.license_expires_on as string | null) ?? null,
-          w9_on_file: v.w9_on_file === true,
-          is_1099_exempt: v.is_1099_exempt === true,
+          // Not shown to a property manager, so never read as "missing".
+          w9_on_file: taxFlag(v.w9_on_file, books),
+          is_1099_exempt: taxFlag(v.is_1099_exempt, books),
           status: v.status as string,
           archived_at: (v.archived_at as string | null) ?? null,
           inUse,
@@ -311,7 +318,7 @@ export async function loadTicketPage(supabase: Supabase, ticketId: string, viewe
         trades,
         compliance: items,
         coiOnFile: Boolean(insured && insured >= today),
-        w9OnFile: v.w9_on_file === true || v.is_1099_exempt === true,
+        w9OnFile: !books || v.w9_on_file === true || v.is_1099_exempt === true,
         googleRating: v.google_rating === null || v.google_rating === undefined ? null : Number(v.google_rating),
         googleReviewCount: (v.google_review_count as number | null) ?? null,
         boardAverage: r && r.count ? Math.round((r.sum / r.count) * 10) / 10 : null,
@@ -347,7 +354,7 @@ export async function loadTicketPage(supabase: Supabase, ticketId: string, viewe
             coiCurrent: view.coiOnFile,
             coiExpired: Boolean(insured && insured < today),
             licenseOnFile: Boolean(str(v.license_number)),
-            w9OnFile: v.w9_on_file === true,
+            w9OnFile: taxFlag(v.w9_on_file, books),
           },
           distanceMiles: null,
         });

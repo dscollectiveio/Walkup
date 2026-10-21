@@ -1,3 +1,5 @@
+import { vendorSource } from "@/lib/contractors/vendor-source";
+import { vendorNames } from "@/lib/contractors/vendor-names";
 import Link from "next/link";
 import { Card, HEADER_BUTTON } from "@/components/ui";
 import { btnLink, btnSecondary, linkClass } from "@/components/repairs/styles";
@@ -63,16 +65,16 @@ export async function UpkeepView({
   const [{ data: tasks }, { data: vendors }, { data: recentLog }, { count: archivedCount }, { data: openTickets }] = await Promise.all([
     // Estimates and contractors are only readable by board and accountant; everyone else reads the member views.
     (seesMoney
-      ? supabase.from("upkeep_tasks").select("id, name, description, interval_months, due_month, last_done_on, next_due_on, trade, vendor_id, estimated_cost::text, vendors(name)")
+      ? supabase.from("upkeep_tasks").select("id, name, description, interval_months, due_month, last_done_on, next_due_on, trade, vendor_id, estimated_cost::text")
       : supabase.from("upkeep_tasks_member").select("id, name, description, interval_months, due_month, last_done_on, next_due_on, trade")
     )
       .eq("is_active", true)
       .order("next_due_on") as unknown as PromiseLike<{ data: Record<string, unknown>[] | null }>,
     isBoard
-      ? supabase.from("vendors").select("id, name").is("archived_at", null).neq("status", "do_not_use").order("name")
+      ? supabase.from(vendorSource(viewer.canReadFinancials)).select("id, name").is("archived_at", null).neq("status", "do_not_use").order("name")
       : Promise.resolve({ data: [] as { id: string; name: string }[] }),
     (seesMoney
-      ? supabase.from("upkeep_log").select("id, task_id, done_on, cost::text, note, vendors(name), upkeep_tasks(name)")
+      ? supabase.from("upkeep_log").select("id, task_id, done_on, cost::text, note, vendor_id, upkeep_tasks(name)")
       : supabase.from("upkeep_log_member").select("id, task_id, done_on, note, task_name")
     )
       .order("done_on", { ascending: false })
@@ -85,11 +87,15 @@ export async function UpkeepView({
   ]);
 
   const list = tasks ?? [];
+  // Contractor names are read by id, not embedded: a property manager has no vendors table (0081).
+  const names = seesMoney
+    ? await vendorNames(supabase, [...list.map((t) => t.vendor_id as string | null), ...(recentLog ?? []).map((l) => l.vendor_id as string | null)], viewer.canReadFinancials)
+    : new Map<string, string>();
   const vendorOptions = (vendors ?? []).map((v) => ({ id: v.id as string, name: v.name as string }));
   const ticketByTask = new Map((openTickets ?? []).map((t) => [t.upkeep_task_id as string, { id: t.id as string, reference: t.reference as number }]));
 
   const rows: ScheduleRow[] = list.map((t) => {
-    const vendorName = seesMoney ? (one(t.vendors as { name: string } | { name: string }[] | null)?.name ?? null) : null;
+    const vendorName = seesMoney ? (names.get((t.vendor_id as string | null) ?? "") ?? null) : null;
     const parts = [
       cadenceWords(t.interval_months as number, (t.due_month as number | null) ?? null),
       t.trade ? tradeLabel(t.trade as string) : null,
@@ -220,7 +226,7 @@ export async function UpkeepView({
           <ul className="divide-y divide-line text-[13px]">
             {(recentLog ?? []).map((l) => {
               const task = seesMoney ? one(l.upkeep_tasks as { name: string } | { name: string }[] | null) : { name: (l.task_name as string | null) ?? "" };
-              const vendor = seesMoney ? one(l.vendors as { name: string } | { name: string }[] | null) : null;
+              const vendorName = seesMoney ? (names.get((l.vendor_id as string | null) ?? "") ?? null) : null;
               return (
                 <li key={l.id as string} className="flex flex-wrap items-baseline justify-between gap-3 py-2">
                   <span className="min-w-0">
@@ -229,7 +235,7 @@ export async function UpkeepView({
                     </Link>
                     <span className="ml-2 text-[12px] text-mute">
                       {humanDate(l.done_on as string, today)}
-                      {vendor ? ` · ${vendor.name}` : ""}
+                      {vendorName ? ` · ${vendorName}` : ""}
                       {l.note ? ` · ${l.note as string}` : ""}
                     </span>
                   </span>

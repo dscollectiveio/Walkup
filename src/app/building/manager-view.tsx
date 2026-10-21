@@ -5,6 +5,7 @@ import { buildingTodayIso, shortDate } from "@/lib/dates";
 import { mailtoLink } from "@/lib/email/mailto";
 import { STANDING_LABEL, sortByStanding, standingOf, type StandingFigures, type StandingState } from "@/lib/access/standing-words";
 import type { createClient } from "@/lib/supabase/server";
+import { loadAllContactDetails } from "@/lib/people/contact-details";
 
 type Supabase = Awaited<ReturnType<typeof createClient>>;
 
@@ -26,16 +27,23 @@ interface Person {
  */
 export async function ManagerBuildingView({ supabase, associationId }: { supabase: Supabase; associationId: string }) {
   const today = buildingTodayIso();
-  const [unitsRes, ownersRes, peopleRes, managersRes, standingRes] = await Promise.all([
+  const [unitsRes, ownersRes, peopleRes, contacts, managersRes, standingRes] = await Promise.all([
     supabase.from("units").select("id, label, sort_order").order("sort_order").order("label"),
     supabase.from("unit_owners").select("unit_id, person_id, effective_to"),
-    supabase.from("persons").select("id, full_name, email, phone, mailing_address"),
+    supabase.from("persons").select("id, full_name, email"),
+    // Phone and mailing address are in their own table (0082); a property manager may read it.
+    loadAllContactDetails(supabase),
     supabase.from("unit_property_managers").select("unit_id, person_id, company, main_contact"),
     supabase.rpc("manager_unit_standing", { p_association_id: associationId }),
   ]);
 
   const units = (unitsRes.data ?? []) as { id: string; label: string }[];
-  const people = new Map(((peopleRes.data ?? []) as Person[]).map((p) => [p.id, p]));
+  const people = new Map(
+    ((peopleRes.data ?? []) as Pick<Person, "id" | "full_name" | "email">[]).map((p) => [
+      p.id,
+      { ...p, phone: contacts.get(p.id)?.phone ?? null, mailing_address: contacts.get(p.id)?.mailing_address ?? null } as Person,
+    ]),
+  );
   const owners = new Map<string, Person[]>();
   for (const o of (ownersRes.data ?? []) as { unit_id: string; person_id: string; effective_to: string | null }[]) {
     if (o.effective_to && o.effective_to < today) continue;

@@ -1,5 +1,6 @@
 "use server";
 
+import { VENDOR_MANAGER_VIEW } from "@/lib/contractors/vendor-source";
 import { createClient } from "@/lib/supabase/server";
 import { guessTradeFromText, isTradeSlug } from "@/lib/contractors/trades";
 import { buildingTodayIso } from "@/lib/dates";
@@ -200,7 +201,7 @@ export async function markUpkeepDone(
 
   let reviewPrompt: { vendorId: string; vendorName: string } | null = null;
   if (v.vendorId) {
-    const { data: vendors } = await supabase.from("vendors").select("id, name").eq("id", v.vendorId).limit(1);
+    const { data: vendors } = await supabase.from(VENDOR_MANAGER_VIEW).select("id, name").eq("id", v.vendorId).limit(1);
     if (vendors?.[0]) reviewPrompt = { vendorId: vendors[0].id, vendorName: vendors[0].name };
   }
 

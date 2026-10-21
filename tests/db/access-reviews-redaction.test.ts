@@ -141,27 +141,32 @@ describe("access reviews, deprovisioning, redaction (0037)", () => {
         `insert into invites (association_id, role, email) values ($1::uuid, 'owner', 'BO@example.test')`,
         [f.damen],
       );
+      // Phone and address live in person_contact_details (0082); an edit leaves an audit row too.
+      await db.query(
+        `insert into person_contact_details (person_id, association_id, phone, mailing_address) values ($1::uuid, $2::uuid, '312-555-0177', '9 Birch Lane')`,
+        [f.boPerson, f.damen],
+      );
+      await db.query(`update person_contact_details set phone = '312-555-0178' where person_id = $1::uuid`, [f.boPerson]);
 
       await asUser(db, f.cyUser, async () => {
         await db.query(`select public.redact_person($1::uuid)`, [f.boPerson]);
       });
 
       const { rows: person } = await db.query(
-        `select full_name, email, phone, mailing_address, auth_user_id from persons where id = $1::uuid`,
+        `select full_name, email, auth_user_id from persons where id = $1::uuid`,
         [f.boPerson],
       );
       expect(person[0]).toEqual({
         full_name: "Former member",
         email: null,
-        phone: null,
-        mailing_address: null,
         auth_user_id: null,
       });
+      expect((await db.query(`select 1 from person_contact_details where person_id = $1::uuid`, [f.boPerson])).rows).toHaveLength(0);
 
       const { rows: leaks } = await db.query<{ n: number }>(
         `select count(*)::int as n from audit_log
           where coalesce(before_data::text, '') || coalesce(after_data::text, '')
-                ~* '(bo@example\\.test|Lindqvist)'`,
+                ~* '(bo@example\\.test|Lindqvist|312-555-017|Birch Lane)'`,
       );
       expect(leaks[0].n).toBe(0);
 

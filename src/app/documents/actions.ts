@@ -5,6 +5,8 @@ import { createClient } from "@/lib/supabase/server";
 import { signedUrlFor } from "@/lib/documents/access";
 import { runExtraction } from "@/lib/documents/pipeline";
 import { documentError } from "@/lib/documents/errors";
+import { isUuid } from "@/lib/documents/upload-paths";
+import { ACCOUNTANT_UPLOAD_COPY } from "@/lib/documents/accountant-uploads";
 
 function revalidateDocuments() {
   revalidatePath("/documents");
@@ -161,6 +163,24 @@ export async function binDocument(documentId: string): Promise<{ ok?: true; erro
   if (error) return { error: documentError(error) };
   if (!data?.length) return { error: "Only the board can bin a document." };
 
+  revalidateDocuments();
+  return { ok: true };
+}
+
+/**
+ * The accountant removes a document they added themselves, within 30 days (migration 0081). A soft delete: the
+ * board still sees it in the bin. Everything else about who may remove what is decided by the database.
+ */
+export async function removeOwnUpload(documentId: string): Promise<{ ok?: true; error?: string }> {
+  if (typeof documentId !== "string" || !isUuid(documentId)) return { error: ACCOUNTANT_UPLOAD_COPY.removeRefused };
+  const supabase = await createClient();
+  const { error } = await supabase.rpc("remove_accountant_upload", { p_document_id: documentId });
+  if (error) {
+    if ((error as { hint?: string }).hint === "window_closed") return { error: ACCOUNTANT_UPLOAD_COPY.removeWindowClosed };
+    if (error.code === "42501") return { error: ACCOUNTANT_UPLOAD_COPY.removeRefused };
+    console.error("removeOwnUpload", error.code);
+    return { error: ACCOUNTANT_UPLOAD_COPY.removeFailed };
+  }
   revalidateDocuments();
   return { ok: true };
 }

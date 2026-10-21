@@ -1,5 +1,6 @@
 import "server-only";
 import { buildingTodayIso } from "@/lib/dates";
+import { VENDOR_MANAGER_VIEW } from "@/lib/contractors/vendor-source";
 import type { BuildingEmergencyInfo } from "./emergency";
 import type { Supabase } from "./server";
 
@@ -117,8 +118,9 @@ export async function loadEmergencyInfo(supabase: Supabase, associationId: strin
 export async function loadEmergencyContractors(
   supabase: Supabase,
 ): Promise<{ name: string; phone: string; trades: string[]; preferred: boolean }[]> {
+  // vendors_manager: the same rows for the board, and the only contractor read a property manager has (0081).
   const { data } = await supabase
-    .from("vendors")
+    .from(VENDOR_MANAGER_VIEW)
     .select("name, phone, trades, status, archived_at, emergency_service")
     .eq("emergency_service", true)
     .is("archived_at", null)

@@ -16,7 +16,8 @@ let downloads: Uint8Array[] = [];
 const updates: Record<string, unknown>[] = [];
 vi.mock("@/lib/supabase/server", () => ({
   createClient: async () => ({
-    rpc: async () => ({ data: null, error: null }),
+    // is_board: the board's path (the accountant has its own, 0081); everything else answers nothing.
+    rpc: async (name: string) => ({ data: name === "is_board" ? true : null, error: null }),
     storage: {
       from: () => ({
         download: async () => {

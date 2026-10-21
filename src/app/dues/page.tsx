@@ -3,6 +3,7 @@ import { redirect } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
 import { BoardOnly } from "@/components/board-only";
 import { getViewer } from "@/lib/owner/viewer";
+import { loadContactDetails } from "@/lib/people/contact-details";
 import { Card, Empty, HEADER_BUTTON, Restricted, money } from "@/components/ui";
 import { bankFeedHref } from "@/app/bank-feed/href";
 import { PaymentForm } from "@/app/delinquency/payment-form";
@@ -274,24 +275,29 @@ export default async function DuesPage({ searchParams }: { searchParams: Promise
     scopeUnits.length > 0
       ? await supabase
           .from("unit_property_managers")
-          .select("unit_id, company, main_contact, persons(full_name, email, phone)")
+          .select("unit_id, person_id, company, main_contact, persons(full_name, email)")
           .in("unit_id", scopeUnits)
       : { data: [] as never[] };
+  // A manager's phone is a contact detail (0082): only the board reads it, so the accountant's view never asks.
+  const managerContacts = isBoard
+    ? await loadContactDetails(supabase, ((managerRows ?? []) as unknown as { person_id: string }[]).map((m) => m.person_id))
+    : new Map<string, { phone: string | null }>();
   const managerByUnit = new Map<
     string,
     { name: string; email: string | null; phone: string | null; company: string | null; main: "owner" | "manager" }
   >();
   for (const m of (managerRows ?? []) as unknown as {
     unit_id: string;
+    person_id: string;
     company: string | null;
     main_contact: "owner" | "manager";
-    persons: { full_name: string; email: string | null; phone: string | null } | null;
+    persons: { full_name: string; email: string | null } | null;
   }[]) {
     if (m.persons) {
       managerByUnit.set(m.unit_id, {
         name: m.persons.full_name,
         email: m.persons.email,
-        phone: m.persons.phone,
+        phone: managerContacts.get(m.person_id)?.phone ?? null,
         company: m.company,
         main: m.main_contact,
       });

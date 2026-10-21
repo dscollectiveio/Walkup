@@ -1,3 +1,4 @@
+import { taxFlag, vendorColumns, vendorSource } from "@/lib/contractors/vendor-source";
 import Link from "next/link";
 import { createClient } from "@/lib/supabase/server";
 import { Card, Restricted } from "@/components/ui";
@@ -93,17 +94,20 @@ export default async function ContractorPage({ params }: { params: Promise<{ ven
     return <Restricted what="this contractor" />;
   }
 
+  // A property manager reads the contractor through vendors_manager, which has no tax identity (0081).
+  const fin = viewer.canReadFinancials;
   const { data: rows } = await supabase
-    .from("vendors")
+    .from(vendorSource(fin))
     .select(
-      "id, association_id, name, trades, contact_name, phone, email, website_url, address, status, do_not_use_reason, board_rating, entity_type, license_number, license_expires_on, insured_until, w9_on_file, w9_received_on, tin_last4, is_1099_exempt, notes, source, source_urls, google_place_id, google_rating, google_review_count, google_fetched_at, google_business_status, archived_at, archived_reason, emergency_service, job_tags, rate_hourly::text, rate_trip_fee::text, rate_after_hours::text, rates_as_of, payment_methods, other_contact_name, other_contact_role, other_contact_phone, other_contact_email",
+      vendorColumns(
+        "id, association_id, name, trades, contact_name, phone, email, website_url, address, status, do_not_use_reason, board_rating, entity_type, license_number, license_expires_on, insured_until, w9_on_file, w9_received_on, tin_last4, is_1099_exempt, notes, source, source_urls, google_place_id, google_rating, google_review_count, google_fetched_at, google_business_status, archived_at, archived_reason, emergency_service, job_tags, rate_hourly::text, rate_trip_fee::text, rate_after_hours::text, rates_as_of, payment_methods, other_contact_name, other_contact_role, other_contact_phone, other_contact_email",
+        fin,
+      ),
     )
     .eq("id", vendorId)
     .limit(1);
-  const row = rows?.[0];
-  if (!row) return <Restricted what="this contractor" />;
-  // A property manager works with the contractor, not their tax identity: the last four digits of the TIN stay with the books.
-  const v = viewer.canReadFinancials ? row : { ...row, tin_last4: null };
+  const v = (rows as unknown as Record<string, unknown>[] | null)?.[0];
+  if (!v) return <Restricted what="this contractor" />;
 
   const canEdit = viewer.isBoard;
   const today = viewer.todayIso;
@@ -154,8 +158,9 @@ export default async function ContractorPage({ params }: { params: Promise<{ ven
       insured_until: (v.insured_until as string | null) ?? null,
       license_number: (v.license_number as string | null) ?? null,
       license_expires_on: (v.license_expires_on as string | null) ?? null,
-      w9_on_file: v.w9_on_file === true,
-      is_1099_exempt: v.is_1099_exempt === true,
+      // Not shown to a property manager, so never read as "missing".
+      w9_on_file: taxFlag(v.w9_on_file, fin),
+      is_1099_exempt: taxFlag(v.is_1099_exempt, fin),
       status: v.status as string,
       archived_at: (v.archived_at as string | null) ?? null,
       inUse,
@@ -196,13 +201,13 @@ export default async function ContractorPage({ params }: { params: Promise<{ ven
     status: v.status as string,
     do_not_use_reason: v.do_not_use_reason as string | null,
     board_rating: v.board_rating as number | null,
-    entity_type: v.entity_type as string | null,
+    entity_type: (v.entity_type as string | null) ?? null,
     license_number: v.license_number as string | null,
     license_expires_on: v.license_expires_on as string | null,
     insured_until: v.insured_until as string | null,
     w9_on_file: v.w9_on_file === true,
-    w9_received_on: v.w9_received_on as string | null,
-    tin_last4: v.tin_last4 as string | null,
+    w9_received_on: (v.w9_received_on as string | null) ?? null,
+    tin_last4: (v.tin_last4 as string | null) ?? null,
     is_1099_exempt: v.is_1099_exempt === true,
     notes: v.notes as string | null,
     emergency_service: v.emergency_service === true,
@@ -399,6 +404,8 @@ export default async function ContractorPage({ params }: { params: Promise<{ ven
               <dt className="text-[11px] text-mute">Insurance certificate</dt>
               <dd className="text-ink">{v.insured_until ? `Runs until ${humanDate(v.insured_until as string, today)}` : "Not on file"}</dd>
             </div>
+            {fin ? (
+              <>
             <div>
               <dt className="text-[11px] text-mute">W-9</dt>
               <dd className="text-ink">
@@ -413,6 +420,8 @@ export default async function ContractorPage({ params }: { params: Promise<{ ven
               <dt className="text-[11px] text-mute">Business type</dt>
               <dd className="text-ink">{v.entity_type ? (ENTITY_LABEL[v.entity_type as string] ?? (v.entity_type as string)) : "Not recorded"}</dd>
             </div>
+              </>
+            ) : null}
             {licenseLinks.length > 0 ? (
               <div>
                 <dt className="text-[11px] text-mute">Check license</dt>

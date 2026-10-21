@@ -158,3 +158,27 @@ describe("access hardening (0074)", () => {
     });
   });
 });
+
+describe("the upkeep member views are read only (0083)", () => {
+  let db: PGlite;
+  let f: Fixture;
+  beforeEach(async () => {
+    db = await freshDb();
+    f = await seed(db);
+    await asUser(db, f.cyUser, () =>
+      db.query(
+        `insert into public.upkeep_tasks (association_id, name, interval_months, next_due_on, created_by) values ($1::uuid, 'Boiler', 12, '2027-09-01', $2::uuid)`,
+        [f.damen, f.cyUser],
+      ),
+    );
+  });
+  afterEach(async () => {
+    await db.close();
+  });
+
+  it("no member can write through them", async () => {
+    await expect(asUser(db, f.adaUser, () => db.query(`update public.upkeep_tasks_member set name = 'hacked'`))).rejects.toThrow(/permission denied/i);
+    await expect(asUser(db, f.adaUser, () => db.query(`delete from public.upkeep_tasks_member`))).rejects.toThrow(/permission denied/i);
+    await expect(asUser(db, f.adaUser, () => db.query(`update public.upkeep_log_member set note = 'x'`))).rejects.toThrow(/permission denied|cannot update view/i);
+  });
+});
