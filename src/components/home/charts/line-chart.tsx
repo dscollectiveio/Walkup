@@ -90,7 +90,7 @@ export function LineChart({
         fontSize="12"
         fontWeight="600"
         fill="var(--color-ink)"
-        style={{ fontFamily: "var(--font-serif)", fontVariantNumeric: "tabular-nums" }}
+        style={{ fontFamily: "var(--font-sans)", fontVariantNumeric: "tabular-nums" }}
       >
         {formatMoney(last.valueCents)}
       </text>

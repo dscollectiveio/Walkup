@@ -36,7 +36,7 @@ export default async function UnsubscribePage({ params }: { params: Promise<{ to
   if (failed) {
     return (
       <Frame>
-        <h1 className="text-[18px] font-bold tracking-tight text-ink">Something went wrong</h1>
+        <h1 className="text-[20px] font-bold tracking-tight text-ink">Something went wrong</h1>
         <p className="mt-2 text-[14px] text-mute">We couldn&apos;t load your email choices. Reload the page, or try again in a minute.</p>
       </Frame>
     );
@@ -44,7 +44,7 @@ export default async function UnsubscribePage({ params }: { params: Promise<{ to
   if (!row) {
     return (
       <Frame>
-        <h1 className="text-[18px] font-bold tracking-tight text-ink">This link isn&apos;t valid</h1>
+        <h1 className="text-[20px] font-bold tracking-tight text-ink">This link isn&apos;t valid</h1>
         <p className="mt-2 text-[14px] text-mute">{INVALID_LINK}</p>
       </Frame>
     );
@@ -52,7 +52,7 @@ export default async function UnsubscribePage({ params }: { params: Promise<{ to
 
   return (
     <Frame>
-      <h1 className="text-[18px] font-bold tracking-tight text-ink">Email from {row.association_name}</h1>
+      <h1 className="text-[20px] font-bold tracking-tight text-ink">Email from {row.association_name}</h1>
       <p className="mt-2 text-[14px] text-mute">
         Choose which emails {row.association_name} can send you through Walkup. This applies to {row.masked_email}.
       </p>

@@ -18,6 +18,7 @@ import { IL_1120_2025 } from "./il_1120_2025";
 import { IL_SOS_ANNUAL_REPORT } from "./il_sos_annual_report";
 import { IRS_1096_2026 } from "./irs_1096_2026";
 import { IRS_1099_NEC_2026 } from "./irs_1099_nec_2026";
+import { IRS_1120_2025 } from "./irs_1120_2025";
 import { IRS_1120H_2025 } from "./irs_1120h_2025";
 
 export interface SuggestedTemplate {
@@ -51,7 +52,7 @@ export interface SuggestedTemplate {
 }
 
 /** In the order the admin page offers them. */
-export const SUGGESTED: SuggestedTemplate[] = [IRS_1120H_2025, IRS_1099_NEC_2026, IL_1120_2025, IL_SOS_ANNUAL_REPORT, IRS_1096_2026];
+export const SUGGESTED: SuggestedTemplate[] = [IRS_1120H_2025, IRS_1120_2025, IRS_1099_NEC_2026, IL_1120_2025, IL_SOS_ANNUAL_REPORT, IRS_1096_2026];
 
 export function suggestedByKey(key: string): SuggestedTemplate | null {
   return SUGGESTED.find((s) => s.key === key) ?? null;

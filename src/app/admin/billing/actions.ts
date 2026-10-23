@@ -111,6 +111,19 @@ export async function schedulePriceChange(_prev: AdminBillingState | null, formD
   return done();
 }
 
+/** Marks a refund request (or a taken offer) done or dismissed once it has been handled by hand in Stripe. */
+export async function resolveRefund(_prev: AdminBillingState | null, formData: FormData): Promise<AdminBillingState> {
+  const supabase = await platformAdmin();
+  if (!supabase) return { error: "Only a platform admin can handle a refund request." };
+  const id = String(formData.get("request_id") ?? "");
+  const status = String(formData.get("status") ?? "");
+  if (!UUID.test(id)) return { error: "Pick a request." };
+  if (status !== "done" && status !== "dismissed") return { error: "Mark it done or dismissed." };
+  const { error } = await supabase.rpc("billing_resolve_refund", { p_id: id, p_status: status });
+  if (error) return { error: error.message };
+  return done();
+}
+
 /** For a missed webhook: fetch the subscription from Stripe and apply it as the platform admin. */
 export async function refreshFromStripe(_prev: AdminBillingState | null, formData: FormData): Promise<AdminBillingState> {
   const supabase = await platformAdmin();

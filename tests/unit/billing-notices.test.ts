@@ -93,7 +93,7 @@ describe("activeNotices", () => {
 });
 
 describe("the words", () => {
-  const kinds = ["price_change", "read_only", "early_access_end", "founding_charge"] as const;
+  const kinds = ["price_change", "read_only", "early_access_end", "founding_charge", "tier_change"] as const;
 
   it("writes every email with the date, the building, no em dashes and nothing about moving money", () => {
     for (const kind of kinds) {

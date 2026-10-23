@@ -531,7 +531,8 @@ export async function loadTaxContext(supabase: Supabase, opts: LoadTaxContextOpt
     today,
   };
 
-  const forms = determineForms(input);
+  // Form 1096 is not shown (DECISIONS #53): Walkup never files with the IRS, and how 1099s are filed is the CPA's call.
+  const forms = determineForms(input).filter((o) => o.formCode !== "irs_1096");
   const deadlines = taxDeadlines({
     today: todayIso,
     association: {

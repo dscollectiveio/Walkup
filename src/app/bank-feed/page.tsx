@@ -690,7 +690,7 @@ export default async function BankFeedPage({
                         className="h-1.5 w-[120px] overflow-hidden rounded-full bg-fill"
                       >
                         <div
-                          className="h-full rounded-full bg-brass transition-[width] duration-300"
+                          className="h-full rounded-full bg-moss transition-[width] duration-300"
                           style={{ width: `${progressPct}%` }}
                         />
                       </div>

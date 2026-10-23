@@ -4,6 +4,7 @@ import { createClient } from "@/lib/supabase/server";
 import { billingEnabled, billingEnforced } from "./config";
 import { computeEntitlement, factsFromRow, type BillingFacts, type Entitlement } from "./entitlement-rules";
 import { noticeFromRow, readOnlyNoticeGiven, type BillingNotice } from "./notices";
+import { refundEligibilityFromRow, type RefundEligibility } from "./refund";
 
 /**
  * The single entitlement helper (subscriptions plan 2.7). Reads the board's
@@ -17,6 +18,8 @@ export interface BillingView {
   entitlement: Entitlement;
   /** The notices the Terms promise, newest effective date first (migration 0084). */
   notices: BillingNotice[];
+  /** Whether a yearly refund can be requested now (migration 0087); null when it could not be read. */
+  refund: RefundEligibility | null;
 }
 
 /** Billing facts and entitlement for a board member of the association; null for anyone else. */
@@ -32,9 +35,12 @@ export const getBilling = cache(async (associationId: string): Promise<BillingVi
   const noticeRows = await supabase.rpc("billing_notices_for", { p_association_id: associationId });
   if (noticeRows.error) console.error("[walkup-billing] notices_failed", noticeRows.error.code ?? "-");
   const notices = ((noticeRows.data ?? []) as Record<string, unknown>[]).map(noticeFromRow).filter((n): n is BillingNotice => n !== null);
+  const refundRows = await supabase.rpc("billing_refund_eligibility", { p_association_id: associationId });
+  const refund = refundEligibilityFromRow((Array.isArray(refundRows.data) ? refundRows.data[0] : refundRows.data) as Record<string, unknown> | undefined);
   return {
     facts,
     notices,
+    refund,
     entitlement: computeEntitlement(facts, {
       enabled: billingEnabled(),
       enforced: billingEnforced(),

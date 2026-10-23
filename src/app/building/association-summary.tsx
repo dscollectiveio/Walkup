@@ -37,7 +37,6 @@ export interface TaxSummary {
   accountantName: string | null;
   accountantFirm: string | null;
   accountantEmail: string | null;
-  filingMethod: "paper" | "electronic" | null;
   sosFileNumber: string | null;
 }
 
@@ -901,15 +900,6 @@ export function AssociationSummary({
                       "/tax#accountant",
                     ],
                     ["Accountant email", tax.accountantEmail, "/tax#accountant"],
-                    [
-                      "How 1099s are filed",
-                      tax.filingMethod === "paper"
-                        ? "On paper"
-                        : tax.filingMethod === "electronic"
-                          ? "Electronically (IRIS)"
-                          : null,
-                      "/tax",
-                    ],
                     ["Illinois SOS file number", tax.sosFileNumber, "/tax#sos-file-number"],
                   ].map(([label, value, href]) => (
                     <div key={label} className="min-w-0 rounded-md border border-line bg-paper px-3 py-2">

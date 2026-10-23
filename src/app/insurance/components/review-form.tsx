@@ -24,6 +24,7 @@ import type { EndorsementRow, ExclusionRow, PremiumLineRow, ReviewFormProps } fr
 import { SectionToggles } from "./section-toggles";
 import { btnGhost, btnPrimary, errorBlock, helpClass, infoBlock, inputClass, labelClass, linkClass, warningBlock } from "./styles";
 import { Toast } from "./toast";
+import { NavySection } from "@/components/navy-section";
 
 /**
  * ReviewForm v2 (insurance-spec §9.3.4): one form for import review, manual
@@ -443,10 +444,9 @@ export function ReviewForm(props: ReviewFormProps) {
     const ds = exclude ? g.defs.filter((d) => !exclude.has(d.key)) : g.defs;
     if (ds.length === 0) return null;
     return (
-      <section key={g.key} className="rounded-xl border border-line bg-paper px-5 py-4">
-        <h2 className="mb-3 text-[15px] font-bold tracking-tight text-ink">{g.title}</h2>
+      <NavySection key={g.key} title={g.title} bodyClassName="">
         <FieldGrid>{ds.map((d) => fieldNode(d))}</FieldGrid>
-      </section>
+      </NavySection>
     );
   };
 
@@ -605,9 +605,9 @@ export function ReviewForm(props: ReviewFormProps) {
             groups.map((g) => sectionCard(g))
           )}
 
-          <section className="space-y-5 rounded-xl border border-line bg-paper px-5 py-4">
+          <NavySection title="Endorsements and exclusions" bodyClassName="space-y-5">
             <div>
-              <h2 className="mb-3 text-[15px] font-bold tracking-tight text-ink">Endorsements</h2>
+              <h3 className="mb-3 text-[13px] font-bold text-ink">Endorsements</h3>
               <ListEditor<EndorsementRow>
                 id="endorsement"
                 rows={endorsements}
@@ -623,7 +623,7 @@ export function ReviewForm(props: ReviewFormProps) {
               />
             </div>
             <div>
-              <h2 className="mb-3 text-[15px] font-bold tracking-tight text-ink">Exclusions</h2>
+              <h3 className="mb-3 text-[13px] font-bold text-ink">Exclusions</h3>
               <ListEditor<ExclusionRow>
                 id="exclusion"
                 rows={exclusions}
@@ -635,10 +635,9 @@ export function ReviewForm(props: ReviewFormProps) {
                 renderPage={props.documentId ? (p) => <OpenFileButton documentId={props.documentId as string} page={p} /> : undefined}
               />
             </div>
-          </section>
+          </NavySection>
 
-          <section className="rounded-xl border border-line bg-paper px-5 py-4">
-            <h2 className="mb-3 text-[15px] font-bold tracking-tight text-ink">Premium breakdown</h2>
+          <NavySection title="Premium breakdown" bodyClassName="">
             <ListEditor<PremiumLineRow>
               id="premium-line"
               rows={premiumLines}
@@ -664,11 +663,10 @@ export function ReviewForm(props: ReviewFormProps) {
                 </p>
               )
             ) : null}
-          </section>
+          </NavySection>
 
           {isQuote ? (
-            <section className="space-y-4 rounded-xl border border-line bg-paper px-5 py-4">
-              <h2 className="text-[15px] font-bold tracking-tight text-ink">About this quote</h2>
+            <NavySection title="About this quote" bodyClassName="space-y-4">
               <div className="grid gap-4 sm:grid-cols-2">
                 <div>
                   <label htmlFor="quote-from" className={labelClass}>
@@ -703,10 +701,9 @@ export function ReviewForm(props: ReviewFormProps) {
                 </label>
                 <textarea id="quote-notes" rows={3} value={notes} onChange={(e) => setNotes(e.target.value)} className={inputClass} />
               </div>
-            </section>
+            </NavySection>
           ) : (
-            <section className="space-y-4 rounded-xl border border-line bg-paper px-5 py-4">
-              <h2 className="text-[15px] font-bold tracking-tight text-ink">After saving</h2>
+            <NavySection title="After saving" bodyClassName="space-y-4">
               <div>
                 <label htmlFor="reminder-days" className={labelClass}>
                   Remind the board to get quotes this many days before it ends
@@ -786,7 +783,7 @@ export function ReviewForm(props: ReviewFormProps) {
                 </label>
                 <textarea id="policy-notes" rows={3} value={notes} onChange={(e) => setNotes(e.target.value)} className={inputClass} />
               </div>
-            </section>
+            </NavySection>
           )}
 
           {duplicate ? (

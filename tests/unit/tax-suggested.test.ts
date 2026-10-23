@@ -100,7 +100,7 @@ afterAll(() => vi.restoreAllMocks());
 
 describe("the suggested registry", () => {
   it("has one entry per form it promises, each well formed", () => {
-    expect(SUGGESTED.map((s) => s.key)).toEqual(["irs_1120h_2025", "irs_1099_nec_2026", "il_1120_2025", "il_sos_annual_report_2026", "irs_1096_2026"]);
+    expect(SUGGESTED.map((s) => s.key)).toEqual(["irs_1120h_2025", "irs_1120_2025", "irs_1099_nec_2026", "il_1120_2025", "il_sos_annual_report_2026", "irs_1096_2026"]);
     expect(new Set(SUGGESTED.map((s) => s.key)).size).toBe(SUGGESTED.length);
     for (const s of SUGGESTED) {
       expect(s.key, s.key).toMatch(/^[a-z0-9_]+$/);
@@ -109,7 +109,7 @@ describe("the suggested registry", () => {
       expect(isOfficialFormUrl(s.sourceUrl), `${s.key}: ${s.sourceUrl}`).toBe(true);
       if (s.instructionsUrl) expect(isOfficialFormUrl(s.instructionsUrl), `${s.key}: ${s.instructionsUrl}`).toBe(true);
       expect(s.revision.trim(), s.key).not.toBe("");
-      expect(s.authoredOn).toBe("2026-10-11");
+      expect(["2026-10-11", "2026-10-23"]).toContain(s.authoredOn);
       expect(s.mirror.every((m) => m.from && m.to && m.from !== m.to), s.key).toBe(true);
     }
     expect(suggestedByKey("irs_1120h_2025")?.formCode).toBe("irs_1120h");

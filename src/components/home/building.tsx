@@ -131,7 +131,7 @@ export function Building({
                     y={y + floorH / 2 + 9}
                     fontSize="9.5"
                     fill={u.status === "behind" ? "var(--color-bad-text)" : "var(--color-mute)"}
-                    style={u.status === "behind" ? { fontFamily: "var(--font-serif)", fontWeight: 600 } : undefined}
+                    style={u.status === "behind" ? { fontFamily: "var(--font-sans)", fontWeight: 600 } : undefined}
                   >
                     {u.owedLabel ?? STATUS_WORD[u.status]}
                   </text>

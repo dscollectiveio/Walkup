@@ -36,7 +36,8 @@ export async function freshDb(opts: { before?: string } = {}): Promise<PGlite> {
     -- keys actually reference.
     create table auth.users (
       id    uuid primary key default gen_random_uuid(),
-      email text
+      email text,
+      last_sign_in_at timestamptz
     );
 
     -- Supabase derives auth.uid() from the request JWT. Here it reads a

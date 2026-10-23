@@ -12,6 +12,7 @@ import { saveBuildingFacts } from "../facts-actions";
 import { QUESTION_KEYS } from "./questions";
 import { btnGhost, btnPrimary, errorBlock, helpClass, inputClass, labelClass } from "../components/styles";
 import { Toast } from "../components/toast";
+import { NavySection } from "@/components/navy-section";
 
 /**
  * The building facts form (insurance-spec §9.8). Yes / no / not sure are
@@ -318,12 +319,11 @@ export function FactsForm({
           </section>
         ) : (
           SECTIONS.map((s) => (
-            <section key={s.title} className="space-y-5 rounded-xl border border-line bg-paper px-5 py-4">
-              <h2 className="text-[15px] font-bold tracking-tight text-ink">{s.title}</h2>
+            <NavySection key={s.title} title={s.title} bodyClassName="space-y-5">
               {s.questions.map((q) => (
                 <div key={q}>{question(q)}</div>
               ))}
-            </section>
+            </NavySection>
           ))
         )}
       </fieldset>

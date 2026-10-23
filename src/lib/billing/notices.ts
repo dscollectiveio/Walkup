@@ -11,7 +11,7 @@ import { computeStatus, type BillingFacts } from "./entitlement-rules";
  * No em dashes: this is customer-facing copy.
  */
 
-export type NoticeKind = "price_change" | "read_only" | "early_access_end" | "founding_charge";
+export type NoticeKind = "price_change" | "read_only" | "early_access_end" | "founding_charge" | "tier_change";
 
 /** Days of notice the Terms promise before each change. */
 export const NOTICE_LEAD_DAYS: Record<NoticeKind, number> = {
@@ -19,6 +19,7 @@ export const NOTICE_LEAD_DAYS: Record<NoticeKind, number> = {
   read_only: 7,
   early_access_end: 90,
   founding_charge: 30,
+  tier_change: 30,
 };
 
 export interface BillingNotice {
@@ -33,7 +34,7 @@ export interface BillingNotice {
 
 const DAY = 86_400_000;
 
-const KINDS: readonly string[] = ["price_change", "read_only", "early_access_end", "founding_charge"];
+const KINDS: readonly string[] = ["price_change", "read_only", "early_access_end", "founding_charge", "tier_change"];
 
 /** Maps a billing_notices_for row to a notice; null for anything unreadable. */
 export function noticeFromRow(row: Record<string, unknown> | null | undefined): BillingNotice | null {
@@ -59,7 +60,7 @@ export function noticeFromRow(row: Record<string, unknown> | null | undefined): 
 export function readOnlyNoticeGiven(notices: BillingNotice[], now: Date = new Date()): boolean {
   const cutoff = now.getTime() - NOTICE_LEAD_DAYS.read_only * DAY;
   return notices.some((n) => {
-    if (n.kind === "price_change" || !n.emailedAt) return false;
+    if (n.kind === "price_change" || n.kind === "tier_change" || !n.emailedAt) return false;
     const sent = Date.parse(n.emailedAt);
     return !Number.isNaN(sent) && sent <= cutoff;
   });
@@ -130,6 +131,12 @@ export function noticeBanner(n: BillingNotice, now: Date = new Date()): { headli
         detail: "A board admin can choose a plan on the Billing page to keep adding records after that day. Nothing is charged unless you choose one.",
         tone: soon ? "attention" : "neutral",
       };
+    case "tier_change":
+      return {
+        headline: `Your plan changes on ${when}.`,
+        detail: `${n.detail ?? ""} Nothing changes before then, and you can turn auto-renew off on the Billing tab if you'd rather not continue.`.trim(),
+        tone: soon ? "attention" : "neutral",
+      };
     case "founding_charge":
       return {
         headline: `Your free founding year ends on ${when}.`,
@@ -189,6 +196,14 @@ export function renderNoticeEmail(input: NoticeEmailInput): NoticeEmail {
         "You won't be charged unless a board admin chooses a plan. To keep adding records after that day, a board admin can choose the plan for your building's size on the Billing page.",
         `Choose a plan: ${billingUrl}`,
         "After that day, if no plan has been chosen, the account becomes read-only. You and your owners can still view and download every record.",
+      ];
+      break;
+    case "tier_change":
+      subject = `Your Walkup plan changes on ${when}`;
+      body = [
+        `We're writing to let you know that the Walkup plan for ${assoc} changes at your next renewal.`,
+        input.detail ?? "",
+        `The change starts on ${when}. Nothing changes before then. If you'd rather not continue, you can turn off auto-renew on the Billing page: ${billingUrl}`,
       ];
       break;
     case "founding_charge":

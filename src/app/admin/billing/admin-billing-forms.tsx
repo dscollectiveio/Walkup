@@ -2,7 +2,7 @@
 
 import { useActionState, useState } from "react";
 import { btnDanger, btnLink, btnPrimary, btnSecondary, errorClass, inputClass, labelClass } from "@/components/repairs/styles";
-import { endEarlyAccess, extendTrial, grantComp, refreshFromStripe, revokeComp, schedulePriceChange, type AdminBillingState } from "./actions";
+import { endEarlyAccess, extendTrial, grantComp, refreshFromStripe, resolveRefund, revokeComp, schedulePriceChange, type AdminBillingState } from "./actions";
 
 const KIND_LABELS: Record<string, string> = {
   early_access: "Early access",
@@ -172,6 +172,23 @@ export function SchedulePriceChangeForm() {
       <button type="submit" disabled={pending} className={btnPrimary}>
         {pending ? "Scheduling…" : "Schedule and notify"}
       </button>
+    </form>
+  );
+}
+
+/** Done or Dismiss for one open refund request. */
+export function ResolveRefundButtons({ requestId }: { requestId: string }) {
+  const [state, action, pending] = useActionState(resolveRefund, null);
+  return (
+    <form action={action} className="flex flex-wrap items-center gap-2">
+      <input type="hidden" name="request_id" value={requestId} />
+      <button type="submit" name="status" value="done" disabled={pending} className={btnPrimary}>
+        {pending ? "Saving…" : "Mark done"}
+      </button>
+      <button type="submit" name="status" value="dismissed" disabled={pending} className={btnSecondary}>
+        Dismiss
+      </button>
+      <Status state={state} />
     </form>
   );
 }

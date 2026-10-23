@@ -161,7 +161,7 @@ describe("cron and environment configuration", () => {
   });
   it("documents every secret the new features read in .env.local.example, with no value", () => {
     const env = readFileSync(path.join(ROOT, ".env.local.example"), "utf8");
-    for (const name of ["RESEND_API_KEY", "RESEND_WEBHOOK_SECRET", "EMAIL_FROM_ADDRESS", "EMAIL_SENDING_DISABLED", "PLAID_WEBHOOK_URL", "CRON_SECRET", "SUPABASE_SERVICE_ROLE_KEY", "BANK_TOKEN_KEY", "BILLING_ENABLED", "BILLING_ENFORCE", "STRIPE_SECRET_KEY", "STRIPE_WEBHOOK_SECRET"]) {
+    for (const name of ["RESEND_API_KEY", "RESEND_WEBHOOK_SECRET", "EMAIL_FROM_ADDRESS", "EMAIL_SENDING_DISABLED", "PLAID_WEBHOOK_URL", "CRON_SECRET", "SUPABASE_SERVICE_ROLE_KEY", "BANK_TOKEN_KEY", "BILLING_ENABLED", "BILLING_ENFORCE", "BILLING_TIER_AUTO", "STRIPE_SECRET_KEY", "STRIPE_WEBHOOK_SECRET"]) {
       expect(env, name).toMatch(new RegExp(`^${name}=$`, "m"));
     }
   });

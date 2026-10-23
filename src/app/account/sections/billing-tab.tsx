@@ -5,7 +5,7 @@ import { billingCopy, billingDate } from "@/lib/billing/copy";
 import { activeNotices } from "@/lib/billing/notices";
 import { BillingNotices } from "@/components/home/billing-notices";
 import { PLAN_TIERS, TOO_MANY_UNITS_MESSAGE, TRIAL_DAYS, planByKey, tierForUnits } from "@/lib/billing/config";
-import { ManageBillingButton, UpgradeToYearly } from "@/app/billing/billing-buttons";
+import { AutoRenewSwitch, ManageBillingButton, RefundRequest, UpgradeToYearly } from "@/app/billing/billing-buttons";
 import { PlanPicker } from "../plan-picker";
 import { Pill, dtClass, ddClass } from "./shared";
 
@@ -150,6 +150,36 @@ export function BillingTab({ viewer, view, checkout }: { viewer: Viewer; view: B
           </p>
         ) : null}
       </Card>
+
+      {facts.hasSubscription && facts.currentPeriodEnd && enabled && ["active", "trialing"].includes(facts.subscriptionStatus ?? "") ? (
+        <Card navy title="Auto-renew" hint="Plans renew by themselves. You can turn that off here.">
+          {isAdmin ? (
+            <AutoRenewSwitch
+              renewing={!facts.cancelAtPeriodEnd}
+              date={billingDate(facts.currentPeriodEnd)}
+              interval={facts.billingInterval === "year" ? "year" : "month"}
+            />
+          ) : (
+            <p className="text-[13px] text-mute">
+              Auto-renew is {facts.cancelAtPeriodEnd ? "off" : "on"}. Only a board admin can change it.
+            </p>
+          )}
+        </Card>
+      ) : null}
+
+      {isAdmin && enabled && facts.billingInterval === "year" && view.refund && (view.refund.eligible || view.refund.openKind) ? (
+        <Card navy title="Refund" hint="A yearly charge can be refunded in full for 14 days.">
+          {view.refund.openKind ? (
+            <p className="text-[13px] text-ink" role="status">
+              {view.refund.openKind === "offer"
+                ? "You took our offer of 2 free months. We'll email you to confirm it."
+                : "Your refund request is with us. We'll email you when it is done."}
+            </p>
+          ) : view.refund.until ? (
+            <RefundRequest until={billingDate(view.refund.until)} />
+          ) : null}
+        </Card>
+      ) : null}
 
       {showYearly && currentPlan ? (
         <UpgradeToYearly

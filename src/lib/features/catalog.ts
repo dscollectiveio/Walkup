@@ -271,11 +271,11 @@ export const CATEGORIES: Category[] = [
       },
       {
         id: "state-filings",
-        name: "Form 1096 and Illinois filings",
+        name: "Illinois filings",
         summary: "Links and instructions for the filings Walkup doesn't fill.",
         details: [
           "The Illinois annual report and IL-1120 come with official links and filing steps",
-          "A filing-method setting decides whether Form 1096 applies to you",
+          "How you file 1099s with the IRS is your CPA's call; Walkup prepares the recipient copies",
         ],
         who: ["board", "accountant"],
       },

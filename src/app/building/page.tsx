@@ -295,10 +295,6 @@ export default async function BuildingPage({ searchParams }: { searchParams: Pro
     accountantName: accountantPerson?.full_name ?? null,
     accountantFirm: (association.accountant_firm as string | null) ?? null,
     accountantEmail: accountantPerson?.email ?? null,
-    filingMethod:
-      association.information_returns_filing === "paper" || association.information_returns_filing === "electronic"
-        ? (association.information_returns_filing as "paper" | "electronic")
-        : null,
     sosFileNumber: (association.il_sos_file_number as string | null) ?? null,
   };
   const factRow = factRows?.[0] as Record<string, unknown> | undefined;

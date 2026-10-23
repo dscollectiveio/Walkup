@@ -1,4 +1,5 @@
 import "server-only";
+import { maskEmail, officerEmails } from "@/lib/access/contact-mask";
 import type { Supabase } from "@/lib/repairs/server";
 import { buildCollections, centsFromNumeric, type RawCharge, type RawMessage, type RawOwner } from "./build";
 import type { CollectionUnit } from "./suggest";
@@ -50,9 +51,12 @@ export async function loadCollections(supabase: Supabase, associationId: string,
     due_on: c.due_on as string,
     balanceCents: centsFromNumeric(c.balance as number | string),
   }));
+  // The accountant sees the Treasurer's and the President's address and "on file" for everyone else (DECISIONS #52).
+  const officers = opts.board ? new Set<string>() : await officerEmails(supabase);
+  const mask = (email: string | null) => maskEmail(email, { seesAll: opts.board, officers });
   const ownerRows: RawOwner[] = (ownersRes.data ?? []).flatMap((o) => {
     const p = o.persons as unknown as { full_name: string; email: string | null } | null;
-    return p ? [{ unit_id: o.unit_id as string, person_id: o.person_id as string, full_name: p.full_name, email: p.email }] : [];
+    return p ? [{ unit_id: o.unit_id as string, person_id: o.person_id as string, full_name: p.full_name, email: mask(p.email) }] : [];
   });
   // Walkup's email for a unit goes to its manager, not its owners, when the manager is the main
   // contact and has an email. The database makes the same choice (email_contact_person), so this
@@ -61,7 +65,7 @@ export async function loadCollections(supabase: Supabase, associationId: string,
   for (const m of managersRes.data ?? []) {
     const p = m.persons as unknown as { full_name: string; email: string | null } | null;
     if (p && (p.email ?? "").trim() !== "" && ownerRows.some((o) => o.unit_id === (m.unit_id as string))) {
-      managerFor.set(m.unit_id as string, { unit_id: m.unit_id as string, person_id: m.person_id as string, full_name: p.full_name, email: p.email });
+      managerFor.set(m.unit_id as string, { unit_id: m.unit_id as string, person_id: m.person_id as string, full_name: p.full_name, email: mask(p.email) });
     }
   }
   const owners: RawOwner[] = [

@@ -2327,3 +2327,35 @@ This is the "to build" in #44. Doug chose: the system sends the notices by itsel
 - **Secretary (0085).** A batch the Secretary approves for an announcement is now sent without waiting for an admin.
 - **Still by hand:** the yearly refund (a full refund within 14 days is made in Stripe). A request button with a
   retention offer was asked for and is not built yet: the offer itself has to be decided first.
+
+## 52. Doug's answers to the open product decisions
+
+**Decided 2026-10-23.**
+
+- **Auto-renewal** is a feature: plans renew automatically, and a board admin can turn auto-renew off (and back on) from the Billing tab on Your account. Turning it off ends the plan at the end of the paid period (Stripe `cancel_at_period_end`). *To build.*
+- **Signup stays open.** Doug wants to hear about every new signup and to have a master view, as the owner of the company, of every building that has signed up and who is involved in it (platform admin only). *To build.*
+- **The accountant sees only the Treasurer's and the President's contact details** (email and phone), not other people's. *To build:* a larger change, since the accountant reads people through `persons` today.
+- **One login across several buildings:** deferred.
+- **Still to answer:** the retention offer before a yearly refund request; where the 1099 filing-method and W-9 controls go (explained, recommendation given); verified due-date templates (explained); the open style questions from the 2026-10-19 design audit (re-asked).
+
+## 53. Answers to the remaining product and style decisions
+
+**Decided 2026-10-23.**
+
+- **Refund retention offer** (shown before a yearly refund request can be submitted): 2 free months, then $15 a month for the following 4 months. Walkup never moves money, so Doug applies the credit by hand in Stripe. *To build, with the request button.*
+- **1099 and W-9:** drop the Form 1096 card and the paper-or-electronic chooser (Walkup never files with the IRS). W-9 status stays on each contractor's page and as the Dashboard reminder.
+- **Due dates:** write verified-rule sets for the 1120-H, 1120 and 1099-NEC with IRS sources. They stay "Estimated" until Doug or his CPA marks each one verified.
+- **Style:** the bank feed categorization bar is green. The unsubscribe page title matches 20px. The Dashboard building graphic's label moves to Outfit. Tax and insurance hand-built cards convert to the navy-header Card. Em dashes stay removed from PDFs and citations. The 44px approve-bar buttons and the "None" option in the tax-template mapping stay.
+
+## 54. What was built from #52 and #53
+
+**Built 2026-10-23, not yet released** (migrations 0086, 0087 and 0088).
+
+- **Master view and signup alerts (0086).** `/admin/buildings` (platform admin only) lists every building newest first: when it signed up, units and owners, plan or trial, and the people with a role beyond owner (name, email, roles, last sign-in). The daily run at `/api/cron/billing-notices` emails the platform admins once per new building (`platform_signup_alerts` records what was announced). It is a daily email, not instant.
+- **Auto-renew switch.** Account, Billing: a board admin turns auto-renew off (Stripe `cancel_at_period_end`) or back on. Off ends the plan at the end of the paid period.
+- **Refund requests (0087).** A board admin on a yearly plan, inside 14 days of the charge, sees "Request a refund". A pop-up first offers 2 free months, then $15 a month for 4 (taking it is a request of kind `offer`); only "No thanks" reaches the refund request. Either way support is emailed and the request shows on `/admin/billing` to be marked done after Doug acts in Stripe.
+- **Tier changes at renewal (0088).** The daily run notices a building whose unit count moves it into another tier, for the first renewal at least 31 days away, and (only with `BILLING_TIER_AUTO=1`) moves the plan at Stripe on that renewal, with no proration. Without the switch the notice goes out and no price changes.
+- **Form 1096 and the filing chooser are gone** from the Taxes tab, the Building summary and the features list. The 1096 logic stays in `determine.ts` unused and unreachable.
+- **Due-date rules.** A new link-only template `irs_1120_2025` joins the 1120-H and 1099-NEC rules; `docs/tax-rule-verification.md` is the checklist for Doug or the CPA to verify all three. Nothing is verified by code.
+- **Accountant contact details.** On the dues and collections pages the accountant sees the Treasurer's and the President's email and "on file" for everyone else (`src/lib/access/contact-mask.ts`). This is the page side only: the database still returns `persons.email` to the accountant's own login, because sign-in, invites and every email Walkup sends read that column.
+- **Style (#53).** Green bank-feed bar, 20px unsubscribe title, Outfit on the building graphic and the line chart, navy section headers on the insurance review form, facts form and switching checklist.

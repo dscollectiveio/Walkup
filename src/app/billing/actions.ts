@@ -5,9 +5,19 @@ import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
 import { getViewer } from "@/lib/owner/viewer";
-import { SITE_URL } from "@/lib/site-config";
+import { SITE_URL, SUPPORT_EMAIL } from "@/lib/site-config";
 import { getBilling } from "@/lib/billing/entitlement";
-import { createCheckoutSession, createPortalSession, findLiveSubscription, switchSubscriptionPrice } from "@/lib/billing/stripe";
+import { renderRefundNotice, type RefundKind } from "@/lib/billing/refund";
+import { sendConfig } from "@/lib/email-outbox/config";
+import { sendViaResend } from "@/lib/email-outbox/resend";
+import {
+  createCheckoutSession,
+  createPortalSession,
+  findLiveSubscription,
+  findManageableSubscription,
+  setSubscriptionAutoRenew,
+  switchSubscriptionPrice,
+} from "@/lib/billing/stripe";
 import {
   TOO_MANY_UNITS_MESSAGE,
   billingEnabled,
@@ -150,5 +160,85 @@ export async function upgradeToYearly(): Promise<BillingActionState & { ok?: boo
     return { error: "Stripe couldn't switch your plan to yearly. Nothing has changed, and you have not been charged twice. Try again, or use Manage billing." };
   }
   revalidatePath("/account");
+  return { ok: true };
+}
+
+/**
+ * The auto-renew switch (DECISIONS #52). Plans renew by themselves; a board admin can turn that off, which ends the
+ * plan when the paid period runs out, and back on any time before. The subscription must be this building's own.
+ * The webhook (customer.subscription.updated) updates Walkup's record, so this page catches up within a minute.
+ */
+export async function setAutoRenew(_prev: (BillingActionState & { ok?: boolean }) | null, formData: FormData): Promise<BillingActionState & { ok?: boolean }> {
+  const ctx = await boardAdminBilling();
+  if ("error" in ctx) return { error: ctx.error };
+  const { viewer, view } = ctx;
+  const f = view.facts;
+  const renew = formData.get("renew") === "on";
+  if (!f.stripeCustomerId || !f.hasSubscription) return { error: "There's no plan to change yet. Choose a plan first." };
+  if (renew === !f.cancelAtPeriodEnd) return { error: renew ? "Auto-renew is already on." : "Auto-renew is already off." };
+
+  try {
+    const sub = await findManageableSubscription(f.stripeCustomerId);
+    if (!sub) return { error: "We couldn't find an active plan at Stripe. Nothing has changed." };
+    if (sub.associationId && sub.associationId !== viewer.associationId) return { error: "That plan belongs to another building." };
+    await setSubscriptionAutoRenew(sub.id, renew);
+  } catch (cause) {
+    console.error("[walkup-billing] autorenew_failed", (cause as { status?: number }).status ?? "-", (cause as { code?: string }).code ?? "-");
+    return { error: "Stripe couldn't change auto-renew. Nothing has changed. Try again in a minute." };
+  }
+  revalidatePath("/account");
+  return { ok: true };
+}
+
+/**
+ * A yearly refund request, or the retention offer taken instead (migration 0087, DECISIONS #53). Walkup never moves
+ * money: this records the request, tells support by email so it is not missed, and the refund or credit is made by
+ * hand in Stripe. The database checks that the caller is a board admin, the plan is yearly and paid, the charge is
+ * inside the 14 days, and no request is already open.
+ */
+export async function requestRefund(kind: RefundKind, reason: string): Promise<BillingActionState & { ok?: boolean }> {
+  if (kind !== "refund" && kind !== "offer") return { error: "Choose a refund or the offer." };
+  const viewer = await getViewer();
+  if (!viewer?.isBoardAdmin) return { error: "Only a board admin can ask for a refund." };
+  const view = await getBilling(viewer.associationId);
+  if (!view) return { error: "We couldn't load your building's plan. Try again in a minute." };
+  const note = reason.trim().slice(0, 500);
+
+  const supabase = await createClient();
+  const { error } = await supabase.rpc("billing_request_refund", { p_association_id: viewer.associationId, p_kind: kind, p_reason: note || null });
+  if (error) {
+    if (error.code === "42501") return { error: "Only a board admin can ask for a refund." };
+    if (error.code === "23505") return { error: "A request for your building is already with us." };
+    if (error.code === "22023") return { error: error.message };
+    console.error("[walkup-billing] refund_request_failed", error.code ?? "-");
+    return { error: "Couldn't send that. Try again in a minute, or email support." };
+  }
+
+  // Tell support, best effort: the request is saved either way and shows on the billing admin page.
+  const config = sendConfig();
+  if (config.ok) {
+    const mail = renderRefundNotice({
+      kind,
+      associationName: viewer.associationName,
+      requesterName: viewer.fullName,
+      planName: planByKey(view.facts.planKey)?.name ?? null,
+      chargedOn: view.refund?.chargedOn ?? null,
+      reason: note || null,
+    });
+    const sent = await sendViaResend(config.apiKey, {
+      from: `"Walkup" <${config.from}>`,
+      to: SUPPORT_EMAIL,
+      replyTo: SUPPORT_EMAIL,
+      subject: mail.subject,
+      text: mail.text,
+      html: mail.html,
+      headers: {},
+      tags: [{ name: "kind", value: `billing_refund_${kind}` }],
+      idempotencyKey: `wk-refund-${viewer.associationId}-${view.refund?.chargedOn ?? "x"}-${kind}`,
+    });
+    if (!sent.ok) console.error("[walkup-billing] refund_notice_failed", sent.status);
+  }
+  revalidatePath("/account");
+  revalidatePath("/admin/billing");
   return { ok: true };
 }

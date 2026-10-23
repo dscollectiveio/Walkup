@@ -5,6 +5,7 @@ import { useCallback, useSyncExternalStore } from "react";
 import type { ChecklistItem } from "@/lib/insurance/emails";
 import { ImportUploader } from "../../components/insurance-uploader";
 import { btnGhost, linkClass } from "../../components/styles";
+import { NavySection } from "@/components/navy-section";
 
 /**
  * After the board records its choice of a quote (insurance-spec §9.10a,
@@ -69,12 +70,13 @@ export function SwitchingChecklist({ policyId, items }: { policyId: string; item
   );
   if (items.length === 0) return null;
   return (
-    <section aria-labelledby="switching-title" className="rounded-xl border border-line bg-paper px-5 py-4">
-      <h2 id="switching-title" className="eyebrow text-mute">
-        Next steps for switching insurers
-      </h2>
-      <p className="mt-1.5 text-[13px] text-mute">Tick each one when it&rsquo;s done. The ticks are kept in this browser only.</p>
-      <ul className="mt-3 divide-y divide-line">
+    <NavySection
+      id="switching"
+      title="Next steps for switching insurers"
+      hint="Tick each one when it's done. The ticks are kept in this browser only."
+      bodyClassName=""
+    >
+      <ul className="divide-y divide-line">
         {items.map((it) => (
           <li key={it.key} className="flex flex-wrap items-center justify-between gap-3 py-3">
             <label className="flex min-h-[44px] flex-1 items-center gap-3 text-[13px] text-ink">
@@ -89,7 +91,7 @@ export function SwitchingChecklist({ policyId, items }: { policyId: string; item
           </li>
         ))}
       </ul>
-    </section>
+    </NavySection>
   );
 }
 

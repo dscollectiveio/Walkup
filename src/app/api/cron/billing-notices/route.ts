@@ -1,13 +1,16 @@
 import "server-only";
 import { createHash, timingSafeEqual } from "node:crypto";
 import { NextResponse, type NextRequest } from "next/server";
-import { billingEnabled } from "@/lib/billing/config";
+import { billingEnabled, priceIdFor } from "@/lib/billing/config";
+import { moveSubscriptionPriceAtRenewal } from "@/lib/billing/stripe";
+import { tierChangeNeeded, tierChangeReady } from "@/lib/billing/tier";
 import { factsFromRow } from "@/lib/billing/entitlement-rules";
 import { readOnlyNoticeNeeded, renderNoticeEmail, type NoticeKind } from "@/lib/billing/notices";
 import { billingServiceRpc } from "@/lib/billing/service-rpc";
 import { buildingTodayIso } from "@/lib/dates";
 import { sendConfig } from "@/lib/email-outbox/config";
 import { sendViaResend } from "@/lib/email-outbox/resend";
+import { renderSignupAlert, type SignupPerson } from "@/lib/billing/signup-alert";
 import { SUPPORT_EMAIL } from "@/lib/site-config";
 
 export const dynamic = "force-dynamic";
@@ -42,6 +45,13 @@ const MAX_SENDS = 100;
  *   1. Comp end dates (early access, founding year) become notices.
  *   2. While billing is switched on, a building heading for read-only gets its notice.
  *   3. Every notice with an email still to go is sent, one per board admin, a few tries each.
+ *
+ * It also keeps plans in step with unit counts (migration 0088, DECISIONS #44): a building whose count moves it into
+ * another tier gets a 30-day notice, and only when `BILLING_TIER_AUTO` is on does the run move the plan at Stripe,
+ * on the renewal the notice named. Off by default, so no price changes until that is switched on deliberately.
+ *
+ * The same run tells the platform admins about any new building that signed up and has not been announced yet
+ * (migration 0086), one email each.
  *
  * Calling it twice in a day sends nothing new: notices are made once (dedupe key) and a delivery is sent once.
  * Counts only leave this route; no address, name or message does.
@@ -82,9 +92,45 @@ export async function GET(request: NextRequest) {
     }
   }
 
+  let tierNotices = 0;
+  let tierMoved = 0;
+  if (billingEnabled()) {
+    const tiers = await billingServiceRpc<
+      { association_id: string; stripe_subscription_id: string; plan_key: string | null; billing_interval: "month" | "year"; current_period_end: string; unit_count: number; notice_emailed_at: string | null }[]
+    >("billing_tier_candidates", {});
+    if (tiers.error) {
+      console.error("[walkup-billing] tier_candidates_failed", tiers.error.code ?? "-");
+    } else {
+      for (const t of tiers.data ?? []) {
+        const facts = { planKey: t.plan_key, interval: t.billing_interval, currentPeriodEnd: t.current_period_end, unitCount: t.unit_count, noticeEmailedAt: t.notice_emailed_at };
+        const needed = tierChangeNeeded(facts, now);
+        if (needed) {
+          const opened = await billingServiceRpc<boolean>("billing_open_tier_notice", {
+            p_association_id: t.association_id,
+            p_effective_on: needed.effectiveOn,
+            p_key: `tier_change:${t.association_id}:${needed.toPlan}:${needed.effectiveOn}`,
+            p_detail: needed.detail,
+          });
+          if (opened.error) console.error("[walkup-billing] open_tier_notice_failed", opened.error.code ?? "-");
+          else if (opened.data) tierNotices += 1;
+        }
+        const ready = process.env.BILLING_TIER_AUTO === "1" ? tierChangeReady(facts, now) : null;
+        const priceId = ready ? priceIdFor(ready, t.billing_interval) : null;
+        if (ready && priceId) {
+          try {
+            await moveSubscriptionPriceAtRenewal(t.stripe_subscription_id, priceId);
+            tierMoved += 1;
+          } catch (cause) {
+            console.error("[walkup-billing] tier_move_failed", (cause as { status?: number }).status ?? "-");
+          }
+        }
+      }
+    }
+  }
+
   const config = sendConfig();
   if (!config.ok) {
-    return NextResponse.json({ notices: { comp: comp.data ?? 0, readOnly: readOnlyOpened }, skipped: config.reason });
+    return NextResponse.json({ notices: { comp: comp.data ?? 0, readOnly: readOnlyOpened, tier: tierNotices }, tierMoved, skipped: config.reason });
   }
 
   let sent = 0;
@@ -128,5 +174,45 @@ export async function GET(request: NextRequest) {
     await new Promise((resolve) => setTimeout(resolve, 600));
   }
 
-  return NextResponse.json({ notices: { comp: comp.data ?? 0, readOnly: readOnlyOpened }, sent, failed });
+  // New signups: tell the platform admins once per building.
+  let signupsAnnounced = 0;
+  const signups = await billingServiceRpc<
+    { association_id: string; display_name: string; city: string | null; state_code: string | null; created_at: string; people: SignupPerson[]; recipients: string[] }[]
+  >("platform_signup_alerts_claim", {});
+  if (signups.error) {
+    console.error("[walkup-billing] signup_alerts_failed", signups.error.code ?? "-");
+  } else {
+    for (const b of signups.data ?? []) {
+      if (!b.recipients?.length) continue;
+      const mail = renderSignupAlert({ displayName: b.display_name, city: b.city, stateCode: b.state_code, createdAt: b.created_at, people: b.people ?? [] });
+      let ok = true;
+      for (const to of b.recipients) {
+        const r = await sendViaResend(config.apiKey, {
+          from: `"Walkup" <${config.from}>`,
+          to,
+          replyTo: SUPPORT_EMAIL,
+          subject: mail.subject,
+          text: mail.text,
+          html: mail.html,
+          headers: {},
+          tags: [
+            { name: "kind", value: "platform_signup" },
+            { name: "association", value: "platform" },
+          ],
+          idempotencyKey: `wk-signup-${b.association_id}-${to}`,
+        });
+        if (!r.ok) {
+          ok = false;
+          console.error("[walkup-billing] signup_alert_send_failed", r.status);
+        }
+        await new Promise((resolve) => setTimeout(resolve, 600));
+      }
+      if (ok) {
+        await billingServiceRpc("platform_signup_alert_mark", { p_association_id: b.association_id });
+        signupsAnnounced += 1;
+      }
+    }
+  }
+
+  return NextResponse.json({ notices: { comp: comp.data ?? 0, readOnly: readOnlyOpened, tier: tierNotices }, tierMoved, sent, failed, signupsAnnounced });
 }

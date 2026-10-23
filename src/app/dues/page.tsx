@@ -3,6 +3,7 @@ import { redirect } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
 import { BoardOnly } from "@/components/board-only";
 import { getViewer } from "@/lib/owner/viewer";
+import { maskEmail, officerEmails } from "@/lib/access/contact-mask";
 import { loadContactDetails } from "@/lib/people/contact-details";
 import { Card, Empty, HEADER_BUTTON, Restricted, money } from "@/components/ui";
 import { bankFeedHref } from "@/app/bank-feed/href";
@@ -114,11 +115,14 @@ export default async function DuesPage({ searchParams }: { searchParams: Promise
 
   // Everyone sees the units; what's attached to them is RLS-scoped below.
   const unitList = units ?? [];
+  // The accountant sees the Treasurer's and the President's address and "on file" for everyone else (DECISIONS #52).
+  const officers = isBoard ? new Set<string>() : await officerEmails(supabase);
+  const mask = (email: string | null) => maskEmail(email, { seesAll: isBoard, officers });
   const ownerByUnit = new Map<string, { name: string; email: string | null }>();
   for (const o of owners ?? []) {
     if (o.effective_to && o.effective_to < todayKey) continue;
     const p = o.persons as unknown as { full_name: string; email: string | null } | null;
-    if (p && !ownerByUnit.has(o.unit_id)) ownerByUnit.set(o.unit_id, { name: p.full_name, email: p.email });
+    if (p && !ownerByUnit.has(o.unit_id)) ownerByUnit.set(o.unit_id, { name: p.full_name, email: mask(p.email) });
   }
 
   const scopeUnits = canReadFinancials ? unitList.map((u) => u.id) : myUnitIds;
@@ -296,7 +300,7 @@ export default async function DuesPage({ searchParams }: { searchParams: Promise
     if (m.persons) {
       managerByUnit.set(m.unit_id, {
         name: m.persons.full_name,
-        email: m.persons.email,
+        email: mask(m.persons.email),
         phone: managerContacts.get(m.person_id)?.phone ?? null,
         company: m.company,
         main: m.main_contact,

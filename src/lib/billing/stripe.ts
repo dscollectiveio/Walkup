@@ -205,3 +205,50 @@ export async function switchSubscriptionPrice(subscriptionId: string, itemId: st
   );
   return snapshotSubscription(sub);
 }
+
+/**
+ * The customer's one subscription that can still be renewed or ended (active, in a Stripe trial, or past due), or
+ * null. Used by the auto-renew switch, which has to reach a subscription that is still in its free days too.
+ */
+export async function findManageableSubscription(customerId: string): Promise<(SubscriptionSnapshot & { cancelAtPeriodEnd: boolean }) | null> {
+  if (!/^cus_[A-Za-z0-9]+$/.test(customerId)) throw new StripeError("Not a customer id.", 400);
+  const list = await stripeRequest<{ data?: RawSubscription[] }>("GET", "/subscriptions", { customer: customerId, status: "all", limit: 5 });
+  const sub = (list.data ?? []).find((s) => ["active", "trialing", "past_due"].includes(String((s as { status?: string }).status)));
+  if (!sub) return null;
+  return { ...snapshotSubscription(sub), cancelAtPeriodEnd: snapshotSubscription(sub).cancelAtPeriodEnd };
+}
+
+/**
+ * Turns automatic renewal off or on. Off ends the plan when the paid period runs out (Stripe's
+ * cancel_at_period_end), with nothing refunded and nothing charged again; on keeps it going. Either can be
+ * undone any time before the period ends.
+ */
+export async function setSubscriptionAutoRenew(subscriptionId: string, renew: boolean): Promise<SubscriptionSnapshot> {
+  if (!/^sub_[A-Za-z0-9]+$/.test(subscriptionId)) throw new StripeError("Not a subscription.", 400);
+  const sub = await stripeRequest<RawSubscription>(
+    "POST",
+    `/subscriptions/${subscriptionId}`,
+    { cancel_at_period_end: !renew },
+    { idempotencyKey: `autorenew-${subscriptionId}-${renew ? "on" : "off"}-${Math.floor(Date.now() / 60_000)}` },
+  );
+  return snapshotSubscription(sub);
+}
+
+/**
+ * Moves a subscription to another price at its next renewal: the price changes now, with nothing credited or
+ * charged now (proration_behavior none), so the new price is the one on the invoice Stripe makes when the period
+ * ends. Used for a tier change after its 30 days' notice (DECISIONS #44).
+ */
+export async function moveSubscriptionPriceAtRenewal(subscriptionId: string, priceId: string): Promise<SubscriptionSnapshot> {
+  if (!/^sub_[A-Za-z0-9]+$/.test(subscriptionId) || !/^price_[A-Za-z0-9_]+$/.test(priceId)) throw new StripeError("Not a subscription or price.", 400);
+  const current = await stripeRequest<RawSubscription>("GET", `/subscriptions/${subscriptionId}`);
+  const itemId = current.items?.data?.[0]?.id;
+  if (!itemId) throw new StripeError("The subscription has no item to change.", 400);
+  const sub = await stripeRequest<RawSubscription>(
+    "POST",
+    `/subscriptions/${subscriptionId}`,
+    { items: [{ id: itemId, price: priceId }], proration_behavior: "none" },
+    { idempotencyKey: `tier-${subscriptionId}-${priceId}` },
+  );
+  return snapshotSubscription(sub);
+}

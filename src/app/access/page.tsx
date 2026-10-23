@@ -6,7 +6,7 @@ import { getViewer } from "@/lib/owner/viewer";
 import { createClient } from "@/lib/supabase/server";
 import { navFor, type NavRole } from "@/components/sidebar/config";
 import { ACCESS_TABLES, describeAccessEvent, type AuditRow } from "@/lib/access/activity";
-import { PREVIEW_LABEL, PREVIEW_ROLES } from "@/lib/access/preview";
+import { PREVIEW_ROLES } from "@/lib/access/preview";
 import { GenerateInviteForm } from "@/app/building/generate-invite-form";
 import { InviteRow, type InviteRecord } from "@/app/building/invite-row";
 import { OfficeLine } from "./change-board-form";
@@ -104,9 +104,9 @@ export default async function AccessPage() {
   // Preview.
   const flatten = (role: NavRole) => {
     const n = navFor(role);
-    return [...n.ungrouped, ...n.groups.flatMap((g) => g.items), ...n.trailing].map((i) => i.label);
+    return [...n.ungrouped, ...n.groups.flatMap((g) => g.items), ...n.trailing].map((i) => i.href);
   };
-  const tabsByRole: Record<string, string[]> = {};
+  const tabsByRole: Record<string, string[]> = {}; // the routes in each role's sidebar
   for (const r of PREVIEW_ROLES) tabsByRole[r] = flatten(r as NavRole);
 
   const twoYears = new Date(`${today}T00:00:00Z`);
@@ -213,9 +213,9 @@ export default async function AccessPage() {
         </div>
       </Card>
 
-      <Card navy title="See what a role sees" hint="The tabs each role gets and what it can and can't do.">
+      <Card navy title="See what a role sees" hint="Which tabs each role gets, and what each can and can't do.">
         <RolePreview tabsByRole={tabsByRole} />
-        <p className="mt-3 text-[12px] text-mute">Roles on this list: {PREVIEW_ROLES.map((r) => PREVIEW_LABEL[r]).join(", ")}.</p>
+        <p className="mt-3 text-[12px] text-mute">A check means the role gets that page in its sidebar. Owners and observers get their own, smaller versions of some pages, and the board reaches the same information through its fuller ones.</p>
       </Card>
 
       {isAdmin ? (

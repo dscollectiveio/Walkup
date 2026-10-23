@@ -69,7 +69,7 @@ describe("billing stays away from the association's money", () => {
 });
 
 describe("billingServiceRpc", () => {
-  it("allows exactly the ten billing functions", () => {
+  it("allows exactly the fourteen billing functions", () => {
     expect([...BILLING_SERVICE_RPC_ALLOWED].sort()).toEqual([
       "billing_apply_subscription",
       "billing_claim_event",
@@ -80,7 +80,11 @@ describe("billingServiceRpc", () => {
       "billing_notice_claim",
       "billing_notice_mark",
       "billing_open_read_only_notice",
+      "billing_open_tier_notice",
       "billing_record_payment",
+      "billing_tier_candidates",
+      "platform_signup_alert_mark",
+      "platform_signup_alerts_claim",
     ]);
   });
 

@@ -146,3 +146,53 @@ describe("billing notices (0084)", () => {
     await expect(open("read_only:oops")).rejects.toThrow(/bad notice key/);
   });
 });
+
+describe("tier change notices (0088)", () => {
+  let db: PGlite;
+  let f: Fixture;
+
+  beforeEach(async () => {
+    db = await freshDb();
+    f = await seed(db);
+  });
+  afterEach(async () => {
+    await db.close();
+  });
+
+  const paid = (assoc: string) =>
+    db.query(
+      `update public.billing_accounts
+          set subscription_status = 'active', stripe_subscription_id = 'sub_abc123', billing_interval = 'year', plan_key = 'starter',
+              current_period_end = now() + interval '60 days'
+        where association_id = $1`,
+      [assoc],
+    );
+
+  it("lists paid renewing subscriptions with their unit count, to the service role only", async () => {
+    await paid(f.damen);
+    const rows = await asService(db, async () => (await db.query<{ association_id: string; unit_count: number; plan_key: string }>(`select association_id, unit_count, plan_key from public.billing_tier_candidates()`)).rows);
+    expect(rows).toEqual([{ association_id: f.damen, unit_count: 3, plan_key: "starter" }]);
+    await expect(asUser(db, f.cyUser, () => db.query(`select * from public.billing_tier_candidates()`))).rejects.toThrow(/permission denied/);
+
+    // A plan set to end is not renewing, so it is never moved.
+    await db.query(`update public.billing_accounts set cancel_at_period_end = true where association_id = $1`, [f.damen]);
+    expect(await asService(db, async () => (await db.query(`select * from public.billing_tier_candidates()`)).rows)).toHaveLength(0);
+  });
+
+  it("opens a tier notice once, shows when its email went out, and refuses a malformed key", async () => {
+    await paid(f.damen);
+    const when = await db.query<{ d: string }>(`select ((current_period_end at time zone 'America/Chicago')::date)::text as d from public.billing_accounts where association_id = $1`, [f.damen]);
+    const key = `tier_change:${f.damen}:building:${when.rows[0].d}`;
+    const open = () =>
+      asService(db, async () => (await db.query<{ ok: boolean }>(`select public.billing_open_tier_notice($1, $2::date, $3, 'Your plan moves.') as ok`, [f.damen, when.rows[0].d, key])).rows[0].ok);
+    expect(await open()).toBe(true);
+    expect(await open()).toBe(false);
+    await expect(asService(db, () => db.query(`select public.billing_open_tier_notice($1, current_date, 'oops', 'x')`, [f.damen]))).rejects.toThrow(/bad notice key/);
+
+    let candidate = await asService(db, async () => (await db.query<{ notice_emailed_at: string | null }>(`select notice_emailed_at from public.billing_tier_candidates()`)).rows[0]);
+    expect(candidate.notice_emailed_at).toBeNull();
+    await db.query(`update public.billing_notices set emailed_at = now() - interval '31 days' where kind = 'tier_change'`);
+    candidate = await asService(db, async () => (await db.query<{ notice_emailed_at: string | null }>(`select notice_emailed_at from public.billing_tier_candidates()`)).rows[0]);
+    expect(candidate.notice_emailed_at).not.toBeNull();
+  });
+});
