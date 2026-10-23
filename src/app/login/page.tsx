@@ -21,7 +21,7 @@ export default async function LoginPage({
   return (
     <AuthShell
       title="Welcome back"
-      subtitle="Sign in to your association's books."
+      subtitle="Sign into Walkup"
       aside={{
         heading: "Good to see you again.",
         body: "Your building's books, dues, budget and tax deadlines, right where you left them.",

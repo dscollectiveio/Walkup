@@ -7,10 +7,10 @@ import { createClient } from "@/lib/supabase/server";
 import { navFor, type NavRole } from "@/components/sidebar/config";
 import { ACCESS_TABLES, describeAccessEvent, type AuditRow } from "@/lib/access/activity";
 import { PREVIEW_LABEL, PREVIEW_ROLES } from "@/lib/access/preview";
-import { AccessReviewCard, type AccessReviewRecord } from "@/app/building/access-review-card";
 import { GenerateInviteForm } from "@/app/building/generate-invite-form";
 import { InviteRow, type InviteRecord } from "@/app/building/invite-row";
-import { ChangeBoardForm, POSITION_OPTIONS, StepDownButton } from "./change-board-form";
+import { OfficeLine } from "./change-board-form";
+import { POSITION_OPTIONS } from "./positions";
 import { ExtendAccessButton } from "./extend-button";
 import { RolePreview } from "./role-preview";
 
@@ -40,12 +40,11 @@ export default async function AccessPage() {
   const supabase = await createClient();
   const today = buildingTodayIso();
 
-  const [{ data: persons }, { data: grants }, { data: positions }, { data: inviteRows }, { data: reviewRows }, { data: audit }] = await Promise.all([
+  const [{ data: persons }, { data: grants }, { data: positions }, { data: inviteRows }, { data: audit }] = await Promise.all([
     supabase.from("persons").select("id, full_name, email, auth_user_id").order("full_name"),
     supabase.from("role_grants").select("person_id, role, expires_on, revoked_at").is("revoked_at", null),
     supabase.from("board_positions").select("id, person_id, position, term_start, term_end").is("ended_at", null),
     supabase.from("invites").select("id, token, role, email, expires_at, redeemed_at").order("created_at", { ascending: false }).limit(30),
-    supabase.from("access_reviews").select("id, reviewed_at, reviewed_by, notes, active_grants, revoked_count").order("reviewed_at", { ascending: false }).limit(5),
     isAdmin
       ? supabase
           .from("audit_log")
@@ -90,17 +89,6 @@ export default async function AccessPage() {
     redeemedAt: (i.redeemed_at as string | null) ?? null,
   }));
 
-  // Access review.
-  const reviews: AccessReviewRecord[] = (reviewRows ?? []).map((r) => ({
-    id: r.id as string,
-    reviewedAt: r.reviewed_at as string,
-    reviewerName: r.reviewed_by ? (nameByUser.get(r.reviewed_by as string) ?? null) : null,
-    notes: (r.notes as string | null) ?? null,
-    grantCount: Array.isArray(r.active_grants) ? r.active_grants.length : 0,
-    revokedCount: (r.revoked_count as number) ?? 0,
-  }));
-  const daysSince = reviews[0] ? Math.max(0, Math.floor((Date.parse(`${today}T00:00:00Z`) - Date.parse(reviews[0].reviewedAt)) / 86_400_000)) : null;
-
   // Activity.
   const feed = ((audit ?? []) as AuditRow[])
     .map((row) => ({
@@ -111,7 +99,7 @@ export default async function AccessPage() {
       }),
     }))
     .filter((x): x is { row: AuditRow; text: string } => x.text !== null)
-    .slice(0, 25);
+    .slice(0, 80);
 
   // Preview.
   const flatten = (role: NavRole) => {
@@ -124,6 +112,7 @@ export default async function AccessPage() {
   const twoYears = new Date(`${today}T00:00:00Z`);
   twoYears.setUTCDate(twoYears.getUTCDate() + 730);
   const defaultTermEnd = twoYears.toISOString().slice(0, 10);
+  const peopleOptions = boardPeopleOptions(people, boardPeople);
 
   return (
     <div className="space-y-6">
@@ -138,41 +127,38 @@ export default async function AccessPage() {
         </p>
       </div>
 
-      <Card navy title="Board and officers" action={isAdmin ? <ChangeBoardForm people={boardPeopleOptions(people, boardPeople)} defaultTermEnd={defaultTermEnd} /> : undefined}>
+      <Card navy title="Board and officers">
         <ul className="divide-y divide-line">
           {OFFICES.map((office) => {
             const holder = posRows.find((p) => p.position === office);
-            const ends = holder?.term_end ? daysUntil(holder.term_end, today) : null;
             return (
-              <li key={office} className="flex flex-wrap items-center justify-between gap-x-4 gap-y-1 py-2.5">
-                <div className="min-w-0">
-                  <p className="text-[11px] font-medium uppercase tracking-wide text-mute">{officeLabel(office)}</p>
-                  <p className="text-[14px] text-ink">{holder ? (nameById.get(holder.person_id) ?? "Someone") : <span className="text-mute">Vacant</span>}</p>
-                </div>
-                <div className="flex items-center gap-4 text-[12px] text-mute">
-                  {holder?.term_end ? (
-                    <span className={ends !== null && ends <= 30 ? "font-medium text-warning-text" : ""}>
-                      Term ends {holder.term_end}
-                      {ends !== null && ends <= 30 ? (ends >= 0 ? ` (${ends} days)` : " (ended)") : ""}
-                    </span>
-                  ) : null}
-                  {isAdmin && holder ? <StepDownButton positionId={holder.id} name={nameById.get(holder.person_id) ?? "They"} position={officeLabel(office)} /> : null}
-                </div>
-              </li>
+              <OfficeLine
+                key={office}
+                position={office}
+                label={officeLabel(office)}
+                holder={holder ? { positionId: holder.id, personId: holder.person_id, name: nameById.get(holder.person_id) ?? "Someone", termEnd: holder.term_end } : null}
+                people={peopleOptions}
+                defaultTermEnd={defaultTermEnd}
+                endsInDays={holder?.term_end ? daysUntil(holder.term_end, today) : null}
+                canEdit={isAdmin}
+              />
             );
           })}
           {directors.map((d) => (
-            <li key={d.id} className="flex flex-wrap items-center justify-between gap-x-4 gap-y-1 py-2.5">
-              <div>
-                <p className="text-[11px] font-medium uppercase tracking-wide text-mute">Director</p>
-                <p className="text-[14px] text-ink">{nameById.get(d.person_id) ?? "Someone"}</p>
-              </div>
-              <div className="flex items-center gap-4 text-[12px] text-mute">
-                {d.term_end ? <span>Term ends {d.term_end}</span> : null}
-                {isAdmin ? <StepDownButton positionId={d.id} name={nameById.get(d.person_id) ?? "They"} position="Director" /> : null}
-              </div>
-            </li>
+            <OfficeLine
+              key={d.id}
+              position="director"
+              label="Director"
+              holder={{ positionId: d.id, personId: d.person_id, name: nameById.get(d.person_id) ?? "Someone", termEnd: d.term_end }}
+              people={peopleOptions}
+              defaultTermEnd={defaultTermEnd}
+              endsInDays={d.term_end ? daysUntil(d.term_end, today) : null}
+              canEdit={isAdmin}
+            />
           ))}
+          {isAdmin ? (
+            <OfficeLine key="new-director" position="director" label="Director" holder={null} people={peopleOptions} defaultTermEnd={defaultTermEnd} endsInDays={null} canEdit addLabel="Add a director" />
+          ) : null}
         </ul>
         <p className="mt-3 text-[12px] text-mute">
           The Treasurer also categorizes and posts bank transactions and adds budget categories. The Secretary also approves announcement emails. Everyone on the
@@ -180,7 +166,7 @@ export default async function AccessPage() {
         </p>
       </Card>
 
-      <Card navy title="Everyone with access beyond owners" hint="Board, accountant and outside helpers. Their roles are changed on Building & Owners.">
+      <Card navy title="Everyone with access beyond owners" hint="Board, accountant and outside helpers, and the invites that bring new people in. Roles are changed on Building & Owners.">
         {withAccess.length === 0 ? (
           <Empty>No one yet.</Empty>
         ) : (
@@ -208,13 +194,15 @@ export default async function AccessPage() {
             ))}
           </ul>
         )}
-      </Card>
 
-      <Card navy title="Invites" hint="A link only works for the email it was made for (board and helper roles) and ends in 3 days; owner links last 7.">
-        <div className="space-y-4">
+        <div className="mt-5 space-y-3 border-t border-line pt-4">
+          <div>
+            <h3 className="text-[13px] font-bold text-ink">Invites</h3>
+            <p className="text-[12px] text-mute">A link only works for the email it was made for (board and helper roles) and ends in 3 days; owner links last 7.</p>
+          </div>
           <GenerateInviteForm canGiveAnyRole={isAdmin} people={people.filter((p) => !p.auth_user_id).map((p) => ({ id: p.id, full_name: p.full_name }))} />
           {invites.length === 0 ? (
-            <Empty>No invites yet.</Empty>
+            <p className="text-[13px] text-mute">No invites yet.</p>
           ) : (
             <ul className="divide-y divide-line">
               {invites.map((i) => (
@@ -232,15 +220,11 @@ export default async function AccessPage() {
 
       {isAdmin ? (
         <>
-          <Card navy title="Access review" hint="Every 90 days, confirm everyone who can see the books still should.">
-            <AccessReviewCard reviews={reviews} activeGrantCount={activeGrants.length} daysSince={daysSince} />
-          </Card>
-
           <Card navy title="Recent access activity" hint="Roles given and ended, invites, and changes of board.">
             {feed.length === 0 ? (
               <Empty>Nothing yet.</Empty>
             ) : (
-              <ul className="divide-y divide-line">
+              <ul className="max-h-64 divide-y divide-line overflow-y-auto pr-1" tabIndex={0} aria-label="Recent access activity, scrolls">
                 {feed.map(({ row, text }) => (
                   <li key={row.id} className="flex flex-wrap items-baseline justify-between gap-x-4 py-2 text-[13px]">
                     <span className="text-ink">{text}</span>

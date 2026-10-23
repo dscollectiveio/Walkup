@@ -5,6 +5,7 @@ import { runCoverageCheck } from "@/lib/insurance/coverage-check";
 import { stateNameFor } from "@/lib/insurance/market-verify";
 import { loadCheckInput, loadInsuranceContext, loadPolicies } from "@/lib/insurance/queries";
 import { InsuranceTabs, viewFor } from "./components/insurance-tabs";
+import { OverviewDropdown } from "./components/overview-dropdown";
 import { InsuranceHeader } from "./components/page-header";
 import { CheckTab } from "./tabs/check";
 import { MarketTab } from "./tabs/market";
@@ -27,10 +28,14 @@ export const maxDuration = 300;
 export default async function InsurancePage({
   searchParams,
 }: {
-  searchParams: Promise<{ view?: string } & QuotesSearch>;
+  searchParams: Promise<{ view?: string; open?: string } & QuotesSearch>;
 }) {
   const sp = await searchParams;
-  const view = viewFor(sp.view === "policy" ? "overview" : sp.view);
+  const view = viewFor(sp.view);
+  // The old Policies and Coverage check tabs are dropdowns on the overview now; their links land with the right one open.
+  const openKey = sp.open ?? (sp.view === "policies" || sp.view === "check" ? sp.view : undefined);
+  const openPolicies = openKey === "policies";
+  const openCheck = openKey === "check";
   const supabase = await createClient();
   const ctx = await loadInsuranceContext(supabase);
   if (!ctx) return <Restricted what="insurance records" />;
@@ -60,12 +65,6 @@ export default async function InsurancePage({
   const overview = <OverviewTab supabase={supabase} ctx={ctx} policies={policies} check={check} aiOn={aiOn} stateName={stateName} />;
   let body: React.ReactNode;
   switch (view) {
-    case "policies":
-      body = <PoliciesTab supabase={supabase} ctx={ctx} policies={policies} empty={overview} />;
-      break;
-    case "check":
-      body = <CheckTab supabase={supabase} ctx={ctx} policies={policies} check={check} stateName={stateName} />;
-      break;
     case "market":
       body = <MarketTab supabase={supabase} ctx={ctx} policies={policies} check={check} aiOn={aiOn} />;
       break;
@@ -73,16 +72,39 @@ export default async function InsurancePage({
       body = <QuotesTab supabase={supabase} ctx={ctx} policies={policies} check={check} aiOn={aiOn} sp={sp} />;
       break;
     default:
-      body = overview;
+      body = (
+        <>
+          {overview}
+          {policies.length > 0 ? (
+            <OverviewDropdown
+              id="policies"
+              title="Policies"
+              summary={`${inForce} in force. Every policy, claim and the year-by-year premium history.`}
+              open={openPolicies}
+            >
+              <PoliciesTab supabase={supabase} ctx={ctx} policies={policies} empty={null} />
+            </OverviewDropdown>
+          ) : null}
+          <OverviewDropdown
+            id="coverage-check"
+            title="Coverage check"
+            summary={
+              check.counts.gap > 0
+                ? `${check.counts.gap} ${check.counts.gap === 1 ? "gap" : "gaps"} found. Your policies against the law and your building's facts.`
+                : "Your policies against the law and your building's facts."
+            }
+            open={openCheck}
+          >
+            <CheckTab supabase={supabase} ctx={ctx} policies={policies} check={check} stateName={stateName} />
+          </OverviewDropdown>
+        </>
+      );
   }
 
   return (
     <div className="space-y-6">
       <InsuranceHeader isBoard={ctx.isBoard} />
-      <InsuranceTabs
-        active={view}
-        badges={{ policies: inForce, gaps: check.counts.gap, quotes: (drafts.count ?? 0) + (awaiting.count ?? 0) }}
-      />
+      <InsuranceTabs active={view} badges={{ quotes: (drafts.count ?? 0) + (awaiting.count ?? 0) }} />
       {body}
     </div>
   );

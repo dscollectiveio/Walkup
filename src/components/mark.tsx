@@ -8,6 +8,9 @@
  * <WalkupMark variant="bare" background="#fff" /> drops the tile; the
  * separators and keyhole become `background`.
  *
+ * `animate` plays a short entrance when the mark first appears (coin drops onto the two circles, keyhole fades in).
+ * It is the same mark, drawn the same, only moving once; reduced motion skips it.
+ *
  * Never build other variants (the package's "Please don't" page).
  */
 
@@ -24,7 +27,9 @@ export function WalkupMark({
   background = BRAND.navy,
   className,
   title = "Walkup",
+  animate = false,
 }: {
+  animate?: boolean;
   size?: number;
   variant?: "tile" | "bare";
   /** For `bare`: the colour behind the mark. Separators and keyhole take it. */
@@ -46,11 +51,13 @@ export function WalkupMark({
       aria-hidden={title ? undefined : true}
     >
       {variant === "tile" ? <rect width="64" height="64" rx="14" fill={BRAND.navy} /> : null}
-      <circle cx="24" cy="39" r="13" fill={BRAND.cream} stroke={ink} strokeWidth="2" />
-      <circle cx="40" cy="39" r="13" fill={BRAND.brick} stroke={ink} strokeWidth="2" />
-      <circle cx="32" cy="24" r="14" fill={BRAND.gold} stroke={ink} strokeWidth="2" />
-      <circle cx="32" cy="21" r="3.6" fill={ink} />
-      <path d="M30.1 23.5H33.9L35.4 32H28.6Z" fill={ink} />
+      <circle cx="24" cy="39" r="13" fill={BRAND.cream} stroke={ink} strokeWidth="2" className={animate ? "mark-a1" : undefined} />
+      <circle cx="40" cy="39" r="13" fill={BRAND.brick} stroke={ink} strokeWidth="2" className={animate ? "mark-a2" : undefined} />
+      <circle cx="32" cy="24" r="14" fill={BRAND.gold} stroke={ink} strokeWidth="2" className={animate ? "mark-a3" : undefined} />
+      <g className={animate ? "mark-a4" : undefined}>
+        <circle cx="32" cy="21" r="3.6" fill={ink} />
+        <path d="M30.1 23.5H33.9L35.4 32H28.6Z" fill={ink} />
+      </g>
     </svg>
   );
 }
@@ -66,7 +73,10 @@ export function Lockup({
   onDark = false,
   size = 30,
   className,
+  animate = false,
 }: {
+  /** Plays the mark's entrance once, on load. */
+  animate?: boolean;
   association?: string | null;
   onDark?: boolean;
   /** Mark height in px. */
@@ -86,7 +96,7 @@ export function Lockup({
   );
   const dark = (
     <span className="inline-flex items-center" style={{ gap }}>
-      <WalkupMark variant="bare" background={BRAND.navy} size={size} title="" />
+      <WalkupMark variant="bare" background={BRAND.navy} size={size} title="" animate={animate} />
       {word(BRAND.cream)}
     </span>
   );
@@ -94,11 +104,11 @@ export function Lockup({
   return (
     <span className={`inline-flex items-center ${className ?? ""}`}>
       <span className="brand-on-light inline-flex items-center" style={{ gap }}>
-        <WalkupMark variant="tile" size={size} title="" />
+        <WalkupMark variant="tile" size={size} title="" animate={animate} />
         {word(BRAND.navy)}
       </span>
       <span className="brand-on-dark items-center" style={{ gap }}>
-        <WalkupMark variant="bare" background="var(--w-bone)" size={size} title="" />
+        <WalkupMark variant="bare" background="var(--w-bone)" size={size} title="" animate={animate} />
         {word(BRAND.cream)}
       </span>
     </span>

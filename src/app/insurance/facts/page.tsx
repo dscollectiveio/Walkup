@@ -36,7 +36,7 @@ export default async function FactsPage({ searchParams }: { searchParams: Promis
 
   return (
     <div className="space-y-6">
-      <BackLink href="/insurance?view=check">Coverage check</BackLink>
+      <BackLink href="/insurance?open=check#coverage-check">Coverage check</BackLink>
       <div>
         <h1 className="text-[20px] font-bold tracking-tight text-ink">
           {onlyMode ? `${only.length} ${only.length === 1 ? "question" : "questions"} for the coverage check` : "About the building"}

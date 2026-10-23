@@ -98,7 +98,7 @@ export function MoreMenu({ policyId, isAdmin, archived }: { policyId: string; is
         onConfirm={async () => {
           const r = await deletePolicy(policyId);
           if ("error" in r) return r;
-          router.push("/insurance?view=policies");
+          router.push("/insurance?open=policies#policies");
           return r;
         }}
       />

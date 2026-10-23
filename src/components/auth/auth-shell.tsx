@@ -32,10 +32,10 @@ const POINTS = [
   "Two-step sign-in protects every account",
 ];
 
-function Brand() {
+function Brand({ size = 72 }: { size?: number }) {
   return (
     <Link href="/" aria-label="Walkup home" className="inline-flex min-h-[44px] items-center">
-      <Lockup onDark size={34} />
+      <Lockup onDark size={size} animate />
     </Link>
   );
 }
@@ -122,7 +122,7 @@ export function AuthShell({
 
       {/* Compact header (phones and tablets) */}
       <header className="bg-[#1B2A41] px-6 py-4 lg:hidden">
-        <Brand />
+        <Brand size={44} />
       </header>
 
       {/* Form */}

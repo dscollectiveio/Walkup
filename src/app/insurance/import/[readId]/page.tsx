@@ -197,7 +197,7 @@ export default async function ReadPage({
       </ul>
 
       <div>
-        <Link href={finished ? "/insurance?view=policies" : "/insurance"} className={finished ? btnPrimary : btnGhost}>
+        <Link href={finished ? "/insurance?open=policies#policies" : "/insurance"} className={finished ? btnPrimary : btnGhost}>
           {finished ? "Done" : "Finish later"}
         </Link>
         {!finished ? <p className="mt-2 text-[12px] text-mute">Walkup keeps what it read for 30 days.</p> : null}

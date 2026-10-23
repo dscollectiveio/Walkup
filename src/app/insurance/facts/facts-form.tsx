@@ -353,7 +353,7 @@ export function FactsForm({
             {pending ? "Saving…" : only ? "Save answers" : "Save facts"}
           </button>
           {only ? (
-            <Link href="/insurance?view=check" className={`${btnGhost} ${oneByOne ? "max-sm:hidden" : ""}`}>
+            <Link href="/insurance?open=check#coverage-check" className={`${btnGhost} ${oneByOne ? "max-sm:hidden" : ""}`}>
               Back to the coverage check
             </Link>
           ) : null}

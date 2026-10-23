@@ -56,8 +56,8 @@ export default async function AnnouncementsPage({ searchParams }: { searchParams
         ) : (
           <div className="space-y-3">
             {sortAnnouncements(result.rows).map((r) => (
-              <section key={r.id} className="rounded-xl border border-line bg-paper px-5">
-                <AnnouncementItem row={r} unread={result.unread.has(r.id)} todayIso={today} />
+              <section key={r.id} className="overflow-hidden rounded-xl border border-line bg-paper">
+                <AnnouncementItem row={r} unread={result.unread.has(r.id)} todayIso={today} band />
               </section>
             ))}
           </div>
@@ -115,14 +115,14 @@ export default async function AnnouncementsPage({ searchParams }: { searchParams
         </p>
       ) : null}
 
-      <nav aria-label="Announcement lists" className="flex flex-wrap gap-2">
+      <nav aria-label="Announcement lists" className="inline-flex max-w-full gap-1 overflow-x-auto rounded-full border border-line bg-paper p-1 shadow-sm">
         {TABS.map((t) => (
           <Link
             key={t.key}
             href={`/announcements?tab=${t.key}`}
             aria-current={t.key === tab.key ? "page" : undefined}
-            className={`inline-flex min-h-[44px] items-center rounded-full border px-4 text-[13px] font-medium ${
-              t.key === tab.key ? "border-ink bg-ink text-paper" : "border-line-strong bg-paper text-ink hover:bg-fill"
+            className={`inline-flex min-h-[44px] items-center rounded-full px-5 text-[13px] font-medium transition-colors ${
+              t.key === tab.key ? "bg-ink text-paper" : "text-ink hover:bg-fill"
             }`}
           >
             {t.label}
@@ -142,11 +142,13 @@ export default async function AnnouncementsPage({ searchParams }: { searchParams
             const s = stats.get(r.id);
             const ended = r.expires_on !== null && r.expires_on < today && r.status === "published";
             return (
-              <section key={r.id} className="rounded-xl border border-line bg-paper px-5 pb-4">
+              <section key={r.id} className="overflow-hidden rounded-xl border border-line bg-paper">
                 <AnnouncementItem
                   row={r}
                   unread={false}
                   todayIso={today}
+                  band
+                  actions={<BoardRowActions id={r.id} status={r.status} pinned={r.pinned} />}
                   extra={
                     <p className="text-[12px] text-mute">
                       {audienceLabel(r, labelsFor.get(r.id) ?? [])}
@@ -155,7 +157,6 @@ export default async function AnnouncementsPage({ searchParams }: { searchParams
                     </p>
                   }
                 />
-                <BoardRowActions id={r.id} status={r.status} pinned={r.pinned} />
               </section>
             );
           })}

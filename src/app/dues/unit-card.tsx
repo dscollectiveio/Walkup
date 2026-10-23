@@ -196,7 +196,8 @@ export function UnitCard({
         editingPlan || showManager || showAdditional ? "border-line-strong shadow-md" : "border-line"
       }`}
     >
-      <header className="flex flex-wrap items-center gap-x-4 gap-y-2 rounded-t-[11px] border-b border-l-[3px] border-line border-l-brass bg-ink/[0.14] px-4 py-3 text-ink">
+      {/* The same lighter blue header band as each form on the Taxes tab: name and standing on the left, what is owed on the right. */}
+      <header className="flex flex-wrap items-center gap-x-3 gap-y-1 rounded-t-[11px] border-b border-line bg-ink/[0.09] px-4 py-2.5 text-ink">
         <button
           type="button"
           onClick={() => setOpen((v) => !v)}
@@ -208,19 +209,20 @@ export function UnitCard({
             <path d="M4 2l4 4-4 4" stroke="currentColor" strokeWidth="1.6" fill="none" strokeLinecap="round" strokeLinejoin="round" />
           </svg>
           <span className="shrink-0 text-[15px] font-bold">{label}</span>
+          <span className={`shrink-0 whitespace-nowrap rounded-full px-2 py-0.5 text-[11px] ${standingTone}`}>{standingLabel}</span>
           <span className="min-w-0 truncate text-[13px] text-mute">
             {ownerName ?? "no owner on file"}
             {ownerName && ownerNoEmail ? " · no email" : ""}
           </span>
         </button>
-        <span className={`whitespace-nowrap rounded-full px-2 py-0.5 text-[11px] ${standingTone}`}>{standingLabel}</span>
-        <span className="hidden whitespace-nowrap text-[13px] sm:inline">
-          <span className="text-mute">Owed </span>
-          <span className={overdue ? "rounded bg-bad-tint px-1.5 font-semibold text-bad-text" : "font-semibold"}>{owedLabel}</span>
-        </span>
-        <span className="hidden whitespace-nowrap text-[12px] text-mute lg:inline">
-          {plan ? `${money(plan.annualCents)} a year · ${FREQUENCY_WORDS[plan.frequency]}` : "no dues plan yet"}
-        </span>
+        {/* What is owed, on the right of the bar, the way a form's due date is. */}
+        <p className="hidden items-baseline whitespace-nowrap text-right sm:flex">
+          <span className="mr-1.5 text-[11px] font-medium uppercase tracking-wide text-mute">Owed</span>
+          <span className={`tabular text-[14px] font-bold ${overdue ? "rounded bg-bad-tint px-1.5 text-bad-text" : ""}`}>{owedLabel}</span>
+          <span className="ml-2 hidden text-[11px] font-normal text-mute lg:inline">
+            {plan ? `${money(plan.annualCents)} a year · ${FREQUENCY_WORDS[plan.frequency]}` : "no dues plan yet"}
+          </span>
+        </p>
         <button
           type="button"
           onClick={() => setOpen((v) => !v)}

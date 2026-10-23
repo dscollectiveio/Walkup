@@ -95,6 +95,7 @@ export const NAV_GROUPS: NavGroupConfig[] = [
     label: "Building",
     items: [
       { href: "/building", label: "Building & Owners", icon: Building2, tourId: "building" },
+      { href: "/access", label: "People & Access", icon: UserCog, tourId: "access" },
       {
         href: "/repairs",
         label: "Repairs & Upkeep",
@@ -107,7 +108,6 @@ export const NAV_GROUPS: NavGroupConfig[] = [
       },
       { href: "/repairs/find", label: "Find a Contractor", icon: UserSearch, tourId: "find-contractor" },
       { href: "/documents", label: "Documents", icon: Folder, tourId: "documents" },
-      { href: "/access", label: "People & Access", icon: UserCog, tourId: "access" },
     ],
   },
 ];

@@ -23,7 +23,7 @@ export async function PoliciesTab({
   supabase: Supabase;
   ctx: InsuranceContext;
   policies: PolicyWithStatus[];
-  /** The Overview's empty state, shown when there are no policies at all. */
+  /** Shown when there are no policies at all (the overview dropdown only renders this with policies, so null there). */
   empty: React.ReactNode;
 }) {
   if (policies.length === 0) return <>{empty}</>;

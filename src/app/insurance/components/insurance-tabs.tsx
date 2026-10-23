@@ -6,20 +6,18 @@ import Link from "next/link";
  * its own strip; the page never does.
  */
 
-export type InsuranceView = "overview" | "policies" | "check" | "market" | "quotes";
+export type InsuranceView = "overview" | "market" | "quotes";
 
-export const INSURANCE_VIEWS: InsuranceView[] = ["overview", "policies", "check", "market", "quotes"];
+export const INSURANCE_VIEWS: InsuranceView[] = ["overview", "market", "quotes"];
 
-/** `?view=` to a tab. Legacy keys: `policy` (the old first tab) is the overview. */
+/** `?view=` to a tab. Legacy keys: `policy`, `policies` and `check` all land on the overview, where those are now dropdowns. */
 export function viewFor(raw: string | undefined): InsuranceView {
   if (raw && (INSURANCE_VIEWS as string[]).includes(raw)) return raw as InsuranceView;
   return "overview";
 }
 
 const TABS: { key: InsuranceView; label: string }[] = [
-  { key: "overview", label: "Overview" },
-  { key: "policies", label: "Policies" },
-  { key: "check", label: "Coverage check" },
+  { key: "overview", label: "Insurance Overview" },
   { key: "market", label: "Marketplace" },
   { key: "quotes", label: "Quotes & emails" },
 ];
@@ -29,14 +27,14 @@ export function InsuranceTabs({
   badges,
 }: {
   active: InsuranceView;
-  badges: { policies?: number; gaps?: number; quotes?: number };
+  badges: { quotes?: number };
 }) {
   return (
     <div className="-mx-4 overflow-x-auto px-4 sm:mx-0 sm:px-0">
       <nav aria-label="Insurance sections" className="inline-flex rounded-full border border-line bg-paper p-0.5">
         {TABS.map((t) => {
           const current = active === t.key;
-          const count = t.key === "policies" ? badges.policies : t.key === "check" ? badges.gaps : t.key === "quotes" ? badges.quotes : undefined;
+          const count = t.key === "quotes" ? badges.quotes : undefined;
           const showCount = count !== undefined && count > 0;
           return (
             <Link
@@ -51,15 +49,10 @@ export function InsuranceTabs({
               {showCount ? (
                 <span
                   className={`figures inline-flex min-w-[20px] items-center justify-center rounded-full px-1.5 text-[11px] ${
-                    t.key === "check"
-                      ? "bg-bad-tint text-bad-text"
-                      : current
-                        ? "bg-ink-mid text-paper"
-                        : "bg-fill text-mute"
+                    current ? "bg-ink-mid text-paper" : "bg-fill text-mute"
                   }`}
                 >
                   {count}
-                  <span className="sr-only">{t.key === "check" ? (count === 1 ? " gap" : " gaps") : ""}</span>
                 </span>
               ) : null}
             </Link>

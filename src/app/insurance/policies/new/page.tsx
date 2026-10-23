@@ -147,7 +147,7 @@ export default async function NewPolicyPage({
 
   return (
     <div className="space-y-4">
-      <BackLink href="/insurance?view=policies">Insurance</BackLink>
+      <BackLink href="/insurance?open=policies#policies">Insurance</BackLink>
       <ReviewForm {...props} />
     </div>
   );

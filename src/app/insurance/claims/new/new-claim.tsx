@@ -35,7 +35,7 @@ export function NewClaim({
         claimsLine={ordered[0] ? claimsLines[ordered[0].id] ?? null : null}
         onCancel={() => router.back()}
         onSaved={() => {
-          router.push(defaultTicketId ? `/maintenance/${defaultTicketId}` : "/insurance?view=policies");
+          router.push(defaultTicketId ? `/maintenance/${defaultTicketId}` : "/insurance?open=policies#policies");
         }}
       />
     </div>

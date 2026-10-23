@@ -13,6 +13,8 @@ import {
 import { linesInForce, renewalFor } from "@/lib/insurance/status";
 import { fromCents, toCents } from "@/lib/money/cents";
 import { ContactCard, type ContactCardContact } from "../components/contact-card";
+import { PolicyDocument } from "../components/policy-document";
+import { previewKind } from "@/lib/documents/preview";
 import { FindingCard } from "../components/finding-card";
 import { ImportUploader } from "../components/insurance-uploader";
 import { MarkRequestDone } from "../components/mark-request-done";
@@ -279,6 +281,26 @@ export async function OverviewTab({
     accounts = (data ?? []) as { id: string; name: string }[];
   }
 
+  // Each policy in force with a document on file: the declarations page it was read from. Previewed in a pop-out, or downloaded.
+  const sourceIds = [...new Set(inForce.map((p) => rowText(p, "source_document_id")).filter((v): v is string => !!v))];
+  const docRows = sourceIds.length
+    ? (
+        await supabase
+          .from("documents")
+          .select("id, title, filename, mime_type")
+          .in("id", sourceIds)
+          .is("deleted_at", null)
+      ).data ?? []
+    : [];
+  const docById = new Map((docRows as { id: string; title: string | null; filename: string; mime_type: string | null }[]).map((d) => [d.id, d]));
+  const policyDocs = inForce
+    .map((p) => {
+      const id = rowText(p, "source_document_id");
+      const doc = id ? docById.get(id) : null;
+      return doc ? { policy: p, doc } : null;
+    })
+    .filter((x): x is { policy: PolicyWithStatus; doc: { id: string; title: string | null; filename: string; mime_type: string | null } } => x !== null);
+
   // Owners card (§9.1 item 6).
   let ownersText: string | null = null;
   let ownersStale: string | null = null;
@@ -341,6 +363,25 @@ export async function OverviewTab({
             })}
           </ul>
         )}
+        {policyDocs.length > 0 ? (
+          <div className="mt-3 border-t border-line pt-3">
+            <h3 className="text-[13px] font-bold text-ink">Policy documents</h3>
+            <ul className="mt-1 divide-y divide-line">
+              {policyDocs.map(({ policy, doc }) => {
+                const name = `${policy.carrier_name} ${coverageShort(policy.coverage).toLowerCase()}`;
+                return (
+                  <li key={policy.id} className="flex flex-wrap items-center justify-between gap-2 py-2 text-[13px]">
+                    <span className="min-w-0">
+                      <span className="font-medium text-ink">{name}</span>
+                      <span className="ml-2 break-all text-[12px] text-mute">{doc.title || doc.filename}</span>
+                    </span>
+                    <PolicyDocument documentId={doc.id} heading={name} filename={doc.filename} kind={previewKind(doc.mime_type)} />
+                  </li>
+                );
+              })}
+            </ul>
+          </div>
+        ) : null}
         {others.length > 0 ? (
           <details className="mt-3 text-[13px]">
             <summary className="min-h-[44px] cursor-pointer py-2 text-ink">Other kinds of coverage ({others.length})</summary>
@@ -353,7 +394,7 @@ export async function OverviewTab({
           </details>
         ) : null}
         <p className="mt-3 text-[13px]">
-          <Link href="/insurance?view=check" className={linkClass}>
+          <Link href="/insurance?open=check#coverage-check" className={linkClass}>
             See the full coverage check
           </Link>
         </p>
@@ -426,7 +467,7 @@ export async function OverviewTab({
             ))}
             <p className="text-[13px] text-ink">
               {counts.gap} {counts.gap === 1 ? "gap" : "gaps"}, {check.notOnFileCount} not on file yet, {counts.ask} worth asking about.{" "}
-              <Link href="/insurance?view=check" className={linkClass}>
+              <Link href="/insurance?open=check#coverage-check" className={linkClass}>
                 See all
               </Link>
             </p>
