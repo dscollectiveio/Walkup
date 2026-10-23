@@ -83,12 +83,19 @@ export function PaymentForm({
             How
             <span className="ml-1 font-normal text-mute-soft">optional</span>
           </label>
-          <input
+          <select
             id="method"
             name="method"
-            placeholder="check, transfer, cash"
-            className="mt-1 w-full rounded-lg border border-line-strong px-3 py-2 text-[13px] text-ink"
-          />
+            defaultValue=""
+            className="mt-1 w-full rounded-lg border border-line-strong bg-paper px-3 py-2 text-[13px] text-ink"
+          >
+            <option value="">Not sure</option>
+            <option value="check">Check</option>
+            <option value="ach">Bank transfer (ACH or Zelle)</option>
+            <option value="cash">Cash</option>
+            <option value="card">Card</option>
+            <option value="other">Other</option>
+          </select>
         </div>
       </div>
 

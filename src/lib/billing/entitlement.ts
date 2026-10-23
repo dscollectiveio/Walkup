@@ -3,6 +3,7 @@ import { cache } from "react";
 import { createClient } from "@/lib/supabase/server";
 import { billingEnabled, billingEnforced } from "./config";
 import { computeEntitlement, factsFromRow, type BillingFacts, type Entitlement } from "./entitlement-rules";
+import { noticeFromRow, readOnlyNoticeGiven, type BillingNotice } from "./notices";
 
 /**
  * The single entitlement helper (subscriptions plan 2.7). Reads the board's
@@ -14,6 +15,8 @@ import { computeEntitlement, factsFromRow, type BillingFacts, type Entitlement }
 export interface BillingView {
   facts: BillingFacts;
   entitlement: Entitlement;
+  /** The notices the Terms promise, newest effective date first (migration 0084). */
+  notices: BillingNotice[];
 }
 
 /** Billing facts and entitlement for a board member of the association; null for anyone else. */
@@ -26,7 +29,19 @@ export const getBilling = cache(async (associationId: string): Promise<BillingVi
   }
   const facts = factsFromRow((Array.isArray(data) ? data[0] : data) as Record<string, unknown> | undefined);
   if (!facts) return null;
-  return { facts, entitlement: computeEntitlement(facts, { enabled: billingEnabled(), enforced: billingEnforced() }) };
+  const noticeRows = await supabase.rpc("billing_notices_for", { p_association_id: associationId });
+  if (noticeRows.error) console.error("[walkup-billing] notices_failed", noticeRows.error.code ?? "-");
+  const notices = ((noticeRows.data ?? []) as Record<string, unknown>[]).map(noticeFromRow).filter((n): n is BillingNotice => n !== null);
+  return {
+    facts,
+    notices,
+    entitlement: computeEntitlement(facts, {
+      enabled: billingEnabled(),
+      enforced: billingEnforced(),
+      // If the notices could not be read, do not make anyone read-only on a guess.
+      noticeGiven: noticeRows.error ? false : readOnlyNoticeGiven(notices),
+    }),
+  };
 });
 
 export const READ_ONLY_MESSAGE =

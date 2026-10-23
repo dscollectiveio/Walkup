@@ -908,7 +908,7 @@ export function AssociationSummary({
                         : tax.filingMethod === "electronic"
                           ? "Electronically (IRIS)"
                           : null,
-                      "/tax#filing-method",
+                      "/tax",
                     ],
                     ["Illinois SOS file number", tax.sosFileNumber, "/tax#sos-file-number"],
                   ].map(([label, value, href]) => (

@@ -2,10 +2,11 @@
 
 import { useActionState, useState } from "react";
 import { btnDanger, btnLink, btnPrimary, btnSecondary, errorClass, inputClass, labelClass } from "@/components/repairs/styles";
-import { extendTrial, grantComp, refreshFromStripe, revokeComp, type AdminBillingState } from "./actions";
+import { endEarlyAccess, extendTrial, grantComp, refreshFromStripe, revokeComp, schedulePriceChange, type AdminBillingState } from "./actions";
 
 const KIND_LABELS: Record<string, string> = {
   early_access: "Early access",
+  founding: "Founding offer (free first year)",
   friend: "Friend",
   pilot: "Pilot",
   nonprofit: "Nonprofit",
@@ -22,14 +23,17 @@ export function AdminBillingRowActions({
   associationId,
   name,
   compActive,
+  compKind,
   subscriptionId,
 }: {
   associationId: string;
   name: string;
   compActive: boolean;
+  compKind: string | null;
   subscriptionId: string | null;
 }) {
-  const [open, setOpen] = useState<"comp" | "trial" | null>(null);
+  const [open, setOpen] = useState<"comp" | "trial" | "early" | null>(null);
+  const [earlyState, earlyAction, earlyPending] = useActionState(endEarlyAccess, null);
   const [compState, compAction, compPending] = useActionState(grantComp, null);
   const [endState, endAction, endPending] = useActionState(revokeComp, null);
   const [trialState, trialAction, trialPending] = useActionState(extendTrial, null);
@@ -45,11 +49,20 @@ export function AdminBillingRowActions({
         <button type="button" className={btnLink} onClick={() => setOpen(open === "trial" ? null : "trial")}>
           Extend trial
         </button>
+        {compActive && compKind === "early_access" ? (
+          <button type="button" className={btnLink} onClick={() => setOpen(open === "early" ? null : "early")}>
+            Set the end of early access
+          </button>
+        ) : null}
         {compActive ? (
           <form
             action={endAction}
             onSubmit={(e) => {
-              if (!window.confirm(`End complimentary access for ${name}? The history is kept.`)) e.preventDefault();
+              const warn =
+                compKind === "early_access" || compKind === "founding"
+                  ? " The Terms promise advance notice before this ends, so use it only for a test building. For a real customer, set an end date instead."
+                  : "";
+              if (!window.confirm(`End complimentary access for ${name}? The history is kept.${warn}`)) e.preventDefault();
             }}
           >
             <input type="hidden" name="association_id" value={associationId} />
@@ -92,10 +105,29 @@ export function AdminBillingRowActions({
               <input id={`ce-${key}`} name="expires_on" type="date" className={inputClass} />
             </div>
           </div>
-          <p className="text-[12px] text-mute">Leave the end date blank for free until you end it. Any current comp is ended and kept in the history.</p>
+          <p className="text-[12px] text-mute">
+            Leave the end date blank for free until you end it. Early access can&rsquo;t end sooner than 90 days from today, and a founding
+            offer needs the day its free year ends (at least 30 days away): the board admins are emailed about the date automatically.
+            Any current comp is ended and kept in the history.
+          </p>
           <Status state={compState} />
           <button type="submit" disabled={compPending} className={btnPrimary}>
             {compPending ? "Saving…" : "Save comp"}
+          </button>
+        </form>
+      ) : null}
+
+      {open === "early" ? (
+        <form action={earlyAction} className="space-y-3 rounded-lg border border-line p-3">
+          <input type="hidden" name="association_id" value={associationId} />
+          <div className="max-w-[240px]">
+            <label htmlFor={`ee-${key}`} className={labelClass}>Free early access ends on</label>
+            <input id={`ee-${key}`} name="ends_on" type="date" required className={inputClass} />
+          </div>
+          <p className="text-[12px] text-mute">At least 90 days from today. {name}&rsquo;s board admins are emailed this date within a day, and it shows in Walkup.</p>
+          <Status state={earlyState} />
+          <button type="submit" disabled={earlyPending} className={btnPrimary}>
+            {earlyPending ? "Saving…" : "Set the end date"}
           </button>
         </form>
       ) : null}
@@ -114,5 +146,32 @@ export function AdminBillingRowActions({
         </form>
       ) : null}
     </div>
+  );
+}
+
+/** Schedules a price change for every building. The database insists on 30 days' notice. */
+export function SchedulePriceChangeForm() {
+  const [state, action, pending] = useActionState(schedulePriceChange, null);
+  return (
+    <form action={action} className="space-y-3">
+      <div className="grid gap-3 sm:grid-cols-3">
+        <div>
+          <label htmlFor="pc-date" className={labelClass}>New price starts</label>
+          <input id="pc-date" name="effective_on" type="date" required className={inputClass} />
+        </div>
+        <div className="sm:col-span-2">
+          <label htmlFor="pc-detail" className={labelClass}>What changes (shown to customers)</label>
+          <textarea id="pc-detail" name="detail" required maxLength={600} rows={2} className={inputClass} />
+        </div>
+      </div>
+      <p className="text-[12px] text-mute">
+        At least 30 days from today. Every building&rsquo;s board admins are emailed within a day and see it in Walkup. Changing the price
+        in Stripe is separate: do that on or after the start date.
+      </p>
+      <Status state={state} />
+      <button type="submit" disabled={pending} className={btnPrimary}>
+        {pending ? "Scheduling…" : "Schedule and notify"}
+      </button>
+    </form>
   );
 }

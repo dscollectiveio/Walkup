@@ -150,14 +150,14 @@ describe("entry points on Building & Owners and Announcements", () => {
 
 describe("cron and environment configuration", () => {
   const vercel = JSON.parse(readFileSync(path.join(ROOT, "vercel.json"), "utf8")) as { crons: { path: string; schedule: string }[] };
-  it("runs the bank sync and the email reminders daily, each at a route that exists", () => {
+  it("runs the bank sync, the email reminders and the billing notices daily, each at a route that exists", () => {
     const paths = vercel.crons.map((c) => c.path).sort();
-    expect(paths).toEqual(["/api/cron/email-reminders", "/api/cron/sync-bank-feeds"]);
+    expect(paths).toEqual(["/api/cron/billing-notices", "/api/cron/email-reminders", "/api/cron/sync-bank-feeds"]);
     for (const c of vercel.crons) {
       expect(c.schedule, c.path).toMatch(/^\d+ \d+ \* \* \*$/);
       expect(existsSync(path.join(ROOT, "src/app", c.path, "route.ts")), c.path).toBe(true);
     }
-    expect(new Set(vercel.crons.map((c) => c.schedule)).size).toBe(2);
+    expect(new Set(vercel.crons.map((c) => c.schedule)).size).toBe(3);
   });
   it("documents every secret the new features read in .env.local.example, with no value", () => {
     const env = readFileSync(path.join(ROOT, ".env.local.example"), "utf8");

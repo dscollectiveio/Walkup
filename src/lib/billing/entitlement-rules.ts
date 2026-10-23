@@ -97,7 +97,7 @@ export function computeStatus(
 
 export function computeEntitlement(
   facts: BillingFacts | null,
-  opts: { enabled: boolean; enforced: boolean; now?: Date; graceDays?: number },
+  opts: { enabled: boolean; enforced: boolean; now?: Date; graceDays?: number; noticeGiven?: boolean },
 ): Entitlement {
   const { status: computed, readOnlyFrom } = computeStatus(facts, opts.now, opts.graceDays);
   const enabled = opts.enabled;
@@ -105,7 +105,9 @@ export function computeEntitlement(
   if (!enabled) {
     return { status: "not_enabled", computed, entitled: true, readOnly: false, enabled, enforced, readOnlyFrom: null };
   }
-  const readOnly = enforced && computed === "read_only";
+  // The Terms promise notice first (DECISIONS #44): a lapsed building is not made read-only until it has been
+  // emailed at least 7 days ago. Unset means "no check" (older callers and tests).
+  const readOnly = enforced && computed === "read_only" && opts.noticeGiven !== false;
   return { status: computed, computed, entitled: !readOnly, readOnly, enabled, enforced, readOnlyFrom };
 }
 

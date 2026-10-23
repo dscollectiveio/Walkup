@@ -377,8 +377,9 @@ export default async function BankFeedPage({
   // Only on the landing render, and not again within the cooldown, so a
   // search or a filter never starts a second sync of the same cursor. Banks
   // marked 'error' are skipped: they want a sign-in, not a retry.
+  // Admin only: the claim and the bank token are admin-only in the database, so for a Treasurer it would fail silently.
   const candidates =
-    canEdit && plainOpen
+    isAdmin && plainOpen
       ? active.filter(
           (c) =>
             c.status === "active" &&

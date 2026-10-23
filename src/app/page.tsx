@@ -27,6 +27,8 @@ import { dateOfKey, monthLongLabel, monthShortLabel } from "@/lib/money/months";
 import { TodoCard } from "@/components/home/todo-card";
 import { AnnouncementsStrip } from "@/components/home/announcements-strip";
 import { BillingNotice } from "@/components/home/billing-notice";
+import { BillingNotices } from "@/components/home/billing-notices";
+import { activeNotices } from "@/lib/billing/notices";
 import { getBilling } from "@/lib/billing/entitlement";
 import { billingNotice } from "@/lib/billing/copy";
 import { loadAnnouncements } from "@/lib/owner/load";
@@ -855,6 +857,7 @@ export default async function HomePage() {
       />
 
 
+      {billing ? <BillingNotices notices={activeNotices(billing.notices, billing.entitlement.computed)} /> : null}
       {billingCopyForHome ? <BillingNotice copy={billingCopyForHome} canPay={isAdmin === true} /> : null}
 
       {fundsError || totalsError ? (

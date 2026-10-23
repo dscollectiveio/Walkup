@@ -2301,3 +2301,29 @@ Approved scope; migration 0082.
   written before this change keep the old phone and address inside `persons` entries, readable by a board admin only;
   `redact_person` still scrubs them for a removed person. (3) A property manager keeps reading every person's details,
   as #48 decided. (4) The board's two-step create is not atomic.
+
+
+## 51. The notices the Terms promise are built
+
+**Built 2026-10-22** (migrations 0084 and 0085; `src/lib/billing/notices.ts`, `src/app/api/cron/billing-notices`).
+This is the "to build" in #44. Doug chose: the system sends the notices by itself, with no approval step.
+
+- **What is noticed, and how long before.** A price change, 30 days. Read-only, 7 days (on top of the 14-day grace
+  period). The end of free early access, 90 days. The end of a founding year (first charge), 30 days. Tier changes
+  at renewal are still not built, so they have no notice.
+- **How a notice is made.** A platform admin schedules a price change on /admin/billing (at least 30 days ahead); sets
+  the end date of an early-access comp (at least 90 days ahead, `billing_end_early_access`); or grants a `founding`
+  comp (a new comp kind, end date at least 30 days ahead). The daily run (`/api/cron/billing-notices`, 15:30 UTC)
+  turns those dates into notices, and, while `BILLING_ENABLED` is on, opens a read-only notice for any building in
+  its grace period or already lapsed.
+- **How it reaches people.** The same run emails every active board admin of that building (one email each, three
+  tries, from notifications@walkuphoa.com, reply-to support) and the board sees the notice on the Dashboard and the
+  Billing tab. These are required notices about the account, so they carry no unsubscribe link and do not go
+  through the association's email approval flow: they are Walkup writing to its customer, not the board writing to owners.
+- **The guard.** With `BILLING_ENFORCE` on, a building is not made read-only until a read-only (or early-access or
+  founding) notice has been emailed at least 7 days earlier. If the notices cannot be read, nobody is made read-only.
+- **Ending a comp by hand skips all this.** "End comp" on /admin/billing ends access at once. It warns, and is for
+  test buildings; for a real customer, set an end date.
+- **Secretary (0085).** A batch the Secretary approves for an announcement is now sent without waiting for an admin.
+- **Still by hand:** the yearly refund (a full refund within 14 days is made in Stripe). A request button with a
+  retention offer was asked for and is not built yet: the offer itself has to be decided first.

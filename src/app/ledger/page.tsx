@@ -1,6 +1,7 @@
 import { createClient } from "@/lib/supabase/server";
 import { Card, MoneyOrDash, Restricted, money } from "@/components/ui";
 import { BoardOnly, viewerIsOwnerOnly } from "@/components/board-only";
+import { getViewer } from "@/lib/owner/viewer";
 
 export const dynamic = "force-dynamic";
 
@@ -23,6 +24,21 @@ export default async function LedgerPage() {
           why="It holds every transaction, including other owners' payments."
           alternative={{ label: "See your statement", href: "/owner" }}
         />
+      );
+    }
+    // A board or accountant with nothing posted yet is not locked out: say the ledger is empty, and how it fills.
+    const viewer = await getViewer();
+    if (viewer?.canReadFinancials) {
+      return (
+        <div className="space-y-6">
+          <h1 className="text-[20px] font-bold tracking-tight text-ink">General ledger</h1>
+          <Card navy title="Nothing posted yet">
+            <p className="text-[13px] text-mute">
+              The ledger fills in as transactions are posted from the Bank Feed or recorded in HOA Dues. Once the first one is posted, every
+              account and fund shows up here.
+            </p>
+          </Card>
+        </div>
       );
     }
     return <Restricted what="the general ledger" />;

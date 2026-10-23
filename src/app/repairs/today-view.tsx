@@ -27,8 +27,8 @@ import { CloseAllButton } from "./board-pieces";
  * tested); this file only loads rows.
  */
 
-/** The sections the Problems tab shows at the top. "Needs a decision", "Coming up" and "Ready to close" are left out. */
-const SHOWN_SECTIONS: readonly TodaySection[] = ["emergencies", "new", "visits", "overdue"];
+/** The sections the Problems tab shows at the top. "Needs a decision" and "Coming up" are left out. */
+const SHOWN_SECTIONS: readonly TodaySection[] = ["emergencies", "new", "visits", "overdue", "close"];
 
 const one = <T,>(v: T | T[] | null | undefined): T | null => (Array.isArray(v) ? (v[0] ?? null) : (v ?? null));
 

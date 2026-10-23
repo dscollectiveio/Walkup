@@ -84,7 +84,7 @@ export function AnnouncementLines({
   const reducedMotion = usePrefersReducedMotion();
   const safeIndex = rows.length > 0 ? index % rows.length : 0;
   const current = rows[safeIndex] ?? null;
-  // Advances every 5 seconds; holds while the pointer or focus is on it or a pop-out is open.
+  // Advances every 7.5 seconds; holds while the pointer or focus is on it or a pop-out is open.
   const rotating = rows.length > 1 && !reducedMotion && openId === null;
 
   useEffect(() => {

@@ -14,7 +14,7 @@ export interface AdminBillingState {
   error?: string;
 }
 
-const KINDS = ["early_access", "friend", "pilot", "nonprofit", "other"] as const;
+const KINDS = ["early_access", "founding", "friend", "pilot", "nonprofit", "other"] as const;
 const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 const DATE = /^\d{4}-\d{2}-\d{2}$/;
 
@@ -77,6 +77,36 @@ export async function extendTrial(_prev: AdminBillingState | null, formData: For
   if (!id) return { error: "Pick an association." };
   if (!DATE.test(until)) return { error: "Pick the new last day of the trial." };
   const { error } = await supabase.rpc("billing_extend_trial", { p_association_id: id, p_new_end: until });
+  if (error) return { error: error.message };
+  return done();
+}
+
+/**
+ * Sets the day an early-access building's free use ends. The database insists on at least 90 days' notice
+ * (DECISIONS #44); the daily run then emails the board admins and shows the notice in Walkup.
+ */
+export async function endEarlyAccess(_prev: AdminBillingState | null, formData: FormData): Promise<AdminBillingState> {
+  const supabase = await platformAdmin();
+  if (!supabase) return { error: "Only a platform admin can end early access." };
+  const id = associationId(formData);
+  const ends = String(formData.get("ends_on") ?? "").trim();
+  if (!id) return { error: "Pick an association." };
+  if (!DATE.test(ends)) return { error: "Pick the day free early access ends." };
+  const { error } = await supabase.rpc("billing_end_early_access", { p_association_id: id, p_ends_on: ends });
+  if (error) return { error: error.message };
+  return done();
+}
+
+/** Schedules a price change for every building: a notice each, at least 30 days ahead. */
+export async function schedulePriceChange(_prev: AdminBillingState | null, formData: FormData): Promise<AdminBillingState> {
+  const supabase = await platformAdmin();
+  if (!supabase) return { error: "Only a platform admin can schedule a price change." };
+  const effective = String(formData.get("effective_on") ?? "").trim();
+  const detail = String(formData.get("detail") ?? "").trim();
+  if (!DATE.test(effective)) return { error: "Pick the day the new price starts." };
+  if (!detail) return { error: "Say what is changing." };
+  if (detail.length > 600) return { error: "Keep it under 600 characters." };
+  const { error } = await supabase.rpc("billing_schedule_price_change", { p_effective_on: effective, p_detail: detail });
   if (error) return { error: error.message };
   return done();
 }

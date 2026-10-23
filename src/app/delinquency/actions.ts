@@ -22,7 +22,9 @@ export async function recordPayment(_prev: unknown, formData: FormData) {
   const unitId = String(formData.get("unit_id") ?? "");
   const amount = Number(formData.get("amount") ?? "");
   const receivedOn = String(formData.get("received_on") ?? "");
-  const method = String(formData.get("method") ?? "").trim() || null;
+  // The database only takes these five; anything else typed or posted becomes "other" instead of a raw error.
+  const rawMethod = String(formData.get("method") ?? "").trim().toLowerCase();
+  const method = !rawMethod ? null : ["check", "ach", "cash", "card", "other"].includes(rawMethod) ? rawMethod : "other";
   const reference = String(formData.get("reference") ?? "").trim() || null;
 
   if (!unitId) return { error: "Choose a unit." };

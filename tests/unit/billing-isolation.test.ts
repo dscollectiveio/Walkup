@@ -28,7 +28,7 @@ function walk(dir: string, out: string[] = []): string[] {
   return out;
 }
 
-const BILLING_DIRS = ["lib/billing", "app/billing", "app/admin/billing", "app/api/stripe"];
+const BILLING_DIRS = ["lib/billing", "app/billing", "app/admin/billing", "app/api/stripe", "app/api/cron/billing-notices"];
 
 /** Subscriptions plan 2.8: Walkup's fee never touches the association's money. */
 describe("billing stays away from the association's money", () => {
@@ -69,12 +69,17 @@ describe("billing stays away from the association's money", () => {
 });
 
 describe("billingServiceRpc", () => {
-  it("allows exactly the five billing functions", () => {
+  it("allows exactly the ten billing functions", () => {
     expect([...BILLING_SERVICE_RPC_ALLOWED].sort()).toEqual([
       "billing_apply_subscription",
       "billing_claim_event",
       "billing_finish_event",
+      "billing_generate_comp_notices",
       "billing_link_checkout",
+      "billing_notice_candidates",
+      "billing_notice_claim",
+      "billing_notice_mark",
+      "billing_open_read_only_notice",
       "billing_record_payment",
     ]);
   });
@@ -95,14 +100,14 @@ describe("billingServiceRpc", () => {
     expect(created[0]).toEqual({ url: "https://x.supabase.test", key: "service-key" });
   });
 
-  it("is imported only by the Stripe webhook route", () => {
+  it("is imported only by the Stripe webhook route and the daily notices run", () => {
     const importers: string[] = [];
     for (const file of walk(SRC)) {
       const rel = path.relative(SRC, file).split(path.sep).join("/");
       const src = readFileSync(file, "utf8");
       if (/from ["']@\/lib\/billing\/service-rpc["']|from ["']\.\/service-rpc["']/.test(src) && !rel.startsWith("lib/email-outbox/")) importers.push(rel);
     }
-    expect(importers).toEqual(["app/api/stripe/webhook/route.ts"]);
+    expect(importers.sort()).toEqual(["app/api/cron/billing-notices/route.ts", "app/api/stripe/webhook/route.ts"]);
   });
 
   it("the webhook path is public, exactly", () => {

@@ -53,8 +53,9 @@ export async function createDraft(input: {
   }
 
   const supabase = await createClient();
+  // vendors_manager, not vendors: a property manager can read contractors but not their tax identity (0081).
   const { data: vendors } = await supabase
-    .from("vendors")
+    .from("vendors_manager")
     .select("id, association_id, name, contact_name, email")
     .eq("id", input.vendorId)
     .limit(1);

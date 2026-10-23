@@ -4,9 +4,9 @@ import { createClient } from "@supabase/supabase-js";
 /**
  * The only place the service key is read for billing (subscriptions plan
  * 2.6), a sibling of src/lib/email-outbox/service-rpc.ts with its own list.
- * It can call five named functions (0062) and nothing else: no table can be
+ * It can call ten named functions (0062, 0084) and nothing else: no table can be
  * read or written from here. Imported only by the Stripe webhook route
- * (src/app/api/stripe/webhook/route.ts); a unit test fails on any other
+ * (src/app/api/stripe/webhook/route.ts) and the daily notices run (src/app/api/cron/billing-notices/route.ts); a unit test fails on any other
  * import.
  */
 export const BILLING_SERVICE_RPC_ALLOWED = [
@@ -15,6 +15,12 @@ export const BILLING_SERVICE_RPC_ALLOWED = [
   "billing_link_checkout",
   "billing_apply_subscription",
   "billing_record_payment",
+  // The daily notices run (migration 0084): turns comp end dates and lapses into notices, then emails them.
+  "billing_generate_comp_notices",
+  "billing_notice_candidates",
+  "billing_open_read_only_notice",
+  "billing_notice_claim",
+  "billing_notice_mark",
 ] as const;
 
 export type BillingServiceRpcName = (typeof BILLING_SERVICE_RPC_ALLOWED)[number];

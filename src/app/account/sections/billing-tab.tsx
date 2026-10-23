@@ -2,6 +2,8 @@ import { Answer, Card } from "@/components/ui";
 import type { Viewer } from "@/lib/owner/viewer";
 import type { BillingView } from "@/lib/billing/entitlement";
 import { billingCopy, billingDate } from "@/lib/billing/copy";
+import { activeNotices } from "@/lib/billing/notices";
+import { BillingNotices } from "@/components/home/billing-notices";
 import { PLAN_TIERS, TOO_MANY_UNITS_MESSAGE, TRIAL_DAYS, planByKey, tierForUnits } from "@/lib/billing/config";
 import { ManageBillingButton, UpgradeToYearly } from "@/app/billing/billing-buttons";
 import { PlanPicker } from "../plan-picker";
@@ -60,6 +62,8 @@ export function BillingTab({ viewer, view, checkout }: { viewer: Viewer; view: B
       ) : checkout === "cancelled" ? (
         <Answer status="neutral" headline="Checkout was cancelled." detail="Nothing was charged." />
       ) : null}
+
+      <BillingNotices notices={activeNotices(view.notices, entitlement.computed)} />
 
       <Card navy title="Your plan" hint={`Walkup's own plan for ${viewer.associationName}. Owners never pay for Walkup.`}>
         <div className="flex flex-wrap items-start justify-between gap-3">

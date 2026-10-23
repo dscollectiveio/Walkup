@@ -1119,4 +1119,53 @@ describe("email reminders and statements (0055)", () => {
       expect((await outbox(r.rows[0].batch_id)).map((x) => x.to_email)).toEqual(["bo@example.test"]);
     });
   });
+
+  // ------------------------------------------------------------------ the Secretary finishes what they approve (0085)
+
+  describe("the Secretary and announcement batches (0085)", () => {
+    const makeSecretary = () =>
+      asCy(() => db.query(`select public.change_board_position($1::uuid, 'secretary', $2::uuid)`, [f.damen, MEL_PERSON]));
+    const announcementBatch = async () => {
+      const { rows } = await q<{ id: string }>(
+        `insert into public.announcements (association_id, title, body, audience, status, published_at)
+         values ($1::uuid, 'Roof', 'The roof work starts Monday.', 'all', 'published', now()) returning id`,
+        [f.damen],
+      );
+      return prepare("announcement", [], { announcement: rows[0].id });
+    };
+
+    it("lets the Secretary approve, claim and record an announcement batch, and nothing else", async () => {
+      await makeSecretary();
+      const batch = await announcementBatch();
+      expect((await approve(batch, MEL_USER)).rows[0].queued).toBeGreaterThan(0);
+
+      const claimed = await claim(batch, 10, MEL_USER);
+      expect(claimed.rows.length).toBeGreaterThan(0);
+      const first = claimed.rows[0];
+      await asUser(db, MEL_USER, () =>
+        db.query(`select public.email_mark_sent($1::uuid, $2::uuid, 'prov-1', 'Roof')`, [first.outbox_id, first.claim_token]),
+      );
+      const sent = await q<{ status: string }>(`select status from public.email_outbox where id = $1::uuid`, [first.outbox_id]);
+      expect(sent.rows[0].status).toBe("sent");
+
+      const next = claimed.rows[1];
+      if (next) {
+        await asUser(db, MEL_USER, () =>
+          db.query(`select public.email_mark_failed($1::uuid, $2::uuid, 'Resend said no', false)`, [next.outbox_id, next.claim_token]),
+        );
+      }
+
+      // A dues batch the Secretary cannot approve or send, and a board member who is not Secretary cannot send announcements.
+      const dues = await prepare("dues_reminder", [f.unit1]);
+      expect((await fail(approve(dues, MEL_USER))).code).toBe("42501");
+      await approve(dues);
+      expect((await fail(claim(dues, 10, MEL_USER))).code).toBe("42501");
+    });
+
+    it("keeps an ordinary board member out of the sender", async () => {
+      const batch = await announcementBatch();
+      await approve(batch);
+      expect((await fail(claim(batch, 10, MEL_USER))).code).toBe("42501");
+    });
+  });
 });
