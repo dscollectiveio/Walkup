@@ -12,6 +12,43 @@ export const FRESH_SIGNIN_MS = 15 * 60 * 1000;
 
 export const ACTIVITY_COOKIE = "walkup.activity";
 
+/**
+ * The activity cookie, signed. With a secret set (ACTIVITY_COOKIE_SECRET) the cookie is `<epoch ms>.<hmac>`, so a
+ * person can't write themselves a fresh timestamp; a cookie with no valid signature counts as no cookie, which is
+ * stamped anew rather than signing anyone out. With no secret the cookie stays the bare number it always was.
+ */
+async function hmacHex(value: string, secret: string): Promise<string> {
+  const key = await crypto.subtle.importKey("raw", new TextEncoder().encode(secret), { name: "HMAC", hash: "SHA-256" }, false, ["sign"]);
+  const sig = await crypto.subtle.sign("HMAC", key, new TextEncoder().encode(`walkup.activity:${value}`));
+  return [...new Uint8Array(sig)].map((b) => b.toString(16).padStart(2, "0")).join("");
+}
+
+export async function encodeActivity(ms: number, secret: string | undefined): Promise<string> {
+  const v = String(ms);
+  return secret ? `${v}.${await hmacHex(v, secret)}` : v;
+}
+
+export async function decodeActivity(raw: string | undefined | null, secret: string | undefined, now: number): Promise<number | null> {
+  if (!raw) return null;
+  if (!secret) return parseActivity(raw, now);
+  const [value, sig, extra] = raw.split(".");
+  if (!value || !sig || extra !== undefined || !/^[0-9a-f]{64}$/.test(sig)) return null;
+  const expected = await hmacHex(value, secret);
+  // Constant-time comparison of two equal-length hex strings.
+  let diff = 0;
+  for (let i = 0; i < expected.length; i++) diff |= expected.charCodeAt(i) ^ sig.charCodeAt(i);
+  return diff === 0 ? parseActivity(value, now) : null;
+}
+
+/** A request the browser made ahead of time (a link scrolled into view), not a person acting. */
+export function isPrefetchRequest(headers: { get(name: string): string | null }): boolean {
+  return (
+    headers.get("next-router-prefetch") !== null ||
+    headers.get("purpose") === "prefetch" ||
+    (headers.get("sec-purpose") ?? "").includes("prefetch")
+  );
+}
+
 export type IdleDecision =
   | { action: "expire" }
   | { action: "stamp" } // write the cookie now

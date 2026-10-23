@@ -125,7 +125,7 @@ export async function shareDocumentWithOwners(documentId: string): Promise<{ ok:
   if (!row) return { error: "You can't change that file." };
   const cat = Array.isArray(row.document_categories) ? row.document_categories[0] : row.document_categories;
   if (!canShareWithOwners(cat?.slug, row.restricted_to_unit_id)) {
-    return { error: "Only governing documents, meeting minutes and financial statements can be shared from here. Pick another file." };
+    return { error: "Only governing documents, meeting minutes, financial statements and files added here can be shared from here. Pick another file." };
   }
 
   const { data, error } = await supabase

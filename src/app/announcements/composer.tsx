@@ -311,7 +311,7 @@ export function Composer({
         <div className="mt-2 space-y-3">
           <DirectUpload
             purpose="document"
-            categorySlug="other"
+            categorySlug="announcement_file"
             multiple={false}
             maxFiles={1}
             label="Add a file"

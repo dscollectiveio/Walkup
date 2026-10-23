@@ -2359,3 +2359,14 @@ This is the "to build" in #44. Doug chose: the system sends the notices by itsel
 - **Due-date rules.** A new link-only template `irs_1120_2025` joins the 1120-H and 1099-NEC rules; `docs/tax-rule-verification.md` is the checklist for Doug or the CPA to verify all three. Nothing is verified by code.
 - **Accountant contact details.** On the dues and collections pages the accountant sees the Treasurer's and the President's email and "on file" for everyone else (`src/lib/access/contact-mask.ts`). This is the page side only: the database still returns `persons.email` to the accountant's own login, because sign-in, invites and every email Walkup sends read that column.
 - **Style (#53).** Green bank-feed bar, 20px unsubscribe title, Outfit on the building graphic and the line chart, navy section headers on the insurance review form, facts form and switching checklist.
+
+## 55. Small leftovers cleared (not yet released)
+
+**Built 2026-10-23** (migrations 0089 and 0090).
+
+- **Announcement files (0089).** A file added from the announcement composer is filed as "Announcement file", a category that can be shared with all owners, because attaching it to a notice for owners is the decision to share it. Before, it was filed as "Other" and always hit the sharing error. The AI classifier never re-files it.
+- **Property managers and the assignee list (0090).** `repairs_assignees()` gives the board and a property manager the board's names for the problem page's picker, which was empty for a manager.
+- **Unused code removed:** `RenameForm` and `linkExistingDocument`.
+- **Words:** the board member role text and the Features page (People and access, property managers, attorneys and observers) match what the roles can do.
+- **Idle-timeout cookie.** With `ACTIVITY_COOKIE_SECRET` set it is signed (HMAC), so a timestamp can't be written by hand; empty keeps it as before. A browser prefetch no longer counts as activity.
+- **Decided to leave:** the Repairs "Needs a decision" section stays hidden (it was left out on purpose to keep the page short); the bank rule `auto_post` stays unset by the app (DECISIONS #29: nothing reaches the ledger without a click); old phone numbers stay in audit rows (only a board admin reads them, and they are the history of what changed). Contractor document links on the problem page for a property manager are not changed.

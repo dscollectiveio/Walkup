@@ -4,65 +4,11 @@ import { useRouter } from "next/navigation";
 import { useActionState, useState, useTransition } from "react";
 import {
   purgeDocument,
-  renameDocument,
   rerunExtraction,
   restoreDocument,
   setDocumentVisibility,
 } from "../actions";
 import type { DocumentRow } from "@/lib/documents/access";
-
-export function RenameForm({ doc }: { doc: DocumentRow }) {
-  const [open, setOpen] = useState(false);
-  const [state, action, pending] = useActionState(renameDocument, null);
-
-  const [prev, setPrev] = useState(state);
-  if (state !== prev) {
-    setPrev(state);
-    if (state?.ok) setOpen(false);
-  }
-
-  if (!open) {
-    return (
-      <button
-        type="button"
-        onClick={() => setOpen(true)}
-        className="text-[12px] text-mute underline-offset-2 hover:underline"
-      >
-        Rename
-      </button>
-    );
-  }
-
-  return (
-    <form action={action} className="mt-2 flex flex-wrap items-center gap-2">
-      <input type="hidden" name="document_id" value={doc.id} />
-      <input
-        name="title"
-        defaultValue={doc.title}
-        aria-label="Title"
-        className="w-full max-w-[360px] rounded-lg border border-line-strong px-3 py-1.5 text-[13px] text-ink"
-      />
-      <button
-        type="submit"
-        disabled={pending}
-        className="rounded-md bg-ink px-3 py-1.5 text-[12px] font-medium text-paper hover:bg-ink-mid disabled:opacity-50"
-      >
-        {pending ? "Saving…" : "Save"}
-      </button>
-      <button
-        type="button"
-        onClick={() => setOpen(false)}
-        className="text-[12px] text-mute underline-offset-2 hover:underline"
-      >
-        Cancel
-      </button>
-      <p className="w-full text-[11px] text-mute-soft">
-        Leave it blank to go back to the original filename.
-      </p>
-      {state?.error ? <p className="w-full text-[11px] text-bad-text">{state.error}</p> : null}
-    </form>
-  );
-}
 
 export function VisibilityForm({
   doc,

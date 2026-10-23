@@ -11,7 +11,7 @@ export const ROLE_WORDS: Record<ViewerRole, { name: string; what: string }> = {
   },
   board_member: {
     name: "Board member",
-    what: "Sees and works on the books, dues, taxes, insurance, repairs and documents, and can invite owners. A board admin approves the bigger steps.",
+    what: "Reads the books, dues, taxes, insurance, repairs and documents, and works on repairs, dues, taxes, documents and announcements. The bank feed is read only unless you hold the Treasurer position, and a board admin handles roles, invites beyond owners, the bank connection and email approval (the Secretary approves announcement emails).",
   },
   accountant: {
     name: "Accountant",

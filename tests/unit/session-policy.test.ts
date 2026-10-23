@@ -1,11 +1,14 @@
 import { describe, expect, it } from "vitest";
 import {
   ACTIVITY_REFRESH_MS,
+  decodeActivity,
+  encodeActivity,
   FRESH_SIGNIN_MESSAGE,
   FRESH_SIGNIN_MS,
   IDLE_TIMEOUT_MS,
   idleDecision,
   isFreshSignIn,
+  isPrefetchRequest,
   lastTotpAt,
   parseActivity,
 } from "@/lib/security/session-policy";
@@ -82,5 +85,34 @@ describe("fresh sign-in", () => {
     expect(FRESH_SIGNIN_MESSAGE).toMatch(/confirm your sign-in/i);
     expect(FRESH_SIGNIN_MESSAGE).toContain("/confirm-sign-in");
     expect(FRESH_SIGNIN_MESSAGE).not.toContain("—");
+  });
+});
+
+describe("the signed activity cookie", () => {
+  const now = Date.parse("2026-10-23T18:00:00Z");
+
+  it("round-trips with a secret, and refuses a cookie signed with another or with no signature", async () => {
+    const cookie = await encodeActivity(now - 5000, "secret-one");
+    expect(cookie).toMatch(/^\d{13}\.[0-9a-f]{64}$/);
+    expect(await decodeActivity(cookie, "secret-one", now)).toBe(now - 5000);
+    expect(await decodeActivity(cookie, "secret-two", now)).toBeNull();
+    expect(await decodeActivity(String(now - 5000), "secret-one", now)).toBeNull(); // the old bare number
+    expect(await decodeActivity(`${now - 5000}.${"0".repeat(64)}`, "secret-one", now)).toBeNull();
+    expect(await decodeActivity(`${now}.${cookie.split(".")[1]}`, "secret-one", now)).toBeNull(); // moved the time, kept the signature
+    expect(await decodeActivity(`${cookie}.x`, "secret-one", now)).toBeNull();
+  });
+
+  it("stays the bare number when no secret is set", async () => {
+    expect(await encodeActivity(now, undefined)).toBe(String(now));
+    expect(await decodeActivity(String(now - 5000), undefined, now)).toBe(now - 5000);
+    expect(await decodeActivity(undefined, undefined, now)).toBeNull();
+  });
+
+  it("recognizes a prefetch by any of the headers browsers and Next send", () => {
+    const h = (o: Record<string, string>) => ({ get: (n: string) => o[n.toLowerCase()] ?? null });
+    expect(isPrefetchRequest(h({ "next-router-prefetch": "1" }))).toBe(true);
+    expect(isPrefetchRequest(h({ purpose: "prefetch" }))).toBe(true);
+    expect(isPrefetchRequest(h({ "sec-purpose": "prefetch;prerender" }))).toBe(true);
+    expect(isPrefetchRequest(h({}))).toBe(false);
   });
 });

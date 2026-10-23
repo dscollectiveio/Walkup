@@ -1,7 +1,7 @@
 import { createServerClient } from "@supabase/ssr";
 import { NextResponse, type NextRequest } from "next/server";
 import { PENDING_INVITE_COOKIE } from "@/lib/invite-cookie";
-import { ACTIVITY_COOKIE, idleDecision, parseActivity } from "@/lib/security/session-policy";
+import { ACTIVITY_COOKIE, decodeActivity, encodeActivity, idleDecision, isPrefetchRequest } from "@/lib/security/session-policy";
 
 // Set once we've seen this user's persons row, so later requests skip that
 // query. Convenience only (like the redirect it feeds): pages already degrade
@@ -152,7 +152,10 @@ export async function updateSession(request: NextRequest) {
     // Idle timeout (SECURITY_POLICY 4d): a cookie, not a database call. It is
     // rewritten at most once a minute. A missing cookie is stamped, not
     // treated as expired, so sessions that began before this shipped survive.
-    const decision = idleDecision(parseActivity(request.cookies.get(ACTIVITY_COOKIE)?.value, now), now);
+    // Signed when ACTIVITY_COOKIE_SECRET is set, so the timestamp can't be written by hand. A prefetch (the browser
+    // loading a link ahead of time) is not a person acting, so it never refreshes the stamp.
+    const secret = process.env.ACTIVITY_COOKIE_SECRET?.trim() || undefined;
+    const decision = idleDecision(await decodeActivity(request.cookies.get(ACTIVITY_COOKIE)?.value, secret, now), now);
     if (decision.action === "expire") {
       try {
         await supabase.auth.signOut();
@@ -169,8 +172,8 @@ export async function updateSession(request: NextRequest) {
       expired.cookies.delete(MEMBER_COOKIE);
       return expired;
     }
-    if (decision.action === "stamp") {
-      stampActivity = String(now);
+    if (decision.action === "stamp" && !isPrefetchRequest(request.headers)) {
+      stampActivity = await encodeActivity(now, secret);
       response.cookies.set(ACTIVITY_COOKIE, stampActivity, activityCookieOptions);
     }
   } else if (request.cookies.get(ACTIVITY_COOKIE)) {

@@ -141,7 +141,7 @@ export async function runExtraction(
     .eq("association_id", doc.association_id)
     .order("sort_order");
   // Owner unit uploads are filed by the person who adds them, never guessed by the reader (0079).
-  const categories = (allCategories ?? []).filter((c) => c.slug !== "unit_owner_upload");
+  const categories = (allCategories ?? []).filter((c) => c.slug !== "unit_owner_upload" && c.slug !== "announcement_file");
 
   const result = await classifyDocument({
     supabase,

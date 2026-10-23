@@ -260,6 +260,11 @@ export async function loadTicketPage(supabase: Supabase, ticketId: string, viewe
     boardPeople = [...boardIds]
       .map((id) => ({ id, name: persons.get(id) || "Board member" }))
       .sort((a, b) => a.name.localeCompare(b.name));
+    // A property manager can't read role_grants, so the list above is empty for them: ask for the board's names (0090).
+    if (boardPeople.length === 0 && viewer.canManage) {
+      const { data: assignees } = await supabase.rpc("repairs_assignees", { p_association_id: ticket.associationId });
+      boardPeople = ((assignees ?? []) as { person_id: string; full_name: string }[]).map((a) => ({ id: a.person_id, name: a.full_name || "Board member" }));
+    }
 
     // Reviews and history, for ranking and the comparison's "your history".
     const reviews = new Map<string, { sum: number; count: number; tags: Record<string, number> }>();

@@ -243,14 +243,14 @@ describe("document hub (0020)", () => {
       `select association_id, count(*)::int as n
          from document_categories group by 1 order by 1`,
     );
-    expect(rows.map((r) => r.n)).toEqual([17, 17]);
+    expect(rows.map((r) => r.n)).toEqual([18, 18]);
   });
 
   it("gives owners the category labels, since they file nothing but read some", async () => {
     const { rows } = await asUser(db, f.adaUser, () =>
       db.query(`select slug from document_categories`),
     );
-    expect(rows.length).toBe(17);
+    expect(rows.length).toBe(18);
   });
 
   it("refuses to delete a seeded category that documents may be filed under", async () => {
