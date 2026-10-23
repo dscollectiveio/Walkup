@@ -1,58 +1,11 @@
 "use client";
 
 import Link from "next/link";
-import { createContext, useContext, useRef, useState, useTransition } from "react";
-import {
-  Banknote,
-  BookOpen,
-  Building2,
-  Check,
-  ChevronDown,
-  ChevronRight,
-  FileText,
-  FolderOpen,
-  HandCoins,
-  Hammer,
-  Landmark,
-  Mail,
-  Maximize2,
-  Megaphone,
-  Shield,
-  Siren,
-  Upload,
-  UserPlus,
-  Users,
-  Wallet,
-  X,
-  type LucideIcon,
-} from "lucide-react";
+import { createContext, useContext, useEffect, useRef, useState, useTransition, type ReactNode } from "react";
+import { Check, ChevronDown, ChevronRight, Maximize2, X } from "lucide-react";
 import type { SetupSection, SetupStep } from "@/lib/home/setup-guide";
 import { dismissSetupGuide, setSetupStepOverride } from "@/app/home-actions";
-import { SECTION_HEADER } from "@/components/section-header";
 import { ShowHide } from "./fold-section";
-
-/** An icon for the steps that matter most, so they read at a glance. Steps without one just show their checkbox. */
-const STEP_ICON: Record<string, LucideIcon> = {
-  profile: Building2,
-  board_contact: Users,
-  import_units: Upload,
-  units: Building2,
-  owners: Users,
-  invites: UserPlus,
-  first_announcement: Megaphone,
-  import_opening: BookOpen,
-  bank: Landmark,
-  backlog: Banknote,
-  budget: Wallet,
-  dues_payment: HandCoins,
-  email_sending: Mail,
-  dues_schedule: HandCoins,
-  tax: FileText,
-  insurance: Shield,
-  upkeep_schedule: Hammer,
-  emergency_info: Siren,
-  documents: FolderOpen,
-};
 
 /** A board member sees the guide but only an admin ticks, overrides or skips it. */
 const ReadOnlyContext = createContext(false);
@@ -64,21 +17,6 @@ function formatDone(iso: string): string {
 function sectionCounts(section: SetupSection): { done: number; total: number } {
   const steps = section.steps.filter((s) => !s.informational);
   return { done: steps.filter((s) => s.done).length, total: steps.length };
-}
-
-function StepIcon({ stepKey, done, active }: { stepKey: string; done: boolean; active: boolean }) {
-  const Icon = STEP_ICON[stepKey];
-  if (!Icon) return null;
-  return (
-    <span
-      aria-hidden="true"
-      className={`flex h-7 w-7 shrink-0 items-center justify-center rounded-md border ${
-        done ? "border-line bg-paper text-mute-soft" : active ? "border-brass bg-paper text-ink" : "border-brass/50 bg-paper text-ink"
-      }`}
-    >
-      <Icon size={14} strokeWidth={1.7} />
-    </span>
-  );
 }
 
 /** A thin bar for a group of steps: navy while anything is left, green once all are done. Never red. */
@@ -166,9 +104,8 @@ function StepRow({ step, active }: { step: SetupStep; active: boolean }) {
     <li className="py-3">
       <div className="flex items-center gap-3">
         <StepCheck step={step} />
-        <StepIcon stepKey={step.key} done={step.done} active={active} />
         <span className="min-w-0 flex-1">
-          <span className={`block text-[13px] ${step.done ? "text-mute" : "font-medium text-ink"}`}>
+          <span className={`block text-[13px] ${step.done ? "text-mute-soft line-through" : "font-medium text-ink"}`}>
             {step.name}
           </span>
           <span className="mt-0.5 block text-[11px] text-mute-soft">
@@ -206,7 +143,7 @@ function DetailedStep({ step, isNext }: { step: SetupStep; isNext: boolean }) {
         <StepCheck step={step} className="mt-0.5" />
         <div className="min-w-0 flex-1">
           <div className="flex flex-wrap items-center gap-2">
-            <span className={`text-[14px] ${step.done ? "text-mute" : "font-medium text-ink"}`}>{step.name}</span>
+            <span className={`text-[14px] ${step.done ? "text-mute-soft line-through" : "font-medium text-ink"}`}>{step.name}</span>
             {isNext ? (
               <span className="rounded-full bg-ink px-2 py-0.5 text-[10px] font-medium text-paper">Do this next</span>
             ) : null}
@@ -253,33 +190,6 @@ function optionalName(name: string): string {
   return name.replace(/\s*\(optional\)\s*$/i, "");
 }
 
-/** The required-setup ring: how much of normal setup is done. */
-function CompletionRing({ pct }: { pct: number }) {
-  const r = 26;
-  const c = 2 * Math.PI * r;
-  const complete = pct >= 100;
-  return (
-    <svg viewBox="0 0 64 64" className="h-14 w-14 shrink-0" role="img" aria-label={`${pct}% of required setup done`}>
-      <circle cx="32" cy="32" r={r} fill="none" stroke="var(--color-fill)" strokeWidth="7" />
-      <circle
-        cx="32"
-        cy="32"
-        r={r}
-        fill="none"
-        stroke={complete ? "var(--color-good)" : "var(--color-brass)"}
-        strokeWidth="7"
-        strokeLinecap="round"
-        strokeDasharray={`${(c * pct) / 100} ${c}`}
-        transform="rotate(-90 32 32)"
-        className="motion-safe:transition-[stroke-dasharray] motion-safe:duration-500"
-      />
-      <text x="32" y="36.5" textAnchor="middle" className="fill-ink text-[14px] font-bold">
-        {pct}%
-      </text>
-    </svg>
-  );
-}
-
 /** A boxed chevron, so a section header reads as something you can open or close. */
 function FoldChevron({ open }: { open: boolean }) {
   return (
@@ -296,9 +206,8 @@ function OptionalRow({ step }: { step: SetupStep }) {
   return (
     <li className="flex items-center gap-3 py-2.5">
       <StepCheck step={step} />
-      <StepIcon stepKey={step.key} done={step.done} active={false} />
       <span className="min-w-0 flex-1">
-        <span className={`block text-[13px] ${step.done ? "text-mute" : "text-ink"}`}>{optionalName(step.name)}</span>
+        <span className={`block text-[13px] ${step.done ? "text-mute-soft line-through" : "text-ink"}`}>{optionalName(step.name)}</span>
         <span className="mt-0.5 block text-[11px] text-mute-soft">
           {step.detail}
           {step.overridden ? <span className="ml-1.5 font-medium text-warning-text">· Marked by hand</span> : null}
@@ -316,8 +225,8 @@ function OptionalRow({ step }: { step: SetupStep }) {
 /**
  * "Set up your building", the lower part of the Dashboard's to-do card. Every
  * step ticks itself from real rows (see setup-guide.ts); nothing here is
- * checked off by hand. The ring counts only the required steps; the optional
- * extras sit in their own group at the bottom and never hold the ring back.
+ * checked off by hand. The progress counts only the required steps; the optional
+ * extras sit in their own group at the bottom and never hold it back.
  * "Skip for now" hides the guide for the whole association.
  */
 export function SetupGuidePanel({
@@ -326,111 +235,107 @@ export function SetupGuidePanel({
   done,
   total,
   readOnly = false,
+  notices = null,
 }: {
   sections: SetupSection[];
   activeStepKey: string | null;
   done: number;
   total: number;
   readOnly?: boolean;
+  /** The urgent notices, shown right under the header. */
+  notices?: ReactNode;
 }) {
   const [pending, start] = useTransition();
   const [error, setError] = useState<string | null>(null);
   const [collapsed, setCollapsed] = useState<Record<string, boolean>>({});
-  const [folded, setFolded] = useState(false);
   // null = not touched yet: open until every optional extra is done.
   const [optionalFolded, setOptionalFolded] = useState<boolean | null>(null);
   const dialogRef = useRef<HTMLDialogElement>(null);
+  const bodyRef = useRef<HTMLDivElement>(null);
+  const [moreBelow, setMoreBelow] = useState(false);
+  // Whether the steps run past the bottom of the box: a fade and a "More steps below" button say so.
+  useEffect(() => {
+    const el = bodyRef.current;
+    if (!el) return;
+    const measure = () => setMoreBelow(el.scrollHeight - el.scrollTop - el.clientHeight > 8);
+    measure();
+    el.addEventListener("scroll", measure, { passive: true });
+    const ro = new ResizeObserver(measure);
+    ro.observe(el);
+    for (const child of Array.from(el.children)) ro.observe(child);
+    return () => {
+      el.removeEventListener("scroll", measure);
+      ro.disconnect();
+    };
+  }, [sections, collapsed, optionalFolded]);
   const pct = total > 0 ? Math.round((done / total) * 100) : 0;
   const optional = sections.flatMap((sec) => sec.steps.filter(isOptional));
   const optionalDone = optional.filter((st) => st.done).length;
   const optionalIsFolded = optionalFolded ?? (optional.length > 0 && optionalDone === optional.length);
-  const next = sections.flatMap((sec) => sec.steps).find((st) => st.key === activeStepKey) ?? null;
 
   return (
     <ReadOnlyContext.Provider value={readOnly}>
-    <section id="setup-guide" aria-labelledby="setup-guide-title" className="flex min-h-0 flex-1 scroll-mt-20 flex-col border-t border-line">
-      <div
-        onClick={() => setFolded((f) => !f)}
-        className={`flex shrink-0 cursor-pointer flex-wrap items-center justify-between gap-x-3 gap-y-1 hover:bg-ink/[0.11] ${SECTION_HEADER}`}
-      >
-        <button
-          type="button"
-          onClick={(e) => {
-            e.stopPropagation();
-            setFolded((f) => !f);
-          }}
-          aria-expanded={!folded}
-          aria-controls="setup-guide-body"
-          className="-my-1 flex min-h-[32px] items-center gap-2 rounded text-left uppercase hover:text-ink-mid focus-visible:outline focus-visible:outline-2 focus-visible:outline-brass"
-        >
-          <ChevronDown
-            size={15}
-            strokeWidth={2}
-            aria-hidden="true"
-            className={`shrink-0 motion-safe:transition-transform ${folded ? "-rotate-90" : ""}`}
-          />
-          <h3 id="setup-guide-title">Set up your building</h3>
-        </button>
-        <div className="flex items-center gap-2 normal-case tracking-normal">
+    <section id="setup-guide" aria-labelledby="setup-guide-title" className="flex min-h-0 flex-1 scroll-mt-20 flex-col">
+      <header className="flex shrink-0 flex-col gap-2.5 rounded-t-[7px] band bg-ink px-5 py-3">
+        <div className="flex min-h-[2.5rem] items-center justify-between gap-3">
+        <div className="min-w-0">
+          <h2 id="setup-guide-title" className="eyebrow text-paper">
+            Set up your building
+          </h2>
+          <p className="mt-0.5 text-[12px] text-ondark-mute">
+            <span className="figures font-semibold text-paper">{pct}%</span> done · {done} of {total} steps
+          </p>
+        </div>
+        <div className="flex shrink-0 items-center gap-3">
           <button
             type="button"
-            onClick={(e) => {
-              e.stopPropagation();
-              dialogRef.current?.showModal();
-            }}
+            onClick={() => dialogRef.current?.showModal()}
             aria-label="Expand the setup guide"
             title="See every step in detail"
-            className="flex h-7 w-7 items-center justify-center rounded-md text-mute hover:bg-paper hover:text-ink"
+            className="flex h-7 w-7 items-center justify-center rounded-md text-ondark-mute hover:bg-paper/10 hover:text-paper"
           >
             <Maximize2 size={14} strokeWidth={1.6} aria-hidden="true" />
           </button>
           {readOnly ? null : (
-          <button
-            type="button"
-            disabled={pending}
-            onClick={(e) => {
-              e.stopPropagation();
-              start(async () => {
-                setError(null);
-                const result = await dismissSetupGuide();
-                if (result.error) setError(result.error);
-              });
-            }}
-            className="text-[12px] font-normal text-mute underline-offset-2 hover:text-ink hover:underline disabled:opacity-50"
-          >
-            {pending ? "Hiding…" : "Skip for now"}
-          </button>
+            <button
+              type="button"
+              disabled={pending}
+              onClick={() =>
+                start(async () => {
+                  setError(null);
+                  const result = await dismissSetupGuide();
+                  if (result.error) setError(result.error);
+                })
+              }
+              className="text-[12px] font-normal text-ondark-mute underline-offset-2 hover:text-paper hover:underline disabled:opacity-50"
+            >
+              {pending ? "Hiding…" : "Skip for now"}
+            </button>
           )}
-          <ShowHide shown={!folded} />
         </div>
-      </div>
-
-      {/* Folded, this row stays: the ring, the count, and the one thing to do next. */}
-      <div className={`flex shrink-0 flex-wrap items-center gap-x-5 gap-y-2 px-5 py-2.5 ${folded ? "" : "border-b border-line"}`}>
-        <div className="flex min-w-0 items-center gap-4">
-          <CompletionRing pct={pct} />
-          <div className="min-w-0">
-            <p className="text-[15px] font-bold tracking-tight text-ink">
-              {pct >= 100 ? "Required setup is done" : `${pct}% set up`}
-            </p>
-            <p className="text-[12px] text-mute">
-              {done} of {total} required steps
-            </p>
-          </div>
         </div>
-        {next ? (
-          <div className="flex min-w-0 flex-1 items-center justify-between gap-3 rounded-lg border border-line bg-bone/50 py-2 pl-4 pr-2.5 sm:ml-auto sm:max-w-[28rem]">
-            <span className="min-w-0">
-              <span className="block text-[10px] font-semibold uppercase tracking-[0.06em] text-section-label">Next up</span>
-              <span className="block truncate text-[13px] font-medium text-ink">{next.name}</span>
-            </span>
-            <GoButton href={next.href} label={next.name} primary />
-          </div>
-        ) : null}
-        {error ? <p className="w-full text-[12px] text-bad-text">{error}</p> : null}
-      </div>
+        <div
+          role="progressbar"
+          aria-label="Setup progress"
+          aria-valuemin={0}
+          aria-valuemax={100}
+          aria-valuenow={pct}
+          className="h-2 overflow-hidden rounded-full bg-paper/15"
+        >
+          <div className="h-full rounded-full bg-brass motion-safe:transition-[width] motion-safe:duration-500" style={{ width: `${pct}%` }} />
+        </div>
+      </header>
 
-      <div id="setup-guide-body" hidden={folded} className="max-h-[22rem] min-h-0 flex-1 divide-y divide-line overflow-y-auto lg:max-h-none">
+      {notices}
+
+      {error ? <p className="shrink-0 border-b border-line px-5 py-2 text-[12px] text-bad-text">{error}</p> : null}
+
+      <div className="relative flex min-h-0 flex-1 flex-col">
+      <div
+        id="setup-guide-body"
+        ref={bodyRef}
+        className="max-h-[22rem] min-h-0 flex-1 divide-y divide-line overflow-y-auto lg:max-h-none"
+      >
         {sections.map((section, i) => {
           const counts = sectionCounts(section);
           const complete = counts.done === counts.total;
@@ -507,6 +412,20 @@ export function SetupGuidePanel({
           </div>
         ) : null}
       </div>
+      {moreBelow ? (
+        <>
+          <div aria-hidden="true" className="pointer-events-none absolute inset-x-0 bottom-0 h-16 bg-gradient-to-t from-paper via-paper/80 to-transparent" />
+          <button
+            type="button"
+            onClick={() => bodyRef.current?.scrollBy({ top: bodyRef.current.clientHeight * 0.8, behavior: "smooth" })}
+            className="absolute bottom-2 left-1/2 flex -translate-x-1/2 items-center gap-1 rounded-full bg-ink px-3 py-1 text-[11px] font-medium text-paper shadow-md hover:bg-ink-mid focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-brass"
+          >
+            More steps below
+            <ChevronDown size={13} strokeWidth={2.2} aria-hidden="true" />
+          </button>
+        </>
+      ) : null}
+      </div>
     </section>
 
     {/* Native <dialog>: showModal() gives Esc-to-close, a focus trap and a backdrop. */}
@@ -552,31 +471,45 @@ export function SetupGuidePanel({
         <div className="min-h-0 flex-1 space-y-8 overflow-y-auto px-6 py-6">
           {sections.map((section, i) => {
             const counts = sectionCounts(section);
+            const complete = counts.done === counts.total;
+            // Same rule as the card: a finished step closes itself, and can be opened again.
+            const foldKey = `detail:${section.key}:${complete ? "done" : "open"}`;
+            const isCollapsed = collapsed[foldKey] ?? complete;
             return (
               <section key={section.key}>
-                <div className="flex items-baseline justify-between gap-3">
-                  <div>
-                    <span className="text-[10px] font-medium uppercase tracking-[0.07em] text-section-label">
-                      Step {i + 1}
+                <button
+                  type="button"
+                  onClick={() => setCollapsed((c) => ({ ...c, [foldKey]: !isCollapsed }))}
+                  aria-expanded={!isCollapsed}
+                  className="flex w-full items-baseline justify-between gap-3 text-left"
+                >
+                  <span className="flex items-baseline gap-2">
+                    <FoldChevron open={!isCollapsed} />
+                    <span>
+                      <span className="block text-[10px] font-medium uppercase tracking-[0.07em] text-section-label">
+                        Step {i + 1}
+                      </span>
+                      <span className="block text-[17px] font-bold tracking-tight text-ink">{section.title}</span>
                     </span>
-                    <h3 className="text-[17px] font-bold tracking-tight text-ink">{section.title}</h3>
-                  </div>
+                  </span>
                   <span
                     className={`shrink-0 rounded-full px-2 py-0.5 text-[11px] ${
-                      counts.done === counts.total
-                        ? "border border-good-line bg-good-tint text-good-text"
-                        : "bg-fill text-mute"
+                      complete ? "border border-good-line bg-good-tint text-good-text" : "bg-fill text-mute"
                     }`}
                   >
                     {counts.done} of {counts.total}
                   </span>
-                </div>
-                <p className="mt-1 text-[13px] text-mute">{section.blurb}</p>
-                <ul className="mt-3 grid gap-3 md:grid-cols-2">
-                  {section.steps.map((step) => (
-                    <DetailedStep key={step.key} step={step} isNext={step.key === activeStepKey} />
-                  ))}
-                </ul>
+                </button>
+                {isCollapsed ? null : (
+                  <>
+                    <p className="mt-1 text-[13px] text-mute">{section.blurb}</p>
+                    <ul className="mt-3 grid gap-3 md:grid-cols-2">
+                      {section.steps.map((step) => (
+                        <DetailedStep key={step.key} step={step} isNext={step.key === activeStepKey} />
+                      ))}
+                    </ul>
+                  </>
+                )}
               </section>
             );
           })}

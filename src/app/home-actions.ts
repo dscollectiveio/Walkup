@@ -62,6 +62,26 @@ export async function dismissSetupGuide() {
   return { ok: true };
 }
 
+/** Brings the setup guide back after "Skip for now". Board admin only, like hiding it. */
+export async function restoreSetupGuide() {
+  const supabase = await createClient();
+  const { data: associations } = await supabase.from("associations").select("id").limit(1);
+  const associationId = associations?.[0]?.id;
+  if (!associationId) return { error: "No association is visible to you." };
+
+  const { data, error } = await supabase
+    .from("associations")
+    .update({ setup_dismissed_at: null })
+    .eq("id", associationId)
+    .select("id");
+
+  if (error) return { error: error.message };
+  if (!data || data.length === 0) return { error: "Only a board admin can bring the setup guide back." };
+
+  revalidatePath("/");
+  return { ok: true };
+}
+
 /**
  * Ticks a setup step by hand ("done"), unticks one that ticked itself
  * ("not_done"), or returns it to following the data ("auto"). Stored on the

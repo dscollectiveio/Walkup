@@ -879,7 +879,7 @@ export default async function HomePage() {
       ) : null}
 
       {/* Where the association stands first, then To-do and setup (Worth a minute, then setup), half and half. */}
-      <div className="grid items-stretch gap-4 lg:h-[39rem] lg:grid-cols-2">
+      <div className="grid items-stretch gap-4 lg:grid-cols-2">
         <Standing
           totalCents={totalCents}
           operatingCents={operatingCents}
@@ -890,7 +890,7 @@ export default async function HomePage() {
           source={bankCash ? "bank" : "books"}
           booksGap={booksGap}
         />
-        <div className="flex min-h-0 min-w-0 flex-col gap-4">
+        <div className="flex min-h-0 min-w-0 flex-col gap-4 lg:h-0 lg:min-h-full">
           <TodoCard
             items={urgent}
             emptyNote={
@@ -898,16 +898,20 @@ export default async function HomePage() {
                 ? "The books balance and every unit is current."
                 : "No activity has been recorded yet, so there's nothing to flag."
             }
+            canRestoreSetup={canSetTarget && !isSetupComplete(setupSections) && association.setup_dismissed_at !== null}
             setup={
-              showSetupGuide ? (
-                <SetupGuidePanel
-                  sections={setupSections}
-                  activeStepKey={nextStep(setupSections)?.key ?? null}
-                  done={setupCounts.done}
-                  total={setupCounts.total}
-                  readOnly={!canSetTarget}
-                />
-              ) : null
+              showSetupGuide
+                ? (notices) => (
+                    <SetupGuidePanel
+                      sections={setupSections}
+                      activeStepKey={nextStep(setupSections)?.key ?? null}
+                      done={setupCounts.done}
+                      total={setupCounts.total}
+                      readOnly={!canSetTarget}
+                      notices={notices}
+                    />
+                  )
+                : null
             }
           />
           {showSetupGuide ? null : (

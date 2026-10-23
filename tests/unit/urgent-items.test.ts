@@ -61,7 +61,7 @@ describe("urgentItems — Worth a minute today", () => {
       severity: 1,
       tone: "bad",
       title: "Walkup couldn't send your last email",
-      why: "Walkup's email service needs attention. Reminders are paused. Email support@walkuphoa.com.",
+      why: "Reminders are paused. Email support@walkuphoa.com.",
       action: { label: "Check", href: "/dues/email" },
     });
     expect(items[1]).toMatchObject({
@@ -73,7 +73,7 @@ describe("urgentItems — Worth a minute today", () => {
     });
     expect(items[2]).toMatchObject({
       title: "1 owner didn't get an email (bounced)",
-      why: "Their address may be wrong. Fix it so reminders reach them.",
+      why: "Their address may be wrong. Fix it so reminders arrive.",
       action: { label: "See who", href: "/dues/email" },
     });
   });
@@ -173,7 +173,7 @@ describe("urgentItems — Worth a minute today", () => {
         key: "repairs_emergency",
         tone: "bad",
         title: "1 emergency problem open",
-        why: "Reported as an emergency: Water pouring through the ceiling. Check someone is on it.",
+        why: "Water pouring through the ceiling. Make sure someone is on it.",
         action: { label: "Open it", href: "/maintenance/abc" },
       });
     });

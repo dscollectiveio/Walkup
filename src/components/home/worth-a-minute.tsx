@@ -1,8 +1,8 @@
 import Link from "next/link";
 import {
-  ArrowRight,
   BarChart3,
   CalendarClock,
+  ChevronRight,
   CircleCheck,
   FileSearch,
   Hammer,
@@ -23,7 +23,6 @@ import {
 } from "lucide-react";
 import type { UrgentItem } from "@/lib/home/urgent-items";
 import { WorthCarousel } from "./worth-carousel";
-import { FoldSection } from "./fold-section";
 
 const ICONS: Record<UrgentItem["key"], LucideIcon> = {
   books: Scale,
@@ -67,28 +66,13 @@ const TONE = {
 
 /**
  * "Worth a minute today": the few conditions that most need a board member,
- * as the top subsection of the Dashboard's to-do card (todo-card.tsx). Small
- * cards scroll sideways, two at a time; none are dropped. With nothing to
+ * at the top of the Dashboard's to-do card (todo-card.tsx), with no header of
+ * its own. Small cards scroll sideways; none are dropped. With nothing to
  * flag it says so in one quiet line.
  */
 export function WorthAMinute({ items, emptyNote }: { items: UrgentItem[]; emptyNote: string }) {
-  const needsAttention = items.filter((i) => i.tone === "bad").length;
-
   return (
-    <FoldSection
-      id="worth-a-minute"
-      title="Worth a minute today"
-      summary={
-        items.length > 0 ? (
-          <span className="text-[11px] font-medium normal-case tracking-normal text-mute">
-            {items.length} to look at
-            {needsAttention > 0 ? (
-              <span className="text-bad-text"> · {needsAttention} need{needsAttention === 1 ? "s" : ""} attention</span>
-            ) : null}
-          </span>
-        ) : null
-      }
-    >
+    <section id="worth-a-minute" aria-label="Worth a minute today">
       {items.length === 0 ? (
         <div className="flex items-center gap-3 px-5 py-3">
           <span
@@ -110,45 +94,35 @@ export function WorthAMinute({ items, emptyNote }: { items: UrgentItem[]; emptyN
       ) : (
         <WorthCarousel count={items.length}>
           {items.map((item) => (
-            <li key={`${item.key}-${item.title}`} className="flex min-w-0 max-w-full shrink-0 grow-0 basis-full snap-start">
+            <li key={`${item.key}-${item.title}`} className="flex min-w-0 max-w-full shrink-0 grow-0 basis-[calc(50%-0.25rem)] snap-start">
               <ItemCard item={item} />
             </li>
           ))}
         </WorthCarousel>
       )}
-    </FoldSection>
+    </section>
   );
 }
 
-/** One flag as a slim row: icon and two short lines on the left, the button to the issue on the right. */
+/**
+ * One flag, styled like the books notice on "Where the association stands": a single tinted line with a small
+ * icon, the title and the reason, and an arrow. The whole line is the link to the issue.
+ */
 function ItemCard({ item }: { item: UrgentItem }) {
   const Icon = ICONS[item.key];
   const tone = TONE[item.tone];
   return (
-    <article className="relative flex w-full min-w-0 max-w-full items-center gap-2.5 overflow-hidden rounded-lg border border-line bg-bone/50 py-1 pl-3.5 pr-1.5">
-      <span aria-hidden="true" className={`absolute inset-y-0 left-0 w-[3px] ${tone.accent}`} />
-      <span
-        aria-hidden="true"
-        className={`flex h-7 w-7 shrink-0 items-center justify-center rounded-md border ${tone.tile}`}
-      >
-        <Icon size={14} strokeWidth={1.6} />
+    <Link
+      href={item.action.href}
+      aria-label={`${tone.label}: ${item.title}. ${item.action.label}`}
+      className={`flex min-h-[3.75rem] w-full min-w-0 max-w-full items-center gap-2 rounded-md border px-3 py-2 text-[12px] font-medium hover:brightness-[0.98] ${tone.tile}`}
+    >
+      <Icon size={16} strokeWidth={2} aria-hidden="true" className="shrink-0" />
+      <span className="min-w-0 flex-1" title={`${item.title}. ${item.why}`}>
+        <span className="block truncate font-semibold">{item.title}</span>
+        <span className="line-clamp-2 font-normal leading-snug opacity-80">{item.why}</span>
       </span>
-      <div className="min-w-0 flex-1">
-        <h4 className="truncate text-[13px] font-semibold leading-snug text-ink" title={item.title}>
-          <span className="sr-only">{tone.label}: </span>
-          {item.title}
-        </h4>
-        <p className="truncate text-[11.5px] leading-snug text-mute" title={item.why}>
-          {item.why}
-        </p>
-      </div>
-      <Link
-        href={item.action.href}
-        className={`inline-flex min-h-[30px] shrink-0 items-center justify-center gap-1.5 whitespace-nowrap rounded-md px-2.5 text-[12px] font-medium transition-colors ${tone.button} ${item.tone === "bad" ? "nudge-needed" : ""}`}
-      >
-        {item.action.label}
-        <ArrowRight size={13} strokeWidth={1.8} aria-hidden="true" />
-      </Link>
-    </article>
+      <ChevronRight size={14} strokeWidth={2} aria-hidden="true" className="shrink-0" />
+    </Link>
   );
 }

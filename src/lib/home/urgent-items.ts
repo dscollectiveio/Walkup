@@ -97,11 +97,11 @@ const plural = (n: number, one: string, many = `${one}s`) => `${n} ${n === 1 ? o
 function insuranceTaskWhy(key: string, tone: "attention" | "bad"): string {
   if (key.startsWith("read:")) {
     return tone === "bad"
-      ? "Open it to see why. You can try again or type the figures in yourself."
-      : "Nothing is saved until a board member checks the figures.";
+      ? "Open it to retry or type the figures in."
+      : "Check the figures before they are saved.";
   }
-  if (key === "owner_requests") return "Lenders ask owners for it. Your agent sends the certificate; Walkup drafts the request.";
-  return "Owners read it to know what their own condo policy has to cover.";
+  if (key === "owner_requests") return "Your agent sends the certificate. Walkup drafts the request.";
+  return "Owners use it to set their own coverage.";
 }
 
 export function urgentItems(input: UrgentInputs): UrgentItem[] {
@@ -117,8 +117,8 @@ export function urgentItems(input: UrgentInputs): UrgentItem[] {
       severity: 0,
       title: `${plural(n, "emergency problem")} open`,
       why: emergency.firstTitle
-        ? `Reported as an emergency: ${emergency.firstTitle}. Check someone is on it.`
-        : "Reported as an emergency. Check someone is on it.",
+        ? `${emergency.firstTitle}. Make sure someone is on it.`
+        : "Make sure someone is on it.",
       action: { label: "Open it", href: n === 1 && emergency.firstId ? `/maintenance/${emergency.firstId}` : "/repairs?view=problems" },
       tone: "bad",
     });
@@ -129,7 +129,7 @@ export function urgentItems(input: UrgentInputs): UrgentItem[] {
       key: "repairs_possible_emergency",
       severity: 1,
       title: `${plural(n, "report")} may be an emergency`,
-      why: "Suggested by AI from the report. Check and mark it, or dismiss it.",
+      why: "AI flagged it. Confirm or dismiss.",
       action: { label: "Check", href: "/repairs?view=problems" },
       tone: "warning",
     });
@@ -140,7 +140,7 @@ export function urgentItems(input: UrgentInputs): UrgentItem[] {
       key: "repairs_urgent",
       severity: 1,
       title: `${plural(n, "urgent problem")} open`,
-      why: `Marked "Urgent" by whoever reported ${n === 1 ? "it" : "them"}.`,
+      why: "Marked urgent by the reporter.",
       action: { label: n === 1 ? "See it" : "See them", href: "/repairs?view=problems&priority=urgent" },
       tone: "bad",
     });
@@ -151,7 +151,7 @@ export function urgentItems(input: UrgentInputs): UrgentItem[] {
       key: "repairs_overdue",
       severity: 2,
       title: `${plural(n, "problem")} past ${n === 1 ? "its" : "their"} target date`,
-      why: "The date the board set for each fix has passed and it's still open.",
+      why: "Still open after the target date.",
       action: { label: n === 1 ? "See it" : "See them", href: "/repairs?view=problems&sort=due" },
       tone: "warning",
     });
@@ -162,7 +162,7 @@ export function urgentItems(input: UrgentInputs): UrgentItem[] {
       key: "upkeep_overdue",
       severity: 2,
       title: upkeep.count === 1 && upkeep.firstName ? `${upkeep.firstName} is overdue` : `${upkeep.count} upkeep jobs are overdue`,
-      why: "Overdue upkeep is easier to fix before it becomes a repair.",
+      why: "Cheaper to fix before it becomes a repair.",
       action: { label: "Open upkeep", href: "/repairs?view=upkeep&show=overdue" },
       tone: "warning",
     });
@@ -175,7 +175,7 @@ export function urgentItems(input: UrgentInputs): UrgentItem[] {
       key: "access_ending",
       severity: 2,
       title: ending.count === 1 ? `${name}'s access ends ${when}` : `${ending.count} people's access ends soon`,
-      why: "Access that is time-boxed lapses on its own. Give another 90 days from Building & Owners if they still need it.",
+      why: "It lapses on its own. Extend 90 days if still needed.",
       action: { label: "Open Building & Owners", href: "/building#units-and-people" },
       tone: "warning",
     });
@@ -194,7 +194,7 @@ export function urgentItems(input: UrgentInputs): UrgentItem[] {
             ? `${name}'s term as ${pos} has ended`
             : `${name}'s term as ${pos} ends ${when}`
           : `${term.count} officer terms end soon`,
-      why: "Use Change of board to hand the office to the next person, or set a new term end.",
+      why: "Hand off the office or set a new term end.",
       action: { label: "Open People & Access", href: "/access" },
       tone: "warning",
     });
@@ -208,7 +208,7 @@ export function urgentItems(input: UrgentInputs): UrgentItem[] {
         paperwork.expired === 1 && paperwork.firstName
           ? `${paperwork.firstName}'s ${paperwork.firstKind === "license" ? "license" : "insurance certificate"} has expired`
           : `${paperwork.expired} contractors have expired paperwork`,
-      why: "If an uninsured contractor is hurt on the property, the association may be exposed. Ask for a current certificate.",
+      why: "Ask for a current certificate.",
       action: { label: "Ask for certificates", href: "/repairs?view=contractors" },
       tone: "warning",
     });
@@ -219,7 +219,7 @@ export function urgentItems(input: UrgentInputs): UrgentItem[] {
       key: "books",
       severity: 0,
       title: "The two sides of the books don't match",
-      why: "Every transaction is recorded twice. When the sides disagree, a record is wrong somewhere, and everything downstream inherits it.",
+      why: "A record is wrong somewhere. Find it before statements go out.",
       action: { label: "See every transaction", href: "/ledger" },
       tone: "bad",
     });
@@ -245,7 +245,7 @@ export function urgentItems(input: UrgentInputs): UrgentItem[] {
       key: "delinquent",
       severity: 1,
       title: `${u.label} is ${u.lateness}: ${money(u.overdue)}`,
-      why: "Unpaid dues hurt cash flow. Collections shows who is behind and what has been sent.",
+      why: "See who is behind in Collections.",
       action: { label: "Open Collections", href: "/dues#collections" },
       tone: "bad",
     });
@@ -258,7 +258,7 @@ export function urgentItems(input: UrgentInputs): UrgentItem[] {
       key: "delinquent",
       severity: 1,
       title: `${behind.length} units are behind on dues: ${money(total)}`,
-      why: `${listed}. Unpaid dues hurt cash flow. Collections shows who is behind and what has been sent.`,
+      why: `${listed}. See Collections.`,
       action: { label: "Open Collections", href: "/dues#collections" },
       tone: "bad",
     });
@@ -269,7 +269,7 @@ export function urgentItems(input: UrgentInputs): UrgentItem[] {
       key: "w9",
       severity: 2,
       title: `${input.vendorsMissingW9} contractor${input.vendorsMissingW9 === 1 ? "" : "s"} still owe${input.vendorsMissingW9 === 1 ? "s" : ""} you a W-9`,
-      why: "You need one on file to issue their 1099-NEC in January. Easier to collect now than over the holidays.",
+      why: "Needed for their 1099-NEC in January.",
       action: { label: "Request W-9s", href: "/repairs?view=contractors" },
       tone: "warning",
     });
@@ -284,7 +284,7 @@ export function urgentItems(input: UrgentInputs): UrgentItem[] {
       key: "insurance",
       severity: 2,
       title: `${coverageShort(renewal.policy.coverage)} renews in ${d} day${d === 1 ? "" : "s"}`,
-      why: "A good time to check the renewal terms and ask for another quote to compare.",
+      why: "Check the terms and compare quotes.",
       action: { label: "Get quotes", href: "/insurance?view=quotes&new=1" },
       tone: "warning",
     });
@@ -313,8 +313,8 @@ export function urgentItems(input: UrgentInputs): UrgentItem[] {
           : `${over.length} categories are over budget`,
       why:
         over.length === 1
-          ? "So far this year. Catching it now leaves room to trim or move money before it needs a special assessment."
-          : `${lead.name} leads at ${money(lead.overCents / 100)} so far this year. Catching it now leaves room to adjust.`,
+          ? "So far this year. Trim or move money now."
+          : `${lead.name} leads at ${money(lead.overCents / 100)} so far this year.`,
       action: { label: "See the budget", href: "/budget" },
       tone: "warning",
     });
@@ -325,7 +325,7 @@ export function urgentItems(input: UrgentInputs): UrgentItem[] {
       key: "bank",
       severity: 3,
       title: "The bank account isn't connected yet",
-      why: "Connecting it brings transactions in automatically. Read-only: nothing can move money.",
+      why: "Read-only. Transactions come in automatically.",
       action: { label: "Connect the bank", href: "/bank-feed" },
       tone: "warning",
     });
@@ -339,7 +339,7 @@ export function urgentItems(input: UrgentInputs): UrgentItem[] {
         key: "sync",
         severity: 2,
         title: `The bank hasn't synced in ${staleDays} days`,
-        why: "New transactions aren't reaching the books. If the bank wants a fresh sign-in, the bank feed has a Reconnect button.",
+        why: "New transactions aren't arriving. Try Reconnect in the bank feed.",
         action: { label: "Open the bank feed", href: "/bank-feed" },
         tone: "warning",
       });
@@ -352,7 +352,7 @@ export function urgentItems(input: UrgentInputs): UrgentItem[] {
       key: "email_key_rejected",
       severity: 1,
       title: "Walkup couldn't send your last email",
-      why: `Walkup's email service needs attention. Reminders are paused. Email ${SUPPORT_EMAIL}.`,
+      why: `Reminders are paused. Email ${SUPPORT_EMAIL}.`,
       action: { label: "Check", href: "/dues/email" },
       tone: "bad",
     });
@@ -372,7 +372,7 @@ export function urgentItems(input: UrgentInputs): UrgentItem[] {
       key: "email_bounced",
       severity: 2,
       title: `${plural(mail.bounced, "owner")} didn't get an email (bounced)`,
-      why: "Their address may be wrong. Fix it so reminders reach them.",
+      why: "Their address may be wrong. Fix it so reminders arrive.",
       action: { label: "See who", href: "/dues/email" },
       tone: "warning",
     });

@@ -1,4 +1,4 @@
-// "Right now" tiles for the Where-the-association-stands card. Every tile is
+// "Status Check" tiles for the Where-the-association-stands card. Every tile is
 // either a real figure from the records or an honest nudge to set the thing
 // up, never a placeholder number. Pure, so the wording and thresholds are
 // testable.

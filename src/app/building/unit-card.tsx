@@ -73,6 +73,35 @@ export function UnitCard({
     if (state && "ok" in state && state.ok) setEditing(false);
   }
 
+  const deleteControl = canDelete ? (
+    confirming ? (
+      <span className="flex items-center gap-2">
+        <button
+          type="button"
+          disabled={deletePending}
+          onClick={() =>
+            startDelete(async () => {
+              setDeleteError(null);
+              const result = await deleteUnit(unit.id);
+              if (result.error) setDeleteError(result.error);
+              else setConfirming(false);
+            })
+          }
+          className="rounded-md border border-bad-line bg-bad-tint px-2.5 py-1 text-[11px] font-medium text-bad-text"
+        >
+          {deletePending ? "Deleting…" : "Confirm delete"}
+        </button>
+        <button type="button" onClick={() => setConfirming(false)} className="text-[12px] text-mute underline-offset-2 hover:underline">
+          Cancel
+        </button>
+      </span>
+    ) : (
+      <button type="button" onClick={() => setConfirming(true)} className="text-[12px] text-bad-text underline-offset-2 hover:underline">
+        Delete unit
+      </button>
+    )
+  ) : null;
+
   if (editing) {
     const formId = `edit-${unit.id}`;
     return (
@@ -131,6 +160,22 @@ export function UnitCard({
             <p className="border-l-[3px] border-bad bg-bad-tint px-3 py-2 text-[13px] text-bad-text">{state.error}</p>
           ) : null}
         </form>
+        {fieldsHidden ? null : (
+          <div className="space-y-2 border-t border-line bg-paper px-4 py-3">
+            <div className="flex flex-wrap items-center justify-end gap-3">
+              {deleteControl}
+              <button
+                type="submit"
+                form={formId}
+                disabled={pending}
+                className="inline-flex min-h-[32px] shrink-0 items-center rounded-md bg-ink px-4 text-[12px] font-medium text-paper hover:bg-ink-mid disabled:opacity-50"
+              >
+                {pending ? "Saving…" : "Save"}
+              </button>
+            </div>
+            {deleteError ? <p className="text-right text-[11px] text-bad-text">{deleteError}</p> : null}
+          </div>
+        )}
         {fieldsHidden && state && "error" in state && state.error ? (
           <p className="border-t border-bad bg-bad-tint px-3 py-2 text-[13px] text-bad-text">{state.error}</p>
         ) : null}
@@ -267,34 +312,7 @@ export function UnitCard({
                     Add a person
                   </button>
                 ) : <span />}
-                {canDelete ? (
-                  confirming ? (
-                    <span className="flex items-center gap-2">
-                      <button
-                        type="button"
-                        disabled={deletePending}
-                        onClick={() =>
-                          startDelete(async () => {
-                            setDeleteError(null);
-                            const result = await deleteUnit(unit.id);
-                            if (result.error) setDeleteError(result.error);
-                            else setConfirming(false);
-                          })
-                        }
-                        className="rounded-md border border-bad-line bg-bad-tint px-2.5 py-1 text-[11px] font-medium text-bad-text"
-                      >
-                        {deletePending ? "Deleting…" : "Confirm delete"}
-                      </button>
-                      <button type="button" onClick={() => setConfirming(false)} className="text-[12px] text-mute underline-offset-2 hover:underline">
-                        Cancel
-                      </button>
-                    </span>
-                  ) : (
-                    <button type="button" onClick={() => setConfirming(true)} className="text-[12px] text-bad-text underline-offset-2 hover:underline">
-                      Delete unit
-                    </button>
-                  )
-                ) : null}
+                {deleteControl}
               </div>
               {deleteError ? <p className="text-[11px] text-bad-text">{deleteError}</p> : null}
             </div>
