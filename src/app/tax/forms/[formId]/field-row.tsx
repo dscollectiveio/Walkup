@@ -30,7 +30,7 @@ export interface FieldView {
 /** What the field actions answer: an error, or saved — sometimes with a warning that the calculated lines couldn't refresh. */
 type ActionResult = { error?: string; warning?: string };
 
-const btn = "min-h-[36px] rounded-md border border-line-strong bg-paper px-3 text-[12px] font-medium text-ink hover:bg-fill disabled:opacity-50";
+const btn = "min-h-[44px] rounded-md border border-line-strong bg-paper px-3 text-[12px] font-medium text-ink hover:bg-fill disabled:opacity-50 sm:min-h-[36px]";
 
 /** Mirrors fillForm's reading of a checkbox value (lib/tax/pdf), so the page and the PDF agree on what "checked" means. */
 const TRUTHY = new Set(["true", "yes", "x", "1", "on"]);
@@ -96,11 +96,11 @@ export function FieldRow({ field, canEdit, locked }: { field: FieldView; canEdit
         <div className="min-w-0">
           <div className="text-[13px] font-medium text-ink">{field.label}</div>
           {field.hint ? <p className="mt-0.5 text-[12px] text-mute">{field.hint}</p> : null}
-          <div className="mt-0.5 text-[11px] text-mute-soft">
+          <div className="mt-0.5 break-words text-[12px] text-mute-soft">
             {field.citation ? `${field.citation} · ` : ""}
-            <span className="font-mono">{field.pdfFieldName}</span>
+            <span className="break-all font-mono">{field.pdfFieldName}</span>
           </div>
-          <div className="mt-1 text-[12px] text-mute">
+          <div className="mt-1 break-words text-[12px] text-mute">
             {field.sourceHref ? (
               <a href={field.sourceHref} className="underline underline-offset-2">{field.sourceLine}</a>
             ) : (
@@ -110,7 +110,7 @@ export function FieldRow({ field, canEdit, locked }: { field: FieldView; canEdit
         </div>
         <div className="text-right">
           {editing ? (
-            <div className="flex items-center gap-2">
+            <div className="flex flex-wrap items-center justify-end gap-2">
               <label className="sr-only" htmlFor={`v-${field.id}`}>{field.label}</label>
               <input
                 id={`v-${field.id}`}
@@ -118,19 +118,19 @@ export function FieldRow({ field, canEdit, locked }: { field: FieldView; canEdit
                 onChange={(e) => setValue(e.target.value)}
                 inputMode={field.kind === "money" ? "decimal" : undefined}
                 placeholder={field.kind === "money" ? "0.00" : field.kind === "date" ? "MM/DD/YYYY" : undefined}
-                className="figures min-h-[36px] w-40 rounded-lg border border-line-strong bg-paper px-2 text-[13px] text-ink"
+                className="figures min-h-[44px] w-40 max-w-full rounded-lg border border-line-strong bg-paper px-2 text-[16px] text-ink sm:min-h-[36px] sm:text-[13px]"
               />
               <button type="button" disabled={pending} onClick={() => run(() => editField(field.id, value))} className={btn}>
                 Save
               </button>
             </div>
           ) : (
-            <div className="figures text-[15px] text-ink">{shown}</div>
+            <div className={`figures text-[15px] text-ink ${field.kind === "money" ? "whitespace-nowrap" : "break-words"}`}>{shown}</div>
           )}
           {calculated ? (
-            <div className="text-[11px] text-mute">Calculated</div>
+            <div className="text-[12px] text-mute">Calculated</div>
           ) : field.confirmed && !editing ? (
-            <div className="text-[11px] text-good-text">Confirmed</div>
+            <div className="text-[12px] text-good-text">Confirmed</div>
           ) : null}
         </div>
       </div>

@@ -413,12 +413,12 @@ export default async function BudgetPage({ searchParams }: { searchParams: Promi
               <li key={`${e.entry_date}-${i}`} className="flex items-baseline gap-3 py-1.5">
                 <span className="figures w-16 shrink-0 text-mute">{shortDate(e.entry_date, todayIso)}</span>
                 <span className="min-w-0 flex-1 truncate text-ink">{e.memo}</span>
-                <span className="figures shrink-0 text-ink">{dollars(e.cents)}</span>
+                <span className="figures shrink-0 whitespace-nowrap text-ink">{dollars(e.cents)}</span>
               </li>
             ))}
           </ul>
         )}
-        <Link href={transactionsFor(accountId)} className="mt-2 inline-block font-medium text-ink underline-offset-2 hover:underline">
+        <Link href={transactionsFor(accountId)} className="mt-2 inline-flex min-h-[44px] items-center font-medium text-ink underline-offset-2 hover:underline sm:min-h-0">
           See all on the bank feed →
         </Link>
       </>
@@ -440,13 +440,13 @@ export default async function BudgetPage({ searchParams }: { searchParams: Promi
                   {r.status === "on_track" ? (r.spentCents === 0 ? "Nothing yet" : style.word) : `${r.pctOver}% over`}
                 </span>
               </span>
-              <span className="shrink-0 text-[12px]">
+              <span className="shrink-0 whitespace-nowrap text-[12px]">
                 <span className="figures text-ink">{dollars(r.spentCents)}</span>
                 <span className="text-mute"> of {dollars(r.targetCents)}</span>
               </span>
             </div>
             <PlanBar spent={r.spentCents} target={r.targetCents} pace={pace} bar={style.bar} />
-            <div className="mt-1 flex justify-between text-[11px] text-mute">
+            <div className="mt-1 flex justify-between text-[12px] text-mute sm:text-[11px]">
               <span className={r.leftCents < 0 ? style.text : ""}>
                 {r.leftCents >= 0 ? `${dollars(r.leftCents)} left to spend` : `${dollars(-r.leftCents)} over`}
               </span>
@@ -484,7 +484,7 @@ export default async function BudgetPage({ searchParams }: { searchParams: Promi
               key={k}
               href={hrefFor({ period: k })}
               aria-current={k === period ? "page" : undefined}
-              className={`inline-flex min-h-[36px] items-center rounded-full px-3.5 text-[12px] font-medium ${
+              className={`inline-flex min-h-[44px] items-center rounded-full px-3.5 sm:min-h-[36px] text-[12px] font-medium ${
                 k === period ? "bg-ink text-paper" : "text-mute hover:text-ink"
               }`}
             >
@@ -497,7 +497,7 @@ export default async function BudgetPage({ searchParams }: { searchParams: Promi
             {p.label} · {syncedWords(lastSynced, today)}
           </span>
           {canEdit && hasBudget ? (
-            <a href={editHref} className="font-medium text-ink underline-offset-2 hover:underline">
+            <a href={editHref} className="inline-flex min-h-[44px] items-center font-medium text-ink underline-offset-2 hover:underline sm:min-h-0">
               Edit budget
             </a>
           ) : null}
@@ -515,7 +515,7 @@ export default async function BudgetPage({ searchParams }: { searchParams: Promi
         </Card>
       ) : (
         <>
-          <Card navy title="Where the money went" hint="Biggest first. Hover a slice or a row; click one to see its transactions. Moves to the reserve aren't included because they're savings, not spending.">
+          <Card navy title="Where the money went" hint="Biggest first. Hover or tap a slice or a row; click one to see its transactions. Moves to the reserve aren't included because they're savings, not spending.">
             {allSpend.length === 0 ? (
               <div className="py-6 text-center">
                 <p className="text-[13px] text-mute">Nothing posted for {p.label.toLowerCase()} yet.</p>
@@ -578,7 +578,7 @@ export default async function BudgetPage({ searchParams }: { searchParams: Promi
                 pace={pace}
                 bar={totalSpent > totalTarget * 1.1 ? STATUS_STYLE.over.bar : totalSpent > totalTarget ? STATUS_STYLE.watch.bar : STATUS_STYLE.on_track.bar}
               />
-              <p className="mt-1.5 text-[11px] text-mute-soft">The thin line is where you&rsquo;d be if spending were spread evenly.</p>
+              <p className="mt-1.5 text-[12px] text-mute-soft sm:text-[11px]">The thin line is where you&rsquo;d be if spending were spread evenly.</p>
             </div>
 
             <ul className="mt-4 overflow-hidden rounded-lg border border-line">
@@ -594,10 +594,10 @@ export default async function BudgetPage({ searchParams }: { searchParams: Promi
                           <span className="truncate text-[13px] font-medium text-ink">{a.name}</span>
                           <span className={`text-[11px] font-medium ${STATUS_STYLE.none.text}`}>{STATUS_STYLE.none.word}</span>
                         </span>
-                        <span className="figures shrink-0 text-[12px] text-ink">{dollars(a.cents)}</span>
+                        <span className="figures shrink-0 whitespace-nowrap text-[12px] text-ink">{dollars(a.cents)}</span>
                       </div>
                       <PlanBar spent={a.cents} target={0} pace={pace} bar={STATUS_STYLE.none.bar} />
-                      <div className="mt-1 text-[11px] text-mute">Spent with no plan set. Add one so it&rsquo;s tracked like the rest.</div>
+                      <div className="mt-1 text-[12px] text-mute sm:text-[11px]">Spent with no plan set. Add one so it&rsquo;s tracked like the rest.</div>
                     </summary>
                     <div className="bg-fill/30 px-3 pb-3 pl-9 text-[12px]">
                       <p className="py-2 text-mute">
@@ -639,13 +639,13 @@ export default async function BudgetPage({ searchParams }: { searchParams: Promi
                                 : `${dollars(reservePlanCents - savedCents)} short`}
                           </span>
                         </span>
-                        <span className="shrink-0 text-[12px]">
+                        <span className="shrink-0 whitespace-nowrap text-[12px]">
                           <span className="figures text-ink">{dollars(savedCents)}</span>
                           {reservePlanCents !== null ? <span className="text-mute"> of {dollars(reservePlanCents)}</span> : null}
                         </span>
                       </div>
                       <PlanBar spent={savedCents} target={reservePlanCents ?? 0} pace={pace} bar={STATUS_STYLE.saved.bar} />
-                      <div className="mt-1 text-[11px] text-mute-soft">Savings, not spending, never counted as over budget.</div>
+                      <div className="mt-1 text-[12px] text-mute-soft sm:text-[11px]">Savings, not spending, never counted as over budget.</div>
                     </summary>
                     <div className="bg-fill/30 px-3 pb-3 pl-9 text-[12px]">
                       <p className="py-2 text-mute">
@@ -668,7 +668,7 @@ export default async function BudgetPage({ searchParams }: { searchParams: Promi
               ) : null}
             </ul>
 
-            <p className="mt-2 text-[11px] text-mute-soft">
+            <p className="mt-2 text-[12px] text-mute-soft sm:text-[11px]">
               On track: at or under plan · Watch: up to 10% over · Over budget: more than 10% over. Click a row for what&rsquo;s in it.
             </p>
           </Card>

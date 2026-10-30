@@ -46,17 +46,17 @@ export function ProvenancePanel({
 
   return (
     <details className="mt-3 border-t border-line pt-3">
-      <summary className="cursor-pointer text-[13px] text-mute underline-offset-2 hover:underline">
+      <summary className="cursor-pointer py-2.5 text-[13px] text-mute underline-offset-2 hover:underline sm:py-0">
         See what this is made of
       </summary>
       <dl className="mt-3 space-y-3 text-[13px]">
         {rows.map((row) => (
           <div key={row.figure_key}>
             <div className="flex items-baseline justify-between gap-3">
-              <dt className="font-medium text-ink">
+              <dt className="min-w-0 break-words font-medium text-ink">
                 {FIGURE_LABELS[row.figure_key] ?? row.figure_key}
               </dt>
-              <dd className="figures text-ink">
+              <dd className="figures whitespace-nowrap text-ink">
                 {row.value === null
                   ? "n/a"
                   : RATIO_KEYS.has(row.figure_key)
@@ -64,18 +64,18 @@ export function ProvenancePanel({
                     : money(row.value)}
               </dd>
             </div>
-            <p className="mt-0.5 text-[11px] text-mute-soft">{row.formula_description}</p>
+            <p className="mt-0.5 text-[12px] text-mute-soft">{row.formula_description}</p>
             {row.derivation === "sum" && row.source_journal_line_ids.length > 0 ? (
               <ul className="mt-1 space-y-0.5 border-l-2 border-line pl-2">
                 {row.source_journal_line_ids.map((id) => {
                   const line = lineIndex.get(id);
                   if (!line) return null;
                   return (
-                    <li key={id} className="flex justify-between gap-3 text-[11px] text-mute">
-                      <span>
+                    <li key={id} className="flex justify-between gap-3 text-[12px] text-mute">
+                      <span className="min-w-0 break-words">
                         {line.date} · {line.label}
                       </span>
-                      <span className="figures">{money(line.amount)}</span>
+                      <span className="figures whitespace-nowrap">{money(line.amount)}</span>
                     </li>
                   );
                 })}

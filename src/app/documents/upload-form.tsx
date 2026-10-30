@@ -51,7 +51,7 @@ export function UploadForm({ categories, accountant = false }: { categories: Doc
               value={categoryId}
               disabled={busy}
               onChange={(e) => setCategoryId(e.target.value)}
-              className="rounded-lg border border-line-strong bg-paper px-3 py-2 text-[16px] text-ink disabled:opacity-50 sm:text-[13px]"
+              className="min-h-[44px] max-w-full rounded-lg border border-line-strong bg-paper px-3 py-2 text-[16px] text-ink disabled:opacity-50 sm:text-[13px]"
             >
               <option value="">{accountant ? ACCOUNTANT_UPLOAD_COPY.categoryPlaceholder : "Decide later"}</option>
               {options.map((c) => (

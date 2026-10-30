@@ -57,10 +57,10 @@ const btnGhost =
 function Unit({ r }: { r: CollectionRow }) {
   return (
     <div>
-      <Link href={unitHref(r.unitId)} className="font-medium text-ink underline-offset-2 hover:underline">
+      <Link href={unitHref(r.unitId)} className="inline-block py-2 font-medium text-ink sm:py-0 underline-offset-2 hover:underline">
         {r.label}
       </Link>
-      {r.ownerNames.length ? <div className="text-[11px] text-mute">{r.ownerNames.join(", ")}</div> : null}
+      {r.ownerNames.length ? <div className="text-[12px] text-mute sm:text-[11px]">{r.ownerNames.join(", ")}</div> : null}
       {r.chips.length ? (
         <div className="mt-1 flex flex-wrap gap-1">
           {r.chips.map((c) => (
@@ -78,7 +78,7 @@ function History({ items }: { items: HistoryItem[] }) {
   if (items.length === 0) return null;
   return (
     <details className="mt-2 text-[12px]">
-      <summary className="cursor-pointer text-mute hover:text-ink">History</summary>
+      <summary className="cursor-pointer py-3 text-mute hover:text-ink sm:py-0">History</summary>
       <ul className="mt-2 space-y-1">
         {items.map((h, i) => (
           <li key={i} className="flex flex-wrap gap-x-2 text-mute">
@@ -141,12 +141,12 @@ export function CollectionsTable({
     <div className="text-[12px]">
       <p className="text-mute">{r.suggestion.why}</p>
       {canPrepare && r.suggestion.action === "remind" ? (
-        <button type="button" className="mt-1 font-medium text-ink underline underline-offset-2" disabled={pending} onClick={() => prepare([r.unitId])}>
+        <button type="button" className="mt-1 inline-flex min-h-[44px] items-center font-medium text-ink underline underline-offset-2 sm:min-h-0" disabled={pending} onClick={() => prepare([r.unitId])}>
           Prepare a reminder
         </button>
       ) : null}
       {canPrepare && r.suggestion.action === "late_fee_notice" && r.feeChargeId ? (
-        <button type="button" className="mt-1 font-medium text-ink underline underline-offset-2" disabled={pending} onClick={() => prepareFee(r.feeChargeId!)}>
+        <button type="button" className="mt-1 inline-flex min-h-[44px] items-center font-medium text-ink underline underline-offset-2 sm:min-h-0" disabled={pending} onClick={() => prepareFee(r.feeChargeId!)}>
           Prepare a late fee notice
         </button>
       ) : null}
@@ -269,6 +269,9 @@ export function CollectionsTable({
                   <input type="checkbox" className="h-5 w-5" checked={selected.has(r.unitId)} disabled={!r.selectable} onChange={() => toggle(r.unitId)} />
                   Include in the reminders
                 </label>
+              ) : null}
+              {canPrepare && !r.selectable && r.disabledReason ? (
+                <p className="text-[12px] text-mute">{r.disabledReason}</p>
               ) : null}
               <History items={r.history} />
             </li>

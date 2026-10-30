@@ -112,13 +112,13 @@ export default async function StatementsPage({ searchParams }: { searchParams: P
           <label htmlFor="from" className="block text-[12px] font-medium text-ink">
             From
           </label>
-          <input id="from" name="from" type="date" defaultValue={from} className="mt-1 rounded-lg border border-line-strong bg-paper px-3 py-2 text-[16px] text-ink sm:text-[14px]" />
+          <input id="from" name="from" type="date" defaultValue={from} className="mt-1 min-h-[44px] rounded-lg border border-line-strong bg-paper px-3 py-2 text-[16px] text-ink sm:text-[14px]" />
         </div>
         <div>
           <label htmlFor="to" className="block text-[12px] font-medium text-ink">
             To
           </label>
-          <input id="to" name="to" type="date" defaultValue={to} className="mt-1 rounded-lg border border-line-strong bg-paper px-3 py-2 text-[16px] text-ink sm:text-[14px]" />
+          <input id="to" name="to" type="date" defaultValue={to} className="mt-1 min-h-[44px] rounded-lg border border-line-strong bg-paper px-3 py-2 text-[16px] text-ink sm:text-[14px]" />
         </div>
         <button type="submit" className="inline-flex min-h-[44px] items-center rounded-md border border-line-strong bg-paper px-4 text-[13px] font-medium text-ink hover:bg-fill">
           Use these dates

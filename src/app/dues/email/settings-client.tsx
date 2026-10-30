@@ -15,7 +15,7 @@ import { btnPrimary, btnSecondary } from "@/components/repairs/styles";
 
 const btn = btnPrimary;
 const btnGhost = btnSecondary;
-const input = "mt-1 w-full rounded-lg border border-line-strong bg-paper px-3 py-2 text-[16px] text-ink sm:text-[14px]";
+const input = "mt-1 min-h-[44px] w-full rounded-lg border border-line-strong bg-paper px-3 py-2 text-[16px] text-ink sm:text-[14px]";
 const label = "block text-[12px] font-medium text-ink";
 
 function Err({ text }: { text: string | null | undefined }) {

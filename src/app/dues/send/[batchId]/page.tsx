@@ -46,7 +46,7 @@ function Message({ title, detail }: { title: string; detail: string }) {
   return (
     <div className="space-y-6">
       <Answer status="neutral" headline={title} detail={detail} />
-      <Link href="/dues#collections" className="text-[13px] text-ink underline underline-offset-2">
+      <Link href="/dues#collections" className="inline-flex min-h-[44px] items-center text-[13px] text-ink underline underline-offset-2">
         Back to Collections
       </Link>
     </div>
@@ -259,7 +259,7 @@ export default async function ReviewPage({ params }: { params: Promise<{ batchId
             </Card>
             <ManualDrafts drafts={manualDrafts} />
             <div>
-              <Link href="/dues#collections" className="text-[13px] text-ink underline underline-offset-2">
+              <Link href="/dues#collections" className="inline-flex min-h-[44px] items-center text-[13px] text-ink underline underline-offset-2">
                 Back to Collections
               </Link>
             </div>

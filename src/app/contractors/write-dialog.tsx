@@ -71,7 +71,7 @@ export function WriteToContractor(props: {
           props.variant === "primary"
             ? btnPrimary
             : props.variant === "link"
-              ? "inline-flex min-h-[28px] items-center whitespace-nowrap text-[12px] font-medium text-ink underline underline-offset-2 hover:text-ink-mid"
+              ? "inline-flex min-h-[44px] sm:min-h-[28px] items-center whitespace-nowrap text-[12px] font-medium text-ink underline underline-offset-2 hover:text-ink-mid"
               : btnSecondary
         }
       >

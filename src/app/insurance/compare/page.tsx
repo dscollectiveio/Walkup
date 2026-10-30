@@ -112,7 +112,7 @@ export default async function ComparePage({ searchParams }: { searchParams: Prom
             ) : null}
             {declinedCount > 0 && !showDeclined ? (
               <p className="text-center text-[13px]">
-                <Link href={`/insurance/compare?coverage=${coverage}&declined=1`} className="underline underline-offset-2">
+                <Link href={`/insurance/compare?coverage=${coverage}&declined=1`} className="inline-flex min-h-[44px] items-center underline underline-offset-2">
                   Show declined ({declinedCount})
                 </Link>
               </p>
@@ -227,7 +227,7 @@ export default async function ComparePage({ searchParams }: { searchParams: Prom
                             <dt className="text-mute">{r.label}</dt>
                             <dd className="text-right">
                               <CellView cell={r.cell} />
-                              {r.now.display ? <div className="text-[11px] text-mute">Now {r.now.display}</div> : null}
+                              {r.now.display ? <div className="text-[12px] text-mute">Now {r.now.display}</div> : null}
                             </dd>
                           </div>
                         ))}

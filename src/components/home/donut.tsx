@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useRef, useState } from "react";
 
 export interface DonutSegment {
   pct: number;
@@ -33,10 +33,20 @@ export function Donut({
     const start = acc.length ? acc[acc.length - 1].start + acc[acc.length - 1].len : 0;
     return [...acc, { ...seg, len: (c * Math.max(0, Math.min(100, seg.pct))) / 100, start }];
   }, []);
+  const box = useRef<HTMLDivElement>(null);
+  // A tap elsewhere closes the pop-out (hover alone cannot on a phone).
+  useEffect(() => {
+    if (active === null) return;
+    const away = (e: PointerEvent) => {
+      if (box.current && !box.current.contains(e.target as Node)) setActive(null);
+    };
+    document.addEventListener("pointerdown", away);
+    return () => document.removeEventListener("pointerdown", away);
+  }, [active]);
   const shown = active !== null ? arcs[active] : null;
 
   return (
-    <div className="relative" onMouseLeave={() => setActive(null)}>
+    <div ref={box} className="relative" onMouseLeave={() => setActive(null)}>
       <svg viewBox="0 0 88 88" className="h-24 w-24 overflow-visible" role="img" aria-label={label}>
         <circle cx="44" cy="44" r={r} fill="none" stroke="var(--color-fill)" strokeWidth="14" />
         {arcs.map((arc, i) =>
@@ -55,6 +65,7 @@ export function Donut({
               tabIndex={0}
               aria-label={`${arc.title}: ${arc.detail}`}
               onMouseEnter={() => setActive(i)}
+              onClick={() => setActive(i)}
               onFocus={() => setActive(i)}
               onBlur={() => setActive(null)}
               className="cursor-pointer outline-none motion-safe:transition-[stroke-width] motion-safe:duration-150"
@@ -64,14 +75,14 @@ export function Donut({
         <text x="44" y="44" textAnchor="middle" className="figures pointer-events-none fill-ink text-[16px] font-bold">
           {center}
         </text>
-        <text x="44" y="58" textAnchor="middle" className="pointer-events-none fill-mute text-[9px]">
+        <text x="44" y="58" textAnchor="middle" className="pointer-events-none fill-mute text-[10px]">
           {sub}
         </text>
       </svg>
       {shown ? (
         <div
           role="status"
-          className="pointer-events-none absolute bottom-full left-1/2 z-20 mb-1 w-max max-w-[14rem] -translate-x-1/2 rounded-md bg-ink px-2.5 py-1.5 text-left text-[11px] text-paper shadow-lg"
+          className="pointer-events-none absolute bottom-full left-1/2 z-20 mb-1 w-max max-w-[14rem] -translate-x-1/2 rounded-md bg-ink px-2.5 py-1.5 text-left text-[12px] text-paper shadow-lg"
         >
           <span className="flex items-center gap-1.5 font-semibold">
             <span aria-hidden="true" className="h-2 w-2 shrink-0 rounded-full border border-paper/40" style={{ background: shown.color }} />

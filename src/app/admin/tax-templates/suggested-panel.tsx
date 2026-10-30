@@ -56,7 +56,7 @@ export function SuggestedPanel({ rows }: { rows: SuggestionRow[] }) {
                     {r.kind === "pdf" ? "PDF + field map" : "Link only: rules, no PDF"}
                   </span>
                 </p>
-                <p className="mt-0.5 text-[12px] text-mute">
+                <p className="mt-0.5 break-all text-[12px] text-mute">
                   {r.revision} · authored {r.authoredOn} against{" "}
                   <a href={r.sourceUrl} target="_blank" rel="noopener noreferrer" className="underline underline-offset-2">{r.sourceUrl}</a>
                 </p>

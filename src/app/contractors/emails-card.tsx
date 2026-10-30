@@ -31,7 +31,7 @@ export function DraftList({ drafts }: { drafts: DraftRow[] }) {
                 aria-expanded={open}
                 aria-controls={`draft-${d.id}`}
                 onClick={() => setOpenId(open ? null : d.id)}
-                className="inline-flex min-h-[34px] shrink-0 items-center justify-center rounded-md bg-ink px-4 text-[12px] font-medium text-paper hover:bg-ink-mid focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-brass"
+                className="inline-flex min-h-[44px] sm:min-h-[34px] shrink-0 items-center justify-center rounded-md bg-ink px-4 text-[12px] font-medium text-paper hover:bg-ink-mid focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-brass"
               >
                 {open ? "Close" : "Edit"}
               </button>

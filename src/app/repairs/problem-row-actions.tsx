@@ -7,7 +7,7 @@ import { setContractorW9, setProblemWorkStatus } from "./problem-actions";
 import { WORK_STATUSES, beforeContractorSelected, numberedWorkStatus, type WorkStatus } from "@/lib/repairs/work-status";
 
 const link =
-  "inline-flex min-h-[34px] items-center whitespace-nowrap text-[13px] font-medium text-ink underline underline-offset-2 hover:text-ink-mid";
+  "inline-flex min-h-[44px] sm:min-h-[34px] items-center whitespace-nowrap text-[13px] font-medium text-ink underline underline-offset-2 hover:text-ink-mid";
 
 /**
  * The links on a line, when they apply: Get quotes (any status before a
@@ -89,7 +89,7 @@ export function ProblemStatusSelect({ id, reference, value }: { id: string; refe
         value={value}
         disabled={pending}
         onChange={(e) => change(e.target.value as WorkStatus)}
-        className="min-h-[34px] w-full rounded-md border border-line-strong bg-paper px-2.5 text-[12px] font-medium text-ink hover:bg-fill disabled:opacity-60"
+        className="min-h-[44px] sm:min-h-[34px] w-full rounded-md border border-line-strong bg-paper px-2.5 text-[12px] font-medium text-ink hover:bg-fill disabled:opacity-60"
       >
         {WORK_STATUSES.map((s) => (
           <option key={s} value={s}>
@@ -133,7 +133,7 @@ export function ProblemW9Check({
     return <span className="text-[12px] text-mute-soft">No contractor</span>;
   }
   return (
-    <label className={`inline-flex min-h-[34px] items-center gap-2 text-[12px] ${canEdit ? "cursor-pointer" : ""}`}>
+    <label className={`inline-flex min-h-[44px] sm:min-h-[34px] items-center gap-2 text-[12px] ${canEdit ? "cursor-pointer" : ""}`}>
       <input
         type="checkbox"
         checked={checked}
@@ -158,7 +158,7 @@ export function ProblemW9Check({
       />
       <span className={checked ? "font-medium text-good-text" : "text-mute"}>{checked ? "Collected" : "Not yet"}</span>
       {error ? (
-        <span role="alert" className="text-[11px] text-bad-text">
+        <span role="alert" className="text-[12px] text-bad-text">
           {error}
         </span>
       ) : null}

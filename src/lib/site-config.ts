@@ -91,7 +91,7 @@ export const FAQ: { group: FaqGroup; q: string; a: string; links?: FaqLink[] }[]
     group: "For treasurers",
     q: "What should a small self-managed condo association look for in software?",
     a: "Look for software built for small, volunteer-run buildings rather than large managed communities. Walkup is built for Illinois condo associations of 2 to 20 units and covers bookkeeping, dues, budgets, financial statements and Form 1120-H prep for a flat $19 to $59 a month.",
-    links: [{ label: "See every feature", href: "/features" }, { label: "See pricing", href: "/#pricing" }],
+    links: [{ label: "See All Features", href: "/features" }, { label: "See Pricing", href: "/#pricing" }],
   },
   {
     group: "For treasurers",

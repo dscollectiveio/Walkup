@@ -18,7 +18,7 @@ export function DisconnectButton({ connectionId }: { connectionId: string }) {
       <button
         type="button"
         onClick={() => setConfirming(true)}
-        className="rounded-md border border-line-strong px-4 py-2 text-[13px] text-ink hover:bg-fill"
+        className="min-h-[44px] rounded-md border border-line-strong px-4 py-2 text-[13px] text-ink hover:bg-fill"
       >
         Disconnect
       </button>
@@ -40,18 +40,18 @@ export function DisconnectButton({ connectionId }: { connectionId: string }) {
             else setConfirming(false);
           })
         }
-        className="rounded-md border border-bad-line bg-bad-tint px-3 py-1.5 text-[13px] font-medium text-bad-text hover:bg-bad-tint/80"
+        className="min-h-[44px] rounded-md border border-bad-line bg-bad-tint px-3 py-1.5 text-[13px] font-medium text-bad-text hover:bg-bad-tint/80"
       >
         {pending ? "Disconnecting…" : "Confirm"}
       </button>
       <button
         type="button"
         onClick={() => setConfirming(false)}
-        className="text-[13px] text-mute underline-offset-2 hover:underline"
+        className="min-h-[44px] px-2 text-[13px] text-mute underline-offset-2 hover:underline"
       >
         Cancel
       </button>
-      {error ? <p className="w-full text-[11px] text-bad-text">{error}</p> : null}
+      {error ? <p className="w-full text-[12px] text-bad-text">{error}</p> : null}
     </div>
   );
 }

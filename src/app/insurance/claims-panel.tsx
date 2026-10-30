@@ -135,7 +135,7 @@ export function ClaimForm({
             <p className="text-[13px] text-ink">
               First, report it: call {claimsLine.carrier} claims at{" "}
               {tel ? (
-                <a href={tel} className="figures font-medium underline underline-offset-2">
+                <a href={tel} className="figures inline-block whitespace-nowrap py-2.5 font-medium underline underline-offset-2 sm:py-0">
                   {formatPhone(claimsLine.phone)}
                 </a>
               ) : (
@@ -384,7 +384,7 @@ export function ClaimsPanel({
                       .join(" · ")}
                   </div>
                   {c.ticket ? (
-                    <Link href={`/maintenance/${c.ticket.id}`} className="mt-1 inline-flex min-h-[32px] items-center text-[12px] text-ink underline underline-offset-2">
+                    <Link href={`/maintenance/${c.ticket.id}`} className="mt-1 inline-flex min-h-[44px] items-center break-words text-[12px] text-ink underline underline-offset-2 sm:min-h-[32px]">
                       Problem #{c.ticket.reference} {c.ticket.title}
                     </Link>
                   ) : null}

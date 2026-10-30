@@ -2370,3 +2370,11 @@ This is the "to build" in #44. Doug chose: the system sends the notices by itsel
 - **Words:** the board member role text and the Features page (People and access, property managers, attorneys and observers) match what the roles can do.
 - **Idle-timeout cookie.** With `ACTIVITY_COOKIE_SECRET` set it is signed (HMAC), so a timestamp can't be written by hand; empty keeps it as before. A browser prefetch no longer counts as activity.
 - **Decided to leave:** the Repairs "Needs a decision" section stays hidden (it was left out on purpose to keep the page short); the bank rule `auto_post` stays unset by the app (DECISIONS #29: nothing reaches the ledger without a click); old phone numbers stay in audit rows (only a board admin reads them, and they are the history of what changed). Contractor document links on the problem page for a property manager are not changed.
+
+## 56. Founding offer changed to free for life (landing page only so far)
+
+**Decided 2026-10-30 by Doug.** The first 25 associations are free for life, not for their first 12 months (replaces the founding offer in #44).
+
+- **Done:** the landing page says so in the hero, the Pricing section and the final call to action.
+- **Not done yet, and it must be before launch:** Terms section on the founding offer (`src/app/terms/page.tsx`) and `FOUNDING` in `site-config.ts` still say 12 months; the billing code grants a 12-month comp and the notice emails (`founding_charge`, 30 days before the first charge) assume a first charge happens; the FAQ and pricing wording; the lawyer review of the Terms. Until those change, the page and the Terms disagree, and the Terms are what a customer could rely on.
+- **Open for Doug:** whether "free for life" means the life of the association's account or the product, whether it survives a building changing hands, and what happens if the building passes 20 units.

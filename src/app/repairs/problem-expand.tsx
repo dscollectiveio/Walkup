@@ -17,12 +17,12 @@ import {
 } from "./problem-actions";
 
 const field =
-  "block min-h-[36px] w-full rounded-md border border-line-strong bg-paper px-2.5 text-[16px] text-ink sm:text-[13px] disabled:opacity-60";
+  "block min-h-[44px] sm:min-h-[36px] w-full rounded-md border border-line-strong bg-paper px-2.5 text-[16px] text-ink sm:text-[13px] disabled:opacity-60";
 const label = "mb-1 block text-[11px] font-medium uppercase tracking-wide text-mute";
 const btn =
-  "inline-flex min-h-[34px] items-center justify-center whitespace-nowrap rounded-md bg-ink px-3.5 text-[12px] font-medium text-paper hover:bg-ink-mid disabled:opacity-60";
+  "inline-flex min-h-[44px] sm:min-h-[34px] items-center justify-center whitespace-nowrap rounded-md bg-ink px-3.5 text-[12px] font-medium text-paper hover:bg-ink-mid disabled:opacity-60";
 const btnQuiet =
-  "inline-flex min-h-[34px] items-center justify-center whitespace-nowrap rounded-md border border-line-strong bg-paper px-3.5 text-[12px] font-medium text-ink hover:bg-fill disabled:opacity-60";
+  "inline-flex min-h-[44px] sm:min-h-[34px] items-center justify-center whitespace-nowrap rounded-md border border-line-strong bg-paper px-3.5 text-[12px] font-medium text-ink hover:bg-fill disabled:opacity-60";
 
 /**
  * One line of the Problems list with a chevron that opens a panel under it: the
@@ -94,7 +94,7 @@ export function ExpandableRow({
             aria-controls={panelId}
             aria-label={`${open ? "Collapse" : "Expand"} problem #${reference}: ${title}`}
             title={open ? "Collapse" : "More options"}
-            className="mt-0.5 flex h-6 w-6 shrink-0 items-center justify-center rounded-md border border-line-strong bg-paper text-ink hover:bg-fill focus-visible:outline focus-visible:outline-2 focus-visible:outline-brass"
+            className="relative mt-0.5 flex h-6 w-6 shrink-0 items-center justify-center rounded-md border border-line-strong bg-paper text-ink after:absolute after:-inset-[10px] after:content-[''] hover:bg-fill focus-visible:outline focus-visible:outline-2 focus-visible:outline-brass"
           >
             <ChevronRight size={15} strokeWidth={2.2} aria-hidden="true" className={`motion-safe:transition-transform ${open ? "rotate-90" : ""}`} />
           </button>
@@ -287,7 +287,7 @@ function PanelBody({
                     const on = picked.includes(x.id);
                     return (
                       <li key={x.id}>
-                        <label className="flex min-h-[36px] cursor-pointer items-center gap-3 px-3 py-1.5 text-[13px] hover:bg-fill/60">
+                        <label className="flex min-h-[44px] sm:min-h-[36px] cursor-pointer items-center gap-3 px-3 py-1.5 text-[13px] hover:bg-fill/60">
                           <input
                             type="checkbox"
                             checked={on}

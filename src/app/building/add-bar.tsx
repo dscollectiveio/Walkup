@@ -6,8 +6,8 @@ import { AddPersonForm } from "./add-person-form";
 import { UnitsRoster, type RosterUnit } from "./units-roster";
 import { AddUnitForm } from "./add-unit-form";
 
-const primary = "rounded-md bg-ink px-4 py-2 text-[13px] font-medium text-paper hover:bg-ink-mid";
-const active = "rounded-md border border-ink bg-paper px-4 py-2 text-[13px] font-medium text-ink";
+const primary = "rounded-md bg-ink px-4 py-2 max-sm:min-h-[44px] text-[13px] font-medium text-paper hover:bg-ink-mid";
+const active = "rounded-md border border-ink bg-paper px-4 py-2 max-sm:min-h-[44px] text-[13px] font-medium text-ink";
 
 /**
  * The Units and people card: its navy header carries "Add a unit" on the right,

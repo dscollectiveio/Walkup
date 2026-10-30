@@ -4,7 +4,7 @@ import { useActionState, useState } from "react";
 import { reportOutsidePayment } from "./actions";
 import { btnPrimary } from "@/components/repairs/styles";
 
-const inputClass = "mt-1 w-full rounded-lg border border-line-strong bg-paper px-3 py-2 text-[13px] text-ink";
+const inputClass = "mt-1 w-full rounded-lg border border-line-strong bg-paper px-3 py-2 text-[16px] text-ink min-h-[44px] sm:min-h-0 sm:text-[13px]";
 
 function todayIso(): string {
   const d = new Date();

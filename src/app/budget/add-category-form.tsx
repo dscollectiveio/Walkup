@@ -26,13 +26,13 @@ export function AddCategoryForm({ associationId }: { associationId: string }) {
           name="name"
           type="text"
           placeholder="e.g. Pool Maintenance"
-          className="mt-1 w-full rounded-lg border border-line-strong bg-paper px-3 py-2 text-[13px] text-ink"
+          className="mt-1 w-full rounded-lg border border-line-strong bg-paper px-3 py-2 text-[16px] text-ink min-h-[44px] sm:min-h-0 sm:text-[13px]"
         />
       </div>
       <button
         type="submit"
         disabled={pending}
-        className="rounded-md border border-line-strong px-4 py-2 text-[13px] text-ink hover:bg-fill disabled:opacity-50"
+        className="min-h-[44px] rounded-md border border-line-strong px-4 py-2 text-[13px] text-ink hover:bg-fill disabled:opacity-50 sm:min-h-0"
       >
         {pending ? "Adding…" : "Add"}
       </button>

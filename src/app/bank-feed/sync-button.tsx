@@ -32,8 +32,8 @@ export function SyncButton({ connectionId }: { connectionId: string }) {
       >
         {pending ? "Syncing…" : "Sync now"}
       </button>
-      {note ? <p className="mt-2 text-[11px] text-mute">{note}</p> : null}
-      {error ? <p className="mt-2 text-[11px] text-bad-text">{error}</p> : null}
+      {note ? <p className="mt-2 text-[12px] text-mute">{note}</p> : null}
+      {error ? <p className="mt-2 text-[12px] text-bad-text">{error}</p> : null}
     </div>
   );
 }

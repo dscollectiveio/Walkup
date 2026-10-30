@@ -47,7 +47,7 @@ export function RequestRows({
           {grouped ? (
             <h3 className="text-[13px] font-medium text-ink">
               {rows[0].contact_id ? (
-                <Link href={`/insurance/contacts/${rows[0].contact_id}`} className="underline-offset-2 hover:underline">
+                <Link href={`/insurance/contacts/${rows[0].contact_id}`} className="inline-block py-2 underline-offset-2 hover:underline sm:py-0">
                   {rows[0].contactName}
                 </Link>
               ) : (

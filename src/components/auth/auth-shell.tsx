@@ -20,7 +20,7 @@ import { BareMarker } from "@/components/app-frame";
 export const FIRST_RUN_STEPS = ["Create your account", "Secure it", "Set up your building"] as const;
 
 export const authInput =
-  "mt-1.5 w-full rounded-lg border border-line-strong bg-paper px-3.5 py-2.5 text-[15px] text-ink placeholder:text-mute-soft focus:border-ink focus:outline-none focus:ring-2 focus:ring-brass/40";
+  "mt-1.5 w-full rounded-lg border border-line-strong bg-paper px-3.5 py-2.5 text-[16px] text-ink sm:text-[15px] placeholder:text-mute-soft focus:border-ink focus:outline-none focus:ring-2 focus:ring-brass/40";
 export const authLabel = "block text-[13px] font-semibold text-ink";
 export const authButton =
   "inline-flex min-h-[48px] w-full items-center justify-center rounded-lg bg-ink px-4 text-[15px] font-semibold text-paper transition-colors hover:bg-ink-mid focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-brass disabled:opacity-60";

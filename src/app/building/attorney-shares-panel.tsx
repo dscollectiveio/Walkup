@@ -48,7 +48,7 @@ export async function AttorneySharesPanel({ supabase, todayIso }: { supabase: Su
           <li key={a.id} className="space-y-2 py-3 first:pt-0 last:pb-0">
             <div>
               <p className="text-[14px] font-medium text-ink">{a.name}</p>
-              <p className="text-[12px] text-mute">
+              <p className="break-words text-[12px] text-mute">
                 {[a.email, `access ends ${longDate(a.ends)}`].filter(Boolean).join(" · ")}
               </p>
             </div>

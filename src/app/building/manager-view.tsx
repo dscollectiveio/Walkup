@@ -151,12 +151,12 @@ function ContactDetails({ p }: { p: Person }) {
   return (
     <span className="block text-mute">
       {email ? (
-        <a href={mailtoLink(email)} className="mr-3 inline-flex min-h-[32px] items-center text-ink underline underline-offset-2">
+        <a href={mailtoLink(email)} className="mr-3 inline-flex min-h-[32px] max-sm:min-h-[44px] max-w-full break-all items-center text-ink underline underline-offset-2">
           {email}
         </a>
       ) : null}
       {phone ? (
-        <a href={`tel:${phone.replace(/[^\d+]/g, "")}`} className="mr-3 inline-flex min-h-[32px] items-center text-ink underline underline-offset-2">
+        <a href={`tel:${phone.replace(/[^\d+]/g, "")}`} className="mr-3 inline-flex min-h-[32px] max-sm:min-h-[44px] max-w-full break-all items-center text-ink underline underline-offset-2">
           {phone}
         </a>
       ) : null}

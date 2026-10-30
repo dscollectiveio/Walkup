@@ -71,12 +71,12 @@ export default async function BuildingPage({ searchParams }: { searchParams: Pro
         <Card navy title="About the building">
           <ul className="space-y-1 text-[13px]">
             <li>
-              <Link href="/insurance" className="inline-flex min-h-[40px] items-center text-ink underline underline-offset-2">
+              <Link href="/insurance" className="inline-flex min-h-[40px] max-sm:min-h-[44px] items-center text-ink underline underline-offset-2">
                 What the building&rsquo;s insurance covers
               </Link>
             </li>
             <li>
-              <Link href="/repairs/emergency-info" className="inline-flex min-h-[40px] items-center text-ink underline underline-offset-2">
+              <Link href="/repairs/emergency-info" className="inline-flex min-h-[40px] max-sm:min-h-[44px] items-center text-ink underline underline-offset-2">
                 Emergency information
               </Link>
             </li>

@@ -5,7 +5,7 @@ import { CollapsibleCard } from "@/components/collapsible-card";
 import { btnPrimary, btnSecondary } from "@/components/repairs/styles";
 import { clearAccountant, setAccountant } from "./form-actions";
 
-const inputClass = "mt-1 h-[40px] w-full rounded-lg border border-line-strong bg-paper px-3 text-[13px] text-ink";
+const inputClass = "mt-1 h-[44px] w-full rounded-lg border border-line-strong bg-paper px-3 text-[16px] text-ink sm:h-[40px] sm:text-[13px]";
 const primary = btnPrimary;
 const secondary = btnSecondary;
 
@@ -51,7 +51,7 @@ export function AccountantCard({
             <div className="text-mute">
               {[accountant.firm, accountant.email].filter(Boolean).join(" · ") || "No email on file"}
             </div>
-            <a href="/building" className="mt-1 inline-block text-[12px] text-mute underline-offset-2 hover:underline">
+            <a href="/building" className="mt-1 inline-block py-2.5 text-[12px] text-mute underline-offset-2 hover:underline sm:py-0">
               Give them read access to the books →
             </a>
           </div>
@@ -76,7 +76,7 @@ export function AccountantCard({
                       if (r.error) setRemoveError(r.error);
                     })
                   }
-                  className="text-[12px] text-mute underline-offset-2 hover:underline disabled:opacity-50"
+                  className="min-h-[44px] text-[12px] text-mute underline-offset-2 hover:underline disabled:opacity-50 sm:min-h-0"
                 >
                   {removePending ? "Removing…" : "Remove"}
                 </button>
@@ -84,7 +84,7 @@ export function AccountantCard({
             ) : null}
           </div>
           {headsUpHref ? (
-            <p className="w-full text-[11px] text-mute">Opens a draft in your email app. Nothing is sent until you send it.</p>
+            <p className="w-full text-[12px] text-mute">Opens a draft in your email app. Nothing is sent until you send it.</p>
           ) : null}
           {removeError ? <p className="w-full text-[12px] text-bad-text">{removeError}</p> : null}
         </div>
@@ -135,11 +135,11 @@ export function AccountantCard({
               />
             </div>
             <div className="flex items-center gap-2">
-              <button type="submit" disabled={pending} className={`${primary} !h-[40px] !min-h-[40px]`}>
+              <button type="submit" disabled={pending} className={`${primary} !h-[44px] !min-h-[44px] sm:!h-[40px] sm:!min-h-[40px]`}>
                 {pending ? "Saving…" : accountant ? "Save" : "Add your accountant"}
               </button>
               {accountant ? (
-                <button type="button" onClick={() => setEditing(false)} className={`${secondary} !h-[40px] !min-h-[40px]`}>
+                <button type="button" onClick={() => setEditing(false)} className={`${secondary} !h-[44px] !min-h-[44px] sm:!h-[40px] sm:!min-h-[40px]`}>
                   Cancel
                 </button>
               ) : null}

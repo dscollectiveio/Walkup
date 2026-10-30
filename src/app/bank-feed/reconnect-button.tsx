@@ -5,7 +5,7 @@ import { createUpdateLinkToken, reconnectBank } from "./actions";
 import { PlaidLinkButton } from "./connect-bank-button";
 
 const STYLE =
-  "inline-flex h-9 items-center whitespace-nowrap rounded-md bg-ink px-3 text-[13px] font-medium text-paper transition-colors hover:bg-ink-mid focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-brass disabled:opacity-50";
+  "inline-flex h-11 items-center sm:h-9 whitespace-nowrap rounded-md bg-ink px-3 text-[13px] font-medium text-paper transition-colors hover:bg-ink-mid focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-brass disabled:opacity-50";
 
 /**
  * "Reconnect Chase": opens Plaid Link in update mode so the person signs in

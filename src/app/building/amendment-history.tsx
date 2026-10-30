@@ -35,11 +35,11 @@ export function AmendmentHistory({ amendments, canDelete = false }: { amendments
                 {i === 0 ? <span className="ml-2 rounded-full bg-brass/20 px-2 py-0.5 text-[10px] font-semibold text-ink">Current</span> : null}
               </span>
               <span className="flex flex-wrap items-center gap-3">
-                {a.reason ? <span className="text-[11px] text-mute">{a.reason}</span> : null}
+                {a.reason ? <span className="text-[12px] sm:text-[11px] text-mute">{a.reason}</span> : null}
                 {canDelete ? (
                   confirming === a.id ? (
                     <span className="flex flex-wrap items-center gap-2">
-                      <span className="text-[11px] text-mute">
+                      <span className="text-[12px] sm:text-[11px] text-mute">
                         {amendments.length === 1
                           ? "Removes the only recorded split, so units will show no share."
                           : i === 0
@@ -57,23 +57,23 @@ export function AmendmentHistory({ amendments, canDelete = false }: { amendments
                             else setConfirming(null);
                           })
                         }
-                        className="rounded-md border border-bad-line bg-bad-tint px-2.5 py-1 text-[11px] font-medium text-bad-text"
+                        className="rounded-md border border-bad-line bg-bad-tint px-2.5 py-1 max-sm:min-h-[44px] text-[12px] sm:text-[11px] font-medium text-bad-text"
                       >
                         {pending ? "Deleting…" : "Confirm delete"}
                       </button>
-                      <button type="button" onClick={() => setConfirming(null)} className="text-[11px] text-mute underline-offset-2 hover:underline">
+                      <button type="button" onClick={() => setConfirming(null)} className="text-[12px] sm:text-[11px] text-mute underline-offset-2 hover:underline max-sm:inline-flex max-sm:min-h-[44px] max-sm:items-center">
                         Cancel
                       </button>
                     </span>
                   ) : (
-                    <button type="button" onClick={() => setConfirming(a.id)} className="text-[11px] text-bad-text underline-offset-2 hover:underline">
+                    <button type="button" onClick={() => setConfirming(a.id)} className="text-[12px] sm:text-[11px] text-bad-text underline-offset-2 hover:underline max-sm:inline-flex max-sm:min-h-[44px] max-sm:items-center">
                       Delete
                     </button>
                   )
                 ) : null}
               </span>
             </div>
-            <div className="mt-1 flex flex-wrap gap-x-4 gap-y-1 text-[11px] text-mute">
+            <div className="mt-1 flex flex-wrap gap-x-4 gap-y-1 text-[12px] sm:text-[11px] text-mute">
               {a.lines.map((l) => (
                 <span key={l.unitLabel}>
                   {l.unitLabel} <span className="figures text-ink">{l.percentage}%</span>
@@ -83,7 +83,7 @@ export function AmendmentHistory({ amendments, canDelete = false }: { amendments
           </li>
         ))}
       </ul>
-      {error ? <p className="mt-2 text-[11px] text-bad-text">{error}</p> : null}
+      {error ? <p className="mt-2 text-[12px] sm:text-[11px] text-bad-text">{error}</p> : null}
     </div>
   );
 }

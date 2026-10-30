@@ -51,11 +51,11 @@ function Photo({ photo, ticketId }: { photo: PhotoView; ticketId: string }) {
       ) : (
         <div className="flex aspect-square w-full flex-col items-center justify-center gap-1 rounded-md border border-line bg-fill p-2 text-center">
           <span className="rounded-full border border-line-strong px-2 py-0.5 text-[11px] text-mute">Photo</span>
-          <span className="line-clamp-2 break-all text-[11px] text-mute">{photo.filename}</span>
+          <span className="line-clamp-2 break-all text-[12px] text-mute">{photo.filename}</span>
           <DownloadButton id={photo.documentId}>Download</DownloadButton>
         </div>
       )}
-      <p className="text-[11px] leading-snug text-mute">{photo.caption}</p>
+      <p className="text-[12px] leading-snug text-mute">{photo.caption}</p>
       {photo.canRemove ? (
         confirming ? (
           <div className="space-y-1 rounded-md border border-line p-2">

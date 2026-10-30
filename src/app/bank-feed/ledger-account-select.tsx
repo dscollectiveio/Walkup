@@ -42,7 +42,7 @@ export function LedgerAccountSelect({
             setValue(e.target.value);
             if (e.target.value && e.target.value !== NEW) apply(e.target.value);
           }}
-          className="rounded-lg border border-line-strong bg-paper px-2 py-1 text-[12px] text-ink"
+          className="min-h-[44px] max-w-full rounded-lg border border-line-strong bg-paper px-2 py-1 text-[16px] text-ink sm:min-h-0 sm:text-[12px]"
         >
           <option value="">Choose…</option>
           {cashAccounts.map((a) => (
@@ -54,12 +54,12 @@ export function LedgerAccountSelect({
         </select>
       </label>
       {value === NEW ? (
-        <span className="ml-2 inline-flex items-center gap-1">
+        <span className="mt-1 flex items-center gap-1 sm:ml-2 sm:mt-0 sm:inline-flex">
           <input
             value={newName}
             onChange={(e) => setNewName(e.target.value)}
             placeholder="e.g. Chase Checking"
-            className="rounded-lg border border-line-strong bg-paper px-2 py-1 text-[12px] text-ink"
+            className="min-h-[44px] min-w-0 rounded-lg border border-line-strong bg-paper px-2 py-1 text-[16px] text-ink sm:min-h-0 sm:text-[12px]"
           />
           <button
             type="button"
@@ -77,7 +77,7 @@ export function LedgerAccountSelect({
                 if (result.error) setError(result.error);
               })
             }
-            className="rounded-md border border-line-strong px-2 py-1 text-[11px] text-ink hover:bg-fill disabled:opacity-50"
+            className="min-h-[44px] rounded-md border border-line-strong px-3 py-1 text-[12px] text-ink hover:bg-fill disabled:opacity-50 sm:min-h-0 sm:px-2 sm:text-[11px]"
           >
             Create
           </button>

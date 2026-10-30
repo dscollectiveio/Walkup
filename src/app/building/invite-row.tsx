@@ -40,15 +40,15 @@ export function InviteRow({ invite, canRevokeInvites = false }: { invite: Invite
         <span className="text-[13px] font-medium text-ink">
           {ROLE_LABEL[invite.role] ?? invite.role}
         </span>
-        {invite.email ? <span className="ml-2 text-[12px] text-mute">{invite.email}</span> : null}
-        <span className={`ml-2 text-[11px] ${className}`}>{label}</span>
-        <div className="mt-0.5 text-[11px] text-mute-soft">
+        {invite.email ? <span className="ml-2 break-all text-[12px] text-mute">{invite.email}</span> : null}
+        <span className={`ml-2 text-[12px] sm:text-[11px] ${className}`}>{label}</span>
+        <div className="mt-0.5 text-[12px] sm:text-[11px] text-mute-soft">
           {invite.redeemedAt
             ? `Joined ${new Date(invite.redeemedAt).toLocaleDateString()}`
             : `Expires ${new Date(invite.expiresAt).toLocaleDateString()}`}
         </div>
       </div>
-      <div className="flex shrink-0 items-center gap-2">
+      <div className="flex shrink-0 flex-wrap items-center gap-2">
         {!invite.redeemedAt && new Date(invite.expiresAt) >= new Date() ? (
           <button
             type="button"
@@ -57,14 +57,14 @@ export function InviteRow({ invite, canRevokeInvites = false }: { invite: Invite
               setCopied(true);
               setTimeout(() => setCopied(false), 2000);
             }}
-            className="rounded-md border border-line-strong px-2.5 py-1 text-[11px] text-ink hover:bg-fill"
+            className="rounded-md border border-line-strong px-2.5 py-1 max-sm:min-h-[44px] text-[12px] sm:text-[11px] text-ink hover:bg-fill"
           >
             {copied ? "Copied" : "Copy link"}
           </button>
         ) : null}
         {canRevoke ? (
           confirming ? (
-            <span className="flex items-center gap-2">
+            <span className="flex flex-wrap items-center gap-2">
               <button
                 type="button"
                 disabled={pending}
@@ -76,14 +76,14 @@ export function InviteRow({ invite, canRevokeInvites = false }: { invite: Invite
                     else setConfirming(false);
                   })
                 }
-                className="rounded-md border border-bad-line bg-bad-tint px-2.5 py-1 text-[11px] font-medium text-bad-text hover:bg-bad-tint/80"
+                className="rounded-md border border-bad-line bg-bad-tint px-2.5 py-1 max-sm:min-h-[44px] text-[12px] sm:text-[11px] font-medium text-bad-text hover:bg-bad-tint/80"
               >
                 {pending ? "Revoking…" : "Confirm revoke"}
               </button>
               <button
                 type="button"
                 onClick={() => setConfirming(false)}
-                className="text-[12px] text-mute underline-offset-2 hover:underline"
+                className="text-[12px] text-mute underline-offset-2 hover:underline max-sm:inline-flex max-sm:min-h-[44px] max-sm:items-center"
               >
                 Cancel
               </button>
@@ -92,14 +92,14 @@ export function InviteRow({ invite, canRevokeInvites = false }: { invite: Invite
             <button
               type="button"
               onClick={() => setConfirming(true)}
-              className="text-[12px] text-bad-text underline-offset-2 hover:underline"
+              className="text-[12px] text-bad-text underline-offset-2 hover:underline max-sm:inline-flex max-sm:min-h-[44px] max-sm:items-center"
             >
               Revoke
             </button>
           )
         ) : null}
       </div>
-      {error ? <p className="w-full text-[11px] text-bad-text">{error}</p> : null}
+      {error ? <p className="w-full text-[12px] sm:text-[11px] text-bad-text">{error}</p> : null}
     </li>
   );
 }

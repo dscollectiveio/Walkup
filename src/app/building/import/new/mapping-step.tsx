@@ -244,7 +244,7 @@ export function MappingStep(props: MappingStepProps) {
           ))}
       </div>
 
-      <label className="flex items-start gap-3 text-[13px] text-ink">
+      <label className="flex items-start gap-3 max-sm:min-h-[44px] text-[13px] text-ink">
         <input type="checkbox" checked={keepCopy} onChange={(e) => setKeepCopy(e.target.checked)} className="mt-0.5 h-5 w-5 shrink-0" />
         <span>
           Keep a copy of this file in Documents (board only)

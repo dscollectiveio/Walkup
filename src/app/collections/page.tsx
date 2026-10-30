@@ -102,11 +102,11 @@ export default async function CollectionsPage() {
                   <dl className="grid gap-3 sm:grid-cols-4">
                     <div>
                       <dt className="text-[12px] text-mute">Owed</dt>
-                      <dd className="figures text-[16px] font-semibold text-ink">{money(r.owed)}</dd>
+                      <dd className="figures whitespace-nowrap text-[16px] font-semibold text-ink">{money(r.owed)}</dd>
                     </div>
                     <div>
                       <dt className="text-[12px] text-mute">Overdue</dt>
-                      <dd className="figures text-[16px] font-semibold text-ink">{money(r.overdue)}</dd>
+                      <dd className="figures whitespace-nowrap text-[16px] font-semibold text-ink">{money(r.overdue)}</dd>
                     </div>
                     <div>
                       <dt className="text-[12px] text-mute">Oldest overdue</dt>
@@ -131,18 +131,18 @@ export default async function CollectionsPage() {
                             {o.owner_since ? <span className="text-mute"> · since {shortDate(o.owner_since, today)}</span> : null}
                             <span className="block text-mute">
                               {o.email ? (
-                                <a href={mailtoLink(o.email)} className="mr-3 inline-flex min-h-[32px] items-center text-ink underline underline-offset-2">
+                                <a href={mailtoLink(o.email)} className="mr-3 inline-flex min-h-[44px] items-center break-all text-ink sm:min-h-[32px] underline underline-offset-2">
                                   {o.email}
                                 </a>
                               ) : null}
                               {o.phone ? (
-                                <a href={`tel:${o.phone.replace(/[^\d+]/g, "")}`} className="mr-3 inline-flex min-h-[32px] items-center text-ink underline underline-offset-2">
+                                <a href={`tel:${o.phone.replace(/[^\d+]/g, "")}`} className="mr-3 inline-flex min-h-[44px] items-center break-all text-ink sm:min-h-[32px] underline underline-offset-2">
                                   {o.phone}
                                 </a>
                               ) : null}
                               {!o.email && !o.phone && !o.mailing_address ? "No contact details on file." : null}
                             </span>
-                            {o.mailing_address ? <span className="block text-[12px] text-mute">{o.mailing_address}</span> : null}
+                            {o.mailing_address ? <span className="block break-words text-[12px] text-mute">{o.mailing_address}</span> : null}
                           </li>
                         ))}
                       </ul>

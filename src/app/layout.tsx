@@ -1,4 +1,4 @@
-import type { Metadata } from "next";
+import type { Metadata, Viewport } from "next";
 import { Outfit } from "next/font/google";
 import { SITE_URL } from "@/lib/site-config";
 import "./globals.css";
@@ -31,6 +31,12 @@ const THEME_SCRIPT = `(function(){try{var t=localStorage.getItem("walkup.theme")
 
 // The sign-up → Dashboard steps draw their own full-page frame (AuthShell),
 // with no sidebar or header even once a session exists.
+
+// Pinch-zoom stays on (never set maximumScale or userScalable).
+export const viewport: Viewport = {
+  width: "device-width",
+  initialScale: 1,
+};
 
 export const metadata: Metadata = {
   // Makes relative share-image and canonical URLs resolve to the real domain.

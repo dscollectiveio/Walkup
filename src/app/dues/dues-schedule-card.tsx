@@ -25,7 +25,7 @@ const FREQ_LABEL: Record<string, string> = {
   one_time: "one time",
 };
 
-const inputClass = "mt-1 w-full rounded-lg border border-line-strong px-3 py-2 text-[13px] text-ink";
+const inputClass = "mt-1 w-full rounded-lg border border-line-strong px-3 py-2 text-[16px] text-ink min-h-[44px] sm:min-h-0 sm:text-[13px]";
 
 function firstOfNextMonth(): string {
   const d = new Date();
@@ -126,7 +126,7 @@ function AddScheduleForm() {
         <button
           type="button"
           onClick={() => setOpen(false)}
-          className="rounded-md border border-line-strong px-4 py-2 text-[13px] text-ink hover:bg-fill"
+          className="min-h-[44px] rounded-md border border-line-strong px-4 py-2 text-[13px] text-ink hover:bg-fill sm:min-h-0"
         >
           Cancel
         </button>
@@ -164,7 +164,7 @@ function ChargeButton({ schedule, unitCount }: { schedule: ScheduleView; unitCou
             else setResult(null);
           })
         }
-        className="rounded-md bg-ink px-3 py-1.5 text-[12px] font-medium text-paper hover:bg-ink-mid disabled:opacity-50"
+        className="min-h-[44px] rounded-md bg-ink px-3 py-1.5 text-[12px] font-medium text-paper hover:bg-ink-mid disabled:opacity-50 sm:min-h-0"
       >
         {pending ? "Charging…" : `Charge ${schedule.periodLabel}`}
       </button>

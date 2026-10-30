@@ -53,7 +53,7 @@ export function QuoteGroups({
                   <li key={q.id} className="space-y-2 py-3">
                     <div className="flex flex-wrap items-start justify-between gap-2">
                       <div className="min-w-0 text-[13px]">
-                        <Link href={`/insurance/quotes/${q.id}`} className="font-medium text-ink underline-offset-2 hover:underline">
+                        <Link href={`/insurance/quotes/${q.id}`} className="inline-block py-2 font-medium text-ink underline-offset-2 hover:underline sm:py-0">
                           {q.carrier_name}
                         </Link>
                         {showContact && q.contactName ? <span className="text-mute"> · {q.contactName}</span> : null}

@@ -194,7 +194,7 @@ function NoteItem(props: { n: NoteView; canEditThis: boolean; canDelete: boolean
           </div>
         </div>
       ) : (
-        <p className="whitespace-pre-wrap text-ink">{n.body}</p>
+        <p className="whitespace-pre-wrap break-words text-ink">{n.body}</p>
       )}
       <p className="mt-1 text-[12px] text-mute">
         {n.author} · {humanDate(n.createdAt.slice(0, 10), props.todayIso)}

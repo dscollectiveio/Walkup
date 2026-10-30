@@ -58,12 +58,12 @@ export function ReserveTargetForm({
         step="100"
         defaultValue={currentTarget !== null ? String(currentTarget) : ""}
         placeholder="30000"
-        className="figures w-32 rounded-lg border border-line-strong px-3 py-1.5 text-right text-[13px] text-ink"
+        className="figures w-32 rounded-lg border border-line-strong px-3 py-1.5 text-right text-[16px] text-ink max-sm:min-h-[44px] sm:text-[13px]"
       />
       <button
         type="submit"
         disabled={pending}
-        className="rounded-md bg-ink px-3 py-1.5 text-[12px] font-medium text-paper hover:bg-ink-mid disabled:opacity-50"
+        className="rounded-md bg-ink px-3 py-1.5 text-[12px] font-medium text-paper hover:bg-ink-mid disabled:opacity-50 max-sm:min-h-[44px]"
       >
         {pending ? "Saving…" : "Save"}
       </button>

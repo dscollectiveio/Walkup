@@ -86,7 +86,7 @@ const MONTHS = [
 ];
 
 const INPUT =
-  "w-full rounded-md border border-line-strong bg-paper px-2.5 py-1.5 text-[13px] text-ink";
+  "w-full rounded-md border border-line-strong bg-paper px-2.5 py-1.5 text-[16px] text-ink sm:text-[13px]";
 
 function money(text: string | null): string | null {
   if (!text) return null;
@@ -219,7 +219,7 @@ export function AssociationSummary({
               type="button"
               onClick={() => startEdit(id)}
               aria-label={`Edit ${label}`}
-              className="shrink-0 rounded p-1 text-mute opacity-60 hover:bg-fill hover:text-ink group-hover:opacity-100 focus:opacity-100"
+              className="shrink-0 rounded p-1 max-sm:-my-2 max-sm:inline-flex max-sm:h-11 max-sm:w-11 max-sm:items-center max-sm:justify-center text-mute opacity-60 hover:bg-fill hover:text-ink group-hover:opacity-100 focus:opacity-100"
             >
               <svg
                 width="14"
@@ -385,15 +385,15 @@ export function AssociationSummary({
               <p className="text-[13px] text-mute">
                 {address || "No address yet"}
               </p>
-              <dl className="mt-3 grid grid-cols-2 gap-3 text-[13px] lg:grid-cols-4">
-                <div className="col-span-2 min-w-0 overflow-hidden rounded-lg border border-line bg-paper">
+              <dl className="mt-3 grid grid-cols-1 gap-3 text-[13px] sm:grid-cols-2 lg:grid-cols-4">
+                <div className="min-w-0 sm:col-span-2 overflow-hidden rounded-lg border border-line bg-paper">
                   <div className={`${CARD_HEADER} flex items-center justify-between gap-2`}>
                     <dt>Building details</dt>
                     <button
                       type="button"
                       onClick={showMoreInfo}
                       aria-expanded={expanded}
-                      className="shrink-0 text-[11px] font-medium normal-case tracking-normal text-ink underline underline-offset-2 hover:text-ink-mid"
+                      className="shrink-0 text-[12px] sm:text-[11px] max-sm:-my-2 max-sm:inline-flex max-sm:min-h-[44px] max-sm:items-center font-medium normal-case tracking-normal text-ink underline underline-offset-2 hover:text-ink-mid"
                     >
                       More info <span aria-hidden="true">&rarr;</span>
                     </button>
@@ -405,7 +405,7 @@ export function AssociationSummary({
                       ["Roof replaced", profile.roof_replaced_year ? String(profile.roof_replaced_year) : null],
                     ].map(([label, value]) => (
                       <div key={label} className="min-w-0">
-                        <div className="text-[11px] text-mute">{label}</div>
+                        <div className="text-[12px] sm:text-[11px] text-mute">{label}</div>
                         <div className={`text-[14px] font-semibold ${value ? "text-ink" : "font-normal text-mute-soft"}`}>{value || "Not set"}</div>
                       </div>
                     ))}
@@ -790,7 +790,7 @@ export function AssociationSummary({
                       type="button"
                       onClick={() => setUploading((v) => !v)}
                       aria-expanded={uploading}
-                      className="rounded-md bg-ink px-3 py-1.5 text-[13px] font-medium text-paper hover:bg-ink-mid"
+                      className="rounded-md bg-ink px-3 py-1.5 max-sm:min-h-[44px] text-[13px] font-medium text-paper hover:bg-ink-mid"
                     >
                       {uploading ? "Close" : "Upload policy"}
                     </button>
@@ -827,7 +827,7 @@ export function AssociationSummary({
                           <button
                             type="button"
                             onClick={useSuggestion}
-                            className="rounded-md border border-line-strong px-3 py-1 text-[12px] font-medium text-ink hover:bg-fill"
+                            className="rounded-md border border-line-strong px-3 py-1 max-sm:min-h-[44px] text-[12px] font-medium text-ink hover:bg-fill"
                           >
                             Use it
                           </button>
@@ -885,7 +885,7 @@ export function AssociationSummary({
                   </div>
                   <Link
                     href="/tax"
-                    className="text-[13px] font-medium text-ink underline underline-offset-2"
+                    className="text-[13px] font-medium text-ink underline underline-offset-2 max-sm:inline-flex max-sm:min-h-[44px] max-sm:items-center"
                   >
                     Edit in Taxes
                   </Link>
@@ -950,7 +950,7 @@ export function AssociationSummary({
               <button
                 type="button"
                 onClick={() => setEditing(false)}
-                className="rounded-md border border-line-strong px-4 py-2 text-[13px] text-ink hover:bg-fill"
+                className="rounded-md border border-line-strong px-4 py-2 max-sm:min-h-[44px] text-[13px] text-ink hover:bg-fill"
               >
                 Cancel
               </button>

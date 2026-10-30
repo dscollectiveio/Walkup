@@ -6,10 +6,10 @@ import { AddressInput } from "@/components/address-input";
 import { todayIso } from "@/lib/dates";
 import { ROLE_OPTIONS } from "./person-row";
 
-const input = "mt-1 w-full rounded-lg border border-line-strong bg-paper px-3 py-2 text-[13px] text-ink";
+const input = "mt-1 w-full rounded-lg border border-line-strong bg-paper px-3 py-2 text-[16px] text-ink sm:text-[13px]";
 const label = "block text-[12px] font-medium text-ink";
 const optional = <span className="ml-1 font-normal text-mute-soft">optional</span>;
-const ghost = "rounded-md bg-ink px-3 py-1.5 text-[12px] font-medium text-paper hover:bg-ink-mid";
+const ghost = "rounded-md bg-ink px-3 py-1.5 max-sm:min-h-[44px] text-[12px] font-medium text-paper hover:bg-ink-mid";
 
 /** Someone already in the unit, with the values to edit. */
 export interface ResidentValue {
@@ -31,7 +31,7 @@ function RoleBoxes({ prefix, selected }: { prefix: string; selected: string[] })
       <span className={label}>Role in the HOA</span>
       <div className="mt-1.5 flex flex-wrap gap-x-4 gap-y-1.5">
         {ROLE_OPTIONS.map((r) => (
-          <label key={r.value} className="flex items-center gap-1.5 text-[12px] text-ink">
+          <label key={r.value} className="flex items-center gap-1.5 text-[12px] text-ink max-sm:min-h-[44px]">
             <input type="checkbox" name={`${prefix}.roles`} value={r.value} defaultChecked={selected.includes(r.value)} className="rounded border-line-strong" />
             {r.label}
             <span className="text-mute-soft">({r.hint})</span>
@@ -138,7 +138,7 @@ export function PeopleFields({
                   </div>
                 </div>
                 {canEditRoles ? <RoleBoxes prefix={`p.${k}`} selected={r.roles} /> : null}
-                <button type="button" onClick={() => toggleRemoved(r.ownerRowId, true)} className="text-[12px] text-bad-text underline-offset-2 hover:underline">
+                <button type="button" onClick={() => toggleRemoved(r.ownerRowId, true)} className="text-[12px] text-bad-text underline-offset-2 hover:underline max-sm:inline-flex max-sm:min-h-[44px] max-sm:items-center">
                   Take {r.fullName} off this unit
                 </button>
               </>
@@ -160,7 +160,7 @@ export function PeopleFields({
                     ["link", "Someone already on file"],
                   ] as const
                 ).map(([value, text]) => (
-                  <label key={value} className="flex min-h-[32px] items-center gap-2 text-[13px] text-ink">
+                  <label key={value} className="flex min-h-[32px] items-center gap-2 text-[13px] max-sm:min-h-[44px] text-ink">
                     <input
                       type="radio"
                       name={`p.${k}.mode`}
@@ -173,7 +173,7 @@ export function PeopleFields({
                   </label>
                 ))}
               </div>
-              <button type="button" onClick={() => setAdded((x) => x.filter((y) => y.key !== k))} className="text-[12px] text-bad-text underline-offset-2 hover:underline">
+              <button type="button" onClick={() => setAdded((x) => x.filter((y) => y.key !== k))} className="text-[12px] text-bad-text underline-offset-2 hover:underline max-sm:inline-flex max-sm:min-h-[44px] max-sm:items-center">
                 Remove
               </button>
             </div>

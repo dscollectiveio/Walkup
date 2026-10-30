@@ -2,7 +2,7 @@
 // screen's inputs and buttons look and size the same (44 px hit targets).
 
 export const inputClass =
-  "mt-1 block min-h-[44px] w-full rounded-lg border border-line-strong bg-paper px-3 py-2 text-[13px] text-ink disabled:opacity-60";
+  "mt-1 block min-h-[44px] w-full rounded-lg border border-line-strong bg-paper px-3 py-2 text-[16px] text-ink disabled:opacity-60 sm:text-[13px]";
 
 export const labelClass = "block text-[12px] font-medium text-ink";
 
@@ -15,7 +15,7 @@ export { btnPrimary, btnSecondary as btnGhost } from "@/components/repairs/style
 export const btnDanger =
   "inline-flex min-h-[44px] items-center justify-center rounded-md border border-bad-line bg-bad-tint px-4 text-[13px] font-medium text-bad-text hover:opacity-90 disabled:opacity-50";
 
-export const linkClass = "font-medium text-ink underline underline-offset-2";
+export const linkClass = "inline-block py-3 font-medium text-ink underline underline-offset-2 sm:py-0";
 
 /** The action-error block (§11.4): directly above the button that failed. */
 export const errorBlock = "border-l-[3px] border-bad bg-bad-tint px-3 py-2 text-[13px] text-bad-text";

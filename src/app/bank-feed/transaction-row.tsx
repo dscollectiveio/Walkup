@@ -143,11 +143,11 @@ const CHIP_TONE: Record<RowRecommendation["source"], string> = {
 
 /** Whole-surface buttons: the entire pill is the click target, not just the label. */
 const BTN_PRIMARY =
-  "inline-flex items-center justify-center whitespace-nowrap rounded-md bg-ink px-3 py-1.5 text-[12px] font-medium text-paper transition-colors hover:bg-ink-mid focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-brass disabled:opacity-50";
+  "inline-flex min-h-[44px] items-center justify-center whitespace-nowrap rounded-md bg-ink px-3 py-1.5 sm:min-h-0 text-[12px] font-medium text-paper transition-colors hover:bg-ink-mid focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-brass disabled:opacity-50";
 const BTN_OUTLINE =
-  "inline-flex items-center justify-center whitespace-nowrap rounded-md border border-line-strong bg-paper px-3 py-1.5 text-[12px] font-medium text-ink transition-colors hover:bg-fill focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-brass disabled:opacity-50";
+  "inline-flex min-h-[44px] items-center justify-center whitespace-nowrap rounded-md border border-line-strong bg-paper px-3 py-1.5 sm:min-h-0 text-[12px] font-medium text-ink transition-colors hover:bg-fill focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-brass disabled:opacity-50";
 const LINK_QUIET =
-  "whitespace-nowrap text-[11px] text-mute underline-offset-2 hover:text-ink hover:underline disabled:opacity-50";
+  "inline-flex min-h-[44px] items-center whitespace-nowrap text-[12px] text-mute underline-offset-2 sm:min-h-0 sm:text-[11px] hover:text-ink hover:underline disabled:opacity-50";
 
 /**
  * Below the sm breakpoint a row is a card: the <tr> becomes a wrapping flex
@@ -328,7 +328,7 @@ function CategorizeForm({
     <div className="space-y-2 rounded-lg border border-line-strong bg-fill p-3">
       <div className="flex flex-wrap items-end gap-3">
         <div>
-          <label className="block text-[11px] text-mute">This is</label>
+          <label className="block text-[12px] text-mute sm:text-[11px]">This is</label>
           <CategoryPicker
             pickers={pickers}
             direction={direction}
@@ -349,7 +349,7 @@ function CategorizeForm({
             <select
               value={vendorId}
               onChange={(e) => setVendorId(e.target.value)}
-              className="mt-1 rounded-lg border border-line-strong bg-paper px-2 py-1.5 text-[12px] text-ink"
+              className="mt-1 min-h-[44px] max-w-full rounded-lg border border-line-strong bg-paper px-2 py-1.5 text-[16px] text-ink sm:min-h-0 sm:text-[12px]"
             >
               <option value="">No vendor</option>
               {pickers.vendors.map((v) => (
@@ -363,14 +363,14 @@ function CategorizeForm({
       </div>
 
       {similar.length > 0 ? (
-        <label className="flex items-center gap-1.5 text-[11px] text-ink">
+        <label className="flex min-h-[44px] items-center gap-2 text-[12px] text-ink sm:min-h-0 sm:gap-1.5 sm:text-[11px]">
           <input type="checkbox" checked={applyToSimilar} onChange={(e) => setApplyToSimilar(e.target.checked)} />
           Also file the {similar.length} other “{t.description.trim()}” transaction
           {similar.length === 1 ? "" : "s"} the same way
         </label>
       ) : null}
 
-      {t.pending ? <p className="text-[11px] text-mute">{PENDING_NOTE}.</p> : null}
+      {t.pending ? <p className="text-[12px] text-mute sm:text-[11px]">{PENDING_NOTE}.</p> : null}
 
       <div className="flex flex-wrap items-center gap-2">
         <button
@@ -378,7 +378,7 @@ function CategorizeForm({
           disabled={pending || t.pending || !choice}
           onClick={() => submit(true)}
           title={t.pending ? PENDING_NOTE : undefined}
-          className="rounded-md bg-ink px-2.5 py-1 text-[11px] font-medium text-paper hover:bg-ink-mid disabled:opacity-50"
+          className="min-h-[44px] rounded-md bg-ink px-3 py-1 text-[12px] font-medium text-paper hover:bg-ink-mid disabled:opacity-50 sm:min-h-0 sm:px-2.5 sm:text-[11px]"
         >
           {pending ? "Saving…" : isExcluded ? "Keep out of the books" : "Save & post"}
         </button>
@@ -386,14 +386,14 @@ function CategorizeForm({
           type="button"
           disabled={pending || !choice}
           onClick={() => submit(false)}
-          className="rounded-md border border-line-strong px-2.5 py-1 text-[11px] text-ink hover:bg-fill disabled:opacity-50"
+          className="min-h-[44px] rounded-md border border-line-strong px-3 py-1 text-[12px] text-ink hover:bg-fill disabled:opacity-50 sm:min-h-0 sm:px-2.5 sm:text-[11px]"
         >
           Save for later
         </button>
-        <button type="button" onClick={onDone} className="text-[11px] text-mute underline-offset-2 hover:underline">
+        <button type="button" onClick={onDone} className="min-h-[44px] px-2 text-[12px] text-mute underline-offset-2 hover:underline sm:min-h-0 sm:px-0 sm:text-[11px]">
           Cancel
         </button>
-        {error ? <span className="w-full text-[11px] text-bad-text">{error}</span> : null}
+        {error ? <span className="w-full text-[12px] text-bad-text sm:text-[11px]">{error}</span> : null}
       </div>
     </div>
   );
@@ -491,9 +491,9 @@ export function TransactionRow({
         <td className={CELL.description}>
           <div className="text-ink">{t.description}</div>
           {!t.posting_kind && t.raw_category ? (
-            <div className="text-[11px] text-mute-soft">bank says: {t.raw_category}</div>
+            <div className="text-[12px] text-mute-soft sm:text-[11px]">bank says: {t.raw_category}</div>
           ) : null}
-          {error ? <p className="mt-1 text-[11px] text-bad-text">{error}</p> : null}
+          {error ? <p className="mt-1 text-[12px] text-bad-text sm:text-[11px]">{error}</p> : null}
         </td>
 
         <td className={CELL.category}>
@@ -521,7 +521,7 @@ export function TransactionRow({
                       type="button"
                       onClick={() => setEditing(true)}
                       title="Opens the form with this already chosen"
-                      className={`inline-flex items-center gap-1 whitespace-nowrap rounded-full border px-2.5 py-0.5 text-[11px] font-medium ${CHIP_TONE[suggestion.source]}`}
+                      className={`inline-flex min-h-[44px] items-center gap-1 whitespace-nowrap rounded-full border px-3 py-0.5 text-[12px] font-medium sm:min-h-0 sm:px-2.5 sm:text-[11px] ${CHIP_TONE[suggestion.source]}`}
                     >
                       {suggestion.label}
                       <span className="font-normal opacity-80">· choose →</span>
@@ -535,7 +535,7 @@ export function TransactionRow({
                         alongWith.length > 0 ? ` along with ${alongWith.length} more from the same payee` : ""
                       }`}
                       title={chipTitle}
-                      className={`inline-flex items-center gap-1 whitespace-nowrap rounded-full border px-2.5 py-0.5 text-[11px] font-medium disabled:opacity-50 ${CHIP_TONE[suggestion.source]}`}
+                      className={`inline-flex min-h-[44px] items-center gap-1 whitespace-nowrap rounded-full border px-3 py-0.5 text-[12px] font-medium disabled:opacity-50 sm:min-h-0 sm:px-2.5 sm:text-[11px] ${CHIP_TONE[suggestion.source]}`}
                     >
                       <span aria-hidden="true">✓</span>
                       {busy ? (t.pending ? "Saving…" : "Posting…") : chipText}
@@ -556,7 +556,7 @@ export function TransactionRow({
                     </button>
                   ) : null}
                 </div>
-                <span className="text-[11px] text-mute-soft">
+                <span className="text-[12px] text-mute-soft sm:text-[11px]">
                   {t.pending && !suggestion.needsPick ? "Pending at the bank: posts once it settles" : suggestion.reason}
                 </span>
               </div>

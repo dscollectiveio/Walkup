@@ -17,9 +17,9 @@ import { btnPrimary } from "@/components/repairs/styles";
 export const dynamic = "force-dynamic";
 
 const toolBtn =
-  "inline-flex h-9 items-center rounded-md border border-line-strong bg-paper px-3 text-[13px] font-medium text-ink transition-colors hover:bg-fill";
+  "inline-flex h-11 items-center rounded-md border border-line-strong bg-paper px-3 text-[13px] font-medium text-ink transition-colors hover:bg-fill sm:h-9";
 const navBtn =
-  "inline-flex h-9 w-9 items-center justify-center rounded-md border border-line-strong bg-paper text-ink transition-colors hover:bg-fill";
+  "inline-flex h-11 w-11 items-center justify-center rounded-md border border-line-strong bg-paper text-ink transition-colors hover:bg-fill sm:h-9 sm:w-9";
 
 const TONE_TEXT = { good: "text-good-text", bad: "text-bad-text", neutral: "text-mute" } as const;
 
@@ -51,6 +51,9 @@ function LineRow({
         />
         <span className="min-w-0 flex-1">
           <span className="text-ink">{row.account_name}</span>
+          {variance ? (
+            <span className={`block text-[12px] sm:hidden ${TONE_TEXT[variance.tone]}`}>{variance.words}</span>
+          ) : null}
         </span>
         <span className="hidden w-36 items-center gap-2 sm:flex">
           <span className="h-1.5 flex-1 overflow-hidden rounded-full bg-fill">
@@ -69,16 +72,16 @@ function LineRow({
             ) : null}
           </span>
         ) : null}
-        <span className="figures w-28 text-right text-ink">{money(row.amount)}</span>
+        <span className="figures w-28 whitespace-nowrap text-right text-ink">{money(row.amount)}</span>
       </summary>
       <ul className="divide-y divide-line/60 bg-fill/30 pl-10 pr-3 text-[12px]">
         {entries.length === 0 ? (
           <li className="py-2 text-mute-soft">No entries found.</li>
         ) : (
           entries.map((e, i) => (
-            <li key={`${e.entry_id}-${i}`} className="flex items-baseline gap-3 py-1.5">
+            <li key={`${e.entry_id}-${i}`} className="flex items-baseline gap-3 py-2.5 sm:py-1.5">
               <span className="figures w-16 shrink-0 text-mute">{shortDate(e.entry_date, today)}</span>
-              <span className="min-w-0 flex-1 truncate text-ink">
+              <span className="min-w-0 flex-1 break-words text-ink sm:truncate">
                 {e.bank_description ? (
                   <Link
                     href={`/bank-feed?status=posted&q=${encodeURIComponent(e.bank_description)}`}
@@ -91,7 +94,7 @@ function LineRow({
                   e.memo
                 )}
               </span>
-              <span className="figures shrink-0 text-ink">{money(e.amount)}</span>
+              <span className="figures shrink-0 whitespace-nowrap text-ink">{money(e.amount)}</span>
             </li>
           ))
         )}
@@ -249,23 +252,23 @@ export default async function FinancialStatementsPage({
           </Link>
         </div>
         {rows.length > 0 && report ? (
-          <div className="flex items-center gap-2">
+          <div className="relative flex flex-wrap items-center gap-2">
             <ReportActions report={report} pdfHref={pdfHref} />
-            <details className="relative">
+            <details className="sm:relative">
               <summary
                 aria-label="More ways to share"
                 className={`${toolBtn} cursor-pointer list-none px-2.5 [&::-webkit-details-marker]:hidden`}
               >
                 ···
               </summary>
-              <div className="absolute right-0 z-10 mt-1 w-64 rounded-lg border border-line bg-paper p-1 text-[13px] shadow-lg">
-                <a href={excelHref} className="block rounded-md px-3 py-2 text-ink hover:bg-fill">
+              <div className="absolute inset-x-0 z-10 mt-1 min-w-[16rem] rounded-lg border border-line bg-paper p-1 text-[13px] shadow-lg sm:inset-x-auto sm:right-0 sm:w-64">
+                <a href={excelHref} className="block min-h-[44px] rounded-md px-3 py-2 text-ink hover:bg-fill">
                   Export to Excel
                 </a>
                 <div className="my-1 border-t border-line" />
-                <a href={yearEndHref} className="block rounded-md px-3 py-2 hover:bg-fill">
+                <a href={yearEndHref} className="block min-h-[44px] rounded-md px-3 py-2 hover:bg-fill">
                   <span className="block text-ink">Year-end package for your accountant</span>
-                  <span className="block text-[11px] text-mute">Excel: statement, trial balance, general ledger</span>
+                  <span className="block text-[12px] text-mute sm:text-[11px]">Excel: statement, trial balance, general ledger</span>
                 </a>
               </div>
             </details>
@@ -302,7 +305,7 @@ export default async function FinancialStatementsPage({
                 <h3 className="text-[11px] font-medium uppercase tracking-[0.07em] text-section-label">
                   What came in and went out
                 </h3>
-                <span className="text-[11px] text-mute-soft">
+                <span className="text-[12px] text-mute-soft sm:text-[11px]">
                   Click a line to see the entries behind it
                   {budgetByAccount ? ` · Budget column is ${budgetNote?.toLowerCase()}` : ""}
                 </span>
@@ -339,7 +342,7 @@ export default async function FinancialStatementsPage({
                       href={statementHref("/financial-statements", "total", period, offset, {
                         sort: sort === "size" ? undefined : "size",
                       })}
-                      className="normal-case tracking-normal text-mute underline-offset-2 hover:text-ink hover:underline"
+                      className="-my-3.5 inline-flex items-center py-3.5 normal-case tracking-normal text-mute underline-offset-2 hover:text-ink hover:underline sm:my-0 sm:py-0"
                     >
                       {sort === "size" ? "Sort by account" : "Sort by size"}
                     </Link>

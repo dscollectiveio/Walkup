@@ -38,7 +38,7 @@ export function SignupForm() {
           type="email"
           autoComplete="email"
           required
-          className={authInput}
+          className={`${authInput} max-sm:text-[16px]`}
         />
       </div>
 
@@ -52,7 +52,7 @@ export function SignupForm() {
           autoComplete="new-password"
           required
           minLength={12}
-          className={authInput}
+          className={`${authInput} max-sm:text-[16px]`}
         />
         <p className="mt-1.5 text-[12px] text-mute">At least 12 characters. A few random words works well.</p>
       </div>
@@ -67,7 +67,7 @@ export function SignupForm() {
           autoComplete="new-password"
           required
           minLength={12}
-          className={authInput}
+          className={`${authInput} max-sm:text-[16px]`}
         />
       </div>
 

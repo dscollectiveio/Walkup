@@ -347,7 +347,7 @@ export async function OverviewTab({
                   </div>
                   <div className="mt-1 flex flex-wrap items-center gap-2 text-[12px]">
                     {cover?.policies.map((p) => (
-                      <Link key={p.id} href={`/insurance/policies/${p.id}`} className="rounded-full border border-line px-2 py-0.5 text-mute hover:text-ink">
+                      <Link key={p.id} href={`/insurance/policies/${p.id}`} className="inline-flex min-h-[44px] items-center rounded-full border border-line px-2 py-0.5 text-mute hover:text-ink sm:min-h-0">
                         {p.carrier} {coverageShort(p.coverage).toLowerCase()}
                       </Link>
                     ))}
@@ -496,7 +496,7 @@ export async function OverviewTab({
             <p className="text-[13px] text-ink">
               To report damage, call {master.carrier_name} claims at{" "}
               {claimsTel ? (
-                <a href={claimsTel} className="figures font-medium underline underline-offset-2">
+                <a href={claimsTel} className="figures inline-block whitespace-nowrap py-2.5 font-medium underline underline-offset-2 sm:py-0">
                   {formatPhone(claimsPhone)}
                 </a>
               ) : (

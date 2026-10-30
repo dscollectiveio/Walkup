@@ -58,17 +58,17 @@ export function SosFileNumber({ current, canWrite }: { current: string | null; c
           defaultValue={current ?? ""}
           placeholder="On your articles of incorporation"
           autoComplete="off"
-          className="mt-1 w-56 rounded-lg border border-line-strong bg-paper px-3 py-1.5 text-[13px] text-ink"
+          className="mt-1 min-h-[44px] w-56 max-w-full rounded-lg border border-line-strong bg-paper px-3 py-1.5 text-[16px] text-ink sm:min-h-0 sm:text-[13px]"
         />
       </div>
       <button
         type="submit"
         disabled={pending}
-        className="min-h-[36px] rounded-md bg-ink px-3 text-[12px] font-medium text-paper hover:bg-ink-mid disabled:opacity-50"
+        className="min-h-[44px] rounded-md bg-ink px-3 sm:min-h-[36px] text-[12px] font-medium text-paper hover:bg-ink-mid disabled:opacity-50"
       >
         {pending ? "Saving…" : "Save"}
       </button>
-      <button type="button" onClick={() => setEditing(false)} className="text-[12px] text-mute underline-offset-2 hover:underline">
+      <button type="button" onClick={() => setEditing(false)} className="min-h-[44px] text-[12px] text-mute underline-offset-2 hover:underline sm:min-h-0">
         Cancel
       </button>
       {state?.error ? <p className="w-full text-[12px] text-bad-text">{state.error}</p> : null}

@@ -13,14 +13,14 @@ export function ResetPasswordForm() {
         <label htmlFor="password" className={authLabel}>
           New password
         </label>
-        <PasswordInput id="password" name="password" autoComplete="new-password" minLength={12} required autoFocus className={authInput} />
+        <PasswordInput id="password" name="password" autoComplete="new-password" minLength={12} required autoFocus className={`${authInput} max-sm:text-[16px]`} />
         <p className="mt-1.5 text-[12px] text-mute">At least 12 characters. A few random words works well.</p>
       </div>
       <div>
         <label htmlFor="confirm_password" className={authLabel}>
           Confirm new password
         </label>
-        <PasswordInput id="confirm_password" name="confirm_password" autoComplete="new-password" minLength={12} required className={authInput} />
+        <PasswordInput id="confirm_password" name="confirm_password" autoComplete="new-password" minLength={12} required className={`${authInput} max-sm:text-[16px]`} />
       </div>
       {state?.error ? <p className={authError}>{state.error}</p> : null}
       <button type="submit" disabled={pending} className={authButton}>

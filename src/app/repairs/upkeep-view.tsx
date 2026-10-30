@@ -166,7 +166,7 @@ export async function UpkeepView({
                   key={f.key}
                   href={upkeepHref({ show: f.key, layout: "list" })}
                   aria-current={show === f.key ? "page" : undefined}
-                  className={`inline-flex min-h-[40px] items-center rounded-full px-4 text-[13px] font-medium ${show === f.key ? "bg-ink text-paper" : "text-mute hover:text-ink"}`}
+                  className={`inline-flex min-h-[44px] sm:min-h-[40px] items-center rounded-full px-4 text-[13px] font-medium ${show === f.key ? "bg-ink text-paper" : "text-mute hover:text-ink"}`}
                 >
                   {f.label}
                 </Link>
@@ -179,7 +179,7 @@ export async function UpkeepView({
                 key={l}
                 href={upkeepHref({ layout: l, show, month })}
                 aria-current={layout === l ? "page" : undefined}
-                className={`inline-flex min-h-[40px] items-center rounded-full px-4 text-[13px] font-medium ${layout === l ? "bg-ink text-paper" : "text-mute hover:text-ink"}`}
+                className={`inline-flex min-h-[44px] sm:min-h-[40px] items-center rounded-full px-4 text-[13px] font-medium ${layout === l ? "bg-ink text-paper" : "text-mute hover:text-ink"}`}
               >
                 {l === "list" ? "List" : "Calendar"}
               </Link>

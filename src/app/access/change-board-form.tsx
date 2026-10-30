@@ -4,7 +4,7 @@ import { useActionState, useState, useTransition } from "react";
 import { btnPrimary } from "@/components/repairs/styles";
 import { changeBoardPosition, endBoardPosition } from "./actions";
 
-const field = "mt-1 block min-h-[40px] w-full rounded-lg border border-line-strong bg-paper px-3 text-[16px] text-ink sm:text-[13px]";
+const field = "mt-1 block min-h-[40px] max-sm:min-h-[44px] w-full rounded-lg border border-line-strong bg-paper px-3 text-[16px] text-ink sm:text-[13px]";
 
 export interface OfficeLineProps {
   /** president, vice_president, secretary, treasurer or director. */
@@ -56,7 +56,7 @@ export function OfficeLine({ position, label, holder, people, defaultTermEnd, en
             <button
               type="button"
               onClick={() => setOpen(true)}
-              className="font-medium text-ink underline underline-offset-2 hover:no-underline"
+              className="font-medium text-ink underline underline-offset-2 hover:no-underline max-sm:inline-flex max-sm:min-h-[44px] max-sm:items-center"
             >
               {holder ? "Edit" : (addLabel ? "Add" : "Assign")}
             </button>
@@ -91,7 +91,7 @@ export function OfficeLine({ position, label, holder, people, defaultTermEnd, en
             </div>
           </div>
           {holder && position !== "director" ? (
-            <label className="flex items-start gap-2 text-[13px] text-ink">
+            <label className="flex items-start gap-2 max-sm:min-h-[44px] text-[13px] text-ink">
               <input type="checkbox" name="end_old_access" className="mt-0.5" />
               <span>
                 If you pick someone else, end {holder.name}&rsquo;s board access too
@@ -110,7 +110,7 @@ export function OfficeLine({ position, label, holder, people, defaultTermEnd, en
             <button type="submit" disabled={pending} className={btnPrimary}>
               {pending ? "Saving…" : "Save"}
             </button>
-            <button type="button" onClick={() => setOpen(false)} className="rounded-md border border-line-strong px-4 py-2 text-[13px] text-ink hover:bg-fill">
+            <button type="button" onClick={() => setOpen(false)} className="rounded-md border border-line-strong px-4 py-2 max-sm:min-h-[44px] text-[13px] text-ink hover:bg-fill">
               Cancel
             </button>
           </div>
@@ -136,11 +136,11 @@ export function StepDownButton({ positionId, name, position }: { positionId: str
             if (r.error) setError(r.error);
           });
         }}
-        className="text-[12px] font-medium text-bad-text underline underline-offset-2 hover:no-underline disabled:opacity-50"
+        className="text-[12px] font-medium text-bad-text underline underline-offset-2 hover:no-underline disabled:opacity-50 max-sm:inline-flex max-sm:min-h-[44px] max-sm:items-center"
       >
         {pending ? "Saving…" : "Step down"}
       </button>
-      {error ? <span className="text-[11px] text-bad-text">{error}</span> : null}
+      {error ? <span className="text-[12px] sm:text-[11px] text-bad-text">{error}</span> : null}
     </span>
   );
 }

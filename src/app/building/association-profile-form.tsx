@@ -52,7 +52,7 @@ export function AssociationProfileForm({ profile }: { profile: AssociationProfil
         <button
           type="button"
           onClick={() => setOpen(true)}
-          className="rounded-md border border-line-strong bg-paper px-4 py-2 text-[13px] font-medium text-ink hover:bg-fill"
+          className="rounded-md border border-line-strong bg-paper px-4 py-2 max-sm:min-h-[44px] text-[13px] font-medium text-ink hover:bg-fill"
         >
           Edit details
         </button>
@@ -72,7 +72,7 @@ export function AssociationProfileForm({ profile }: { profile: AssociationProfil
             name="legal_name"
             required
             defaultValue={profile.legal_name}
-            className="mt-1 w-full rounded-lg border border-line-strong px-3 py-2 text-[13px] text-ink"
+            className="mt-1 w-full rounded-lg border border-line-strong px-3 py-2 text-[16px] sm:text-[13px] text-ink"
           />
         </div>
         <div>
@@ -84,7 +84,7 @@ export function AssociationProfileForm({ profile }: { profile: AssociationProfil
             name="display_name"
             required
             defaultValue={profile.display_name}
-            className="mt-1 w-full rounded-lg border border-line-strong px-3 py-2 text-[13px] text-ink"
+            className="mt-1 w-full rounded-lg border border-line-strong px-3 py-2 text-[16px] sm:text-[13px] text-ink"
           />
         </div>
 
@@ -101,7 +101,7 @@ export function AssociationProfileForm({ profile }: { profile: AssociationProfil
             streetOnly
             withUnit={false}
             fillNames={{ city: "city", state: "state_code", postalCode: "postal_code", county: "county" }}
-            className="mt-1 w-full rounded-lg border border-line-strong px-3 py-2 text-[13px] text-ink"
+            className="mt-1 w-full rounded-lg border border-line-strong px-3 py-2 text-[16px] sm:text-[13px] text-ink"
           />
         </div>
         <div>
@@ -114,7 +114,7 @@ export function AssociationProfileForm({ profile }: { profile: AssociationProfil
             name="postal_code"
             inputMode="numeric"
             defaultValue={profile.postal_code ?? ""}
-            className="mt-1 w-full rounded-lg border border-line-strong px-3 py-2 text-[13px] text-ink"
+            className="mt-1 w-full rounded-lg border border-line-strong px-3 py-2 text-[16px] sm:text-[13px] text-ink"
           />
         </div>
         <div>
@@ -128,7 +128,7 @@ export function AssociationProfileForm({ profile }: { profile: AssociationProfil
             maxLength={2}
             placeholder="IL"
             defaultValue={profile.state_code}
-            className="mt-1 w-full rounded-lg border border-line-strong px-3 py-2 text-[13px] uppercase text-ink"
+            className="mt-1 w-full rounded-lg border border-line-strong px-3 py-2 text-[16px] sm:text-[13px] uppercase text-ink"
           />
         </div>
         <div>
@@ -140,7 +140,7 @@ export function AssociationProfileForm({ profile }: { profile: AssociationProfil
             id="county"
             name="county"
             defaultValue={profile.county ?? ""}
-            className="mt-1 w-full rounded-lg border border-line-strong px-3 py-2 text-[13px] text-ink"
+            className="mt-1 w-full rounded-lg border border-line-strong px-3 py-2 text-[16px] sm:text-[13px] text-ink"
           />
         </div>
 
@@ -153,7 +153,7 @@ export function AssociationProfileForm({ profile }: { profile: AssociationProfil
             id="city"
             name="city"
             defaultValue={profile.city ?? ""}
-            className="mt-1 w-full rounded-lg border border-line-strong px-3 py-2 text-[13px] text-ink"
+            className="mt-1 w-full rounded-lg border border-line-strong px-3 py-2 text-[16px] sm:text-[13px] text-ink"
           />
         </div>
         <div>
@@ -166,7 +166,7 @@ export function AssociationProfileForm({ profile }: { profile: AssociationProfil
             name="ein"
             placeholder="00-0000000"
             defaultValue={profile.ein ?? ""}
-            className="mt-1 w-full rounded-lg border border-line-strong px-3 py-2 text-[13px] text-ink"
+            className="mt-1 w-full rounded-lg border border-line-strong px-3 py-2 text-[16px] sm:text-[13px] text-ink"
           />
         </div>
 
@@ -180,7 +180,7 @@ export function AssociationProfileForm({ profile }: { profile: AssociationProfil
             name="incorporated_on"
             type="date"
             defaultValue={profile.incorporated_on ?? ""}
-            className="mt-1 w-full rounded-lg border border-line-strong px-3 py-2 text-[13px] text-ink"
+            className="mt-1 w-full rounded-lg border border-line-strong px-3 py-2 text-[16px] sm:text-[13px] text-ink"
           />
         </div>
         <div>
@@ -191,7 +191,7 @@ export function AssociationProfileForm({ profile }: { profile: AssociationProfil
             id="fiscal_year_end_month"
             name="fiscal_year_end_month"
             defaultValue={String(profile.fiscal_year_end_month)}
-            className="mt-1 w-full rounded-lg border border-line-strong bg-paper px-3 py-2 text-[13px] text-ink"
+            className="mt-1 w-full rounded-lg border border-line-strong bg-paper px-3 py-2 text-[16px] sm:text-[13px] text-ink"
           >
             {MONTHS.map((m, i) => (
               <option key={m} value={i + 1}>
@@ -208,13 +208,13 @@ export function AssociationProfileForm({ profile }: { profile: AssociationProfil
           <label htmlFor="year_built" className="block text-[12px] font-medium text-ink">
             Year built <span className="ml-1 font-normal text-mute-soft">optional</span>
           </label>
-          <input id="year_built" name="year_built" type="number" min="1700" max="2100" defaultValue={profile.year_built ?? ""} className="figures mt-1 w-full rounded-lg border border-line-strong px-3 py-2 text-[13px] text-ink" />
+          <input id="year_built" name="year_built" type="number" min="1700" max="2100" defaultValue={profile.year_built ?? ""} className="figures mt-1 w-full rounded-lg border border-line-strong px-3 py-2 text-[16px] sm:text-[13px] text-ink" />
         </div>
         <div>
           <label htmlFor="construction_type" className="block text-[12px] font-medium text-ink">
             Construction <span className="ml-1 font-normal text-mute-soft">optional</span>
           </label>
-          <select id="construction_type" name="construction_type" defaultValue={profile.construction_type ?? ""} className="mt-1 w-full rounded-lg border border-line-strong bg-paper px-3 py-2 text-[13px] text-ink">
+          <select id="construction_type" name="construction_type" defaultValue={profile.construction_type ?? ""} className="mt-1 w-full rounded-lg border border-line-strong bg-paper px-3 py-2 text-[16px] sm:text-[13px] text-ink">
             <option value="">Not sure</option>
             <option value="frame">Frame (wood)</option>
             <option value="joisted_masonry">Brick or block walls, wood floors</option>
@@ -227,13 +227,13 @@ export function AssociationProfileForm({ profile }: { profile: AssociationProfil
           <label htmlFor="stories" className="block text-[12px] font-medium text-ink">
             Stories <span className="ml-1 font-normal text-mute-soft">optional</span>
           </label>
-          <input id="stories" name="stories" type="number" min="1" max="200" defaultValue={profile.stories ?? ""} className="figures mt-1 w-full rounded-lg border border-line-strong px-3 py-2 text-[13px] text-ink" />
+          <input id="stories" name="stories" type="number" min="1" max="200" defaultValue={profile.stories ?? ""} className="figures mt-1 w-full rounded-lg border border-line-strong px-3 py-2 text-[16px] sm:text-[13px] text-ink" />
         </div>
         <div>
           <label htmlFor="roof_replaced_year" className="block text-[12px] font-medium text-ink">
             Roof last replaced (year) <span className="ml-1 font-normal text-mute-soft">optional</span>
           </label>
-          <input id="roof_replaced_year" name="roof_replaced_year" type="number" min="1700" max="2100" defaultValue={profile.roof_replaced_year ?? ""} className="figures mt-1 w-full rounded-lg border border-line-strong px-3 py-2 text-[13px] text-ink" />
+          <input id="roof_replaced_year" name="roof_replaced_year" type="number" min="1700" max="2100" defaultValue={profile.roof_replaced_year ?? ""} className="figures mt-1 w-full rounded-lg border border-line-strong px-3 py-2 text-[16px] sm:text-[13px] text-ink" />
         </div>
 
         <div>
@@ -247,7 +247,7 @@ export function AssociationProfileForm({ profile }: { profile: AssociationProfil
             min="0"
             step="0.01"
             defaultValue={profile.capitalization_threshold}
-            className="figures mt-1 w-full rounded-lg border border-line-strong px-3 py-2 text-[13px] text-ink"
+            className="figures mt-1 w-full rounded-lg border border-line-strong px-3 py-2 text-[16px] sm:text-[13px] text-ink"
           />
         </div>
         <div>
@@ -259,7 +259,7 @@ export function AssociationProfileForm({ profile }: { profile: AssociationProfil
             id="capitalization_threshold_source"
             name="capitalization_threshold_source"
             defaultValue={profile.capitalization_threshold_source ?? ""}
-            className="mt-1 w-full rounded-lg border border-line-strong px-3 py-2 text-[13px] text-ink"
+            className="mt-1 w-full rounded-lg border border-line-strong px-3 py-2 text-[16px] sm:text-[13px] text-ink"
           />
         </div>
 
@@ -270,19 +270,19 @@ export function AssociationProfileForm({ profile }: { profile: AssociationProfil
           <label htmlFor="board_contact_name" className="block text-[12px] font-medium text-ink">
             Board contact name <span className="ml-1 font-normal text-mute-soft">optional</span>
           </label>
-          <input id="board_contact_name" name="board_contact_name" maxLength={120} defaultValue={profile.board_contact_name ?? ""} className="mt-1 w-full rounded-lg border border-line-strong px-3 py-2 text-[13px] text-ink" />
+          <input id="board_contact_name" name="board_contact_name" maxLength={120} defaultValue={profile.board_contact_name ?? ""} className="mt-1 w-full rounded-lg border border-line-strong px-3 py-2 text-[16px] sm:text-[13px] text-ink" />
         </div>
         <div>
           <label htmlFor="board_contact_email" className="block text-[12px] font-medium text-ink">
             Board contact email <span className="ml-1 font-normal text-mute-soft">optional</span>
           </label>
-          <input id="board_contact_email" name="board_contact_email" type="email" maxLength={254} defaultValue={profile.board_contact_email ?? ""} className="mt-1 w-full rounded-lg border border-line-strong px-3 py-2 text-[13px] text-ink" />
+          <input id="board_contact_email" name="board_contact_email" type="email" maxLength={254} defaultValue={profile.board_contact_email ?? ""} className="mt-1 w-full rounded-lg border border-line-strong px-3 py-2 text-[16px] sm:text-[13px] text-ink" />
         </div>
         <div>
           <label htmlFor="board_contact_phone" className="block text-[12px] font-medium text-ink">
             Board contact phone <span className="ml-1 font-normal text-mute-soft">optional</span>
           </label>
-          <input id="board_contact_phone" name="board_contact_phone" type="tel" maxLength={40} defaultValue={profile.board_contact_phone ?? ""} className="mt-1 w-full rounded-lg border border-line-strong px-3 py-2 text-[13px] text-ink" />
+          <input id="board_contact_phone" name="board_contact_phone" type="tel" maxLength={40} defaultValue={profile.board_contact_phone ?? ""} className="mt-1 w-full rounded-lg border border-line-strong px-3 py-2 text-[16px] sm:text-[13px] text-ink" />
         </div>
       </div>
 
@@ -303,7 +303,7 @@ export function AssociationProfileForm({ profile }: { profile: AssociationProfil
         <button
           type="button"
           onClick={() => setOpen(false)}
-          className="rounded-md border border-line-strong px-4 py-2 text-[13px] text-ink hover:bg-fill"
+          className="rounded-md border border-line-strong px-4 py-2 max-sm:min-h-[44px] text-[13px] text-ink hover:bg-fill"
         >
           Cancel
         </button>

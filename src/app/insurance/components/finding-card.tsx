@@ -89,7 +89,7 @@ export function FindingCard({
             </p>
             <p className="text-ink">&ldquo;{finding.citation.quote}&rdquo;</p>
             <p>
-              <a href={finding.citation.url} target="_blank" rel="noopener noreferrer" className="text-ink underline underline-offset-2">
+              <a href={finding.citation.url} target="_blank" rel="noopener noreferrer" className="inline-block py-2 text-ink underline underline-offset-2 sm:py-0">
                 {actLinkText(finding.citation)}
               </a>
             </p>

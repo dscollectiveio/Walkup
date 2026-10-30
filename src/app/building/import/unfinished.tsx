@@ -50,10 +50,10 @@ export function Unfinished({ batches, uploads }: { batches: UnfinishedBatch[]; u
               </p>
             </div>
             <div className="flex gap-2">
-              <Link href={`/building/import/${b.id}`} className={`${BTN_PRIMARY} !min-h-[36px] !px-3`}>
+              <Link href={`/building/import/${b.id}`} className={`${BTN_PRIMARY} !min-h-[36px] max-sm:!min-h-[44px] !px-3`}>
                 Continue
               </Link>
-              <button type="button" disabled={pending} onClick={() => remove(() => cancelImport(b.id))} className={`${BTN_SECONDARY} !min-h-[36px] !px-3`}>
+              <button type="button" disabled={pending} onClick={() => remove(() => cancelImport(b.id))} className={`${BTN_SECONDARY} !min-h-[36px] max-sm:!min-h-[44px] !px-3`}>
                 Remove
               </button>
             </div>
@@ -87,14 +87,14 @@ export function Unfinished({ batches, uploads }: { batches: UnfinishedBatch[]; u
                     </option>
                   ))}
                 </select>
-                <Link href={`/building/import/new?kind=${kind}&doc=${u.documentId}`} className={`${BTN_PRIMARY} !min-h-[36px] !px-3`}>
+                <Link href={`/building/import/new?kind=${kind}&doc=${u.documentId}`} className={`${BTN_PRIMARY} !min-h-[36px] max-sm:!min-h-[44px] !px-3`}>
                   Continue
                 </Link>
                 <button
                   type="button"
                   disabled={pending}
                   onClick={() => remove(() => removeUnfinishedUpload(u.documentId))}
-                  className={`${BTN_SECONDARY} !min-h-[36px] !px-3`}
+                  className={`${BTN_SECONDARY} !min-h-[36px] max-sm:!min-h-[44px] !px-3`}
                 >
                   Remove
                 </button>

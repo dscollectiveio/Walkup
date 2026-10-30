@@ -48,11 +48,11 @@ const STATUS_LABEL: Record<Status, string> = {
 /** The pills a treasurer works from; Not for the books and Retracted sit behind "More". */
 const MAIN_STATUSES: Status[] = ["all", "needs", "ready", "posted"];
 
-const PILL_ACTIVE = "rounded-full bg-ink px-3 py-1 text-[12px] font-medium text-paper";
-const PILL = "rounded-full border border-line-strong px-3 py-1 text-[12px] text-ink hover:bg-fill";
+const PILL_ACTIVE = "inline-flex min-h-[44px] items-center rounded-full bg-ink px-3 py-1 sm:min-h-0 text-[12px] font-medium text-paper";
+const PILL = "inline-flex min-h-[44px] items-center rounded-full border border-line-strong px-3 py-1 sm:min-h-0 text-[12px] text-ink hover:bg-fill";
 /** "Ready to post" with rows saved for later: the next thing to do, so it is brass-tinted. */
 const PILL_WAITING =
-  "rounded-full border border-warning-line bg-warning-tint px-3 py-1 text-[12px] font-medium text-warning-text hover:brightness-95";
+  "inline-flex min-h-[44px] items-center rounded-full border border-warning-line bg-warning-tint px-3 py-1 sm:min-h-0 text-[12px] font-medium text-warning-text hover:brightness-95";
 
 const KIND_LABEL: Record<string, string> = {
   expense: "Expense",
@@ -630,7 +630,7 @@ export default async function BankFeedPage({
                 ) : (
                   <Link
                     href="/financial-statements"
-                    className="mt-1 inline-block text-[12px] font-medium text-good-text underline-offset-2 hover:underline"
+                    className="mt-1 inline-flex min-h-[44px] items-center text-[12px] font-medium text-good-text underline-offset-2 hover:underline"
                   >
                     See the financial statements →
                   </Link>
@@ -665,7 +665,7 @@ export default async function BankFeedPage({
                         <Link
                           key={s}
                           href={hrefFor(q, range, s, sort, account)}
-                          className={`rounded-md px-2.5 py-1.5 text-[12px] hover:bg-fill ${status === s ? "font-medium text-ink" : "text-ink"}`}
+                          className={`flex min-h-[44px] items-center rounded-md px-2.5 py-1.5 text-[12px] hover:bg-fill sm:min-h-0 ${status === s ? "font-medium text-ink" : "text-ink"}`}
                         >
                           {STATUS_LABEL[s]}
                           {counts[s] > 0 ? ` · ${counts[s]}` : ""}
@@ -746,7 +746,7 @@ export default async function BankFeedPage({
                         <Link
                           href={loadMoreHref}
                           scroll={false}
-                          className="font-medium text-ink underline-offset-2 hover:underline"
+                          className="inline-flex min-h-[44px] items-center font-medium text-ink underline-offset-2 hover:underline"
                         >
                           {sort === "date_desc" ? "Load earlier" : "Load more"}
                         </Link>

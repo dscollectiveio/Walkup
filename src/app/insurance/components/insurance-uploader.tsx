@@ -212,7 +212,7 @@ export function ImportUploader({
         <ul className="space-y-1 text-[13px]">
           {manualLinks.map((d) => (
             <li key={d.documentId}>
-              <Link href={manual(d.documentId)} className={linkClass}>
+              <Link href={manual(d.documentId)} className={`${linkClass} inline-flex min-h-[44px] items-center break-words sm:min-h-0`}>
                 Enter the details from {d.filename}
               </Link>
             </li>

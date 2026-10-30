@@ -83,7 +83,7 @@ export function UnitsRoster({
     <div className="min-w-0 flex-1 space-y-2">
     {canEdit && units.length > 0 ? (
       <details className="rounded-lg border border-line bg-paper">
-        <summary className="cursor-pointer px-4 py-2.5 text-[13px] font-medium text-ink">{BOARD_UNIT_DOCUMENT_COPY.addTitle}</summary>
+        <summary className="cursor-pointer px-4 py-2.5 max-sm:py-3.5 text-[13px] font-medium text-ink">{BOARD_UNIT_DOCUMENT_COPY.addTitle}</summary>
         <div className="border-t border-line px-4 py-3">
           <UnitDocumentsPanel units={units.map((r) => ({ id: r.unit.id, label: r.unit.label }))} />
         </div>
@@ -198,7 +198,10 @@ export function UnitsRoster({
               {active.share !== null ? <p className="text-mute">{`${+active.share.toFixed(2)}% share`}</p> : null}
             </div>
           ) : (
-            <p className="text-mute">Hover a floor to see its details. Click it to open the unit.</p>
+            <p className="text-mute">
+              <span className="max-sm:hidden">Hover a floor to see its details. Click it to open the unit.</span>
+              <span className="sm:hidden">Tap a floor to open that unit.</span>
+            </p>
           )}
         </div>
       </div>

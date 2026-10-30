@@ -233,12 +233,12 @@ export function ThisYear({
           <a href={boardHref ?? undefined} aria-disabled={boardHref ? undefined : true} className={`${secondary} ${boardHref ? "" : "pointer-events-none opacity-50"}`}>
             Send the dates to the board
           </a>
-          <button type="button" onClick={() => setShowAll((v) => !v)} className="text-[13px] font-medium text-ink underline underline-offset-2">
+          <button type="button" onClick={() => setShowAll((v) => !v)} className="min-h-[44px] text-[13px] font-medium text-ink underline underline-offset-2 sm:min-h-0">
             {showAll ? "Hide the dates" : "See every date →"}
           </button>
         </div>
         {error ? <p className="mt-2 text-[12px] text-bad-text">{error}</p> : null}
-        {boardNote ? <p className="mt-2 text-[11px] text-mute">{boardNote}</p> : null}
+        {boardNote ? <p className="mt-2 text-[12px] text-mute">{boardNote}</p> : null}
         {showAll ? (
           <ul className="mt-3 divide-y divide-line border-t border-line text-[13px]">
             {input.deadlines.length === 0 ? <li className="py-2 text-mute">No dates yet.</li> : null}
@@ -253,7 +253,7 @@ export function ThisYear({
                     · {d.kind} · {STATUS_WORDS[d.status]}
                   </span>
                   {d.milestones.map((m) => (
-                    <span key={m.key} className="block text-[11px] text-mute-soft">
+                    <span key={m.key} className="block text-[12px] text-mute-soft">
                       {m.label} by {dateWords(m.on)}
                     </span>
                   ))}
@@ -269,7 +269,7 @@ export function ThisYear({
                     "not on file, ask your CPA"
                   )}
                 </span>
-                {!d.dueOn && d.note ? <span className="w-full text-[11px] text-mute-soft">{d.note}</span> : null}
+                {!d.dueOn && d.note ? <span className="w-full text-[12px] text-mute-soft">{d.note}</span> : null}
               </li>
             ))}
           </ul>

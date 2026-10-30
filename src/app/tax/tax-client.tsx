@@ -92,7 +92,7 @@ export function FormCard({ view, canWrite, children }: { view: FormCardView; can
   let action: React.ReactNode = null;
   if (a.kind === "filed") {
     action = (
-      <a href={a.href} className="text-[13px] text-good-text underline underline-offset-2">
+      <a href={a.href} className="inline-flex min-h-[44px] items-center text-[13px] text-good-text underline underline-offset-2 sm:min-h-0">
         {a.label}
       </a>
     );
@@ -133,7 +133,7 @@ export function FormCard({ view, canWrite, children }: { view: FormCardView; can
             <p className={`text-[14px] font-bold tabular ${TONE[view.dueDate.tone]}`}>
               <span className="mr-1.5 text-[11px] font-medium uppercase tracking-wide text-mute">Due</span>
               {view.dueDate.label}
-              <span className="ml-2 text-[11px] font-normal text-mute">{view.dueDate.caption}</span>
+              <span className="ml-2 text-[12px] font-normal text-mute">{view.dueDate.caption}</span>
             </p>
           ) : (
             <p className="text-[12px] text-mute">{view.muted ? "Not required" : "No due date on file"}</p>
@@ -152,7 +152,7 @@ export function FormCard({ view, canWrite, children }: { view: FormCardView; can
             </p>
             {reasonRest || view.note ? (
               <details className="text-mute">
-                <summary className="cursor-pointer text-[12px] font-medium text-ink underline underline-offset-2">More</summary>
+                <summary className="cursor-pointer py-2.5 text-[12px] font-medium text-ink underline underline-offset-2 sm:py-0">More</summary>
                 {reasonRest ? <p className="mt-1">{reasonRest}</p> : null}
                 {view.note ? <p className="mt-1">{view.note}</p> : null}
               </details>
@@ -176,7 +176,7 @@ export function FormCard({ view, canWrite, children }: { view: FormCardView; can
                 {view.links.map((l, i) => (
                   <span key={l.href}>
                     {i > 0 ? " · " : ""}
-                    <a href={l.href} target="_blank" rel="noreferrer" title={l.words} className="text-ink underline underline-offset-2 hover:no-underline">
+                    <a href={l.href} target="_blank" rel="noreferrer" title={l.words} className="inline-block py-2 text-ink underline underline-offset-2 hover:no-underline sm:py-0">
                       {l.label} ↗<span className="sr-only"> ({l.words})</span>
                     </a>
                   </span>
@@ -259,7 +259,7 @@ export function CopyValue({ label, value }: { label: string; value: string }) {
         type="button"
         onClick={copy}
         aria-label={`Copy ${label}`}
-        className="shrink-0 rounded-md border border-line-strong bg-paper px-2 py-1 text-[11px] font-medium text-ink hover:bg-fill"
+        className="min-h-[44px] shrink-0 rounded-md border border-line-strong bg-paper px-3 py-1 text-[12px] font-medium text-ink hover:bg-fill sm:min-h-0 sm:px-2"
       >
         {copied ? "Copied" : "Copy"}
       </button>
@@ -293,7 +293,7 @@ export function ClassifyIncomeRow({
       if (r.error) setError(r.error);
       else setChanging(false);
     });
-  const choice = "min-h-[36px] rounded-md border px-3 text-[12px] font-medium disabled:opacity-50";
+  const choice = "min-h-[44px] rounded-md border px-3 text-[12px] sm:min-h-[36px] font-medium disabled:opacity-50";
 
   return (
     <li className="flex flex-wrap items-center justify-between gap-3 py-3">
@@ -322,13 +322,13 @@ export function ClassifyIncomeRow({
           </button>
         </div>
       ) : canWrite ? (
-        <button type="button" onClick={() => setChanging(true)} className="text-[12px] text-mute underline underline-offset-2">
+        <button type="button" onClick={() => setChanging(true)} className="min-h-[44px] px-2 text-[12px] text-mute underline underline-offset-2 sm:min-h-0 sm:px-0">
           Change
         </button>
       ) : null}
       {error ? <p className="w-full text-[12px] text-bad-text">{error}</p> : null}
       {!confirmedAt && canWrite ? (
-        <p className="w-full text-[11px] text-mute">
+        <p className="w-full text-[12px] text-mute">
           Member income is what owners pay as owners: dues, assessments, their late fees. Interest, rent from outsiders,
           and laundry or vending usually isn&rsquo;t. If unsure, ask your CPA.
         </p>

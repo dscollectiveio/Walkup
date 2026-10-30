@@ -271,7 +271,7 @@ export function BillsList(props: { bills: BillRowView[]; isBoard: boolean; categ
                     aria-expanded={open}
                     aria-label={`${open ? "Hide" : "Show"} details for ${b.name}`}
                     onClick={() => setHistoryFor(open ? null : b.id)}
-                    className="mt-0.5 flex h-6 w-6 shrink-0 items-center justify-center rounded-md border border-line-strong bg-paper text-ink hover:bg-fill focus-visible:outline focus-visible:outline-2 focus-visible:outline-brass"
+                    className="relative mt-0.5 flex h-6 w-6 shrink-0 items-center justify-center rounded-md border border-line-strong bg-paper text-ink after:absolute after:-inset-[10px] after:content-[''] hover:bg-fill focus-visible:outline focus-visible:outline-2 focus-visible:outline-brass"
                   >
                     <ChevronRight size={15} strokeWidth={2.2} aria-hidden="true" className={`transition-transform ${open ? "rotate-90" : ""}`} />
                   </button>
@@ -536,7 +536,7 @@ function BillQuickPanel({ bill, isBoard, todayIso, onFullEdit, onPay, onNotice }
   const set = <K extends keyof typeof f>(k: K, v: (typeof f)[K]) => setF((x) => ({ ...x, [k]: v }));
   const dirty = (Object.keys(f) as (keyof typeof f)[]).some((k) => f[k] !== saved[k]);
   const field =
-    "block min-h-[36px] w-full rounded-md border border-line-strong bg-paper px-2.5 text-[16px] text-ink sm:text-[13px] disabled:opacity-60";
+    "block min-h-[44px] sm:min-h-[36px] w-full rounded-md border border-line-strong bg-paper px-2.5 text-[16px] text-ink sm:text-[13px] disabled:opacity-60";
   const lab = "mb-1 block text-[11px] font-medium uppercase tracking-wide text-mute";
 
   function remove() {
@@ -618,7 +618,7 @@ function BillQuickPanel({ bill, isBoard, todayIso, onFullEdit, onPay, onNotice }
           </label>
           <input id={`${fid}-due`} type="date" value={f.due} disabled={!isBoard} onChange={(e) => set("due", e.target.value)} className={field} />
         </div>
-        <label className="flex min-h-[36px] cursor-pointer items-center gap-2 self-end text-[13px] text-ink">
+        <label className="flex min-h-[44px] sm:min-h-[36px] cursor-pointer items-center gap-2 self-end text-[13px] text-ink">
           <input type="checkbox" checked={f.autopay} disabled={!isBoard} onChange={(e) => set("autopay", e.target.checked)} className="h-4 w-4 accent-[var(--color-ink)]" />
           On autopay at the provider
         </label>
@@ -644,7 +644,7 @@ function BillQuickPanel({ bill, isBoard, todayIso, onFullEdit, onPay, onNotice }
       {isBoard ? (
         <div className="flex flex-wrap items-center gap-3 border-t border-line pt-3">
           {bill.is_active && !bill.paused ? (
-            <button type="button" onClick={onPay} className="inline-flex min-h-[34px] items-center rounded-md border border-line-strong bg-paper px-3 text-[12px] font-medium text-ink hover:bg-fill">
+            <button type="button" onClick={onPay} className="inline-flex min-h-[44px] sm:min-h-[34px] items-center rounded-md border border-line-strong bg-paper px-3 text-[12px] font-medium text-ink hover:bg-fill">
               {bill.autopay_arranged ? "Confirm it went through" : "Mark paid"}
             </button>
           ) : null}
@@ -665,7 +665,7 @@ function BillQuickPanel({ bill, isBoard, todayIso, onFullEdit, onPay, onNotice }
             type="button"
             disabled={pending || !dirty}
             onClick={save}
-            className="ml-auto inline-flex min-h-[34px] items-center justify-center rounded-md bg-ink px-4 text-[12px] font-medium text-paper hover:bg-ink-mid disabled:opacity-60"
+            className="ml-auto inline-flex min-h-[44px] sm:min-h-[34px] items-center justify-center rounded-md bg-ink px-4 text-[12px] font-medium text-paper hover:bg-ink-mid disabled:opacity-60"
           >
             {pending ? "Saving…" : "Save"}
           </button>
@@ -715,7 +715,7 @@ function BillStatusSelect({ bill, canEdit }: { bill: BillRowView; canEdit: boole
         value={current}
         disabled={pending}
         onChange={(e) => change(e.target.value)}
-        className="min-h-[34px] w-full rounded-md border border-line-strong bg-paper px-1.5 text-[12px] font-medium text-ink hover:bg-fill disabled:opacity-60"
+        className="min-h-[44px] sm:min-h-[34px] w-full rounded-md border border-line-strong bg-paper px-1.5 text-[12px] font-medium text-ink hover:bg-fill disabled:opacity-60"
       >
         <option value="active">Active</option>
         <option value="paused">Paused</option>

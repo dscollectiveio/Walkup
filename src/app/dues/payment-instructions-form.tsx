@@ -33,7 +33,7 @@ export function PaymentInstructionsForm({
       <button
         type="button"
         onClick={() => setOpen(true)}
-        className="rounded-md border border-line-strong bg-paper px-4 py-2 text-[13px] font-medium text-ink hover:bg-fill"
+        className="min-h-[44px] rounded-md border border-line-strong bg-paper px-4 py-2 text-[13px] font-medium text-ink hover:bg-fill sm:min-h-0"
       >
         Edit payment details
       </button>
@@ -53,7 +53,7 @@ export function PaymentInstructionsForm({
             name="dues_payee_name"
             placeholder="2158 N Damen Ave HOA"
             defaultValue={instructions.dues_payee_name ?? ""}
-            className="mt-1 w-full rounded-lg border border-line-strong px-3 py-2 text-[13px] text-ink"
+            className="mt-1 w-full rounded-lg border border-line-strong px-3 py-2 text-[16px] text-ink min-h-[44px] sm:min-h-0 sm:text-[13px]"
           />
         </div>
         <div>
@@ -65,7 +65,7 @@ export function PaymentInstructionsForm({
             id="dues_bank_name"
             name="dues_bank_name"
             defaultValue={instructions.dues_bank_name ?? ""}
-            className="mt-1 w-full rounded-lg border border-line-strong px-3 py-2 text-[13px] text-ink"
+            className="mt-1 w-full rounded-lg border border-line-strong px-3 py-2 text-[16px] text-ink min-h-[44px] sm:min-h-0 sm:text-[13px]"
           />
         </div>
         <div>
@@ -76,7 +76,7 @@ export function PaymentInstructionsForm({
             id="dues_account_number"
             name="dues_account_number"
             defaultValue={instructions.dues_account_number ?? ""}
-            className="figures mt-1 w-full rounded-lg border border-line-strong px-3 py-2 text-[13px] text-ink"
+            className="figures mt-1 w-full rounded-lg border border-line-strong px-3 py-2 text-[16px] text-ink min-h-[44px] sm:min-h-0 sm:text-[13px]"
           />
         </div>
         <div>
@@ -87,7 +87,7 @@ export function PaymentInstructionsForm({
             id="dues_routing_number"
             name="dues_routing_number"
             defaultValue={instructions.dues_routing_number ?? ""}
-            className="figures mt-1 w-full rounded-lg border border-line-strong px-3 py-2 text-[13px] text-ink"
+            className="figures mt-1 w-full rounded-lg border border-line-strong px-3 py-2 text-[16px] text-ink min-h-[44px] sm:min-h-0 sm:text-[13px]"
           />
         </div>
         <div>
@@ -99,7 +99,7 @@ export function PaymentInstructionsForm({
             id="dues_zelle_handle"
             name="dues_zelle_handle"
             defaultValue={instructions.dues_zelle_handle ?? ""}
-            className="mt-1 w-full rounded-lg border border-line-strong px-3 py-2 text-[13px] text-ink"
+            className="mt-1 w-full rounded-lg border border-line-strong px-3 py-2 text-[16px] text-ink min-h-[44px] sm:min-h-0 sm:text-[13px]"
           />
         </div>
       </div>
@@ -115,7 +115,7 @@ export function PaymentInstructionsForm({
           rows={2}
           placeholder="e.g. Bill pay only. We don't accept Zelle over $500."
           defaultValue={instructions.dues_payment_notes ?? ""}
-          className="mt-1 w-full rounded-lg border border-line-strong px-3 py-2 text-[13px] text-ink"
+          className="mt-1 w-full rounded-lg border border-line-strong px-3 py-2 text-[16px] text-ink min-h-[44px] sm:min-h-0 sm:text-[13px]"
         />
       </div>
 
@@ -136,7 +136,7 @@ export function PaymentInstructionsForm({
         <button
           type="button"
           onClick={() => setOpen(false)}
-          className="rounded-md border border-line-strong px-4 py-2 text-[13px] text-ink hover:bg-fill"
+          className="min-h-[44px] rounded-md border border-line-strong px-4 py-2 text-[13px] text-ink hover:bg-fill sm:min-h-0"
         >
           Cancel
         </button>

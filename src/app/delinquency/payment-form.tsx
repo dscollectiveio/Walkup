@@ -39,7 +39,7 @@ export function PaymentForm({
             name="unit_id"
             required
             defaultValue=""
-            className="mt-1 w-full rounded-lg border border-line-strong bg-paper px-3 py-2 text-[13px] text-ink"
+            className="mt-1 w-full rounded-lg border border-line-strong bg-paper px-3 py-2 text-[16px] text-ink min-h-[44px] sm:min-h-0 sm:text-[13px]"
           >
             <option value="" disabled>
               Choose…
@@ -61,7 +61,7 @@ export function PaymentForm({
             name="amount"
             required
             placeholder="$0"
-            className="mt-1 w-full rounded-lg border border-line-strong px-3 py-2 text-[13px] text-ink"
+            className="mt-1 w-full rounded-lg border border-line-strong px-3 py-2 text-[16px] text-ink min-h-[44px] sm:min-h-0 sm:text-[13px]"
           />
         </div>
 
@@ -74,7 +74,7 @@ export function PaymentForm({
             name="received_on"
             type="date"
             required
-            className="mt-1 w-full rounded-lg border border-line-strong px-3 py-2 text-[13px] text-ink"
+            className="mt-1 w-full rounded-lg border border-line-strong px-3 py-2 text-[16px] text-ink min-h-[44px] sm:min-h-0 sm:text-[13px]"
           />
         </div>
 
@@ -87,7 +87,7 @@ export function PaymentForm({
             id="method"
             name="method"
             defaultValue=""
-            className="mt-1 w-full rounded-lg border border-line-strong bg-paper px-3 py-2 text-[13px] text-ink"
+            className="mt-1 w-full rounded-lg border border-line-strong bg-paper px-3 py-2 text-[16px] text-ink min-h-[44px] sm:min-h-0 sm:text-[13px]"
           >
             <option value="">Not sure</option>
             <option value="check">Check</option>
@@ -107,7 +107,7 @@ export function PaymentForm({
         <input
           id="reference"
           name="reference"
-          className="mt-1 w-full rounded-lg border border-line-strong px-3 py-2 text-[13px] text-ink"
+          className="mt-1 w-full rounded-lg border border-line-strong px-3 py-2 text-[16px] text-ink min-h-[44px] sm:min-h-0 sm:text-[13px]"
         />
       </div>
 
@@ -128,7 +128,7 @@ export function PaymentForm({
         <button
           type="button"
           onClick={() => setOpen(false)}
-          className="rounded-md border border-line-strong px-4 py-2 text-[13px] text-ink hover:bg-fill"
+          className="min-h-[44px] rounded-md border border-line-strong px-4 py-2 text-[13px] text-ink hover:bg-fill sm:min-h-0"
         >
           Cancel
         </button>

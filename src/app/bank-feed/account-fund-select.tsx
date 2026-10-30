@@ -23,7 +23,7 @@ export function AccountFundSelect({
   const [error, setError] = useState<string | null>(null);
   return (
     <div className="flex flex-col items-end">
-      <label className="flex items-center gap-1.5 text-[11px] text-mute">
+      <label className="flex items-center gap-1.5 text-[12px] text-mute sm:text-[11px]">
         Counts as
         <select
           value={value}
@@ -42,7 +42,7 @@ export function AccountFundSelect({
               }
             });
           }}
-          className="rounded-md border border-line-strong bg-paper px-1.5 py-1 text-[12px] text-ink disabled:opacity-60"
+          className="min-h-[44px] max-w-full rounded-md border border-line-strong bg-paper px-1.5 py-1 text-[16px] text-ink disabled:opacity-60 sm:min-h-0 sm:text-[12px]"
         >
           <option value="">Same as the bank</option>
           {funds.map((f) => (

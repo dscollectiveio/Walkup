@@ -194,7 +194,7 @@ export function FieldMapForm({
   const [state, action, pending] = useActionState(saveFieldMap, null);
   const [filter, setFilter] = useState("");
   const shown = rows.filter((r) => r.name.toLowerCase().includes(filter.toLowerCase()) || r.label.toLowerCase().includes(filter.toLowerCase()));
-  const cell = "w-full rounded border border-line-strong px-2 py-1";
+  const cell = "w-full rounded border border-line-strong px-2 py-1 text-[16px] sm:text-[12px]";
 
   return (
     <form action={action} className="space-y-5">
@@ -263,7 +263,7 @@ export function FieldMapForm({
               placeholder="Filter fields"
               value={filter}
               onChange={(e) => setFilter(e.target.value)}
-              className="min-h-[36px] rounded-lg border border-line-strong bg-paper px-3 text-[12px] text-ink"
+              className="min-h-[36px] rounded-lg border border-line-strong bg-paper px-3 text-[16px] text-ink sm:text-[12px]"
             />
           </div>
           <p className="mt-1 text-[12px] text-mute">
@@ -291,14 +291,14 @@ export function FieldMapForm({
               <tbody className="divide-y divide-line">
                 {rows.map((r) => (
                   <tr key={r.name} className={shown.includes(r) ? "" : "hidden"}>
-                    <td className="py-1.5 pr-2 align-top font-mono text-[11px] text-mute">
+                    <td className="py-1.5 pr-2 align-top font-mono text-[12px] sm:text-[11px] text-mute">
                       {r.name}
                       <div className="text-mute-soft">{r.type}</div>
                     </td>
                     <td className="py-1.5 pr-2"><input name={`label:${r.name}`} defaultValue={r.label} disabled={locked} aria-label={`Label for ${r.name}`} className={`${cell} min-w-[14rem]`} /></td>
                     <td className="py-1.5 pr-2"><input name={`section:${r.name}`} defaultValue={r.section} disabled={locked} aria-label={`Section for ${r.name}`} className={`${cell} w-28`} /></td>
                     <td className="py-1.5 pr-2">
-                      <select name={`src:${r.name}`} defaultValue={r.source} disabled={locked} aria-label={`Source for ${r.name}`} className="rounded border border-line-strong bg-paper px-1 py-1">
+                      <select name={`src:${r.name}`} defaultValue={r.source} disabled={locked} aria-label={`Source for ${r.name}`} className="rounded border border-line-strong bg-paper px-1 py-1 text-[16px] sm:text-[12px]">
                         <option value="">Unmapped</option>
                         <option value="setting">Setting</option>
                         <option value="ledger">Ledger</option>
@@ -309,7 +309,7 @@ export function FieldMapForm({
                     </td>
                     <td className="py-1.5 pr-2"><input name={`rule:${r.name}`} defaultValue={r.rule} disabled={locked} aria-label={`Rule for ${r.name}`} className={`${cell} w-48 font-mono`} /></td>
                     <td className="py-1.5 pr-2">
-                      <select name={`kind:${r.name}`} defaultValue={r.kind} disabled={locked} aria-label={`Kind for ${r.name}`} className="rounded border border-line-strong bg-paper px-1 py-1">
+                      <select name={`kind:${r.name}`} defaultValue={r.kind} disabled={locked} aria-label={`Kind for ${r.name}`} className="rounded border border-line-strong bg-paper px-1 py-1 text-[16px] sm:text-[12px]">
                         <option value="">None</option>
                         <option value="money">Money</option>
                         <option value="text">Text</option>

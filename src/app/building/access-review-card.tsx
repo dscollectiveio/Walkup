@@ -80,7 +80,7 @@ export function AccessReviewCard({
               id="review_notes"
               name="notes"
               rows={2}
-              className="mt-1 w-full rounded-lg border border-line-strong px-3 py-2 text-[13px] text-ink"
+              className="mt-1 w-full rounded-lg border border-line-strong px-3 py-2 text-[16px] sm:text-[13px] text-ink"
             />
           </div>
           {state?.error ? <p className="text-[12px] text-bad-text">{state.error}</p> : null}
@@ -95,7 +95,7 @@ export function AccessReviewCard({
             <button
               type="button"
               onClick={() => setOpen(false)}
-              className="rounded-md border border-line-strong px-4 py-2 text-[13px] text-ink hover:bg-fill"
+              className="rounded-md border border-line-strong px-4 py-2 max-sm:min-h-[44px] text-[13px] text-ink hover:bg-fill"
             >
               Cancel
             </button>

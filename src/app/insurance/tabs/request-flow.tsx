@@ -191,7 +191,7 @@ export function RequestFlow({
                   <input type="checkbox" checked={picked.has(c.id)} onChange={(e) => setPicked((s) => toggle(s, c.id, e.target.checked))} />
                   <span>
                     {c.name}
-                    {c.isCurrentAgent ? <span className="ml-2 text-[11px] text-mute">Your agent</span> : null}
+                    {c.isCurrentAgent ? <span className="ml-2 text-[12px] text-mute">Your agent</span> : null}
                     <span className="ml-2 text-[12px] text-mute">{c.email}</span>
                   </span>
                 </label>
@@ -227,7 +227,7 @@ export function RequestFlow({
             <label key={c.coverage} className="flex min-h-[44px] items-center gap-2 text-[13px] text-ink">
               <input type="checkbox" checked={coverages.has(c.coverage)} onChange={(e) => setCoverages((s) => toggle(s, c.coverage, e.target.checked))} />
               {c.label}
-              {c.fromCheck ? <span className="text-[11px] text-mute">from Coverage check</span> : null}
+              {c.fromCheck ? <span className="text-[12px] text-mute">from Coverage check</span> : null}
             </label>
           ))}
         </div>

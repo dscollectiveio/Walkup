@@ -409,8 +409,8 @@ html[data-sidebar="rail"] {
   to { transform: scaleX(1); }
 }
 
-/* Landing hero slideshow (components/landing/hero-slideshow.tsx): the active
-   dot fills over the time to the next slide. Slides themselves only crossfade. */
+/* Landing hero slideshow (components/landing/hero-slideshow.tsx): the bar under the
+   active tab fills over the time to the next slide. Panels themselves only crossfade. */
 @keyframes hero-progress {
   from { transform: scaleX(0); }
   to { transform: scaleX(1); }
@@ -500,4 +500,28 @@ html { scroll-padding-top: 76px; }
 }
 @media (prefers-reduced-motion: no-preference) {
   .announce-in { animation: announce-in 380ms ease-out both; }
+}
+
+/* Phone safeguards. Stop iOS from inflating text on rotate, keep a stray wide
+   element from giving the page a sideways scroll (clip, not hidden, so the
+   sticky header still works), stop the page bouncing behind an open drawer,
+   and lock the page scroll while the navigation drawer is open. */
+html {
+  -webkit-text-size-adjust: 100%;
+  text-size-adjust: 100%;
+}
+body {
+  overflow-x: clip;
+  overscroll-behavior-x: none;
+}
+@media (max-width: 767px) {
+  html[data-drawer="open"] {
+    overflow: hidden;
+    overscroll-behavior: contain;
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  html {
+    scroll-behavior: auto !important;
+  }
 }

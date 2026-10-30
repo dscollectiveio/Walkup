@@ -93,7 +93,7 @@ export function ReadProgress({
     return (
       <div className="space-y-3">
         <div role="status" aria-live="polite" className="space-y-2">
-          <h1 className="text-[20px] font-bold tracking-tight text-ink">Reading {filename}…</h1>
+          <h1 className="break-words text-[20px] font-bold tracking-tight text-ink">Reading {filename}…</h1>
           {pollingOver ? (
             <p className="text-[13px] text-ink">Still reading. Check back in a minute.</p>
           ) : (
@@ -184,7 +184,7 @@ export function ReadProgress({
   return (
     <div className="space-y-4">
       <div role="status" aria-live="polite">
-        <p className="text-[13px] text-mute">{filename}</p>
+        <p className="break-words text-[13px] text-mute">{filename}</p>
         <h1 className="mt-1 text-[20px] font-bold tracking-tight text-ink">{title}</h1>
       </div>
       {body}

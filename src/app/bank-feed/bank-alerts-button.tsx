@@ -27,11 +27,11 @@ export function BankAlertsButton({ connectionId }: { connectionId: string }) {
             else setDone(true);
           })
         }
-        className="rounded-md border border-line-strong px-4 py-2 text-[13px] text-ink hover:bg-fill disabled:opacity-50"
+        className="min-h-[44px] rounded-md border border-line-strong px-4 py-2 text-[13px] text-ink hover:bg-fill disabled:opacity-50"
       >
         {pending ? "Turning on…" : done ? "Alerts are on" : "Turn on connection alerts"}
       </button>
-      {error ? <p className="mt-2 text-[11px] text-bad-text">{error}</p> : null}
+      {error ? <p className="mt-2 text-[12px] text-bad-text">{error}</p> : null}
     </div>
   );
 }

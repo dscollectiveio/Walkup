@@ -22,7 +22,7 @@ export function BillFilters({ params, clearHref, counts }: { params: BillParams;
   const ids = { q: useId(), show: useId(), pay: useId(), freq: useId(), sort: useId() };
   const submit = () => form.current?.requestSubmit();
   const field =
-    "block min-h-[34px] w-full rounded-md border border-line-strong bg-paper px-2.5 text-[16px] text-ink sm:text-[13px]";
+    "block min-h-[44px] sm:min-h-[34px] w-full rounded-md border border-line-strong bg-paper px-2.5 text-[16px] text-ink sm:text-[13px]";
 
   return (
     <form ref={form} action="/repairs" method="get" className="flex flex-wrap items-center gap-2 px-4 py-2.5">
@@ -78,11 +78,11 @@ export function BillFilters({ params, clearHref, counts }: { params: BillParams;
         <Search size={15} strokeWidth={1.8} aria-hidden="true" className="pointer-events-none absolute left-2.5 top-1/2 -translate-y-1/2 text-mute" />
         <input id={ids.q} name="q" type="search" defaultValue={params.q} placeholder="Bill, contractor or category" className={`${field} pl-8`} />
       </div>
-      <button type="submit" className="inline-flex min-h-[34px] items-center rounded-md bg-ink px-4 text-[13px] font-medium text-paper hover:bg-ink-mid">
+      <button type="submit" className="inline-flex min-h-[44px] sm:min-h-[34px] items-center rounded-md bg-ink px-4 text-[13px] font-medium text-paper hover:bg-ink-mid">
         Search
       </button>
       {clearHref ? (
-        <Link href={clearHref} className="inline-flex min-h-[32px] items-center px-1 text-[12px] font-medium text-ink underline underline-offset-2">
+        <Link href={clearHref} className="inline-flex min-h-[44px] sm:min-h-[32px] items-center px-1 text-[12px] font-medium text-ink underline underline-offset-2">
           Clear
         </Link>
       ) : null}

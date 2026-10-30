@@ -69,7 +69,7 @@ export function OwnerSummaryView({
       <Card navy title="If there's damage">
         <div className="space-y-2 text-[13px] text-ink">
           <p>
-            <Link href="/repairs" className="font-medium underline underline-offset-2">
+            <Link href="/repairs" className="inline-flex min-h-[44px] items-center font-medium underline underline-offset-2 sm:min-h-0">
               Report it to the board in Repairs.
             </Link>
           </p>
@@ -77,7 +77,7 @@ export function OwnerSummaryView({
             <p>
               The building&rsquo;s insurer takes claims at{" "}
               {claimsTel ? (
-                <a href={claimsTel} className="figures font-medium underline underline-offset-2">
+                <a href={claimsTel} className="figures inline-block whitespace-nowrap py-2.5 font-medium underline underline-offset-2 sm:py-0">
                   {content.claims_line.phone}
                 </a>
               ) : (
@@ -129,7 +129,7 @@ export function OwnerSummaryView({
             <div className="flex flex-wrap gap-x-4 gap-y-1">
               {cc.phone ? (
                 ccTel ? (
-                  <a href={ccTel} className="figures underline underline-offset-2">
+                  <a href={ccTel} className="figures inline-flex min-h-[44px] items-center underline underline-offset-2 sm:min-h-0">
                     {cc.phone}
                   </a>
                 ) : (
@@ -137,7 +137,7 @@ export function OwnerSummaryView({
                 )
               ) : null}
               {cc.email ? (
-                <a href={mailtoLink(cc.email)} className="break-all underline underline-offset-2">
+                <a href={mailtoLink(cc.email)} className="inline-flex min-h-[44px] items-center break-all underline underline-offset-2 sm:min-h-0">
                   {cc.email}
                 </a>
               ) : null}

@@ -8,9 +8,9 @@ import { clearLinkTokenForOAuth, storeLinkTokenForOAuth } from "./oauth-link-tok
 
 const STYLES = {
   primary:
-    "rounded-md bg-ink px-4 py-2 text-[13px] font-medium text-paper transition hover:bg-ink-mid disabled:opacity-50",
+    "min-h-[44px] rounded-md bg-ink px-4 py-2 text-[13px] font-medium text-paper transition hover:bg-ink-mid disabled:opacity-50",
   outline:
-    "inline-flex items-center gap-1.5 rounded-md border border-line-strong bg-paper px-3 py-1.5 text-[12px] font-medium text-ink transition hover:bg-fill disabled:opacity-50",
+    "inline-flex min-h-[44px] items-center gap-1.5 rounded-md border border-line-strong bg-paper px-3 py-1.5 text-[12px] font-medium text-ink transition hover:bg-fill disabled:opacity-50",
 };
 
 export function ConnectBankButton({

@@ -159,7 +159,7 @@ export async function MultiPeriodView({
                         periods: selectedKeys.join(","),
                         sort: sort === "size" ? undefined : "size",
                       })}
-                      className="normal-case tracking-normal text-mute underline-offset-2 hover:text-ink hover:underline"
+                      className="-my-3.5 inline-flex items-center py-3.5 normal-case tracking-normal text-mute underline-offset-2 hover:text-ink hover:underline sm:my-0 sm:py-0"
                     >
                       {sort === "size" ? "Sort by account" : "Sort by size"}
                     </Link>,

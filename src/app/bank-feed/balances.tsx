@@ -228,13 +228,13 @@ export async function BankAccountsSection({
           </p>
         </div>
         <div className="text-right">
-          <div className="figures text-[22px] leading-none text-paper">
+          <div className="figures whitespace-nowrap text-[22px] leading-none text-paper">
             {hasCash ? money(totalCashCents / 100) : "—"}
           </div>
           {flow ? (
             <p className="mt-1.5 text-[12px] text-ondark-mute">
-              In <span className="figures text-paper">{money(flow.in)}</span> · Out{" "}
-              <span className="figures text-paper">{money(flow.out)}</span> {flow.period}
+              In <span className="figures whitespace-nowrap text-paper">{money(flow.in)}</span> · Out{" "}
+              <span className="figures whitespace-nowrap text-paper">{money(flow.out)}</span> {flow.period}
             </p>
           ) : null}
         </div>
@@ -248,11 +248,11 @@ export async function BankAccountsSection({
           accts.length > 0 ? (
             <div>
               {balance?.source === "last_sync" ? (
-                <p className="mb-2 text-[11px] text-mute-soft">
+                <p className="mb-2 text-[12px] text-mute-soft">
                   Balances are as of the bank&rsquo;s last update, not real-time.
                 </p>
               ) : balance?.source === "stored" && balance.asOf ? (
-                <p className="mb-2 text-[11px] text-mute-soft">
+                <p className="mb-2 text-[12px] text-mute-soft">
                   Balances from the last time Walkup checked with the bank ({syncedAgo(balance.asOf)}).
                 </p>
               ) : null}
@@ -263,7 +263,7 @@ export async function BankAccountsSection({
                     className="flex flex-wrap items-center gap-x-4 gap-y-1 px-3 py-2.5"
                   >
                     <div className="flex min-w-0 flex-1 basis-48 items-baseline gap-2">
-                      <span className="truncate text-[13px] text-ink" title={a.name}>
+                      <span className="min-w-0 break-words text-[13px] text-ink sm:truncate" title={a.name}>
                         {a.name}
                       </span>
                       {a.mask ? <span className="figures shrink-0 text-[11px] text-mute-soft">···{a.mask}</span> : null}
@@ -271,7 +271,7 @@ export async function BankAccountsSection({
                         {ACCOUNT_TYPE_LABEL[a.type] ?? a.type}
                       </span>
                     </div>
-                    <span className="figures w-28 shrink-0 text-right text-[14px] text-ink">
+                    <span className="figures w-28 shrink-0 whitespace-nowrap text-right text-[14px] text-ink">
                       {a.currentCents !== null ? money(a.currentCents / 100) : "—"}
                     </span>
                     {canEdit && a.type === "depository" && fundChoices.length > 1 ? (
@@ -312,7 +312,7 @@ export async function BankAccountsSection({
                 </span>
               ) : null}
             </div>
-            <div className="mt-0.5 text-[11px] text-mute-soft">
+            <div className="mt-0.5 text-[12px] text-mute-soft">
               {syncedAgo(c.last_synced_at)}
               {checkingIds.includes(c.id)
                 ? " · Checking the bank for new transactions. Reload in a minute to see them"

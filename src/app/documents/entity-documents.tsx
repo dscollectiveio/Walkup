@@ -59,7 +59,7 @@ export function EntityDocuments({
           <button
             type="button"
             onClick={() => setOpen(true)}
-            className="rounded-md border border-line-strong px-3 py-1.5 text-[12px] text-ink hover:bg-fill"
+            className="min-h-[44px] rounded-md border border-line-strong px-3 py-1.5 text-[12px] text-ink hover:bg-fill sm:min-h-0"
           >
             Attach a document
           </button>
@@ -83,13 +83,13 @@ export function EntityDocuments({
                 }}
               />
             ) : (
-              <p className="text-[11px] text-bad-text">Don&rsquo;t know how to attach a document to that.</p>
+              <p className="text-[12px] text-bad-text">Don&rsquo;t know how to attach a document to that.</p>
             )}
             <button
               type="button"
               onClick={() => setOpen(false)}
               disabled={busy}
-              className="text-[12px] text-mute underline-offset-2 hover:underline disabled:opacity-50"
+              className="text-[12px] text-mute underline-offset-2 hover:underline disabled:opacity-50 inline-flex min-h-[44px] items-center px-1 sm:min-h-0 sm:px-0"
             >
               Cancel
             </button>
@@ -118,16 +118,16 @@ function EntityDocumentRow({
   return (
     <li className="flex flex-wrap items-center justify-between gap-3 py-2.5">
       <div className="min-w-0">
-        <span className="text-[13px] font-medium text-ink">{doc.title}</span>
-        <span className="ml-2 text-[11px] text-mute">
+        <span className="break-words text-[13px] font-medium text-ink">{doc.title}</span>
+        <span className="ml-2 text-[12px] text-mute">
           {readableSize(doc.byte_size)} · {new Date(doc.uploaded_at).toLocaleDateString()}
         </span>
       </div>
-      <div className="flex shrink-0 items-center gap-3">
+      <div className="flex shrink-0 flex-wrap items-center gap-x-3">
         <DownloadButton id={doc.id}>Download</DownloadButton>
         {canWrite ? (
           confirming ? (
-            <span className="flex items-center gap-2">
+            <span className="flex flex-wrap items-center gap-2">
               <button
                 type="button"
                 disabled={pending}
@@ -138,14 +138,14 @@ function EntityDocumentRow({
                     if (r.error) setError(r.error);
                   })
                 }
-                className="rounded-md border border-bad-line bg-bad-tint px-2 py-1 text-[11px] font-medium text-bad-text hover:bg-bad-tint/80"
+                className="rounded-md border border-bad-line bg-bad-tint px-2 py-1 text-[12px] font-medium text-bad-text hover:bg-bad-tint/80 min-h-[44px] sm:min-h-0"
               >
                 {pending ? "Removing…" : "Confirm"}
               </button>
               <button
                 type="button"
                 onClick={() => setConfirming(false)}
-                className="text-[11px] text-mute underline-offset-2 hover:underline"
+                className="text-[12px] text-mute underline-offset-2 hover:underline inline-flex min-h-[44px] items-center px-1 sm:min-h-0 sm:px-0"
               >
                 Cancel
               </button>
@@ -154,14 +154,14 @@ function EntityDocumentRow({
             <button
               type="button"
               onClick={() => setConfirming(true)}
-              className="text-[12px] text-mute underline-offset-2 hover:underline"
+              className="text-[12px] text-mute underline-offset-2 hover:underline inline-flex min-h-[44px] items-center px-1 sm:min-h-0 sm:px-0"
             >
               Detach
             </button>
           )
         ) : null}
       </div>
-      {error ? <p className="w-full text-[11px] text-bad-text">{error}</p> : null}
+      {error ? <p className="w-full text-[12px] text-bad-text">{error}</p> : null}
     </li>
   );
 }

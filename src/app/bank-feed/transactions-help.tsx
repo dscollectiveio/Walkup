@@ -40,7 +40,7 @@ export function TransactionsHelp() {
         onClick={() => dialogRef.current?.showModal()}
         aria-label="How to categorize transactions"
         title="How this works"
-        className={HEADER_BUTTON}
+        className={`${HEADER_BUTTON} min-h-[44px] min-w-[44px] justify-center sm:min-h-0 sm:min-w-0`}
       >
         <CircleHelp size={16} strokeWidth={1.6} aria-hidden="true" />
         <span className="hidden sm:inline">How this works</span>
@@ -53,7 +53,7 @@ export function TransactionsHelp() {
           // Clicking the dimmed backdrop closes it.
           if (e.target === dialogRef.current) dialogRef.current?.close();
         }}
-        className="m-auto w-[min(32rem,calc(100vw-2rem))] rounded-xl border border-line bg-paper p-0 text-ink shadow-xl backdrop:bg-ink/40"
+        className="m-auto max-h-[90vh] w-[min(32rem,calc(100vw-2rem))] overflow-y-auto rounded-xl border border-line bg-paper p-0 text-ink shadow-xl backdrop:bg-ink/40"
       >
         <header className="flex items-start justify-between gap-4 rounded-t-xl band bg-ink px-5 py-3">
           <div>
@@ -66,7 +66,7 @@ export function TransactionsHelp() {
             type="button"
             onClick={() => dialogRef.current?.close()}
             aria-label="Close"
-            className="rounded-md p-1 text-ondark-mute hover:bg-ink-mid hover:text-paper"
+            className="-m-2 inline-flex h-11 w-11 items-center justify-center rounded-md text-ondark-mute hover:bg-ink-mid hover:text-paper sm:m-0 sm:h-auto sm:w-auto sm:p-1"
           >
             <X size={16} strokeWidth={1.6} aria-hidden="true" />
           </button>
@@ -90,11 +90,11 @@ export function TransactionsHelp() {
         </ol>
 
         <footer className="flex flex-wrap items-center justify-between gap-3 border-t border-line px-5 py-3">
-          <p className="text-[12px] text-mute">{KEYBOARD}</p>
+          <p className="hidden text-[12px] text-mute sm:block">{KEYBOARD}</p>
           <button
             type="button"
             onClick={() => dialogRef.current?.close()}
-            className="rounded-md bg-ink px-3 py-1.5 text-[12px] font-medium text-paper hover:bg-ink-mid"
+            className="min-h-[44px] rounded-md bg-ink px-4 py-1.5 text-[12px] font-medium text-paper hover:bg-ink-mid sm:min-h-0 sm:px-3"
           >
             Got it
           </button>

@@ -50,7 +50,7 @@ export function Timeline(props: {
             {props.entries.map((e) =>
               e.type === "event" ? (
                 <li key={`e-${e.id}`} className="text-[13px] text-mute">
-                  <span className="text-ink">{e.sentence}</span> <span className="whitespace-nowrap text-[11px]">{whenText(e.at, props.todayIso)}</span>
+                  <span className="text-ink">{e.sentence}</span> <span className="whitespace-nowrap text-[12px]">{whenText(e.at, props.todayIso)}</span>
                 </li>
               ) : (
                 <Note key={`n-${e.id}`} note={e} {...props} />
@@ -117,9 +117,9 @@ function Note({
           </div>
         </div>
       ) : (
-        <p className="whitespace-pre-wrap text-[14px] leading-relaxed text-ink">{note.body}</p>
+        <p className="whitespace-pre-wrap break-words text-[14px] leading-relaxed text-ink">{note.body}</p>
       )}
-      <div className="mt-1 flex flex-wrap items-center gap-x-2 gap-y-1 text-[11px] text-mute">
+      <div className="mt-1 flex flex-wrap items-center gap-x-2 gap-y-1 text-[12px] text-mute">
         <span>
           {note.author} · {whenText(note.at, todayIso)}
         </span>

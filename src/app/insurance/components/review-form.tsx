@@ -474,7 +474,7 @@ export function ReviewForm(props: ReviewFormProps) {
                   onClick={() => {
                     setCurrent(i);
                   }}
-                  className={`inline-flex min-h-[32px] items-center ${isChecked(d.key) ? "text-mute line-through" : "text-ink underline underline-offset-2"}`}
+                  className={`inline-flex min-h-[44px] items-center sm:min-h-[32px] ${isChecked(d.key) ? "text-mute line-through" : "text-ink underline underline-offset-2"}`}
                 >
                   {d.label}
                 </a>

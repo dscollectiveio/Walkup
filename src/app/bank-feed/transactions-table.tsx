@@ -130,18 +130,18 @@ function BulkForm({
       </div>
       <div className="flex flex-wrap items-end gap-3">
         <div>
-          <label className="block text-[11px] text-mute">File them all as</label>
+          <label className="block text-[12px] text-mute sm:text-[11px]">File them all as</label>
           <CategoryPicker pickers={pickers} direction={direction} value={choice} onChange={setChoice} autoFocus />
         </div>
         {choice?.kind === "expense" && pickers.vendors.length > 0 ? (
           <div>
-            <label className="block text-[11px] text-mute">
+            <label className="block text-[12px] text-mute sm:text-[11px]">
               Vendor <span className="text-mute-soft">(optional)</span>
             </label>
             <select
               value={vendorId}
               onChange={(e) => setVendorId(e.target.value)}
-              className="mt-1 rounded-lg border border-line-strong bg-paper px-2 py-1.5 text-[12px] text-ink"
+              className="mt-1 min-h-[44px] max-w-full rounded-lg border border-line-strong bg-paper px-2 py-1.5 text-[16px] text-ink sm:min-h-0 sm:text-[12px]"
             >
               <option value="">No vendor</option>
               {pickers.vendors.map((v) => (
@@ -158,7 +158,7 @@ function BulkForm({
           type="button"
           disabled={pending || !choice}
           onClick={() => submit(true)}
-          className="rounded-md bg-ink px-2.5 py-1 text-[11px] font-medium text-paper hover:bg-ink-mid disabled:opacity-50"
+          className="min-h-[44px] rounded-md bg-ink px-3 py-1 text-[12px] font-medium text-paper hover:bg-ink-mid disabled:opacity-50 sm:min-h-0 sm:px-2.5 sm:text-[11px]"
         >
           {pending ? "Saving…" : choice?.kind === "excluded" ? "Keep all out of the books" : "Save & post all"}
         </button>
@@ -166,14 +166,14 @@ function BulkForm({
           type="button"
           disabled={pending || !choice}
           onClick={() => submit(false)}
-          className="rounded-md border border-line-strong px-2.5 py-1 text-[11px] text-ink hover:bg-fill disabled:opacity-50"
+          className="min-h-[44px] rounded-md border border-line-strong px-3 py-1 text-[12px] text-ink hover:bg-fill disabled:opacity-50 sm:min-h-0 sm:px-2.5 sm:text-[11px]"
         >
           Save all for later
         </button>
-        <button type="button" onClick={onCancel} className="text-[11px] text-mute underline-offset-2 hover:underline">
+        <button type="button" onClick={onCancel} className="min-h-[44px] px-2 text-[12px] text-mute underline-offset-2 hover:underline sm:min-h-0 sm:px-0 sm:text-[11px]">
           Clear
         </button>
-        {error ? <span className="w-full text-[11px] text-bad-text">{error}</span> : null}
+        {error ? <span className="w-full text-[12px] text-bad-text sm:text-[11px]">{error}</span> : null}
       </div>
     </div>
   );
@@ -218,7 +218,7 @@ interface Toast {
   rule?: { pattern: string; label: string; item: Omit<CategorizationItem, "id"> };
 }
 
-const LINK_QUIET = "text-[11px] text-mute underline-offset-2 hover:text-ink hover:underline disabled:opacity-50";
+const LINK_QUIET = "inline-flex min-h-[44px] items-center text-[12px] text-mute underline-offset-2 sm:min-h-0 sm:text-[11px] hover:text-ink hover:underline disabled:opacity-50";
 
 /** True when a key press came from somewhere that is already using the keyboard. */
 function isTyping(target: EventTarget | null): boolean {
@@ -523,7 +523,7 @@ export function TransactionsTable({
             type="button"
             disabled={pending}
             onClick={() => acceptAll(mainAccept)}
-            className="rounded-full bg-ink px-3 py-1.5 text-[12px] font-medium text-paper hover:bg-ink-mid disabled:opacity-50"
+            className="min-h-[44px] rounded-full bg-ink px-4 py-1.5 text-[12px] font-medium text-paper hover:bg-ink-mid disabled:opacity-50 sm:min-h-0 sm:px-3"
           >
             {pending
               ? "Posting…"
@@ -536,10 +536,29 @@ export function TransactionsTable({
               also the {guesses.length} guess{guesses.length === 1 ? "" : "es"}
             </button>
           ) : null}
-          <span className="text-[11px] text-mute">undo for 10 seconds</span>
-          {groupError ? <span className="w-full text-[11px] text-bad-text">{groupError}</span> : null}
+          <span className="text-[12px] text-mute sm:text-[11px]">undo for 10 seconds</span>
+          {groupError ? <span className="w-full text-[12px] text-bad-text sm:text-[11px]">{groupError}</span> : null}
         </div>
       ) : null}
+
+      {/* The column headers (and their sort links) are hidden on a phone, so the same three sorts live here. */}
+      <nav aria-label="Sort transactions" className="mb-2 flex flex-wrap items-center gap-x-1 text-[12px] text-mute sm:hidden">
+        <span>Sort by</span>
+        {[
+          { label: "Date", href: dateHref, on: sort === "date_asc" || sort === "date_desc", asc: sort === "date_asc" },
+          { label: "Description", href: nameHref, on: sort === "name_asc" || sort === "name_desc", asc: sort === "name_asc" },
+          { label: "Amount", href: amountHref, on: sort === "amount_asc" || sort === "amount_desc", asc: sort === "amount_asc" },
+        ].map((s) => (
+          <Link
+            key={s.label}
+            href={s.href}
+            className={`inline-flex min-h-[44px] items-center px-2 underline-offset-2 hover:underline ${s.on ? "font-medium text-ink" : ""}`}
+          >
+            {s.label}
+            {s.on ? <span className="ml-0.5">{s.asc ? "▲" : "▼"}</span> : null}
+          </Link>
+        ))}
+      </nav>
 
       <div className="overflow-x-auto">
         <table className="w-full text-[13px]">
@@ -583,12 +602,15 @@ export function TransactionsTable({
                 leadingCell={
                   canEdit ? (
                     selectable(t) ? (
-                      <input
-                        type="checkbox"
-                        checked={selected.has(t.id)}
-                        onChange={() => toggle(t.id)}
-                        aria-label={`Select ${t.description}`}
-                      />
+                      <label className="-m-3 flex h-11 w-11 items-center justify-center sm:m-0 sm:inline sm:h-auto sm:w-auto">
+                        <input
+                          type="checkbox"
+                          checked={selected.has(t.id)}
+                          onChange={() => toggle(t.id)}
+                          aria-label={`Select ${t.description}`}
+                          className="h-5 w-5 sm:h-auto sm:w-auto"
+                        />
+                      </label>
                     ) : null
                   ) : undefined
                 }
@@ -641,7 +663,7 @@ export function TransactionsTable({
               type="button"
               disabled={undoing}
               onClick={undo}
-              className="rounded-md border border-ondark-mute px-2.5 py-0.5 text-[12px] font-medium hover:bg-ink-mid disabled:opacity-50"
+              className="min-h-[44px] rounded-md border border-ondark-mute px-3 py-0.5 text-[12px] font-medium hover:bg-ink-mid disabled:opacity-50 sm:min-h-0 sm:px-2.5"
             >
               {undoing ? "Undoing…" : "Undo"}
             </button>
@@ -655,14 +677,14 @@ export function TransactionsTable({
                 type="button"
                 disabled={undoing}
                 onClick={saveRule}
-                className="rounded-md border border-ondark-mute px-2 py-0.5 font-medium hover:bg-ink-mid disabled:opacity-50"
+                className="min-h-[44px] rounded-md border border-ondark-mute px-3 py-0.5 font-medium hover:bg-ink-mid disabled:opacity-50 sm:min-h-0 sm:px-2"
               >
                 Yes
               </button>
               <button
                 type="button"
                 onClick={() => setToast({ message: toast.message, prior: toast.prior })}
-                className="text-ondark-mute underline-offset-2 hover:text-paper hover:underline"
+                className="min-h-[44px] px-2 text-ondark-mute underline-offset-2 hover:text-paper hover:underline sm:min-h-0 sm:px-0"
               >
                 No
               </button>
@@ -672,7 +694,7 @@ export function TransactionsTable({
             type="button"
             onClick={() => setToast(null)}
             aria-label="Dismiss"
-            className="text-ondark-mute hover:text-paper"
+            className="min-h-[44px] min-w-[44px] text-ondark-mute hover:text-paper sm:min-h-0 sm:min-w-0"
           >
             ×
           </button>

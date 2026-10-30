@@ -73,7 +73,7 @@ function PeriodCard({ title, totals, whenWord, chartLabel }: { title: string; to
         <div>
           <p className="text-[11px] font-medium uppercase tracking-wide text-mute">Expected bills</p>
           <div className="figures text-[24px] leading-tight text-ink">{formatMoney(totals.totalCents)}</div>
-          <p className="mt-0.5 text-[11px] leading-snug text-mute">
+          <p className="mt-0.5 text-[12px] leading-snug text-mute">
             {totals.payments === 0
               ? `No regular bills fall due ${whenWord}.`
               : `${plural(totals.payments, "payment")} due ${whenWord}, from the usual amounts.${

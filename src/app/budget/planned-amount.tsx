@@ -71,7 +71,7 @@ export function PlannedAmount({
         type="button"
         onClick={open}
         title={annualCents !== null ? `${dollars(annualCents)} ${label}: click to change` : "Set a plan for this category"}
-        className="rounded px-1 underline decoration-dotted decoration-line-strong underline-offset-4 hover:bg-fill hover:text-ink"
+        className="inline-flex min-h-[44px] items-center rounded px-1 underline decoration-dotted sm:min-h-0 decoration-line-strong underline-offset-4 hover:bg-fill hover:text-ink"
       >
         {annualCents !== null ? (
           <span className="figures">{dollars(annualCents)}</span>
@@ -102,7 +102,7 @@ export function PlannedAmount({
           }}
           aria-label={`Planned amount ${label}`}
           disabled={pending}
-          className="figures w-28 rounded-md border border-line-strong bg-paper py-1 pl-5 pr-2 text-right text-[13px] text-ink"
+          className="figures min-h-[44px] w-28 rounded-md border border-line-strong bg-paper py-1 pl-5 pr-2 text-right text-[16px] text-ink sm:min-h-0 sm:text-[13px]"
         />
       </span>
       <span className="text-[11px] text-mute">{label}</span>
@@ -110,11 +110,11 @@ export function PlannedAmount({
         type="button"
         onClick={save}
         disabled={pending}
-        className="rounded-md bg-ink px-2 py-1 text-[11px] font-medium text-paper hover:bg-ink-mid disabled:opacity-50"
+        className="min-h-[44px] rounded-md bg-ink px-3 py-1 text-[12px] font-medium text-paper hover:bg-ink-mid disabled:opacity-50 sm:min-h-0 sm:px-2 sm:text-[11px]"
       >
         {pending ? "…" : "Save"}
       </button>
-      <button type="button" onClick={() => setEditing(false)} className="text-[11px] text-mute hover:underline">
+      <button type="button" onClick={() => setEditing(false)} className="min-h-[44px] px-2 text-[12px] text-mute hover:underline sm:min-h-0 sm:px-0 sm:text-[11px]">
         Cancel
       </button>
       {error ? <span className="w-full text-[11px] text-bad-text">{error}</span> : null}

@@ -221,7 +221,7 @@ export function RefundRequest({ until }: { until: string }) {
         onClick={(e) => {
           if (e.target === dialogRef.current) dialogRef.current?.close();
         }}
-        className="m-auto w-[min(520px,94vw)] overflow-hidden rounded-xl border border-line bg-paper p-0 text-ink shadow-2xl backdrop:bg-black/50"
+        className="m-auto max-h-[90dvh] w-[min(520px,94vw)] overflow-y-auto rounded-xl border border-line bg-paper p-0 text-ink shadow-2xl backdrop:bg-black/50"
       >
         <header className="band bg-ink px-5 py-3">
           <h2 className="eyebrow text-paper">{step === "offer" ? "Before you go" : step === "refund" ? "Request a refund" : "Thank you"}</h2>

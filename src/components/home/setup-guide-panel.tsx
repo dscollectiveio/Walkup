@@ -90,7 +90,7 @@ function StepCheck({ step, className = "" }: { step: SetupStep; className?: stri
           if (r.error) setFailed(true);
         });
       }}
-      className={`relative flex h-4 w-4 shrink-0 items-center justify-center rounded border before:absolute before:-inset-2 before:content-[''] hover:border-ink focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-brass disabled:opacity-50 ${
+      className={`relative flex h-4 w-4 shrink-0 items-center justify-center rounded border before:absolute before:-inset-3.5 before:content-[''] hover:border-ink focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-brass disabled:opacity-50 ${
         step.done ? "border-moss bg-moss text-paper" : failed ? "border-bad bg-paper" : "border-line-strong bg-paper"
       } ${step.overridden ? "ring-2 ring-brass/60 ring-offset-1 ring-offset-paper" : ""} ${className}`}
     >

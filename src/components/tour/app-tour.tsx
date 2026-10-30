@@ -182,11 +182,11 @@ export function AppTour({
         aria-modal="true"
         aria-labelledby="walkup-tour-title"
         aria-describedby="walkup-tour-body"
-        className="absolute w-[min(20rem,calc(100vw-2rem))] overflow-hidden rounded-xl border border-line bg-paper text-ink shadow-2xl transition-[left,top] duration-200 motion-reduce:transition-none"
+        className="absolute max-h-[calc(100dvh-2rem)] w-[min(20rem,calc(100vw-2rem))] overflow-y-auto rounded-xl border border-line bg-paper text-ink shadow-2xl transition-[left,top] duration-200 motion-reduce:transition-none"
         style={cardStyle}
       >
         <div className="band bg-ink px-5 py-3">
-          <p className="text-[11px] font-medium uppercase tracking-[0.08em] text-ondark-mute">
+          <p className="text-[12px] font-medium uppercase tracking-[0.08em] text-ondark-mute">
             {index + 1} of {steps.length}
           </p>
           <h2 id="walkup-tour-title" className="mt-0.5 text-[16px] font-semibold text-paper">
@@ -198,7 +198,7 @@ export function AppTour({
         </p>
         <div className="flex items-center gap-2 px-5 pb-4 pt-4">
           {!last ? (
-            <button type="button" onClick={() => finish(false)} className="text-[13px] text-mute underline-offset-2 hover:text-ink hover:underline">
+            <button type="button" onClick={() => finish(false)} className="text-[13px] text-mute underline-offset-2 hover:text-ink hover:underline max-sm:min-h-[44px] max-sm:pr-2">
               Skip tour
             </button>
           ) : null}
@@ -207,7 +207,7 @@ export function AppTour({
               <button
                 type="button"
                 onClick={back}
-                className="rounded-md border border-line-strong px-3 py-1.5 text-[13px] font-medium text-ink hover:bg-fill"
+                className="rounded-md border border-line-strong px-3 py-1.5 text-[13px] font-medium text-ink hover:bg-fill max-sm:min-h-[44px]"
               >
                 Back
               </button>
@@ -216,7 +216,7 @@ export function AppTour({
               ref={nextRef}
               type="button"
               onClick={next}
-              className="rounded-md bg-brass px-3.5 py-1.5 text-[13px] font-semibold text-on-brass hover:brightness-105 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ink"
+              className="rounded-md bg-brass px-3.5 py-1.5 max-sm:min-h-[44px] text-[13px] font-semibold text-on-brass hover:brightness-105 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ink"
             >
               {index === 0 ? "Show me around" : isFinishForAdmin ? "Go to the checklist" : last ? "Done" : "Next"}
             </button>

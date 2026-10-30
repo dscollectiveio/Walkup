@@ -38,7 +38,7 @@ export function ThemeToggle({ className = "" }: { className?: string }) {
       onClick={toggle}
       aria-label={label}
       title={label}
-      className={`flex h-7 w-7 shrink-0 items-center justify-center rounded-md text-nav-muted transition-colors hover:bg-nav-hover hover:text-nav-text ${className}`}
+      className={`flex h-11 w-11 shrink-0 md:h-7 md:w-7 items-center justify-center rounded-md text-nav-muted transition-colors hover:bg-nav-hover hover:text-nav-text ${className}`}
     >
       {dark ? <Sun size={15} strokeWidth={1.6} aria-hidden="true" /> : <Moon size={15} strokeWidth={1.6} aria-hidden="true" />}
     </button>

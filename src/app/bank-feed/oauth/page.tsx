@@ -36,7 +36,7 @@ export default function BankFeedOAuthPage() {
           This link expired or was opened in a different browser tab. Starting a
           fresh Link token here wouldn&rsquo;t match what the bank authorized.
         </p>
-        <Link href="/bank-feed" className="text-[13px] underline underline-offset-2">
+        <Link href="/bank-feed" className="inline-flex min-h-[44px] items-center text-[13px] underline underline-offset-2">
           Start again
         </Link>
       </div>

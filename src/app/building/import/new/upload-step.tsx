@@ -47,7 +47,7 @@ export function UploadStep({ kind }: { kind: ImportKind }) {
       </div>
 
       <div className="rounded-xl border border-line bg-paper p-5">
-        <label className="flex items-start gap-3 text-[13px] text-ink">
+        <label className="flex items-start gap-3 max-sm:min-h-[44px] text-[13px] text-ink">
           <input
             type="checkbox"
             checked={keepCopy}

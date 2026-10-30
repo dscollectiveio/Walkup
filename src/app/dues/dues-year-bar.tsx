@@ -70,15 +70,15 @@ export function DuesYearBar({
           </div>
         ))}
       </div>
-      <div className="mt-1 grid grid-cols-4 gap-1 text-[11px]" aria-hidden="true">
+      <div className="mt-1 grid grid-cols-4 gap-1 text-[12px] sm:text-[11px]" aria-hidden="true">
         {p.quarters.map((q) => (
           <div key={q.label} className={q.current ? "font-semibold text-ink" : "text-mute"}>
             <div>
               {q.label}
               {q.current ? " · now" : ""}
             </div>
-            <div className="figures">
-              {fmt(q.filledCents)} <span className="text-mute-soft">/ {fmt(q.targetCents)}</span>
+            <div className="figures whitespace-nowrap">
+              {fmt(q.filledCents)} <span className="block text-mute-soft sm:inline">/ {fmt(q.targetCents)}</span>
             </div>
           </div>
         ))}

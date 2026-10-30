@@ -63,7 +63,7 @@ export function AddUnitForm({
         >
           {pending ? "Saving…" : "Add it"}
         </button>
-        <button type="button" onClick={onClose} className="rounded-md border border-line-strong px-4 py-2 text-[13px] text-ink hover:bg-fill">
+        <button type="button" onClick={onClose} className="rounded-md border border-line-strong px-4 py-2 max-sm:min-h-[44px] text-[13px] text-ink hover:bg-fill">
           Cancel
         </button>
       </div>

@@ -82,7 +82,7 @@ export function ProblemFilters(props: {
 
     // Compact controls: one row on desktop, labels read aloud rather than shown.
   const field =
-    "block min-h-[34px] w-full rounded-md border border-line-strong bg-paper px-2.5 text-[16px] text-ink sm:text-[13px]";
+    "block min-h-[44px] sm:min-h-[34px] w-full rounded-md border border-line-strong bg-paper px-2.5 text-[16px] text-ink sm:text-[13px]";
 
   const formClass = `${props.embedded || open ? "flex" : "hidden"} flex-wrap items-center gap-2 px-4 py-2.5 md:flex`;
 
@@ -102,7 +102,7 @@ export function ProblemFilters(props: {
             aria-expanded={open}
             aria-controls={ids.panel}
             onClick={() => setOpen((o) => !o)}
-            className="inline-flex min-h-[32px] items-center rounded-md border border-paper/40 px-3 text-[13px] font-medium text-paper hover:bg-paper/10 md:hidden"
+            className="inline-flex min-h-[44px] sm:min-h-[32px] items-center rounded-md border border-paper/40 px-3 text-[13px] font-medium text-paper hover:bg-paper/10 md:hidden"
           >
             Filters{props.clearHref ? " (on)" : ""}
           </button>
@@ -194,11 +194,11 @@ export function ProblemFilters(props: {
           <Search size={15} strokeWidth={1.8} aria-hidden="true" className="pointer-events-none absolute left-2.5 top-1/2 -translate-y-1/2 text-mute" />
           <input id={ids.q} name="q" type="search" defaultValue={p.q} placeholder="Title, details or #number" className={`${field} pl-8`} />
         </div>
-        <button type="submit" className="inline-flex min-h-[34px] items-center rounded-md bg-ink px-4 text-[13px] font-medium text-paper hover:bg-ink-mid">
+        <button type="submit" className="inline-flex min-h-[44px] sm:min-h-[34px] items-center rounded-md bg-ink px-4 text-[13px] font-medium text-paper hover:bg-ink-mid">
           Search
         </button>
         {props.clearHref ? (
-          <Link href={props.clearHref} className="inline-flex min-h-[32px] items-center px-1 text-[12px] font-medium text-ink underline underline-offset-2">
+          <Link href={props.clearHref} className="inline-flex min-h-[44px] sm:min-h-[32px] items-center px-1 text-[12px] font-medium text-ink underline underline-offset-2">
             Clear
           </Link>
         ) : null}

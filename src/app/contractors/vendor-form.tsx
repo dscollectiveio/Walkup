@@ -122,7 +122,7 @@ export function VendorForm({
                   {trades.map((t) => (
                     <label
                       key={t.slug}
-                      className="inline-flex min-h-[40px] cursor-pointer items-center gap-1.5 rounded-full border border-line-strong px-3 text-[12px] text-ink has-[:checked]:border-ink has-[:checked]:bg-ink has-[:checked]:text-paper has-[:focus-visible]:outline has-[:focus-visible]:outline-2 has-[:focus-visible]:outline-brass"
+                      className="inline-flex min-h-[44px] sm:min-h-[40px] cursor-pointer items-center gap-1.5 rounded-full border border-line-strong px-3 text-[12px] text-ink has-[:checked]:border-ink has-[:checked]:bg-ink has-[:checked]:text-paper has-[:focus-visible]:outline has-[:focus-visible]:outline-2 has-[:focus-visible]:outline-brass"
                     >
                       <input type="checkbox" name="trades" value={t.slug} defaultChecked={selectedTrades.has(t.slug)} className="sr-only" />
                       {t.label}
@@ -151,7 +151,7 @@ export function VendorForm({
             Website
           </label>
           <input id={id("website")} name="website_url" defaultValue={vendor?.website_url ?? ""} className={inputClass} />
-          <p className="mt-1 text-[11px] text-mute">A phone number, email or website is enough to save them.</p>
+          <p className="mt-1 text-[12px] text-mute">A phone number, email or website is enough to save them.</p>
         </div>
 
         <div>
@@ -202,7 +202,7 @@ export function VendorForm({
               <input type="checkbox" name="emergency_service" defaultChecked={vendor?.emergency_service ?? false} className="h-5 w-5" />
               Takes emergency or after-hours calls
             </label>
-            <p className="ml-7 text-[11px] text-mute">Shown as &ldquo;Your board says&rdquo; so nobody mistakes it for a check.</p>
+            <p className="ml-7 text-[12px] text-mute">Shown as &ldquo;Your board says&rdquo; so nobody mistakes it for a check.</p>
           </div>
           <fieldset className="sm:col-span-2">
             <legend className={labelClass}>What else is true about them</legend>
@@ -349,7 +349,7 @@ export function VendorForm({
                     defaultValue={vendor?.tin_last4 ?? ""}
                     className={`figures ${inputClass}`}
                   />
-                  <p className="mt-1 text-[11px] text-mute-soft">Never the full number. File the W-9 itself in Documents.</p>
+                  <p className="mt-1 text-[12px] text-mute-soft">Never the full number. File the W-9 itself in Documents.</p>
                 </div>
               </div>
             ) : null}

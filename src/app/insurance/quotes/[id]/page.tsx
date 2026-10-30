@@ -125,14 +125,14 @@ export default async function QuotePage({
 
       <section aria-label="Premium" className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
         <div className="rounded-xl border border-line bg-paper px-4 py-3">
-          <div className="text-[11px] text-mute">Premium</div>
+          <div className="text-[12px] text-mute">Premium</div>
           <div className="figures mt-1 text-[18px] text-ink">{formatMoney(quote.annual_premium)} a year</div>
           {vs ? <div className="mt-1 text-[12px] text-mute">{vs}</div> : null}
           <Provenance info={prov.byField.annual_premium ?? null} documentId={prov.byField.annual_premium?.source === "extracted" ? documentId : null} variant="tile" />
         </div>
         {perUnit ? (
           <div className="rounded-xl border border-line bg-paper px-4 py-3">
-            <div className="text-[11px] text-mute">Per unit a month</div>
+            <div className="text-[12px] text-mute">Per unit a month</div>
             <div className="figures mt-1 text-[18px] text-ink">{formatMoney(perUnit.perMonth, { cents: true })}</div>
           </div>
         ) : null}
@@ -150,8 +150,8 @@ export default async function QuotePage({
                   const v = displayValue(d, quote);
                   return (
                     <div key={d.key} className="min-w-0">
-                      <dt className="text-[11px] text-mute">{d.label}</dt>
-                      <dd className={`text-[13px] ${v === null ? "text-mute-soft" : "figures text-ink"}`}>{v ?? "Not stated"}</dd>
+                      <dt className="text-[12px] text-mute">{d.label}</dt>
+                      <dd className={`break-words text-[13px] ${v === null ? "text-mute-soft" : "figures text-ink"}`}>{v ?? "Not stated"}</dd>
                       {v !== null ? (
                         <Provenance
                           info={prov.byField[d.key] ?? null}
@@ -194,8 +194,8 @@ export default async function QuotePage({
           <ul className="divide-y divide-line text-[13px]">
             {lists.premium.map((l, i) => (
               <li key={i} className="flex justify-between gap-3 py-2">
-                <span className="text-ink">{l.label}</span>
-                <span className="figures text-ink">{formatMoney(l.amount, { cents: true })}</span>
+                <span className="min-w-0 break-words text-ink">{l.label}</span>
+                <span className="figures whitespace-nowrap text-ink">{formatMoney(l.amount, { cents: true })}</span>
               </li>
             ))}
           </ul>
@@ -208,7 +208,7 @@ export default async function QuotePage({
             <dt className="text-mute">From</dt>
             <dd className="text-ink">
               {contactRow ? (
-                <Link href={`/insurance/contacts/${contactRow.id}`} className="underline underline-offset-2">
+                <Link href={`/insurance/contacts/${contactRow.id}`} className="inline-block py-2 underline underline-offset-2 sm:py-0">
                   {contactRow.name}
                 </Link>
               ) : (

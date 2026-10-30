@@ -32,7 +32,7 @@ export function InviteSignupForm({ token }: { token: string }) {
           type="email"
           autoComplete="email"
           required
-          className="mt-1 w-full rounded-lg border border-line-strong bg-paper px-3 py-2 text-[13px] text-ink"
+          className="mt-1 w-full rounded-lg border border-line-strong bg-paper px-3 py-2 text-[16px] sm:text-[13px] text-ink"
         />
       </div>
 
@@ -46,7 +46,7 @@ export function InviteSignupForm({ token }: { token: string }) {
           autoComplete="new-password"
           required
           minLength={8}
-          className="mt-1 w-full rounded-lg border border-line-strong bg-paper px-3 py-2 text-[13px] text-ink"
+          className="mt-1 w-full rounded-lg border border-line-strong bg-paper px-3 py-2 text-[16px] sm:text-[13px] text-ink"
         />
       </div>
 
@@ -60,7 +60,7 @@ export function InviteSignupForm({ token }: { token: string }) {
           autoComplete="new-password"
           required
           minLength={8}
-          className="mt-1 w-full rounded-lg border border-line-strong bg-paper px-3 py-2 text-[13px] text-ink"
+          className="mt-1 w-full rounded-lg border border-line-strong bg-paper px-3 py-2 text-[16px] sm:text-[13px] text-ink"
         />
       </div>
 

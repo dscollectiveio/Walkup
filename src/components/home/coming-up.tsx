@@ -44,7 +44,7 @@ export function ComingUp({ reminders, today }: { reminders: Reminder[]; today: D
             <li key={`${r.name}-${r.kind}-${r.due.toISOString()}-${i}`} className={`relative flex items-center gap-3 py-3 ${r.href ? "-mx-5 px-5 hover:bg-fill/60" : ""}`}>
               <span className="w-12 shrink-0 text-right">
                 <span className="figures block text-[18px] leading-none text-ink">{r.overdue ? late : days}</span>
-                <span className="block whitespace-nowrap text-[10px] text-mute-soft">
+                <span className="block whitespace-nowrap text-[12px] text-mute-soft">
                   {r.overdue ? `day${late === 1 ? "" : "s"} late` : `day${days === 1 ? "" : "s"}`}
                 </span>
               </span>

@@ -67,7 +67,7 @@ export function ReviewRow({
           <div className="flex flex-wrap items-center gap-2">
             <Link
               href={`/documents/${doc.id}`}
-              className="font-medium text-ink underline-offset-2 hover:underline"
+              className="font-medium text-ink underline-offset-2 [overflow-wrap:anywhere] hover:underline"
             >
               {doc.title}
             </Link>
@@ -90,7 +90,7 @@ export function ReviewRow({
         </div>
 
         {!correcting ? (
-          <div className="flex shrink-0 items-center gap-3">
+          <div className="flex shrink-0 flex-wrap items-center gap-x-3 gap-y-1">
             <button
               type="button"
               disabled={busy}
@@ -101,14 +101,14 @@ export function ReviewRow({
                   if (r.error) setError(r.error);
                 })
               }
-              className="rounded-md bg-ink px-3 py-1.5 text-[12px] font-medium text-paper hover:bg-ink-mid disabled:opacity-50"
+              className="min-h-[44px] rounded-md bg-ink px-3 py-1.5 text-[12px] font-medium text-paper hover:bg-ink-mid disabled:opacity-50 sm:min-h-0"
             >
               {busy ? "Confirming…" : "That's right"}
             </button>
             <button
               type="button"
               onClick={() => setCorrecting(true)}
-              className="text-[12px] text-mute underline-offset-2 hover:underline"
+              className="text-[12px] text-mute underline-offset-2 hover:underline inline-flex min-h-[44px] items-center px-1 sm:min-h-0 sm:px-0"
             >
               File it differently
             </button>
@@ -121,7 +121,7 @@ export function ReviewRow({
         <p className="mt-2 max-w-[70ch] text-[13px] leading-relaxed text-mute">{summary}</p>
       ) : null}
       {fields.length > 0 ? (
-        <div className="mt-1.5 flex flex-wrap gap-x-4 gap-y-1 text-[11px] text-mute-soft">
+        <div className="mt-1.5 flex flex-wrap gap-x-4 gap-y-1 text-[12px] text-mute-soft">
           {fields.map((f) => (
             <span key={f}>{f}</span>
           ))}
@@ -131,14 +131,14 @@ export function ReviewRow({
       {correcting ? (
         <form action={action} className="mt-2 flex flex-wrap items-center gap-2">
           <input type="hidden" name="document_id" value={doc.id} />
-          <label htmlFor={`review-cat-${doc.id}`} className="text-[11px] text-mute">
+          <label htmlFor={`review-cat-${doc.id}`} className="text-[12px] text-mute">
             File as
           </label>
           <select
             id={`review-cat-${doc.id}`}
             name="category_id"
             defaultValue={doc.category_id ?? ""}
-            className="rounded-lg border border-line-strong bg-paper px-2 py-1 text-[12px] text-ink"
+            className="min-h-[44px] rounded-lg border border-line-strong bg-paper px-2 py-1 text-[16px] text-ink sm:min-h-0 sm:text-[12px]"
           >
             <option value="">Unfiled</option>
             {categories.map((c) => (
@@ -150,24 +150,24 @@ export function ReviewRow({
           <button
             type="submit"
             disabled={pending}
-            className="rounded-md bg-ink px-3 py-1 text-[12px] font-medium text-paper hover:bg-ink-mid disabled:opacity-50"
+            className="min-h-[44px] rounded-md bg-ink px-3 py-1 text-[12px] font-medium text-paper hover:bg-ink-mid disabled:opacity-50 sm:min-h-0"
           >
             {pending ? "Saving…" : "Save"}
           </button>
           <button
             type="button"
             onClick={() => setCorrecting(false)}
-            className="text-[12px] text-mute underline-offset-2 hover:underline"
+            className="text-[12px] text-mute underline-offset-2 hover:underline inline-flex min-h-[44px] items-center px-1 sm:min-h-0 sm:px-0"
           >
             Cancel
           </button>
           {state?.error ? (
-            <p className="w-full text-[11px] text-bad-text">{state.error}</p>
+            <p className="w-full text-[12px] text-bad-text">{state.error}</p>
           ) : null}
         </form>
       ) : null}
 
-      {error ? <p className="mt-1 text-[11px] text-bad-text">{error}</p> : null}
+      {error ? <p className="mt-1 text-[12px] text-bad-text">{error}</p> : null}
     </li>
   );
 }

@@ -84,7 +84,7 @@ export function Sheet(props: {
 /** The primary button always within reach on a phone (repairs-spec §16). */
 export function StickyActions({ children }: { children: React.ReactNode }) {
   return (
-    <div className="sticky bottom-0 z-10 flex flex-wrap items-center gap-2 border-t border-line bg-paper p-3 max-sm:[&>*]:flex-1">
+    <div className="sticky bottom-0 z-10 flex flex-wrap items-center gap-2 border-t border-line bg-paper p-3 max-sm:pb-[max(0.75rem,env(safe-area-inset-bottom))] max-sm:[&>*]:flex-1">
       {children}
     </div>
   );

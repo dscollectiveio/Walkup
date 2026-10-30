@@ -54,7 +54,7 @@ function NavItemLink({
         href={item.href}
         aria-current={active ? "page" : undefined}
         data-tour={item.tourId}
-        className={`relative flex min-h-[40px] items-center gap-2.5 rounded-md border-l-[3px] px-2.5 text-[13px] font-bold transition-colors duration-300 ease-out ${
+        className={`relative flex min-h-[44px] items-center gap-2.5 rounded-md border-l-[3px] px-2.5 md:min-h-[40px] text-[13px] font-bold transition-colors duration-300 ease-out ${
           active
             ? "border-brass bg-nav-active text-nav-active-text"
             : item.featured
@@ -248,7 +248,7 @@ export function Sidebar({
             {expanded ? (
               <span className="flex min-w-0 flex-col leading-none">
                 <span className="wordmark text-[20px] text-bone">Walkup</span>
-                {associationName ? <span className="mt-1 truncate text-[11px] font-normal text-ondark-mute">{associationName}</span> : null}
+                {associationName ? <span className="mt-1 truncate text-[12px] font-normal text-ondark-mute">{associationName}</span> : null}
               </span>
             ) : null}
           </Link>
@@ -257,7 +257,7 @@ export function Sidebar({
               type="button"
               onClick={() => setDrawerOpen(false)}
               aria-label="Close navigation"
-              className="ml-auto flex h-8 w-8 items-center justify-center rounded-md text-ondark-mute hover:bg-ink-mid hover:text-paper"
+              className="ml-auto flex h-11 w-11 items-center justify-center rounded-md text-ondark-mute hover:bg-ink-mid hover:text-paper"
             >
               <X size={16} strokeWidth={1.6} aria-hidden="true" />
             </button>
@@ -327,11 +327,11 @@ export function Sidebar({
           </div>
         ) : null}
 
-        <div className={`flex items-center border-t border-nav-divider ${expanded ? "gap-2.5 px-3 py-3" : "flex-col gap-2 py-3"}`}>
+        <div className={`flex items-center border-t border-nav-divider ${expanded ? "gap-2.5 px-3 py-3" : "flex-col gap-2 py-3"} pb-[max(0.75rem,env(safe-area-inset-bottom))]`}>
           <Link
             href="/account"
             title="Your account"
-            className={`flex min-w-0 items-center gap-2.5 rounded-md hover:text-nav-text ${expanded ? "flex-1 -mx-1 px-1 py-0.5 hover:bg-nav-hover" : ""}`}
+            className={`flex min-w-0 items-center gap-2.5 rounded-md hover:text-nav-text ${expanded ? "flex-1 -mx-1 min-h-[44px] px-1 py-0.5 hover:bg-nav-hover" : ""}`}
           >
             <span
               aria-hidden="true"

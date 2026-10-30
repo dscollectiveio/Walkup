@@ -135,7 +135,7 @@ export async function CollectionsSection({
         <div className="flex flex-wrap items-center gap-x-3 gap-y-1 rounded-lg border border-line bg-paper px-4 py-3 text-[13px]">
           <span className="font-medium text-ink">Email from Walkup: {strip.label}</span>
           {strip.text ? <span className="text-mute">{strip.text}</span> : null}
-          <Link href="/dues/email" className="ml-auto text-ink underline underline-offset-2">
+          <Link href="/dues/email" className="ml-auto inline-flex min-h-[44px] items-center text-ink underline underline-offset-2">
             Set up
           </Link>
         </div>

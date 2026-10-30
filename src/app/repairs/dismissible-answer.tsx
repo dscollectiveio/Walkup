@@ -63,7 +63,7 @@ export function DismissibleAnswer({
         }}
         aria-label="Dismiss this banner"
         title="Dismiss"
-        className="absolute right-2 top-2 flex h-8 w-8 items-center justify-center rounded-md text-current opacity-70 hover:bg-ink/10 hover:opacity-100 focus-visible:outline focus-visible:outline-2 focus-visible:outline-brass"
+        className="absolute right-2 top-2 flex h-11 w-11 sm:h-8 sm:w-8 items-center justify-center rounded-md text-current opacity-70 hover:bg-ink/10 hover:opacity-100 focus-visible:outline focus-visible:outline-2 focus-visible:outline-brass"
       >
         <X size={16} strokeWidth={2} aria-hidden="true" />
       </button>
@@ -98,7 +98,7 @@ export function DismissibleOnceAnswer({
         onClick={() => setGone(true)}
         aria-label="Dismiss this banner"
         title="Dismiss"
-        className="absolute right-2 top-2 flex h-8 w-8 items-center justify-center rounded-md text-current opacity-70 hover:bg-ink/10 hover:opacity-100 focus-visible:outline focus-visible:outline-2 focus-visible:outline-brass"
+        className="absolute right-2 top-2 flex h-11 w-11 sm:h-8 sm:w-8 items-center justify-center rounded-md text-current opacity-70 hover:bg-ink/10 hover:opacity-100 focus-visible:outline focus-visible:outline-2 focus-visible:outline-brass"
       >
         <X size={16} strokeWidth={2} aria-hidden="true" />
       </button>

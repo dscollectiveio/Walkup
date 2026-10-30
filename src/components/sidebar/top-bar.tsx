@@ -71,7 +71,7 @@ export function TopBar({
           type="button"
           onClick={() => setDrawerOpen(true)}
           aria-label="Open navigation"
-          className="-ml-1 flex h-9 w-9 items-center justify-center rounded-md text-paper hover:bg-ink-mid"
+          className="-ml-2 flex h-11 w-11 shrink-0 items-center justify-center rounded-md text-paper hover:bg-ink-mid"
         >
           <Menu size={18} strokeWidth={1.6} aria-hidden="true" />
         </button>
@@ -80,8 +80,8 @@ export function TopBar({
       <div className="flex min-w-0 items-baseline gap-2">
         <span className="truncate text-[15px] font-semibold text-paper" title={userEmail}>
           {associationName ?? "Walkup"}
-          <span className="font-normal text-ondark-mute"> - </span>
-          <span className="font-normal">{shownName}</span>
+          <span className="hidden font-normal text-ondark-mute sm:inline"> - </span>
+          <span className="hidden font-normal sm:inline">{shownName}</span>
         </span>
         {page ? (
           <>
@@ -93,12 +93,12 @@ export function TopBar({
         ) : null}
       </div>
 
-      <div className="ml-auto flex shrink-0 items-center gap-1.5">
+      <div className="ml-auto flex shrink-0 items-center gap-0.5 sm:gap-1.5">
         <button
           type="button"
           onClick={() => helpRef.current?.showModal()}
           data-tour="help"
-          className="inline-flex h-9 items-center gap-1.5 px-2 text-[13px] font-medium text-paper underline decoration-paper/50 underline-offset-4 transition-colors duration-300 hover:decoration-paper"
+          className="inline-flex h-11 min-w-11 items-center justify-center gap-1.5 px-2 sm:h-9 sm:min-w-0 sm:justify-start text-[13px] font-medium text-paper underline decoration-paper/50 underline-offset-4 transition-colors duration-300 hover:decoration-paper"
         >
           <CircleHelp size={15} strokeWidth={1.6} aria-hidden="true" />
           <span className="hidden sm:inline">Help</span>
@@ -107,7 +107,7 @@ export function TopBar({
         <form action={signOutAction}>
           <button
             type="submit"
-            className="inline-flex h-9 items-center gap-1.5 px-2 text-[13px] font-medium text-paper underline decoration-paper/50 underline-offset-4 transition-colors duration-300 hover:decoration-paper"
+            className="inline-flex h-11 min-w-11 items-center justify-center gap-1.5 px-2 sm:h-9 sm:min-w-0 sm:justify-start text-[13px] font-medium text-paper underline decoration-paper/50 underline-offset-4 transition-colors duration-300 hover:decoration-paper"
           >
             <LogOut size={15} strokeWidth={1.6} aria-hidden="true" />
             <span className="hidden sm:inline">Sign out</span>
@@ -120,7 +120,7 @@ export function TopBar({
           aria-label="Your account"
           aria-current={onAccount ? "page" : undefined}
           title={`Your account (${shownName})`}
-          className={`ml-1 flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-brass text-[13px] font-bold text-on-brass ring-2 transition duration-300 hover:scale-105 hover:brightness-105 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-paper ${
+          className={`relative ml-1 flex h-9 w-9 shrink-0 items-center justify-center rounded-full after:absolute after:-inset-1 after:content-[''] bg-brass text-[13px] font-bold text-on-brass ring-2 transition duration-300 hover:scale-105 hover:brightness-105 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-paper ${
             onAccount ? "ring-paper" : "ring-transparent"
           }`}
         >
@@ -134,7 +134,7 @@ export function TopBar({
         onClick={(e) => {
           if (e.target === helpRef.current) helpRef.current?.close();
         }}
-        className="m-auto w-[min(32rem,calc(100vw-2rem))] rounded-xl border border-line bg-paper p-0 text-ink shadow-xl backdrop:bg-ink-deep/40"
+        className="m-auto max-h-[calc(100dvh-2rem)] w-[min(32rem,calc(100vw-2rem))] overflow-y-auto rounded-xl border border-line bg-paper p-0 text-ink shadow-xl backdrop:bg-ink-deep/40"
       >
         <div className="flex items-start justify-between gap-4 rounded-t-[11px] band bg-ink px-5 py-3">
           <div>
@@ -147,7 +147,7 @@ export function TopBar({
             type="button"
             onClick={() => helpRef.current?.close()}
             aria-label="Close"
-            className="rounded-md p-1 text-ondark-mute hover:bg-ink-mid hover:text-paper"
+            className="-m-2 flex h-11 w-11 shrink-0 items-center justify-center rounded-md text-ondark-mute hover:bg-ink-mid hover:text-paper sm:m-0 sm:h-auto sm:w-auto sm:p-1"
           >
             <X size={16} strokeWidth={1.6} aria-hidden="true" />
           </button>
@@ -164,7 +164,7 @@ export function TopBar({
           <a
             href="/walkthrough.txt"
             download="Walkup walkthrough.txt"
-            className="text-[13px] font-medium text-ink underline underline-offset-2"
+            className="text-[13px] font-medium text-ink underline underline-offset-2 max-sm:inline-flex max-sm:min-h-[44px] max-sm:items-center"
           >
             Download the full walkthrough
           </a>
@@ -175,14 +175,14 @@ export function TopBar({
                 helpRef.current?.close();
                 window.dispatchEvent(new Event(START_TOUR_EVENT));
               }}
-              className="rounded-md border border-line-strong px-3 py-1.5 text-[12px] font-medium text-ink hover:bg-fill"
+              className="rounded-md border border-line-strong px-3 py-1.5 text-[12px] max-sm:min-h-[44px] font-medium text-ink hover:bg-fill"
             >
               Take the tour
             </button>
             <button
               type="button"
               onClick={() => helpRef.current?.close()}
-              className="rounded-md bg-ink px-3 py-1.5 text-[12px] font-medium text-paper hover:bg-ink-mid"
+              className="rounded-md bg-ink px-3 py-1.5 text-[12px] max-sm:min-h-[44px] font-medium text-paper hover:bg-ink-mid"
             >
               Got it
             </button>

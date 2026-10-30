@@ -58,13 +58,13 @@ export function AddToCalendarMenu({ buttonClass }: { buttonClass: string }) {
           <a href={ICS} download="walkup-upkeep.ics" onClick={() => setOpen(false)} className={item}>
             <span>
               <span className="block text-[13px] font-medium text-ink">Apple Calendar</span>
-              <span className="block text-[11px] text-mute">Downloads the file. Open it and Calendar adds the events.</span>
+              <span className="block text-[12px] text-mute">Downloads the file. Open it and Calendar adds the events.</span>
             </span>
           </a>
           <a href={ICS} download="walkup-upkeep.ics" onClick={() => setOpen(false)} className={`${item} border-t border-line`}>
             <span>
               <span className="block text-[13px] font-medium text-ink">Outlook</span>
-              <span className="block text-[11px] text-mute">Downloads the file. Open it in Outlook to add the events.</span>
+              <span className="block text-[12px] text-mute">Downloads the file. Open it in Outlook to add the events.</span>
             </span>
           </a>
           <a
@@ -79,10 +79,10 @@ export function AddToCalendarMenu({ buttonClass }: { buttonClass: string }) {
           >
             <span>
               <span className="block text-[13px] font-medium text-ink">Google Calendar</span>
-              <span className="block text-[11px] text-mute">Downloads the file and opens Google&rsquo;s Import page. Choose the file there.</span>
+              <span className="block text-[12px] text-mute">Downloads the file and opens Google&rsquo;s Import page. Choose the file there.</span>
             </span>
           </a>
-          <p className="border-t border-line bg-fill/40 px-3 py-2 text-[11px] text-mute">
+          <p className="border-t border-line bg-fill/40 px-3 py-2 text-[12px] text-mute">
             It imports once. Download it again after the schedule changes; Walkup doesn&rsquo;t send updates.
           </p>
         </div>

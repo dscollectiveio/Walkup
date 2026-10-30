@@ -6,7 +6,7 @@ import { inputClass, labelClass } from "@/components/repairs/styles";
 import { SEARCHABLE_TRADES } from "@/lib/contractors/trades";
 
 const bubble =
-  "inline-flex min-h-[40px] cursor-pointer items-center rounded-full border border-line-strong bg-paper px-4 text-[13px] font-medium text-ink hover:bg-fill has-[:checked]:border-ink has-[:checked]:bg-ink has-[:checked]:text-paper has-[:focus-visible]:outline has-[:focus-visible]:outline-2 has-[:focus-visible]:outline-offset-2 has-[:focus-visible]:outline-brass";
+  "inline-flex min-h-[44px] sm:min-h-[40px] cursor-pointer items-center rounded-full border border-line-strong bg-paper px-4 text-[13px] font-medium text-ink hover:bg-fill has-[:checked]:border-ink has-[:checked]:bg-ink has-[:checked]:text-paper has-[:focus-visible]:outline has-[:focus-visible]:outline-2 has-[:focus-visible]:outline-offset-2 has-[:focus-visible]:outline-brass";
 
 /**
  * The "Kind of work" choice as bubbles: "Describe Scope of Work" first, then
@@ -62,7 +62,7 @@ export function TradeFields({ current, phrase }: { current: string | null; phras
             type="button"
             aria-expanded={expanded}
             onClick={() => setExpanded((e) => !e)}
-            className="absolute bottom-0 right-0 inline-flex h-10 items-center gap-1 text-[13px] font-medium text-ink hover:text-ink-mid"
+            className="absolute bottom-0 right-0 inline-flex h-11 sm:h-10 items-center gap-1 text-[13px] font-medium text-ink hover:text-ink-mid"
           >
             {expanded ? "Show fewer" : "Load more"}
             {expanded ? <ChevronUp size={15} strokeWidth={2.2} aria-hidden="true" /> : <ChevronDown size={15} strokeWidth={2.2} aria-hidden="true" />}
@@ -84,7 +84,7 @@ export function TradeFields({ current, phrase }: { current: string | null; phras
             placeholder="Attic fan installation"
             className={inputClass}
           />
-          <p className="mt-1 text-[11px] text-mute">
+          <p className="mt-1 text-[12px] text-mute">
             Walkup searches Google for these words near your building. Letters only, no names or numbers.
           </p>
         </div>

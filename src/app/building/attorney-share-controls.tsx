@@ -56,7 +56,7 @@ export function AttorneyShareControls({
                 disabled={pending}
                 onClick={() => remove(s.id)}
                 aria-label={`Stop sharing ${s.label}`}
-                className="inline-flex min-h-[28px] min-w-[28px] items-center justify-center rounded-full text-mute hover:text-ink"
+                className="inline-flex min-h-[28px] min-w-[28px] max-sm:min-h-[44px] max-sm:min-w-[44px] items-center justify-center rounded-full text-mute hover:text-ink"
               >
                 ×
               </button>
@@ -73,7 +73,7 @@ export function AttorneyShareControls({
             id={`share-${personId}`}
             value={choice}
             onChange={(e) => setChoice(e.target.value)}
-            className="w-full rounded-lg border border-line-strong bg-paper px-3 py-2 text-[13px] text-ink sm:max-w-[320px]"
+            className="w-full rounded-lg border border-line-strong bg-paper px-3 py-2 text-[16px] sm:text-[13px] text-ink sm:max-w-[320px]"
           >
             <option value="">Choose a unit to share…</option>
             {options.map((o) => (

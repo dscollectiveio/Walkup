@@ -85,7 +85,7 @@ export function PersonRow({
                 name="full_name"
                 required
                 defaultValue={person.full_name}
-                className="mt-1 w-full rounded-lg border border-line-strong px-3 py-2 text-[13px] text-ink"
+                className="mt-1 w-full rounded-lg border border-line-strong px-3 py-2 text-[16px] sm:text-[13px] text-ink"
               />
             </div>
             <div>
@@ -97,7 +97,7 @@ export function PersonRow({
                 name="email"
                 type="email"
                 defaultValue={person.email ?? ""}
-                className="mt-1 w-full rounded-lg border border-line-strong px-3 py-2 text-[13px] text-ink"
+                className="mt-1 w-full rounded-lg border border-line-strong px-3 py-2 text-[16px] sm:text-[13px] text-ink"
               />
             </div>
             <div>
@@ -108,7 +108,7 @@ export function PersonRow({
                 id={`phone-${person.id}`}
                 name="phone"
                 defaultValue={person.phone}
-                className="mt-1 w-full rounded-lg border border-line-strong px-3 py-2 text-[13px] text-ink"
+                className="mt-1 w-full rounded-lg border border-line-strong px-3 py-2 text-[16px] sm:text-[13px] text-ink"
               />
             </div>
             <div>
@@ -119,7 +119,7 @@ export function PersonRow({
                 id={`addr-${person.id}`}
                 name="mailing_address"
                 defaultValue={person.mailing_address}
-                className="mt-1 w-full rounded-lg border border-line-strong px-3 py-2 text-[13px] text-ink"
+                className="mt-1 w-full rounded-lg border border-line-strong px-3 py-2 text-[16px] sm:text-[13px] text-ink"
               />
             </div>
           </div>
@@ -129,7 +129,7 @@ export function PersonRow({
               <span className="block text-[12px] font-medium text-ink">Access</span>
               <div className="mt-1.5 flex flex-wrap gap-x-4 gap-y-1.5">
                 {ROLE_OPTIONS.map((r) => (
-                  <label key={r.value} className="flex items-center gap-1.5 text-[12px] text-ink">
+                  <label key={r.value} className="flex items-center gap-1.5 text-[12px] text-ink max-sm:min-h-[44px]">
                     <input
                       type="checkbox"
                       name="roles"
@@ -149,14 +149,14 @@ export function PersonRow({
             <button
               type="submit"
               disabled={pending}
-              className="rounded-md bg-ink px-3 py-1.5 text-[12px] font-medium text-paper hover:bg-ink-mid disabled:opacity-50"
+              className="rounded-md bg-ink px-3 py-1.5 max-sm:min-h-[44px] text-[12px] font-medium text-paper hover:bg-ink-mid disabled:opacity-50"
             >
               {pending ? "Saving…" : "Save"}
             </button>
             <button
               type="button"
               onClick={() => setEditing(false)}
-              className="rounded-md border border-line-strong px-3 py-1.5 text-[12px] text-ink hover:bg-fill"
+              className="rounded-md border border-line-strong px-3 py-1.5 max-sm:min-h-[44px] text-[12px] text-ink hover:bg-fill"
             >
               Cancel
             </button>
@@ -180,14 +180,14 @@ export function PersonRow({
             </span>
           ))}
         </div>
-        <div className="mt-1 text-[12px] text-mute">
+        <div className="mt-1 break-words text-[12px] text-mute">
           {[person.email, person.phone].filter(Boolean).join(" · ") || "No contact info on file"}
         </div>
         {person.mailing_address ? (
-          <div className="text-[11px] text-mute-soft">{person.mailing_address}</div>
+          <div className="break-words text-[12px] sm:text-[11px] text-mute-soft">{person.mailing_address}</div>
         ) : null}
         {accessEnds ? (
-          <div className="mt-1 text-[11px] text-mute">
+          <div className="mt-1 text-[12px] sm:text-[11px] text-mute">
             {accessEnds.label} access ends {longDate(accessEnds.on)}.
             {canEditRoles ? (
               <>
@@ -226,14 +226,14 @@ export function PersonRow({
           <button
             type="button"
             onClick={() => setEditing(true)}
-            className="text-[12px] text-mute underline-offset-2 hover:underline"
+            className="text-[12px] text-mute underline-offset-2 hover:underline max-sm:inline-flex max-sm:min-h-[44px] max-sm:items-center"
           >
             Edit
           </button>
         ) : null}
         {canRedact ? (
           confirmingRedact ? (
-            <span className="flex items-center gap-2">
+            <span className="flex flex-wrap items-center gap-2">
               <button
                 type="button"
                 disabled={redacting}
@@ -245,14 +245,14 @@ export function PersonRow({
                     else setConfirmingRedact(false);
                   })
                 }
-                className="rounded-md border border-bad-line bg-bad-tint px-2.5 py-1 text-[11px] font-medium text-bad-text"
+                className="rounded-md border border-bad-line bg-bad-tint px-2.5 py-1 max-sm:min-h-[44px] text-[12px] sm:text-[11px] font-medium text-bad-text"
               >
                 {redacting ? "Removing…" : "Permanently remove"}
               </button>
               <button
                 type="button"
                 onClick={() => setConfirmingRedact(false)}
-                className="text-[11px] text-mute underline-offset-2 hover:underline"
+                className="text-[12px] sm:text-[11px] text-mute underline-offset-2 hover:underline max-sm:inline-flex max-sm:min-h-[44px] max-sm:items-center"
               >
                 Cancel
               </button>
@@ -262,7 +262,7 @@ export function PersonRow({
               type="button"
               onClick={() => setConfirmingRedact(true)}
               title="Clears name, email, phone, and address here and in the audit log. Their payment and ownership history stays, as “Former member.”"
-              className="text-[11px] text-bad-text underline-offset-2 hover:underline"
+              className="text-[12px] sm:text-[11px] text-bad-text underline-offset-2 hover:underline max-sm:inline-flex max-sm:min-h-[44px] max-sm:items-center"
             >
               Remove personal data
             </button>
@@ -270,7 +270,7 @@ export function PersonRow({
         ) : null}
         {canDeleteFormer ? (
           confirmingDelete ? (
-            <span className="flex items-center gap-2">
+            <span className="flex flex-wrap items-center gap-2">
               <button
                 type="button"
                 disabled={deleting}
@@ -282,11 +282,11 @@ export function PersonRow({
                     else setConfirmingDelete(false);
                   })
                 }
-                className="rounded-md border border-bad-line bg-bad-tint px-2.5 py-1 text-[11px] font-medium text-bad-text"
+                className="rounded-md border border-bad-line bg-bad-tint px-2.5 py-1 max-sm:min-h-[44px] text-[12px] sm:text-[11px] font-medium text-bad-text"
               >
                 {deleting ? "Deleting…" : "Delete for good"}
               </button>
-              <button type="button" onClick={() => setConfirmingDelete(false)} className="text-[11px] text-mute underline-offset-2 hover:underline">
+              <button type="button" onClick={() => setConfirmingDelete(false)} className="text-[12px] sm:text-[11px] text-mute underline-offset-2 hover:underline max-sm:inline-flex max-sm:min-h-[44px] max-sm:items-center">
                 Cancel
               </button>
             </span>
@@ -295,14 +295,14 @@ export function PersonRow({
               type="button"
               onClick={() => setConfirmingDelete(true)}
               title="Deletes this former member. It only works when no payment, ownership, email, repair or document still refers to them."
-              className="text-[11px] text-bad-text underline-offset-2 hover:underline"
+              className="text-[12px] sm:text-[11px] text-bad-text underline-offset-2 hover:underline max-sm:inline-flex max-sm:min-h-[44px] max-sm:items-center"
             >
               Delete former member
             </button>
           )
         ) : null}
-        {deleteError ? <p className="max-w-[16rem] text-right text-[11px] text-bad-text">{deleteError}</p> : null}
-        {redactError ? <p className="max-w-[16rem] text-right text-[11px] text-bad-text">{redactError}</p> : null}
+        {deleteError ? <p className="max-w-[16rem] text-right text-[12px] sm:text-[11px] text-bad-text">{deleteError}</p> : null}
+        {redactError ? <p className="max-w-[16rem] text-right text-[12px] sm:text-[11px] text-bad-text">{redactError}</p> : null}
       </div>
     </li>
   );

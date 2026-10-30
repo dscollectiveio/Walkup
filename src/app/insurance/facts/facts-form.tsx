@@ -213,7 +213,7 @@ export function FactsForm({
           "flood_zone",
           [{ value: "", label: "Not sure" }, ...FLOOD_ZONES.filter((z) => z !== "unknown").map((z) => ({ value: z, label: `Zone ${z}` }))],
           facts.flood_zone && facts.flood_zone !== "unknown" ? facts.flood_zone : "",
-          <a href="https://msc.fema.gov/portal/search" target="_blank" rel="noopener noreferrer" className="text-ink underline underline-offset-2">
+          <a href="https://msc.fema.gov/portal/search" target="_blank" rel="noopener noreferrer" className="inline-block py-2 text-ink underline underline-offset-2 sm:py-0">
             Look up your flood zone on the FEMA Flood Map Service Center
           </a>,
         );

@@ -93,7 +93,7 @@ export default async function ReadPage({
     <div className="space-y-6">
       <BackLink href="/insurance">Insurance</BackLink>
       <div>
-        <h1 className="text-[20px] font-bold tracking-tight text-ink">
+        <h1 className="break-words text-[20px] font-bold tracking-tight text-ink">
           Walkup found {policies.length} {isQuote ? "quotes" : "policies"} in {filename}
         </h1>
       </div>

@@ -107,7 +107,7 @@ export async function PoliciesTab({
                         <dt className="text-mute">Policy</dt>
                         <dd>
                           {p ? (
-                            <Link href={`/insurance/policies/${p.id}`} className="text-ink underline underline-offset-2">
+                            <Link href={`/insurance/policies/${p.id}`} className="inline-block py-2.5 text-ink underline underline-offset-2">
                               {coverageShort(p.coverage)}
                             </Link>
                           ) : null}

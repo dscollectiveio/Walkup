@@ -65,7 +65,7 @@ function SourceLinks({ urls }: { urls: string[] }) {
       {shown.map((u, i) => (
         <span key={u}>
           {i > 0 ? ", " : ""}
-          <a href={u} target="_blank" rel="noopener noreferrer nofollow" className="text-ink underline underline-offset-2">
+          <a href={u} target="_blank" rel="noopener noreferrer nofollow" className="inline-block py-2 text-ink underline underline-offset-2 sm:py-0">
             {i + 1}. {hostOf(u)}
           </a>
         </span>
@@ -87,7 +87,7 @@ function About({ text, source }: { text: string | null; source: string | null })
 function NameLink({ name, website: rawWebsite }: { name: string; website: string | null }) {
   const website = safeHttpUrl(rawWebsite);
   return website ? (
-    <a href={website} target="_blank" rel="noopener noreferrer" className="font-medium text-ink underline underline-offset-2">
+    <a href={website} target="_blank" rel="noopener noreferrer" className="inline-block py-2.5 font-medium text-ink underline underline-offset-2 sm:py-0">
       {name}
     </a>
   ) : (
@@ -290,8 +290,8 @@ export async function MarketTab({
                 <li key={p.id} className="space-y-2 py-3 text-[13px]">
                   <div className="font-medium text-ink">{p.name}</div>
                   <div className="flex flex-wrap gap-x-3 text-mute">
-                    {p.phone ? (tel ? <a href={tel} className="underline underline-offset-2">{formatPhone(p.phone)}</a> : <span>{p.phone}</span>) : null}
-                    <a href={mailtoLink(p.contact_email)} className="underline underline-offset-2">
+                    {p.phone ? (tel ? <a href={tel} className="inline-flex min-h-[44px] items-center underline underline-offset-2 sm:min-h-0">{formatPhone(p.phone)}</a> : <span>{p.phone}</span>) : null}
+                    <a href={mailtoLink(p.contact_email)} className="inline-flex min-h-[44px] items-center break-all underline underline-offset-2 sm:min-h-0">
                       {p.contact_email}
                     </a>
                   </div>
@@ -344,11 +344,11 @@ function ContactsCard({ contacts, todayIso, canEdit }: { contacts: ContactRow[];
             {contacts.map((c) => (
               <li key={c.id} className="space-y-2 py-3 text-[13px]">
                 <div className="flex flex-wrap items-center gap-2">
-                  <Link href={`/insurance/contacts/${c.id}`} className="font-medium text-ink underline-offset-2 hover:underline">
+                  <Link href={`/insurance/contacts/${c.id}`} className="inline-flex min-h-[44px] items-center font-medium text-ink underline-offset-2 hover:underline sm:min-h-0">
                     {c.name}
                   </Link>
                   {c.is_current_agent ? <span className="rounded-full bg-ink px-2 py-0.5 text-[11px] text-paper">Your agent</span> : null}
-                  <span className="text-[11px] text-mute">{contactSourceBadge(c.source, c.found_at, todayIso)}</span>
+                  <span className="text-[12px] text-mute">{contactSourceBadge(c.source, c.found_at, todayIso)}</span>
                 </div>
                 <div className="text-mute">
                   {[CONTACT_KIND_LABEL[c.kind] ?? "Contact", [c.city, c.state_code].filter(Boolean).join(", ") || null].filter(Boolean).join(" · ")}
@@ -414,9 +414,9 @@ function AgencyCard({ a, fetchedAt, illinois, saved }: { a: VerifiedAgency; fetc
       <About text={a.about} source={a.aboutSource} />
       {a.phone || a.email ? (
         <div className="flex flex-wrap gap-x-3">
-          {a.phone ? (tel ? <a href={tel} className="figures text-ink underline underline-offset-2">{a.phone}</a> : <span>{a.phone}</span>) : null}
+          {a.phone ? (tel ? <a href={tel} className="figures inline-flex min-h-[44px] items-center text-ink underline underline-offset-2 sm:min-h-0">{a.phone}</a> : <span>{a.phone}</span>) : null}
           {a.email ? (
-            <a href={mailtoLink(a.email)} className="text-ink underline underline-offset-2">
+            <a href={mailtoLink(a.email)} className="inline-flex min-h-[44px] items-center break-all text-ink underline underline-offset-2 sm:min-h-0">
               {a.email}
             </a>
           ) : null}
@@ -471,7 +471,7 @@ function InsurerList({
         {i.verified.rating && i.amBestRating && i.amBestSourceUrl ? (
           <p className="text-ink">
             AM Best rating: {i.amBestRating}, per{" "}
-            <a href={safeHttpUrl(i.amBestSourceUrl) ?? undefined} target="_blank" rel="noopener noreferrer nofollow" className="underline underline-offset-2">
+            <a href={safeHttpUrl(i.amBestSourceUrl) ?? undefined} target="_blank" rel="noopener noreferrer nofollow" className="inline-block py-2 underline underline-offset-2 sm:py-0">
               {hostOf(i.amBestSourceUrl)}
             </a>
           </p>

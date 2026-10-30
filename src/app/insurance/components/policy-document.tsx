@@ -49,17 +49,17 @@ export function PolicyDocument({
           className="m-auto h-[90vh] w-[min(960px,94vw)] overflow-hidden rounded-xl border border-line bg-paper p-0 text-ink shadow-2xl backdrop:bg-black/50"
         >
           <div className="flex h-full flex-col">
-            <header className="flex shrink-0 items-center justify-between gap-3 band bg-ink px-5 py-3">
+            <header className="flex shrink-0 items-center justify-between gap-3 band bg-ink px-4 py-2 sm:px-5 sm:py-3">
               <h2 className="min-w-0 truncate text-[15px] font-semibold text-paper">{heading}</h2>
               <div className="flex shrink-0 items-center gap-3">
-                <DownloadButton id={documentId} className="text-[12px] text-ondark-mute underline-offset-2 hover:text-paper hover:underline">
+                <DownloadButton id={documentId} className="inline-flex min-h-[44px] items-center text-[12px] text-ondark-mute underline-offset-2 hover:text-paper hover:underline sm:min-h-0">
                   Download
                 </DownloadButton>
                 <button
                   type="button"
                   onClick={() => dialogRef.current?.close()}
                   aria-label="Close the preview"
-                  className="flex h-8 w-8 items-center justify-center rounded-md text-ondark-mute hover:bg-paper/10 hover:text-paper"
+                  className="flex h-11 w-11 items-center sm:h-8 sm:w-8 justify-center rounded-md text-ondark-mute hover:bg-paper/10 hover:text-paper"
                 >
                   <X size={16} strokeWidth={1.8} aria-hidden="true" />
                 </button>

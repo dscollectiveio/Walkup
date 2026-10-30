@@ -25,7 +25,7 @@ export function RulesToggle({ rules, canEdit }: { rules: RuleRecord[]; canEdit: 
         type="button"
         onClick={() => setOpen((o) => !o)}
         aria-expanded={open}
-        className="ml-auto text-[12px] text-mute underline-offset-2 hover:text-ink hover:underline"
+        className="ml-auto inline-flex min-h-[44px] items-center text-[12px] text-mute underline-offset-2 hover:text-ink hover:underline"
       >
         Rules · <span className="figures">{rules.length}</span>
       </button>
@@ -73,7 +73,7 @@ function RulesList({ rules, canEdit }: { rules: RuleRecord[]; canEdit: boolean }
                   if (result.error) setError(result.error);
                 })
               }
-              className="text-[12px] text-mute underline-offset-2 hover:underline disabled:opacity-50"
+              className="inline-flex min-h-[44px] items-center text-[12px] text-mute underline-offset-2 hover:underline disabled:opacity-50"
             >
               Remove
             </button>

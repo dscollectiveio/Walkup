@@ -37,7 +37,7 @@ export function CategorizeMenu({
             }
           });
         }}
-        className="min-h-[36px] rounded-md border border-line-strong bg-paper px-2 py-1 text-[12px] font-medium text-ink disabled:opacity-50"
+        className="min-h-[44px] max-w-full rounded-md border border-line-strong bg-paper px-2 py-1 text-[16px] font-medium sm:min-h-[36px] sm:text-[12px] text-ink disabled:opacity-50"
       >
         <option value="">{pending ? "Saving…" : "Categorize…"}</option>
         {categories.map((c) => (

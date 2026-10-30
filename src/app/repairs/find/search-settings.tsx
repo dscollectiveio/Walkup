@@ -11,10 +11,10 @@ import { PreviousSearches } from "./search-history";
 import { TradeFields } from "./trade-fields";
 
 const smallLabel = "block text-[12px] text-mute";
-const selectClass = "mt-1 block min-h-[40px] w-full rounded-lg border border-line-strong bg-paper px-3 text-[16px] text-ink sm:text-[14px]";
+const selectClass = "mt-1 block min-h-[44px] sm:min-h-[40px] w-full rounded-lg border border-line-strong bg-paper px-3 text-[16px] text-ink sm:text-[14px]";
 
 const pill =
-  "inline-flex min-h-[36px] cursor-pointer items-center rounded-full border border-line-strong bg-paper px-3.5 text-[13px] font-medium text-ink hover:bg-fill has-[:checked]:border-ink has-[:checked]:bg-ink has-[:checked]:text-paper has-[:focus-visible]:outline has-[:focus-visible]:outline-2 has-[:focus-visible]:outline-offset-2 has-[:focus-visible]:outline-brass";
+  "inline-flex min-h-[44px] sm:min-h-[36px] cursor-pointer items-center rounded-full border border-line-strong bg-paper px-3.5 text-[13px] font-medium text-ink hover:bg-fill has-[:checked]:border-ink has-[:checked]:bg-ink has-[:checked]:text-paper has-[:focus-visible]:outline has-[:focus-visible]:outline-2 has-[:focus-visible]:outline-offset-2 has-[:focus-visible]:outline-brass";
 
 /**
  * Everything about the search that can be changed, in one form: the kind of
@@ -68,7 +68,7 @@ export function SearchSettings(props: {
             </label>
           ))}
         </div>
-        <p className="mt-1 text-[11px] text-mute">These change the ranking and the reasons shown. They never hide anyone.</p>
+        <p className="mt-1 text-[12px] text-mute">These change the ranking and the reasons shown. They never hide anyone.</p>
       </fieldset>
       </div>
 
@@ -129,7 +129,7 @@ export function SearchSettings(props: {
             <p className={smallLabel}>Availability</p>
             <label
               title="Only businesses open right now or open 24 hours, or whose own site says they take emergency calls"
-              className="mt-1 flex min-h-[40px] w-full cursor-pointer items-center justify-center gap-2 rounded-full border border-bad-line bg-paper px-3.5 text-[13px] font-semibold text-bad-text hover:bg-bad-tint has-[:checked]:border-bad has-[:checked]:bg-bad has-[:checked]:text-paper has-[:focus-visible]:outline has-[:focus-visible]:outline-2 has-[:focus-visible]:outline-offset-2 has-[:focus-visible]:outline-brass"
+              className="mt-1 flex min-h-[44px] sm:min-h-[40px] w-full cursor-pointer items-center justify-center gap-2 rounded-full border border-bad-line bg-paper px-3.5 text-[13px] font-semibold text-bad-text hover:bg-bad-tint has-[:checked]:border-bad has-[:checked]:bg-bad has-[:checked]:text-paper has-[:focus-visible]:outline has-[:focus-visible]:outline-2 has-[:focus-visible]:outline-offset-2 has-[:focus-visible]:outline-brass"
             >
               <input type="checkbox" name="open" value="1" defaultChecked={props.openNow} className="sr-only" />
               <Siren size={16} strokeWidth={2} aria-hidden="true" />
@@ -140,12 +140,12 @@ export function SearchSettings(props: {
             <span className={`${smallLabel} invisible`} aria-hidden="true">
               Search
             </span>
-            <button type="submit" className={`${btnPrimary} mt-1 w-full min-w-[10rem] !min-h-[40px] px-8`}>
+            <button type="submit" className={`${btnPrimary} mt-1 w-full min-w-[10rem] !min-h-[44px] sm:!min-h-[40px] px-8`}>
               {props.submitLabel}
             </button>
           </div>
         </div>
-        <p className="mt-2 text-[11px] text-mute">
+        <p className="mt-2 text-[12px] text-mute">
           The minimums and Emergency Services apply to what is found nearby. Emergency Services keeps businesses open right now or open 24 hours, or whose own site says they take emergency calls. When one is set, results with no rating, review count or hours listed are left out. The distance sets how far Google looks, 5 to 100 miles.
         </p>
       </div>

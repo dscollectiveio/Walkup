@@ -58,7 +58,7 @@ export function GenerateInviteForm({
             required
             value={role}
             onChange={(e) => setRole(e.target.value)}
-            className="mt-1 w-full rounded-lg border border-line-strong bg-paper px-3 py-2 text-[13px] text-ink"
+            className="mt-1 w-full rounded-lg border border-line-strong bg-paper px-3 py-2 text-[16px] sm:text-[13px] text-ink"
           >
             <option value="" disabled>
               Choose…
@@ -82,7 +82,7 @@ export function GenerateInviteForm({
             name="email"
             type="email"
             required={role !== "" && role !== "owner"}
-            className="mt-1 w-full rounded-lg border border-line-strong bg-paper px-3 py-2 text-[13px] text-ink"
+            className="mt-1 w-full rounded-lg border border-line-strong bg-paper px-3 py-2 text-[16px] sm:text-[13px] text-ink"
           />
         </div>
         {role === "owner" && people.length > 0 ? (
@@ -95,7 +95,7 @@ export function GenerateInviteForm({
               id="invite_person"
               name="person_id"
               defaultValue=""
-              className="mt-1 w-full rounded-lg border border-line-strong bg-paper px-3 py-2 text-[13px] text-ink"
+              className="mt-1 w-full rounded-lg border border-line-strong bg-paper px-3 py-2 text-[16px] sm:text-[13px] text-ink"
             >
               <option value="">Create a new person</option>
               {people.map((p) => (
@@ -125,7 +125,7 @@ export function GenerateInviteForm({
         <button
           type="button"
           onClick={() => setOpen(false)}
-          className="rounded-md border border-line-strong px-4 py-2 text-[13px] text-ink hover:bg-fill"
+          className="rounded-md border border-line-strong px-4 py-2 max-sm:min-h-[44px] text-[13px] text-ink hover:bg-fill"
         >
           Cancel
         </button>

@@ -289,10 +289,10 @@ export default async function PolicyPage({
         <section aria-label="Key figures" className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
           {tiles.map((t) => (
             <div key={t.key} className="rounded-xl border border-line bg-paper px-4 py-3">
-              <div className="text-[11px] text-mute">{t.label}</div>
+              <div className="text-[12px] text-mute">{t.label}</div>
               <div className="figures mt-1 text-[18px] text-ink">
                 {t.tel ? (
-                  <a href={t.tel} className="underline underline-offset-2">
+                  <a href={t.tel} className="inline-flex min-h-[44px] items-center underline underline-offset-2 sm:min-h-0">
                     {t.value}
                   </a>
                 ) : (
@@ -319,8 +319,8 @@ export default async function PolicyPage({
                   const v = displayValue(d, policy);
                   return (
                     <div key={d.key} className="min-w-0">
-                      <dt className="text-[11px] text-mute">{d.label}</dt>
-                      <dd className={`text-[13px] ${v === null ? "text-mute-soft" : "figures text-ink"}`}>{v ?? "Not recorded"}</dd>
+                      <dt className="text-[12px] text-mute">{d.label}</dt>
+                      <dd className={`break-words text-[13px] ${v === null ? "text-mute-soft" : "figures text-ink"}`}>{v ?? "Not recorded"}</dd>
                       {v !== null ? (
                         <Provenance
                           info={prov.byField[d.key] ?? null}
@@ -344,7 +344,7 @@ export default async function PolicyPage({
               <li key={i}>
                 {e.form_number ? <span className="figures text-mute">{e.form_number} </span> : null}
                 {e.title}
-                {e.page ? <span className="text-[11px] text-mute"> · page {e.page}</span> : null}
+                {e.page ? <span className="text-[12px] text-mute"> · page {e.page}</span> : null}
               </li>
             ))}
           </ul>
@@ -356,7 +356,7 @@ export default async function PolicyPage({
             {lists.exclusions.map((e, i) => (
               <li key={i}>
                 {e.title}
-                {e.page ? <span className="text-[11px] text-mute"> · page {e.page}</span> : null}
+                {e.page ? <span className="text-[12px] text-mute"> · page {e.page}</span> : null}
               </li>
             ))}
           </ul>
@@ -367,8 +367,8 @@ export default async function PolicyPage({
           <ul className="divide-y divide-line text-[13px]">
             {lists.premium.map((l, i) => (
               <li key={i} className="flex justify-between gap-3 py-2">
-                <span className="text-ink">{l.label}</span>
-                <span className="figures text-ink">{formatMoney(l.amount, { cents: true })}</span>
+                <span className="min-w-0 break-words text-ink">{l.label}</span>
+                <span className="figures whitespace-nowrap text-ink">{formatMoney(l.amount, { cents: true })}</span>
               </li>
             ))}
           </ul>
@@ -390,7 +390,7 @@ export default async function PolicyPage({
               <span className="figures">{billRow.typical_amount ? formatMoney(billRow.typical_amount, { cents: true }) : ""}</span>{" "}
               {FREQUENCY_WORDS[billRow.frequency] ?? billRow.frequency}
               {billRow.next_due_on ? `, next due ${longDate(billRow.next_due_on)}` : ""}.{" "}
-              <Link href="/bills" className="underline underline-offset-2">
+              <Link href="/bills" className="inline-block py-2 underline underline-offset-2 sm:py-0">
                 See bills
               </Link>
             </p>
@@ -446,7 +446,7 @@ export default async function PolicyPage({
           {successorId ? (
             <p className="text-[13px]">
               Replaced by{" "}
-              <Link href={`/insurance/policies/${successorId}`} className="underline underline-offset-2">
+              <Link href={`/insurance/policies/${successorId}`} className="inline-block py-2 underline underline-offset-2 sm:py-0">
                 the renewal
               </Link>
               .
@@ -455,7 +455,7 @@ export default async function PolicyPage({
           {replacedRows.map((r) => (
             <p key={r.id} className="text-[13px]">
               Replaces{" "}
-              <Link href={`/insurance/policies/${r.id}`} className="underline underline-offset-2">
+              <Link href={`/insurance/policies/${r.id}`} className="inline-block py-2 underline underline-offset-2 sm:py-0">
                 {r.carrier_name}, from {longDate(r.effective_from)}
               </Link>
               .

@@ -165,7 +165,7 @@ export function FieldInput({
         {required ? <span className="sr-only"> (needed to save)</span> : null}
       </label>
       {control}
-      {willClear ? <p className="mt-1 text-[11px] text-warning-text">Will be cleared when you save</p> : null}
+      {willClear ? <p className="mt-1 text-[12px] text-warning-text">Will be cleared when you save</p> : null}
       {needsLook ? (
         <div className="mt-2 space-y-2 border-l-[3px] border-warning bg-warning-tint px-3 py-2 text-[12px] text-warning-text">
           <p>Is this right? {review.reason}</p>

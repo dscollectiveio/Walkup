@@ -54,15 +54,15 @@ export function SpendingBreakdown({
       {/* Headline figures */}
       <dl className="grid grid-cols-3 gap-2 text-center">
         <div className="rounded-md border border-line bg-fill/50 px-2 py-1.5">
-          <dt className="text-[10px] text-mute">Total spent</dt>
+          <dt className="text-[12px] text-mute">Total spent</dt>
           <dd className="figures text-[14px] text-ink">{whole(totalCents)}</dd>
         </div>
         <div className="rounded-md border border-line bg-fill/50 px-2 py-1.5">
-          <dt className="text-[10px] text-mute">Average a month</dt>
+          <dt className="text-[12px] text-mute">Average a month</dt>
           <dd className="figures text-[14px] text-ink">{whole(avgMonthlyCents)}</dd>
         </div>
         <div className="rounded-md border border-line bg-fill/50 px-2 py-1.5">
-          <dt className="text-[10px] text-mute">Biggest</dt>
+          <dt className="text-[12px] text-mute">Biggest</dt>
           <dd className="truncate text-[14px] font-medium text-ink">
             {biggest ? `${biggest.label} · ${biggest.pctLabel}%` : "—"}
           </dd>
@@ -133,7 +133,7 @@ export function SpendingBreakdown({
                     <div className="h-full rounded-full" style={{ width: `${Math.max(2, a.pct)}%`, backgroundColor: a.color }} />
                   </div>
                   {a.perMonthCents !== null ? (
-                    <span className="w-16 shrink-0 text-right text-[10px] text-mute">{whole(a.perMonthCents)}/mo</span>
+                    <span className="w-16 shrink-0 text-right text-[12px] text-mute">{whole(a.perMonthCents)}/mo</span>
                   ) : null}
                 </div>
               </li>

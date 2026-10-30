@@ -8,7 +8,7 @@ export const BTN_PRIMARY =
 export const BTN_SECONDARY =
   "inline-flex min-h-[44px] items-center justify-center rounded-md border border-line-strong bg-paper px-4 py-2 text-[13px] font-medium text-ink hover:bg-fill disabled:cursor-not-allowed disabled:opacity-50 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-brass";
 export const INPUT =
-  "w-full rounded-lg border border-line-strong bg-paper px-3 py-2 text-[13px] text-ink focus-visible:outline focus-visible:outline-2 focus-visible:outline-brass";
+  "w-full rounded-lg border border-line-strong bg-paper px-3 py-2 text-[16px] text-ink sm:text-[13px] focus-visible:outline focus-visible:outline-2 focus-visible:outline-brass";
 export const LABEL = "block text-[12px] font-medium text-ink";
 export const HELP = "mt-1 text-[12px] leading-relaxed text-mute";
 

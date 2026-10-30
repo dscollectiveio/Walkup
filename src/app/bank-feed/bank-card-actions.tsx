@@ -5,11 +5,11 @@ import { ChevronDown } from "lucide-react";
 
 /** The one solid button on a bank's card. */
 export const SHOW_ACCOUNTS_BUTTON =
-  "inline-flex h-9 shrink-0 items-center gap-1.5 whitespace-nowrap rounded-md bg-ink px-3 text-[13px] font-medium text-paper transition-colors hover:bg-ink-mid focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-brass";
+  "inline-flex h-11 shrink-0 sm:h-9 items-center gap-1.5 whitespace-nowrap rounded-md bg-ink px-3 text-[13px] font-medium text-paper transition-colors hover:bg-ink-mid focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-brass";
 
 /** Link-style actions inside an account tile: no border, no fill. */
 export const LINK_ACTION =
-  "inline-flex h-5 items-center gap-1 whitespace-nowrap text-[12px] leading-5 font-medium text-ink underline-offset-2 hover:underline focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-brass disabled:opacity-50";
+  "inline-flex h-11 items-center gap-1 sm:h-5 whitespace-nowrap text-[12px] leading-5 font-medium text-ink underline-offset-2 hover:underline focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-brass disabled:opacity-50";
 
 const ManageContext = createContext<{ open: boolean; toggle: () => void } | null>(null);
 

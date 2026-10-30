@@ -127,11 +127,11 @@ function FixRowCard({ row, kind, unitLabels, batchId }: { row: FixRow; kind: Imp
         </div>
         <div className="flex gap-2">
           {row.decision === "skip" ? (
-            <button type="button" disabled={pending} className={`${BTN_SECONDARY} !min-h-[36px] !px-3`} onClick={() => call(() => setRowDecision(row.id, "import"))}>
+            <button type="button" disabled={pending} className={`${BTN_SECONDARY} !min-h-[36px] max-sm:!min-h-[44px] !px-3`} onClick={() => call(() => setRowDecision(row.id, "import"))}>
               Include again
             </button>
           ) : (
-            <button type="button" disabled={pending} className={`${BTN_SECONDARY} !min-h-[36px] !px-3`} onClick={() => call(() => setRowDecision(row.id, "skip"))}>
+            <button type="button" disabled={pending} className={`${BTN_SECONDARY} !min-h-[36px] max-sm:!min-h-[44px] !px-3`} onClick={() => call(() => setRowDecision(row.id, "skip"))}>
               Skip this row
             </button>
           )}
@@ -157,7 +157,7 @@ function FixRowCard({ row, kind, unitLabels, batchId }: { row: FixRow; kind: Imp
                     <button
                       type="button"
                       disabled={pending}
-                      className={`${BTN_SECONDARY} !min-h-[36px] !px-3`}
+                      className={`${BTN_SECONDARY} !min-h-[36px] max-sm:!min-h-[44px] !px-3`}
                       onClick={() => call(() => fixImportRow(row.id, { confirmed_separate: "true" }))}
                     >
                       This is a separate transaction

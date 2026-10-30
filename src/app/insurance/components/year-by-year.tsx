@@ -31,7 +31,7 @@ function Change({ row }: { row: YearRow }) {
       {up ? "+" : ""}
       {pct}%
       {amount ? (
-        <span className="ml-1 text-[11px] text-mute-soft">
+        <span className="ml-1 text-[12px] text-mute-soft">
           ({row.change_amount?.startsWith("-") ? "-" : "+"}
           {amount})
         </span>
@@ -41,7 +41,7 @@ function Change({ row }: { row: YearRow }) {
 }
 
 function Quotes({ n }: { n: number }) {
-  return n === 0 ? <span className="text-[11px] text-warning-text">none</span> : <span className="figures text-mute">{n}</span>;
+  return n === 0 ? <span className="text-[12px] text-warning-text">none</span> : <span className="figures text-mute">{n}</span>;
 }
 
 /**
@@ -54,7 +54,7 @@ export function YearByYear({ rows, todayIso, showCoverage = true }: { rows: Year
       <ul className="divide-y divide-line sm:hidden">
         {rows.map((h) => (
           <li key={h.policy_id} className="py-3 text-[13px]">
-            <Link href={`/insurance/policies/${h.policy_id}`} className="font-medium text-ink underline-offset-2 hover:underline">
+            <Link href={`/insurance/policies/${h.policy_id}`} className="inline-block py-2.5 font-medium text-ink underline-offset-2 hover:underline">
               {showCoverage ? `${coverageShort(h.coverage)} · ` : ""}
               {h.carrier_name}
             </Link>
@@ -109,7 +109,7 @@ export function YearByYear({ rows, todayIso, showCoverage = true }: { rows: Year
                 <td className="py-3 text-ink">
                   {h.carrier_name}
                   {h.previous_carrier && h.previous_carrier !== h.carrier_name ? (
-                    <span className="ml-2 text-[11px] text-mute-soft">switched from {h.previous_carrier}</span>
+                    <span className="ml-2 text-[12px] text-mute-soft">switched from {h.previous_carrier}</span>
                   ) : null}
                 </td>
                 <td className="figures py-3 text-right text-ink">{formatMoney(h.annual_premium)}</td>

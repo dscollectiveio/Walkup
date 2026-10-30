@@ -342,7 +342,7 @@ export function FindResults(props: {
                   setOnlyPhone(false);
                   setOnlyOpenPhone(false);
                 }}
-                className="inline-flex min-h-[32px] items-center px-1 text-[12px] font-medium text-ink underline underline-offset-2"
+                className="inline-flex min-h-[44px] sm:min-h-[32px] items-center px-1 text-[12px] font-medium text-ink underline underline-offset-2"
               >
                 Clear
               </button>
@@ -395,7 +395,7 @@ export function FindResults(props: {
       ) : null}
 
       <div className="border-t border-line pt-3">
-        <p className="text-[11px] text-mute">
+        <p className="text-[12px] text-mute">
           Found by searching Google and the web, not checked by Walkup. Ratings are as the named site listed them on that date. Ask for a
           certificate of insurance and check their license before any work starts.
         </p>
@@ -404,9 +404,9 @@ export function FindResults(props: {
   );
 }
 
-const FILTER_FIELD = "block min-h-[34px] w-full rounded-md border border-line-strong bg-paper px-2.5 text-[16px] text-ink sm:text-[13px]";
+const FILTER_FIELD = "block min-h-[44px] sm:min-h-[34px] w-full rounded-md border border-line-strong bg-paper px-2.5 text-[16px] text-ink sm:text-[13px]";
 const FILTER_PILL =
-  "inline-flex min-h-[32px] cursor-pointer items-center rounded-full border border-line-strong bg-paper px-3 text-[12px] font-medium text-ink hover:bg-fill has-[:checked]:border-ink has-[:checked]:bg-ink has-[:checked]:text-paper has-[:focus-visible]:outline has-[:focus-visible]:outline-2 has-[:focus-visible]:outline-brass";
+  "inline-flex min-h-[44px] sm:min-h-[32px] cursor-pointer items-center rounded-full border border-line-strong bg-paper px-3 text-[12px] font-medium text-ink hover:bg-fill has-[:checked]:border-ink has-[:checked]:bg-ink has-[:checked]:text-paper has-[:focus-visible]:outline has-[:focus-visible]:outline-2 has-[:focus-visible]:outline-brass";
 
 /** The found-online table's fixed columns, desktop only: select, contractor, contact, actions. */
 const FOUND_COLUMNS = "xl:grid xl:grid-cols-[2.75rem_minmax(0,1fr)_15rem_13rem] xl:items-center xl:gap-x-3";

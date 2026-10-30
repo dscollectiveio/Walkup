@@ -178,7 +178,7 @@ export function PeriodPicker({
         disabled={disabled}
         aria-pressed={on}
         onClick={(e) => key && pick(key, e.shiftKey)}
-        className={`flex h-9 min-w-0 flex-col items-center justify-center rounded-md text-[12px] font-medium leading-tight transition-colors ${
+        className={`flex h-11 min-w-0 flex-col items-center justify-center rounded-md text-[12px] font-medium leading-tight transition-colors sm:h-9 ${
           on
             ? "bg-ink text-paper"
             : key === null
@@ -189,7 +189,7 @@ export function PeriodPicker({
         } ${isNow && !on ? "ring-1 ring-inset ring-line-strong" : ""}`}
       >
         <span>{text}</span>
-        {sub ? <span className="text-[9px] font-normal opacity-70">{sub}</span> : null}
+        {sub ? <span className="text-[10px] font-normal opacity-70">{sub}</span> : null}
       </button>
     );
   };
@@ -206,7 +206,7 @@ export function PeriodPicker({
         }}
         aria-haspopup="dialog"
         aria-expanded={open}
-        className="inline-flex h-9 min-w-[12rem] items-center justify-between gap-2 rounded-md border border-line-strong bg-paper px-3 text-[13px] font-medium text-ink hover:bg-fill focus-visible:outline focus-visible:outline-2 focus-visible:outline-brass"
+        className="inline-flex h-11 min-w-[12rem] sm:h-9 items-center justify-between gap-2 rounded-md border border-line-strong bg-paper px-3 text-[13px] font-medium text-ink hover:bg-fill focus-visible:outline focus-visible:outline-2 focus-visible:outline-brass"
       >
         <span className="truncate">{label}</span>
         <ChevronDown size={14} strokeWidth={1.6} aria-hidden="true" className="shrink-0 text-mute" />
@@ -231,7 +231,7 @@ export function PeriodPicker({
                     setGrain(g.key);
                     setAnchor(null);
                   }}
-                  className={`h-7 rounded-md px-3 text-[12px] font-medium ${
+                  className={`h-11 rounded-md px-3 text-[12px] sm:h-7 font-medium ${
                     grain === g.key ? "bg-paper text-ink shadow-sm" : "text-mute hover:text-ink"
                   }`}
                 >
@@ -251,7 +251,7 @@ export function PeriodPicker({
                       setDraft(p.keys);
                       setAnchor(null);
                     }}
-                    className={`h-7 rounded-full border px-2.5 text-[11px] font-medium transition-colors ${
+                    className={`h-11 rounded-full border px-3 text-[12px] sm:h-7 sm:px-2.5 sm:text-[11px] font-medium transition-colors ${
                       presetOn(p.keys)
                         ? "border-ink bg-ink text-paper"
                         : "border-line text-mute hover:border-line-strong hover:text-ink"
@@ -264,7 +264,7 @@ export function PeriodPicker({
           </div>
 
           {/* The calendar: a row per year, newest on top. */}
-          <div className="max-h-[22rem] overflow-y-auto px-4 py-3">
+          <div className="max-h-[40vh] overflow-y-auto sm:max-h-[22rem] px-4 py-3">
             {grain === "annual" ? (
               fiscalYears.length === 0 ? (
                 <p className="py-4 text-center text-[12px] text-mute">No fiscal year is set up yet.</p>
@@ -303,7 +303,7 @@ export function PeriodPicker({
           <div className="flex flex-wrap items-center justify-between gap-2 border-t border-line px-4 py-3">
             <div className="min-w-0">
               <p className="truncate text-[13px] font-medium text-ink">{summary}</p>
-              <p className="text-[11px] text-mute">
+              <p className="text-[12px] text-mute sm:text-[11px]">
                 {full
                   ? `Up to ${MAX_SELECTED} at a time.`
                   : grain === "annual"
@@ -319,7 +319,7 @@ export function PeriodPicker({
                     setDraft([]);
                     setAnchor(null);
                   }}
-                  className="h-8 rounded-md px-2.5 text-[12px] font-medium text-mute hover:bg-fill hover:text-ink"
+                  className="h-11 rounded-md px-3 text-[12px] sm:h-8 sm:px-2.5 font-medium text-mute hover:bg-fill hover:text-ink"
                 >
                   Clear
                 </button>
@@ -328,7 +328,7 @@ export function PeriodPicker({
                 type="button"
                 onClick={apply}
                 disabled={active.length === 0 || unchanged}
-                className="h-8 rounded-md bg-ink px-3.5 text-[12px] font-medium text-paper hover:bg-ink-mid disabled:opacity-40"
+                className="h-11 rounded-md bg-ink px-3.5 sm:h-8 text-[12px] font-medium text-paper hover:bg-ink-mid disabled:opacity-40"
               >
                 {active.length > 1 ? `Compare ${active.length} ${NOUN[grain]}s` : "Show"}
               </button>

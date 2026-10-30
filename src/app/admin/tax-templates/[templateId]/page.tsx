@@ -80,7 +80,7 @@ export default async function TemplatePage({
           {label} · {t.tax_year}
           {kind === "link_only" ? <span className="ml-2 align-middle rounded-full border border-line bg-fill px-2 py-0.5 text-[11px] font-normal text-mute">Link only: rules, no PDF</span> : null}
         </h1>
-        <p className="mt-1 text-[12px] text-mute">
+        <p className="mt-1 break-all text-[12px] text-mute">
           From <a href={t.source_url} target="_blank" rel="noopener noreferrer" className="underline underline-offset-2">{t.source_url}</a>
           {t.instructions_url ? (
             <>

@@ -232,10 +232,10 @@ export function AddressInput({
             </li>
           ))}
           {busy && items.length === 0 ? <li className="px-3 py-2 text-[12px] text-mute">Looking…</li> : null}
-          <li className="border-t border-line px-3 py-1.5 text-[11px] text-mute-soft">Not listed? Keep typing. What you enter is saved as typed.</li>
+          <li className="border-t border-line px-3 py-1.5 text-[12px] text-mute-soft">Not listed? Keep typing. What you enter is saved as typed.</li>
         </ul>
       ) : null}
-      {unavailable && visible ? <p className="mt-1 text-[11px] text-mute">Suggestions aren&rsquo;t available right now. Type the address yourself.</p> : null}
+      {unavailable && visible ? <p className="mt-1 text-[12px] text-mute">Suggestions aren&rsquo;t available right now. Type the address yourself.</p> : null}
     </div>
     {withUnit ? (
       <>

@@ -204,7 +204,7 @@ function LinksLine({ links }: { links: LinkView[] }) {
       {links.map((l, i) => (
         <span key={l.id}>
           {i > 0 ? " · " : ""}
-          <a href={l.url} target="_blank" rel="noreferrer" title={l.label} className="text-ink underline underline-offset-2">
+          <a href={l.url} target="_blank" rel="noreferrer" title={l.label} className="inline-block py-2 text-ink underline underline-offset-2 sm:py-0">
             {LINK_KIND_LABEL[l.kind as LinkKind] ?? l.label} ↗
           </a>
           {uniform ? "" : ` (${words[i]})`}
@@ -369,7 +369,7 @@ export default async function TaxFormPage({ params }: { params: Promise<{ formId
     return (
       <div className="space-y-6">
         <div>
-          <Link href="/tax" className="text-[13px] text-mute hover:underline">← Taxes</Link>
+          <Link href="/tax" className="inline-flex min-h-[44px] items-center text-[13px] text-mute hover:underline sm:min-h-0">← Taxes</Link>
           <h1 className="mt-2 text-[20px] font-bold tracking-tight text-ink">{title}</h1>
           <p className="mt-1 text-mute">{FORM_PLAIN[formCode] ?? ""}</p>
         </div>
@@ -377,7 +377,7 @@ export default async function TaxFormPage({ params }: { params: Promise<{ formId
           Walkup can&rsquo;t find the fiscal year this form belongs to, so it can&rsquo;t show its figures. Check the fiscal years in Building & Owners,
           or ask your CPA.
         </div>
-        <p className="text-[11px] text-mute">{TAX_FOOTER}</p>
+        <p className="text-[12px] text-mute">{TAX_FOOTER}</p>
       </div>
     );
   }
@@ -433,7 +433,7 @@ export default async function TaxFormPage({ params }: { params: Promise<{ formId
   return (
     <div className="space-y-6">
       <div>
-        <Link href="/tax" className="text-[13px] text-mute hover:underline">← Taxes</Link>
+        <Link href="/tax" className="inline-flex min-h-[44px] items-center text-[13px] text-mute hover:underline sm:min-h-0">← Taxes</Link>
         <h1 className="mt-2 text-[20px] font-bold tracking-tight text-ink">{title}</h1>
         <p className="mt-1 text-mute">{FORM_PLAIN[formCode] ?? ""}</p>
         <p className="mt-2 text-[13px] text-ink">
@@ -591,8 +591,8 @@ export default async function TaxFormPage({ params }: { params: Promise<{ formId
                 {group.rows.map((r, i) => (
                   <div key={`${r.label}-${i}`} className="flex flex-wrap items-baseline justify-between gap-x-4 gap-y-0.5 py-2 text-[13px]">
                     <dt className="text-mute">{r.label}</dt>
-                    <dd className="figures text-right text-ink">{r.value}</dd>
-                    {r.note ? <dd className="w-full text-[11px] text-mute-soft">{r.note}</dd> : null}
+                    <dd className="figures whitespace-nowrap text-right text-ink">{r.value}</dd>
+                    {r.note ? <dd className="w-full text-[12px] text-mute-soft">{r.note}</dd> : null}
                   </div>
                 ))}
               </dl>
@@ -611,7 +611,7 @@ export default async function TaxFormPage({ params }: { params: Promise<{ formId
         sent={sent}
       />
 
-      <p className="text-[11px] text-mute">{TAX_FOOTER}</p>
+      <p className="text-[12px] text-mute">{TAX_FOOTER}</p>
     </div>
   );
 }

@@ -88,7 +88,7 @@ export function PostPreview({
     <div
       role="dialog"
       aria-label="Confirm posting"
-      className="fixed bottom-4 left-1/2 z-40 w-[min(34rem,92vw)] -translate-x-1/2 rounded-xl border border-brass bg-paper p-4 text-ink shadow-xl"
+      className="fixed bottom-4 left-1/2 z-40 max-h-[80vh] w-[min(34rem,92vw)] -translate-x-1/2 overflow-y-auto rounded-xl border border-brass bg-paper p-4 text-ink shadow-xl"
     >
       <p className="text-[13px] font-medium">
         Post {rows.length} transaction{rows.length === 1 ? "" : "s"}?
@@ -101,13 +101,13 @@ export function PostPreview({
           ))}
         </ul>
       ) : null}
-      <div className="mt-3 flex items-center gap-2">
+      <div className="mt-3 flex flex-wrap items-center gap-2">
         <button
           type="button"
           autoFocus
           disabled={busy}
           onClick={onPost}
-          className="rounded-md bg-ink px-3 py-1.5 text-[12px] font-medium text-paper hover:bg-ink-mid disabled:opacity-50"
+          className="min-h-[44px] rounded-md bg-ink px-4 py-1.5 text-[12px] font-medium text-paper hover:bg-ink-mid disabled:opacity-50 sm:min-h-0 sm:px-3"
         >
           {busy ? "Posting…" : "Post"}
         </button>
@@ -115,7 +115,7 @@ export function PostPreview({
           type="button"
           disabled={busy}
           onClick={onCancel}
-          className="rounded-md border border-line-strong px-3 py-1.5 text-[12px] text-ink hover:bg-fill disabled:opacity-50"
+          className="min-h-[44px] rounded-md border border-line-strong px-4 py-1.5 text-[12px] text-ink hover:bg-fill disabled:opacity-50 sm:min-h-0 sm:px-3"
         >
           Cancel
         </button>

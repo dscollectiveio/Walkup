@@ -215,7 +215,7 @@ export default async function EmailPage({ searchParams }: { searchParams: Promis
               <label htmlFor="log-kind" className="block text-[12px] font-medium text-ink">
                 Kind
               </label>
-              <select id="log-kind" name="kind" defaultValue={kindFilter ?? ""} className="mt-1 rounded-lg border border-line-strong bg-paper px-3 py-2 text-[16px] text-ink sm:text-[13px]">
+              <select id="log-kind" name="kind" defaultValue={kindFilter ?? ""} className="mt-1 min-h-[44px] rounded-lg border border-line-strong bg-paper px-3 py-2 text-[16px] text-ink sm:text-[13px]">
                 <option value="">All</option>
                 {EMAIL_KINDS.map((k) => (
                   <option key={k} value={k}>
@@ -228,7 +228,7 @@ export default async function EmailPage({ searchParams }: { searchParams: Promis
               <label htmlFor="log-status" className="block text-[12px] font-medium text-ink">
                 Status
               </label>
-              <select id="log-status" name="status" defaultValue={statusFilter ?? ""} className="mt-1 rounded-lg border border-line-strong bg-paper px-3 py-2 text-[16px] text-ink sm:text-[13px]">
+              <select id="log-status" name="status" defaultValue={statusFilter ?? ""} className="mt-1 min-h-[44px] rounded-lg border border-line-strong bg-paper px-3 py-2 text-[16px] text-ink sm:text-[13px]">
                 <option value="">All</option>
                 {STATUSES.map((s) => (
                   <option key={s} value={s}>
@@ -241,7 +241,7 @@ export default async function EmailPage({ searchParams }: { searchParams: Promis
               <label htmlFor="log-unit" className="block text-[12px] font-medium text-ink">
                 Unit
               </label>
-              <select id="log-unit" name="unit" defaultValue={unitFilter ?? ""} className="mt-1 rounded-lg border border-line-strong bg-paper px-3 py-2 text-[16px] text-ink sm:text-[13px]">
+              <select id="log-unit" name="unit" defaultValue={unitFilter ?? ""} className="mt-1 min-h-[44px] rounded-lg border border-line-strong bg-paper px-3 py-2 text-[16px] text-ink sm:text-[13px]">
                 <option value="">All</option>
                 {(unitsRes.data ?? []).map((u) => (
                   <option key={u.id as string} value={u.id as string}>
@@ -292,7 +292,7 @@ export default async function EmailPage({ searchParams }: { searchParams: Promis
           {pages > 1 ? (
             <div className="mt-4 flex items-center justify-between text-[13px]">
               {page > 1 ? (
-                <Link href={qs({ page: String(page - 1) })} className="text-ink underline underline-offset-2">
+                <Link href={qs({ page: String(page - 1) })} className="inline-flex min-h-[44px] items-center text-ink underline underline-offset-2">
                   Newer
                 </Link>
               ) : (
@@ -302,7 +302,7 @@ export default async function EmailPage({ searchParams }: { searchParams: Promis
                 Page {page} of {pages}
               </span>
               {page < pages ? (
-                <Link href={qs({ page: String(page + 1) })} className="text-ink underline underline-offset-2">
+                <Link href={qs({ page: String(page + 1) })} className="inline-flex min-h-[44px] items-center text-ink underline underline-offset-2">
                   Older
                 </Link>
               ) : (

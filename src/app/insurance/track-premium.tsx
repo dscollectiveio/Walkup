@@ -30,7 +30,7 @@ export function TrackPremium({
           id={`premium-cat-${policyId}`}
           value={accountId}
           onChange={(e) => setAccountId(e.target.value)}
-          className="mt-1 min-h-[44px] rounded-lg border border-line-strong bg-paper px-3 text-[13px] text-ink"
+          className="mt-1 min-h-[44px] rounded-lg border border-line-strong bg-paper px-3 text-[16px] text-ink sm:text-[13px]"
         >
           <option value="">Choose…</option>
           {categories.map((c) => (

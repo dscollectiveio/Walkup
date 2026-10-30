@@ -69,7 +69,7 @@ function CashFacts({ points }: { points: LinePoint[] }) {
     <dl className="grid grid-cols-2 gap-2 sm:grid-cols-4">
       {facts.map((f) => (
         <div key={f.label} className="rounded-md border border-line bg-fill/40 px-2.5 py-1.5">
-          <dt className="text-[10px] text-mute">{f.label}</dt>
+          <dt className="text-[12px] text-mute">{f.label}</dt>
           <dd className="figures text-[13px] text-ink">{formatMoney(f.value)}</dd>
         </div>
       ))}
@@ -99,7 +99,7 @@ function InOutFacts({ groups }: { groups: BarGroup[] }) {
     <dl className="grid grid-cols-2 gap-2 sm:grid-cols-4">
       {facts.map((f) => (
         <div key={f.label} className="rounded-md border border-line bg-fill/40 px-2.5 py-1.5">
-          <dt className="text-[10px] text-mute">{f.label}</dt>
+          <dt className="text-[12px] text-mute">{f.label}</dt>
           <dd className={`figures text-[13px] ${f.tone}`}>{f.value}</dd>
         </div>
       ))}
@@ -137,7 +137,7 @@ function buildViews(
             )}, a net change of ${formatMoney(cash.netChangeCents)}.`}
           />
           <CashFacts points={cash.points} />
-          <p className="text-right text-[10px] text-mute-soft">{cash.sinceLabel}</p>
+          <p className="text-right text-[12px] text-mute-soft">{cash.sinceLabel}</p>
         </div>
       ),
     });
@@ -345,7 +345,7 @@ export function ShowcaseCards({
                       setActiveKey(v.key);
                       setUserPaused(true);
                     }}
-                    className={`rounded-full px-3 py-1 text-[11px] font-medium transition-colors ${
+                    className={`relative rounded-full px-3 py-1 text-[11px] font-medium transition-colors before:absolute before:-inset-x-0.5 before:-inset-y-2.5 before:content-[''] ${
                       selected ? "bg-ink text-paper" : "text-mute hover:text-ink"
                     }`}
                   >
@@ -359,7 +359,7 @@ export function ShowcaseCards({
                   onClick={() => setUserPaused((p) => !p)}
                   aria-label={userPaused ? "Resume automatic rotation" : "Pause automatic rotation"}
                   title={userPaused ? "Resume" : "Pause"}
-                  className="ml-1 flex h-6 w-6 items-center justify-center rounded-full text-mute hover:text-ink"
+                  className="relative ml-1 flex h-6 w-6 items-center justify-center rounded-full text-mute before:absolute before:-inset-2.5 before:content-[''] hover:text-ink"
                 >
                   {userPaused ? <Play size={11} strokeWidth={2} aria-hidden="true" /> : <Pause size={11} strokeWidth={2} aria-hidden="true" />}
                 </button>

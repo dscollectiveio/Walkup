@@ -116,7 +116,7 @@ export default async function LedgerPage() {
             </tfoot>
           </table>
         </div>
-        <p className="mt-4 text-[11px] text-mute">
+        <p className="mt-4 text-[12px] text-mute">
           {balanced
             ? "The two sides match, which is what you want. Walkup will not let you save a transaction where they do not."
             : "The two sides do not match. This should be impossible. Please report it."}

@@ -22,7 +22,7 @@ export function LoginForm() {
           type="email"
           autoComplete="email"
           required
-          className={authInput}
+          className={`${authInput} max-sm:text-[16px]`}
         />
       </div>
 
@@ -40,7 +40,7 @@ export function LoginForm() {
           name="password"
           autoComplete="current-password"
           required
-          className={authInput}
+          className={`${authInput} max-sm:text-[16px]`}
         />
       </div>
 

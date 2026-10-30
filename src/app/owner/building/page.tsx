@@ -89,7 +89,7 @@ export default async function OwnerBuildingPage() {
                     <dt className="text-[13px] text-mute">{f.label}</dt>
                     <dd className="text-[14px] text-ink sm:text-right">
                       {f.tel ? (
-                        <a href={f.tel} className="underline underline-offset-2">
+                        <a href={f.tel} className="inline-flex min-h-[44px] items-center underline underline-offset-2 sm:min-h-0">
                           {f.text}
                         </a>
                       ) : (

@@ -67,7 +67,7 @@ export function SendPanel({ formId, canEdit, locked, downloads, draft, accountan
 
         {accountant?.email ? (
           <p className="text-mute">
-            Addressed to {accountant.firstName ?? "your accountant"} at {accountant.email}.
+            Addressed to {accountant.firstName ?? "your accountant"} at <span className="break-all">{accountant.email}</span>.
           </p>
         ) : (
           <p className="text-warning-text">
@@ -89,14 +89,14 @@ export function SendPanel({ formId, canEdit, locked, downloads, draft, accountan
           </li>
           <li>
             <p className="font-medium text-ink">2. Open the email draft</p>
-            <p className="mt-0.5 text-mute">Subject: {draft.subject}</p>
+            <p className="mt-0.5 break-words text-mute">Subject: {draft.subject}</p>
             <div className="mt-2 flex flex-wrap items-center gap-3">
               <a href={draft.href} className={primary}>
                 Open the email draft
               </a>
               <details className="text-[12px] text-mute">
-                <summary className="cursor-pointer underline underline-offset-2">Read the draft first</summary>
-                <pre className="mt-2 max-w-prose whitespace-pre-wrap rounded-lg border border-line bg-fill p-3 font-sans text-[12px] leading-relaxed text-ink">{draft.body}</pre>
+                <summary className="cursor-pointer py-2.5 underline underline-offset-2 sm:py-0">Read the draft first</summary>
+                <pre className="mt-2 max-w-prose whitespace-pre-wrap break-words rounded-lg border border-line bg-fill p-3 font-sans text-[12px] leading-relaxed text-ink">{draft.body}</pre>
               </details>
             </div>
           </li>
@@ -116,7 +116,7 @@ export function SendPanel({ formId, canEdit, locked, downloads, draft, accountan
           </li>
         </ol>
 
-        <p className="text-[11px] text-mute">{NOTHING_SENT}</p>
+        <p className="text-[12px] text-mute">{NOTHING_SENT}</p>
       </div>
     </section>
   );

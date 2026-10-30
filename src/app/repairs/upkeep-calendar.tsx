@@ -77,15 +77,15 @@ export function UpkeepCalendar({
       <div className="mb-3 flex flex-wrap items-center justify-between gap-2">
         <h3 className="text-[15px] font-bold tracking-tight text-ink">{label}</h3>
         <div className="flex items-center gap-1">
-          <Link href={hrefFor(prev)} aria-label="Previous month" className="flex h-8 w-8 items-center justify-center rounded-md border border-line-strong bg-paper text-ink hover:bg-fill">
+          <Link href={hrefFor(prev)} aria-label="Previous month" className="flex h-11 w-11 sm:h-8 sm:w-8 items-center justify-center rounded-md border border-line-strong bg-paper text-ink hover:bg-fill">
             <ChevronLeft size={16} strokeWidth={2} aria-hidden="true" />
           </Link>
           {month !== thisMonth ? (
-            <Link href={hrefFor(thisMonth)} className="inline-flex min-h-[32px] items-center rounded-md border border-line-strong bg-paper px-3 text-[12px] font-medium text-ink hover:bg-fill">
+            <Link href={hrefFor(thisMonth)} className="inline-flex min-h-[44px] sm:min-h-[32px] items-center rounded-md border border-line-strong bg-paper px-3 text-[12px] font-medium text-ink hover:bg-fill">
               Today
             </Link>
           ) : null}
-          <Link href={hrefFor(next)} aria-label="Next month" className="flex h-8 w-8 items-center justify-center rounded-md border border-line-strong bg-paper text-ink hover:bg-fill">
+          <Link href={hrefFor(next)} aria-label="Next month" className="flex h-11 w-11 sm:h-8 sm:w-8 items-center justify-center rounded-md border border-line-strong bg-paper text-ink hover:bg-fill">
             <ChevronRight size={16} strokeWidth={2} aria-hidden="true" />
           </Link>
         </div>
@@ -154,7 +154,7 @@ export function UpkeepCalendar({
           })}
         </div>
       </div>
-      <p className="mt-2 text-[11px] text-mute">Each job shows on its next due date and the dates after it. Red ones are past due.</p>
+      <p className="mt-2 text-[12px] text-mute">Each job shows on its next due date and the dates after it. Red ones are past due.</p>
     </div>
   );
 }

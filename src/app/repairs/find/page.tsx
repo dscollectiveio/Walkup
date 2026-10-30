@@ -171,7 +171,7 @@ export default async function FindPage({ searchParams }: { searchParams: Promise
               </Link>
             </p>
           ) : null}
-          <p className="text-[11px] text-mute">
+          <p className="text-[12px] text-mute">
             Only these words and your building&rsquo;s location are sent to Google and the web search, never names or unit numbers.
           </p>
         </div>

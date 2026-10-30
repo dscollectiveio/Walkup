@@ -568,7 +568,7 @@ export default async function DuesPage({ searchParams }: { searchParams: Promise
             : "The board hasn't added payment details yet."}
         </Empty>
       ) : (
-        <dl className="grid gap-x-6 gap-y-3 text-[13px] sm:grid-cols-2">
+        <dl className="grid gap-x-6 gap-y-3 break-words text-[13px] sm:grid-cols-2">
           {association.dues_payee_name ? (
             <div>
               <dt className="text-[11px] text-mute">Payee name</dt>
@@ -639,13 +639,13 @@ export default async function DuesPage({ searchParams }: { searchParams: Promise
         </p>
         {isBoard ? (
           <p className="mt-2 flex flex-wrap gap-x-4 gap-y-1 text-[13px]">
-            <Link href="#collections" className="text-ink underline underline-offset-2">
+            <Link href="#collections" className="inline-flex min-h-[44px] items-center text-ink underline underline-offset-2 sm:min-h-0">
               Collections
             </Link>
-            <Link href="/dues/statements" className="text-ink underline underline-offset-2">
+            <Link href="/dues/statements" className="inline-flex min-h-[44px] items-center text-ink underline underline-offset-2 sm:min-h-0">
               Owner statements
             </Link>
-            <Link href="/dues/email" className="text-ink underline underline-offset-2">
+            <Link href="/dues/email" className="inline-flex min-h-[44px] items-center text-ink underline underline-offset-2 sm:min-h-0">
               Email &amp; reminders
             </Link>
           </p>
@@ -671,7 +671,7 @@ export default async function DuesPage({ searchParams }: { searchParams: Promise
                     : "All deposits matched"}
                 {unmatchedDeposits > 0 && readyToPostDeposits > 0 ? ` · ${readyToPostDeposits} ready to post` : ""}
               </span>
-              <Link href={bankFeedHref({ range: "all", status: "needs", sort: "date_desc" })} className={HEADER_BUTTON}>
+              <Link href={bankFeedHref({ range: "all", status: "needs", sort: "date_desc" })} className={`${HEADER_BUTTON} min-h-[44px] sm:min-h-0`}>
                 Reconcile Transactions
               </Link>
             </div>

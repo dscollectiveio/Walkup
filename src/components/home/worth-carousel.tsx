@@ -35,7 +35,7 @@ export function WorthCarousel({ children, count }: { children: ReactNode; count:
     el.scrollBy({ left: dir * el.clientWidth, behavior: window.matchMedia("(prefers-reduced-motion: reduce)").matches ? "auto" : "smooth" });
   };
   const arrow =
-    "flex h-7 w-7 shrink-0 items-center justify-center rounded-full border border-line-strong bg-paper text-ink shadow-sm hover:bg-fill focus-visible:outline focus-visible:outline-2 focus-visible:outline-brass";
+    "relative flex h-7 w-7 shrink-0 items-center justify-center rounded-full after:absolute after:-inset-2 after:content-[''] border border-line-strong bg-paper text-ink shadow-sm hover:bg-fill focus-visible:outline focus-visible:outline-2 focus-visible:outline-brass";
   // The arrows flank the row (not over it, where they would cover each card's button). Their slots
   // keep their width when an arrow hides, so the cards don't shift.
   return (

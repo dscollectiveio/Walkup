@@ -35,11 +35,11 @@ export function DownloadButton({
             window.open(result.url, "_blank");
           })
         }
-        className={className ?? "text-[12px] text-mute underline-offset-2 hover:underline"}
+        className={className ?? "text-[12px] text-mute underline-offset-2 hover:underline inline-flex min-h-[44px] items-center px-1 sm:min-h-0 sm:px-0"}
       >
         {pending ? "Opening…" : children}
       </button>
-      {error ? <span className="ml-2 text-[11px] text-bad-text">{error}</span> : null}
+      {error ? <span className="ml-2 text-[12px] text-bad-text">{error}</span> : null}
     </>
   );
 }
@@ -53,7 +53,7 @@ function RemoveOwnUpload({ id, onError }: { id: string; onError: (message: strin
       <button
         type="button"
         onClick={() => setConfirming(true)}
-        className="text-[12px] text-bad-text underline-offset-2 hover:underline"
+        className="text-[12px] text-bad-text underline-offset-2 hover:underline inline-flex min-h-[44px] items-center px-1 sm:min-h-0 sm:px-0"
       >
         {ACCOUNTANT_UPLOAD_COPY.remove}
       </button>
@@ -75,14 +75,14 @@ function RemoveOwnUpload({ id, onError }: { id: string; onError: (message: strin
             }
           })
         }
-        className="rounded-md border border-bad-line bg-bad-tint px-2.5 py-1 text-[11px] font-medium text-bad-text hover:bg-bad-tint/80"
+        className="rounded-md border border-bad-line bg-bad-tint px-2.5 py-1 text-[12px] font-medium text-bad-text hover:bg-bad-tint/80 min-h-[44px] sm:min-h-0"
       >
         {busy ? "Removing…" : ACCOUNTANT_UPLOAD_COPY.removeConfirmYes}
       </button>
       <button
         type="button"
         onClick={() => setConfirming(false)}
-        className="text-[12px] text-mute underline-offset-2 hover:underline"
+        className="text-[12px] text-mute underline-offset-2 hover:underline inline-flex min-h-[44px] items-center px-1 sm:min-h-0 sm:px-0"
       >
         {ACCOUNTANT_UPLOAD_COPY.removeConfirmNo}
       </button>
@@ -148,7 +148,7 @@ export function DocumentListRow({
               <UnfiledChip />
             )}
             {doc.visibility === "all_owners" && !doc.restricted_to_unit_id ? (
-              <span className="text-[11px] text-mute-soft">every owner can see this</span>
+              <span className="text-[12px] text-mute-soft">every owner can see this</span>
             ) : null}
           </div>
           <div className="mt-1 text-[12px] text-mute">{meta}</div>
@@ -160,7 +160,7 @@ export function DocumentListRow({
         </div>
 
         {canWrite ? (
-          <div className="flex shrink-0 items-center gap-3">
+          <div className="flex shrink-0 flex-wrap items-center gap-x-3">
             <DownloadButton id={doc.id}>Download</DownloadButton>
             {binned ? (
               <button
@@ -173,7 +173,7 @@ export function DocumentListRow({
                     if (r.error) setError(r.error);
                   })
                 }
-                className="text-[12px] text-mute underline-offset-2 hover:underline"
+                className="text-[12px] text-mute underline-offset-2 hover:underline inline-flex min-h-[44px] items-center px-1 sm:min-h-0 sm:px-0"
               >
                 {busy ? "Restoring…" : "Restore"}
               </button>
@@ -183,13 +183,13 @@ export function DocumentListRow({
                   <button
                     type="button"
                     onClick={() => setRetagging(true)}
-                    className="text-[12px] text-mute underline-offset-2 hover:underline"
+                    className="text-[12px] text-mute underline-offset-2 hover:underline inline-flex min-h-[44px] items-center px-1 sm:min-h-0 sm:px-0"
                   >
                     Refile
                   </button>
                 ) : null}
                 {confirming ? (
-                  <span className="flex items-center gap-2">
+                  <span className="flex flex-wrap items-center gap-2">
                     <button
                       type="button"
                       disabled={busy}
@@ -201,14 +201,14 @@ export function DocumentListRow({
                           else setConfirming(false);
                         })
                       }
-                      className="rounded-md border border-bad-line bg-bad-tint px-2.5 py-1 text-[11px] font-medium text-bad-text hover:bg-bad-tint/80"
+                      className="rounded-md border border-bad-line bg-bad-tint px-2.5 py-1 text-[12px] font-medium text-bad-text hover:bg-bad-tint/80 min-h-[44px] sm:min-h-0"
                     >
                       {busy ? "Binning…" : "Confirm"}
                     </button>
                     <button
                       type="button"
                       onClick={() => setConfirming(false)}
-                      className="text-[12px] text-mute underline-offset-2 hover:underline"
+                      className="text-[12px] text-mute underline-offset-2 hover:underline inline-flex min-h-[44px] items-center px-1 sm:min-h-0 sm:px-0"
                     >
                       Cancel
                     </button>
@@ -217,7 +217,7 @@ export function DocumentListRow({
                   <button
                     type="button"
                     onClick={() => setConfirming(true)}
-                    className="text-[12px] text-bad-text underline-offset-2 hover:underline"
+                    className="text-[12px] text-bad-text underline-offset-2 hover:underline inline-flex min-h-[44px] items-center px-1 sm:min-h-0 sm:px-0"
                   >
                     Bin
                   </button>
@@ -226,7 +226,7 @@ export function DocumentListRow({
             )}
           </div>
         ) : (
-          <div className="flex shrink-0 items-center gap-3">
+          <div className="flex shrink-0 flex-wrap items-center gap-x-3">
             <DownloadButton id={doc.id}>Download</DownloadButton>
             {canRemoveOwn ? <RemoveOwnUpload id={doc.id} onError={setError} /> : null}
           </div>
@@ -238,14 +238,14 @@ export function DocumentListRow({
       {retagging ? (
         <form action={action} className="mt-2 flex flex-wrap items-center gap-2">
           <input type="hidden" name="document_id" value={doc.id} />
-          <label htmlFor={`cat-${doc.id}`} className="text-[11px] text-mute">
+          <label htmlFor={`cat-${doc.id}`} className="text-[12px] text-mute">
             File as
           </label>
           <select
             id={`cat-${doc.id}`}
             name="category_id"
             defaultValue={doc.category_id ?? ""}
-            className="rounded-lg border border-line-strong bg-paper px-2 py-1 text-[12px] text-ink"
+            className="min-h-[44px] rounded-lg border border-line-strong bg-paper px-2 py-1 text-[16px] text-ink sm:min-h-0 sm:text-[12px]"
           >
             <option value="">Unfiled</option>
             {categories.map((c) => (
@@ -257,24 +257,24 @@ export function DocumentListRow({
           <button
             type="submit"
             disabled={pending}
-            className="rounded-md bg-ink px-3 py-1 text-[12px] font-medium text-paper hover:bg-ink-mid disabled:opacity-50"
+            className="min-h-[44px] rounded-md bg-ink px-3 py-1 text-[12px] font-medium text-paper hover:bg-ink-mid disabled:opacity-50 sm:min-h-0"
           >
             {pending ? "Saving…" : "Save"}
           </button>
           <button
             type="button"
             onClick={() => setRetagging(false)}
-            className="text-[12px] text-mute underline-offset-2 hover:underline"
+            className="text-[12px] text-mute underline-offset-2 hover:underline inline-flex min-h-[44px] items-center px-1 sm:min-h-0 sm:px-0"
           >
             Cancel
           </button>
           {state?.error ? (
-            <p className="w-full text-[11px] text-bad-text">{state.error}</p>
+            <p className="w-full text-[12px] text-bad-text">{state.error}</p>
           ) : null}
         </form>
       ) : null}
 
-      {error ? <p className="mt-1 text-[11px] text-bad-text">{error}</p> : null}
+      {error ? <p className="mt-1 text-[12px] text-bad-text">{error}</p> : null}
     </li>
   );
 }

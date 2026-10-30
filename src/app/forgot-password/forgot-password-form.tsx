@@ -24,7 +24,7 @@ export function ForgotPasswordForm() {
         <label htmlFor="email" className={authLabel}>
           Email
         </label>
-        <input id="email" name="email" type="email" autoComplete="email" required autoFocus className={authInput} />
+        <input id="email" name="email" type="email" autoComplete="email" required autoFocus className={`${authInput} max-sm:text-[16px]`} />
       </div>
       {state?.error ? <p className={authError}>{state.error}</p> : null}
       <button type="submit" disabled={pending} className={authButton}>

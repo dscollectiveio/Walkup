@@ -78,7 +78,7 @@ export function PreviousSearches({ job, current }: { job: string; current: Omit<
               onChange={(e) => {
                 if (e.target.value) router.push(e.target.value);
               }}
-              className="block min-h-[40px] w-full rounded-lg border border-line-strong bg-paper px-3 text-[16px] text-ink sm:text-[14px]"
+              className="block min-h-[44px] sm:min-h-[40px] w-full rounded-lg border border-line-strong bg-paper px-3 text-[16px] text-ink sm:text-[14px]"
             >
               <option value="">History: {entries.length} previous {entries.length === 1 ? "search" : "searches"}. Choose one to run it again.</option>
               {entries.map((e) => (

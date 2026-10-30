@@ -51,7 +51,7 @@ export function PlanPicker({
               role="radio"
               aria-checked={interval === i}
               onClick={() => setInterval(i)}
-              className={`inline-flex min-h-[40px] items-center gap-1.5 rounded-full px-4 text-[13px] font-medium transition-colors duration-300 ${
+              className={`inline-flex min-h-[40px] max-sm:min-h-[44px] items-center gap-1.5 rounded-full px-4 text-[13px] font-medium transition-colors duration-300 ${
                 interval === i ? "bg-ink text-paper" : "text-mute hover:text-ink"
               }`}
             >

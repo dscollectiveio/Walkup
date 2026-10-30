@@ -64,7 +64,7 @@ export default async function LegacyReviewShim({
       <Card navy title="Read this document">
         {category?.slug === "insurance" ? (
           <div className="space-y-3">
-            <p className="text-[13px] text-ink">{doc.filename}</p>
+            <p className="break-words text-[13px] text-ink">{doc.filename}</p>
             <p className="text-[13px] text-mute">Walkup reads the figures for you to check before anything is saved.</p>
             <ReadButtons documentId={doc.id} />
           </div>

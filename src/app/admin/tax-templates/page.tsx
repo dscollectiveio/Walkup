@@ -131,7 +131,7 @@ export default async function TaxTemplatesPage() {
                       <span className="rounded-full border border-warning-line bg-warning-tint px-2 py-0.5 text-[11px] text-warning-text">Not verified</span>
                     )}
                   </span>
-                  {t.notes ? <p className="w-full text-[11px] text-mute-soft">{t.notes}</p> : null}
+                  {t.notes ? <p className="w-full text-[12px] sm:text-[11px] text-mute-soft">{t.notes}</p> : null}
                 </li>
               );
             })}

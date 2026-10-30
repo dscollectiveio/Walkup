@@ -107,7 +107,7 @@ function ReviewItem(props: { r: ReviewView; todayIso: string; canEditThis: boole
           </span>
         ))}
       </div>
-      {r.body ? <p className="mt-1 whitespace-pre-wrap text-ink">{r.body}</p> : null}
+      {r.body ? <p className="mt-1 whitespace-pre-wrap break-words text-ink">{r.body}</p> : null}
       <p className="mt-1 text-[12px] text-mute">
         {r.author} · {humanDate(r.createdAt.slice(0, 10), props.todayIso)}
         {r.edited ? " · edited" : ""}

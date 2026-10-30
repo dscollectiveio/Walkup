@@ -62,12 +62,12 @@ export function History({ rows, canUndo }: { rows: HistoryRow[]; canUndo: boolea
             </div>
             <div className="flex flex-wrap items-center gap-2">
               {r.status === "committed" || r.status === "undone" ? (
-                <Link href={`/building/import/${r.id}?step=done`} className={`${BTN_SECONDARY} !min-h-[36px] !px-3`}>
+                <Link href={`/building/import/${r.id}?step=done`} className={`${BTN_SECONDARY} !min-h-[36px] max-sm:!min-h-[44px] !px-3`}>
                   See it
                 </Link>
               ) : null}
               {r.status === "committed" && canUndo && confirming !== r.id ? (
-                <button type="button" onClick={() => setConfirming(r.id)} className={`${BTN_SECONDARY} !min-h-[36px] !px-3`}>
+                <button type="button" onClick={() => setConfirming(r.id)} className={`${BTN_SECONDARY} !min-h-[36px] max-sm:!min-h-[44px] !px-3`}>
                   Undo
                 </button>
               ) : null}
@@ -76,10 +76,10 @@ export function History({ rows, canUndo }: { rows: HistoryRow[]; canUndo: boolea
           {confirming === r.id ? (
             <div className="mt-2 flex flex-wrap items-center gap-2 text-[13px] text-ink">
               <span>This reverses the entries. Both stay in the ledger history. Undo?</span>
-              <button type="button" disabled={pending} onClick={() => undo(r.id)} className={`${BTN_SECONDARY} !min-h-[36px] !px-3`}>
+              <button type="button" disabled={pending} onClick={() => undo(r.id)} className={`${BTN_SECONDARY} !min-h-[36px] max-sm:!min-h-[44px] !px-3`}>
                 {pending ? "Undoing..." : "Yes, undo"}
               </button>
-              <button type="button" disabled={pending} onClick={() => setConfirming(null)} className={`${BTN_SECONDARY} !min-h-[36px] !px-3`}>
+              <button type="button" disabled={pending} onClick={() => setConfirming(null)} className={`${BTN_SECONDARY} !min-h-[36px] max-sm:!min-h-[44px] !px-3`}>
                 Keep it
               </button>
             </div>

@@ -31,7 +31,7 @@ export function VisibilityForm({
       <button
         type="button"
         onClick={() => setOpen(true)}
-        className="text-[12px] text-mute underline-offset-2 hover:underline"
+        className="text-[12px] text-mute underline-offset-2 hover:underline inline-flex min-h-[44px] items-center px-1 sm:min-h-0 sm:px-0"
       >
         Change who sees this
       </button>
@@ -49,7 +49,7 @@ export function VisibilityForm({
           id="visibility"
           name="visibility"
           defaultValue={doc.visibility}
-          className="mt-1 w-full max-w-[320px] rounded-lg border border-line-strong bg-paper px-3 py-2 text-[13px] text-ink"
+          className="mt-1 w-full max-w-[320px] rounded-lg border border-line-strong bg-paper px-3 py-2 text-[16px] text-ink sm:text-[13px]"
         >
           <option value="board_only">The board and the accountant</option>
           <option value="all_owners">Every owner in the building</option>
@@ -64,7 +64,7 @@ export function VisibilityForm({
           id="restricted_to_unit_id"
           name="restricted_to_unit_id"
           defaultValue={doc.restricted_to_unit_id ?? ""}
-          className="mt-1 w-full max-w-[320px] rounded-lg border border-line-strong bg-paper px-3 py-2 text-[13px] text-ink"
+          className="mt-1 w-full max-w-[320px] rounded-lg border border-line-strong bg-paper px-3 py-2 text-[16px] text-ink sm:text-[13px]"
         >
           <option value="">No: it concerns the whole building</option>
           {units.map((u) => (
@@ -73,24 +73,24 @@ export function VisibilityForm({
             </option>
           ))}
         </select>
-        <p className="mt-1 text-[11px] text-mute">
+        <p className="mt-1 text-[12px] text-mute">
           Naming a unit narrows this to that unit&rsquo;s owner and the board. Use it for
           arrears letters and anything else addressed to one household. It never widens access.
         </p>
       </div>
       {state?.error ? <p className="text-[12px] text-bad-text">{state.error}</p> : null}
-      <div className="flex gap-2">
+      <div className="flex flex-wrap gap-2">
         <button
           type="submit"
           disabled={pending}
-          className="rounded-md bg-ink px-3 py-1.5 text-[12px] font-medium text-paper hover:bg-ink-mid disabled:opacity-50"
+          className="min-h-[44px] rounded-md bg-ink px-3 py-1.5 text-[12px] font-medium text-paper hover:bg-ink-mid disabled:opacity-50 sm:min-h-0"
         >
           {pending ? "Saving…" : "Save"}
         </button>
         <button
           type="button"
           onClick={() => setOpen(false)}
-          className="rounded-md border border-line-strong px-3 py-1.5 text-[12px] text-ink hover:bg-fill"
+          className="min-h-[44px] rounded-md border border-line-strong px-3 py-1.5 text-[12px] text-ink hover:bg-fill sm:min-h-0"
         >
           Cancel
         </button>
@@ -120,12 +120,12 @@ export function RerunButton({ id, label }: { id: string; label: string }) {
             else if (r.detail) setMessage({ text: r.detail, bad: false });
           })
         }
-        className="rounded-md border border-line-strong px-3 py-1.5 text-[12px] text-ink hover:bg-fill disabled:opacity-50"
+        className="min-h-[44px] rounded-md border border-line-strong px-3 py-1.5 text-[12px] text-ink hover:bg-fill disabled:opacity-50 sm:min-h-0"
       >
         {pending ? "Reading…" : label}
       </button>
       {message ? (
-        <p className={`mt-1 text-[11px] ${message.bad ? "text-bad-text" : "text-mute"}`}>
+        <p className={`mt-1 text-[12px] ${message.bad ? "text-bad-text" : "text-mute"}`}>
           {message.text}
         </p>
       ) : null}
@@ -149,11 +149,11 @@ export function RestoreButton({ id }: { id: string }) {
             if (r.error) setError(r.error);
           })
         }
-        className="rounded-md bg-ink px-3 py-1.5 text-[12px] font-medium text-paper hover:bg-ink-mid disabled:opacity-50"
+        className="min-h-[44px] rounded-md bg-ink px-3 py-1.5 text-[12px] font-medium text-paper hover:bg-ink-mid disabled:opacity-50 sm:min-h-0"
       >
         {pending ? "Restoring…" : "Restore"}
       </button>
-      {error ? <p className="mt-1 text-[11px] text-bad-text">{error}</p> : null}
+      {error ? <p className="mt-1 text-[12px] text-bad-text">{error}</p> : null}
     </>
   );
 }
@@ -170,7 +170,7 @@ export function PurgeButton({ id }: { id: string }) {
       <button
         type="button"
         onClick={() => setConfirming(true)}
-        className="text-[12px] text-bad-text underline-offset-2 hover:underline"
+        className="text-[12px] text-bad-text underline-offset-2 hover:underline inline-flex min-h-[44px] items-center px-1 sm:min-h-0 sm:px-0"
       >
         Destroy permanently
       </button>
@@ -193,18 +193,18 @@ export function PurgeButton({ id }: { id: string }) {
             router.push("/documents");
           })
         }
-        className="rounded-md border border-bad-line bg-bad-tint px-3 py-1.5 text-[12px] font-medium text-bad-text hover:bg-bad-tint/80"
+        className="min-h-[44px] rounded-md border border-bad-line bg-bad-tint px-3 py-1.5 text-[12px] font-medium text-bad-text hover:bg-bad-tint/80 sm:min-h-0"
       >
         {pending ? "Destroying…" : "Destroy it"}
       </button>
       <button
         type="button"
         onClick={() => setConfirming(false)}
-        className="text-[12px] text-mute underline-offset-2 hover:underline"
+        className="text-[12px] text-mute underline-offset-2 hover:underline inline-flex min-h-[44px] items-center px-1 sm:min-h-0 sm:px-0"
       >
         Cancel
       </button>
-      {error ? <p className="w-full text-[11px] text-bad-text">{error}</p> : null}
+      {error ? <p className="w-full text-[12px] text-bad-text">{error}</p> : null}
     </div>
   );
 }

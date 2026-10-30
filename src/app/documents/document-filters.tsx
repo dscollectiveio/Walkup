@@ -32,7 +32,7 @@ export function DocumentFilters(o: DocumentFilterOptions) {
   const form = useRef<HTMLFormElement>(null);
   const ids = { q: useId(), category: useId(), status: useId(), sort: useId() };
   const submit = () => form.current?.requestSubmit();
-  const field = "block min-h-[34px] w-full rounded-md border border-line-strong bg-paper px-2.5 text-[16px] text-ink sm:text-[13px]";
+  const field = "block min-h-[44px] w-full rounded-md border border-line-strong bg-paper px-2.5 text-[16px] text-ink sm:min-h-[34px] sm:text-[13px]";
   // One value for the category select: a view (review/binned) is its own status, a category is its own filter.
   const status = o.view === "review" || o.view === "binned" ? o.view : "all";
 
@@ -81,11 +81,11 @@ export function DocumentFilters(o: DocumentFilterOptions) {
         <Search size={15} strokeWidth={1.8} aria-hidden="true" className="pointer-events-none absolute left-2.5 top-1/2 -translate-y-1/2 text-mute" />
         <input id={ids.q} name="q" type="search" defaultValue={o.q} placeholder="Title, filename or words inside the file" className={`${field} pl-8`} />
       </div>
-      <button type="submit" className="inline-flex min-h-[34px] items-center rounded-md bg-ink px-4 text-[13px] font-medium text-paper hover:bg-ink-mid">
+      <button type="submit" className="inline-flex min-h-[44px] items-center rounded-md bg-ink px-4 text-[13px] font-medium text-paper hover:bg-ink-mid sm:min-h-[34px]">
         Search
       </button>
       {o.clearHref ? (
-        <Link href={o.clearHref} className="inline-flex min-h-[32px] items-center px-1 text-[12px] font-medium text-ink underline underline-offset-2">
+        <Link href={o.clearHref} className="inline-flex min-h-[44px] items-center px-1 text-[12px] sm:min-h-[32px] font-medium text-ink underline underline-offset-2">
           Clear
         </Link>
       ) : null}

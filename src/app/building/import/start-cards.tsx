@@ -44,10 +44,10 @@ export function StartCards() {
                     {label}
                   </Link>
                   <span className="text-[12px] text-mute">Download template:</span>
-                  <a href={templateUrl(kind, "csv")} className={`${BTN_SECONDARY} !min-h-[36px] !px-3`} download>
+                  <a href={templateUrl(kind, "csv")} className={`${BTN_SECONDARY} !min-h-[36px] max-sm:!min-h-[44px] !px-3`} download>
                     CSV
                   </a>
-                  <a href={templateUrl(kind, "xlsx")} className={`${BTN_SECONDARY} !min-h-[36px] !px-3`} download>
+                  <a href={templateUrl(kind, "xlsx")} className={`${BTN_SECONDARY} !min-h-[36px] max-sm:!min-h-[44px] !px-3`} download>
                     Excel
                   </a>
                 </div>

@@ -33,7 +33,7 @@ export function PostAllButton({ readyCount, preview }: { readyCount: number; pre
         disabled={pending}
         onClick={() => (readyCount > PREVIEW_ABOVE ? setConfirming(true) : post())}
         title="Posts every row you saved for later to the books"
-        className="whitespace-nowrap rounded-md bg-ink px-3 py-1.5 text-[12px] font-medium text-paper hover:bg-ink-mid disabled:opacity-50"
+        className="min-h-[44px] whitespace-nowrap rounded-md bg-ink px-3 py-1.5 text-[12px] font-medium text-paper hover:bg-ink-mid disabled:opacity-50"
       >
         {pending ? "Posting…" : `Post ${readyCount} saved`}
       </button>

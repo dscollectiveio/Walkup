@@ -199,14 +199,14 @@ export function CategoryPicker({
           setQuery(null);
         }}
         onKeyDown={onKeyDown}
-        className="mt-1 w-full rounded-lg border border-line-strong bg-paper px-2.5 py-1.5 text-[12px] text-ink focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-1 focus-visible:outline-brass"
+        className="mt-1 w-full rounded-lg border border-line-strong bg-paper px-2.5 py-1.5 min-h-[44px] text-[16px] text-ink sm:min-h-0 sm:text-[12px] focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-1 focus-visible:outline-brass"
       />
       {open ? (
         <ul
           id={listId}
           role="listbox"
           aria-label={label}
-          className="absolute left-0 top-full z-20 mt-1 max-h-64 w-max min-w-full max-w-[22rem] overflow-y-auto rounded-lg border border-line-strong bg-paper py-1 shadow-lg"
+          className="absolute left-0 top-full z-20 mt-1 max-h-64 w-max min-w-full max-w-[min(22rem,calc(100vw-2rem))] overflow-y-auto rounded-lg border border-line-strong bg-paper py-1 shadow-lg"
         >
           {groups.map((g) => (
             <li key={g.name} role="presentation">
@@ -224,7 +224,7 @@ export function CategoryPicker({
                     onMouseDown={(e) => e.preventDefault()}
                     onMouseEnter={() => setActive(idx)}
                     onClick={() => pick(o)}
-                    className={`cursor-pointer whitespace-nowrap px-2.5 py-1 text-[12px] ${
+                    className={`cursor-pointer px-2.5 py-3 text-[13px] sm:whitespace-nowrap sm:py-1 sm:text-[12px] ${
                       idx === activeIdx ? "bg-fill text-ink" : "text-ink"
                     } ${chosen?.id === o.id ? "font-medium" : ""}`}
                   >

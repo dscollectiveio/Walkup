@@ -142,7 +142,7 @@ export function FeaturesExplorer({ categories }: { categories: Category[] }) {
                 value={query}
                 onChange={(e) => setQuery(e.target.value)}
                 placeholder="Search features, like “1099”, “quote” or “reminder”"
-                className="h-11 w-full rounded-lg border border-line-strong bg-paper pl-10 pr-10 text-[14px] text-ink placeholder:text-mute-soft focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-brass"
+                className="h-11 w-full rounded-lg border border-line-strong bg-paper pl-10 pr-10 text-[16px] text-ink sm:text-[14px] placeholder:text-mute-soft focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-brass"
               />
               {query ? (
                 <button
@@ -164,7 +164,7 @@ export function FeaturesExplorer({ categories }: { categories: Category[] }) {
                   type="button"
                   aria-pressed={audience === a.key}
                   onClick={() => setAudience(a.key)}
-                  className={`min-h-[36px] rounded-full border px-3.5 text-[13px] font-medium transition-colors duration-300 ${
+                  className={`min-h-[44px] rounded-full border px-3.5 sm:min-h-[36px] text-[13px] font-medium transition-colors duration-300 ${
                     audience === a.key
                       ? "border-[#1B2A41] bg-[#1B2A41] text-white"
                       : "border-line-strong bg-paper text-ink hover:bg-fill"
@@ -181,8 +181,8 @@ export function FeaturesExplorer({ categories }: { categories: Category[] }) {
               Showing <strong className="text-ink">{total}</strong> of {allCount} features
             </span>
             {total > 0 ? (
-              <button type="button" onClick={toggleAll} className="font-medium text-ink underline underline-offset-4 hover:text-mute">
-                {allOpen ? "Collapse all" : "Open every card"}
+              <button type="button" onClick={toggleAll} className="inline-flex min-h-[44px] items-center font-medium text-ink underline underline-offset-4 hover:text-mute sm:min-h-0">
+                {allOpen ? "Collapse All" : "Open Every Card"}
               </button>
             ) : null}
             {query || audience !== "all" ? (
@@ -213,7 +213,7 @@ export function FeaturesExplorer({ categories }: { categories: Category[] }) {
                 href={`#cat-${c.id}`}
                 data-cat={c.id}
                 aria-current={on ? "true" : undefined}
-                className={`flex min-h-[36px] shrink-0 items-center gap-1.5 rounded-full px-3 text-[13px] font-medium transition-colors duration-300 ${
+                className={`flex min-h-[44px] shrink-0 items-center gap-1.5 rounded-full px-3 sm:min-h-[36px] text-[13px] font-medium transition-colors duration-300 ${
                   on ? "bg-[#1B2A41] text-white" : "text-mute hover:bg-fill hover:text-ink"
                 }`}
               >
@@ -338,13 +338,13 @@ export function FeaturesExplorer({ categories }: { categories: Category[] }) {
               data-cta="features-page"
               className="inline-flex min-h-[48px] items-center justify-center rounded-md bg-[#D9A441] px-6 text-[15px] font-bold text-[#1B2A41] transition-colors hover:bg-[#E4B75B] focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-white"
             >
-              Create your building, free
+              Set Up Your Building in Minutes
             </Link>
             <Link
               href="/#pricing"
               className="inline-flex min-h-[48px] items-center justify-center rounded-md border border-line-strong px-6 text-[15px] font-semibold text-ink transition-colors hover:bg-fill"
             >
-              See pricing
+              See Pricing
             </Link>
           </div>
         </div>

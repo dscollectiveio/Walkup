@@ -159,7 +159,7 @@ export function WhereItWent({
               Averages <span className="figures text-ink">{whole(avgMonthly)}</span> a month over {monthCount} months
             </>
           ) : (
-            <>Hover a slice or a row to see it.</>
+            <>Hover or tap a slice to see it.</>
           )}
         </p>
         {comparison ? <p className="mt-0.5 text-center text-[12px] text-mute">{comparison}</p> : null}
@@ -178,7 +178,7 @@ export function WhereItWent({
                 {tag ? (
                   <span className={`shrink-0 rounded-full px-1.5 py-0.5 text-[10px] font-medium ${tag.cls}`}>{tag.text}</span>
                 ) : null}
-                <span className="figures shrink-0 text-[13px] text-ink">{whole(a.valueCents)}</span>
+                <span className="figures shrink-0 whitespace-nowrap text-[13px] text-ink">{whole(a.valueCents)}</span>
                 <span className="figures w-9 shrink-0 text-right text-[12px] text-mute">{pctOf(a.valueCents)}%</span>
               </div>
               <div className="ml-[2.1rem] mt-1.5 flex items-center gap-2">
@@ -189,7 +189,7 @@ export function WhereItWent({
                   />
                 </div>
                 {monthCount > 1 ? (
-                  <span className="w-16 shrink-0 text-right text-[10px] text-mute">{whole(Math.round(a.valueCents / monthCount))}/mo</span>
+                  <span className="w-16 shrink-0 text-right text-[11px] text-mute">{whole(Math.round(a.valueCents / monthCount))}/mo</span>
                 ) : null}
               </div>
             </>
@@ -208,7 +208,7 @@ export function WhereItWent({
                     type="button"
                     onClick={() => setShowAll((v) => !v)}
                     aria-expanded={showAll}
-                    className="ml-[2.1rem] mt-1.5 text-[11px] font-medium text-mute underline-offset-2 hover:text-ink hover:underline"
+                    className="ml-[2.1rem] mt-1 inline-flex min-h-[44px] items-center text-[12px] font-medium text-mute underline-offset-2 hover:text-ink hover:underline"
                   >
                     {showAll ? "Hide" : `Show ${tail.length} smaller categor${tail.length === 1 ? "y" : "ies"}`}
                   </button>
@@ -216,9 +216,9 @@ export function WhereItWent({
                     <ul className="ml-[2.1rem] mt-2 divide-y divide-line/60 border-t border-line/60">
                       {tail.map((t) => (
                         <li key={t.id}>
-                          <Link href={t.href} className="flex items-baseline justify-between gap-3 py-1.5 text-[12px] hover:underline">
+                          <Link href={t.href} className="flex items-baseline justify-between gap-3 py-3 text-[12px] hover:underline sm:py-1.5">
                             <span className="truncate text-ink">{t.label}</span>
-                            <span className="figures shrink-0 text-ink">
+                            <span className="figures shrink-0 whitespace-nowrap text-ink">
                               {whole(t.valueCents)}
                               <span className="ml-1.5 text-mute">{pctOf(t.valueCents)}%</span>
                             </span>

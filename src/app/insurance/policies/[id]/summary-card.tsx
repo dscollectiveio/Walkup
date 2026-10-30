@@ -71,7 +71,7 @@ export function SummaryCard({
           onChange={(e) => setDraft(e.target.value)}
           className={inputClass}
         />
-        <p className="text-[11px] text-mute">{draft.length.toLocaleString("en-US")} of 2,000 characters</p>
+        <p className="text-[12px] text-mute">{draft.length.toLocaleString("en-US")} of 2,000 characters</p>
         {actionError ? <p className={errorBlock}>{actionError}</p> : null}
         <div className="flex flex-wrap gap-2">
           <button

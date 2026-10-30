@@ -33,7 +33,7 @@ export function OwnerRecordsHistory({
   return (
     <div className="mt-4 border-t border-line pt-4">
       <h4 className="text-[12px] font-bold text-ink">Owner records</h4>
-      <p className="mt-0.5 text-[11px] text-mute-soft">
+      <p className="mt-0.5 text-[12px] sm:text-[11px] text-mute-soft">
         Who has owned each unit and when.
         {canDelete ? " Delete is for a record entered by mistake. To record that someone moved out, use Edit on the unit and take them off it." : ""}
       </p>
@@ -50,7 +50,7 @@ export function OwnerRecordsHistory({
                   {canDelete ? (
                     confirming === r.rowId ? (
                       <span className="flex flex-wrap items-center gap-2">
-                        <span className="text-[11px] text-mute">Deletes the record as if it never happened.</span>
+                        <span className="text-[12px] sm:text-[11px] text-mute">Deletes the record as if it never happened.</span>
                         <button
                           type="button"
                           disabled={pending}
@@ -62,16 +62,16 @@ export function OwnerRecordsHistory({
                               else setConfirming(null);
                             })
                           }
-                          className="rounded-md border border-bad-line bg-bad-tint px-2.5 py-1 text-[11px] font-medium text-bad-text"
+                          className="rounded-md border border-bad-line bg-bad-tint px-2.5 py-1 max-sm:min-h-[44px] text-[12px] sm:text-[11px] font-medium text-bad-text"
                         >
                           {pending ? "Deleting…" : "Confirm delete"}
                         </button>
-                        <button type="button" onClick={() => setConfirming(null)} className="text-[11px] text-mute underline-offset-2 hover:underline">
+                        <button type="button" onClick={() => setConfirming(null)} className="text-[12px] sm:text-[11px] text-mute underline-offset-2 hover:underline max-sm:inline-flex max-sm:min-h-[44px] max-sm:items-center">
                           Cancel
                         </button>
                       </span>
                     ) : (
-                      <button type="button" onClick={() => setConfirming(r.rowId)} className="text-[11px] text-bad-text underline-offset-2 hover:underline">
+                      <button type="button" onClick={() => setConfirming(r.rowId)} className="text-[12px] sm:text-[11px] text-bad-text underline-offset-2 hover:underline max-sm:inline-flex max-sm:min-h-[44px] max-sm:items-center">
                         Delete
                       </button>
                     )
@@ -82,7 +82,7 @@ export function OwnerRecordsHistory({
           </div>
         ))}
       </div>
-      {error ? <p className="mt-2 text-[11px] text-bad-text">{error}</p> : null}
+      {error ? <p className="mt-2 text-[12px] sm:text-[11px] text-bad-text">{error}</p> : null}
     </div>
   );
 }

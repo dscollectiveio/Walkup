@@ -73,7 +73,7 @@ export default async function ContactPage({ params }: { params: Promise<{ id: st
         <div className="flex flex-wrap gap-x-4 gap-y-1 text-[13px]">
           {contact.phone ? (
             tel ? (
-              <a href={tel} className="figures text-ink underline underline-offset-2">
+              <a href={tel} className="figures inline-flex min-h-[44px] items-center text-ink underline underline-offset-2 sm:min-h-0">
                 {formatPhone(contact.phone)}
               </a>
             ) : (
@@ -81,12 +81,12 @@ export default async function ContactPage({ params }: { params: Promise<{ id: st
             )
           ) : null}
           {contact.email ? (
-            <a href={mailtoLink(contact.email)} className="break-all text-ink underline underline-offset-2">
+            <a href={mailtoLink(contact.email)} className="inline-flex min-h-[44px] items-center break-all text-ink underline underline-offset-2 sm:min-h-0">
               {contact.email}
             </a>
           ) : null}
           {contact.website_url ? (
-            <a href={safeHttpUrl(contact.website_url) ?? undefined} target="_blank" rel="noopener noreferrer" className="text-ink underline underline-offset-2">
+            <a href={safeHttpUrl(contact.website_url) ?? undefined} target="_blank" rel="noopener noreferrer" className="inline-flex min-h-[44px] items-center break-all text-ink underline underline-offset-2 sm:min-h-0">
               {hostOf(contact.website_url)}
             </a>
           ) : null}
@@ -112,7 +112,7 @@ export default async function ContactPage({ params }: { params: Promise<{ id: st
                 {contact.source_urls.slice(0, 5).map((u, i) => (
                   <span key={u}>
                     {i > 0 ? ", " : ""}
-                    <a href={u} target="_blank" rel="noopener noreferrer nofollow" className="text-ink underline underline-offset-2">
+                    <a href={u} target="_blank" rel="noopener noreferrer nofollow" className="inline-block py-2 text-ink underline underline-offset-2 sm:py-0">
                       {hostOf(u)}
                     </a>
                   </span>
@@ -176,7 +176,7 @@ export default async function ContactPage({ params }: { params: Promise<{ id: st
 
       {canEdit ? (
         <p className="text-[13px]">
-          <Link href="/insurance?view=market" className="text-mute underline underline-offset-2">
+          <Link href="/insurance?view=market" className="inline-block py-2.5 text-mute underline underline-offset-2 sm:py-0">
             All contacts
           </Link>
         </p>

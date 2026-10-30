@@ -58,7 +58,7 @@ export function ListEditor<R extends Record<string, unknown>>({
           ))}
           <div className="flex items-center gap-3">
             {typeof row.page === "number" ? (
-              <span className="text-[11px] text-mute">{renderPage ? renderPage(row.page) : `Page ${row.page}`}</span>
+              <span className="text-[12px] text-mute">{renderPage ? renderPage(row.page) : `Page ${row.page}`}</span>
             ) : null}
             <button
               type="button"

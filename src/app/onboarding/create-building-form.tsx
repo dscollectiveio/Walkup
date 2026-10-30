@@ -19,7 +19,7 @@ export function CreateBuildingForm() {
           name="full_name"
           autoComplete="name"
           required
-          className={authInput}
+          className={`${authInput} max-sm:text-[16px]`}
         />
       </div>
 
@@ -32,7 +32,7 @@ export function CreateBuildingForm() {
           id="legal_name"
           name="legal_name"
           required
-          className={authInput}
+          className={`${authInput} max-sm:text-[16px]`}
         />
       </div>
 
@@ -57,7 +57,7 @@ export function CreateBuildingForm() {
           name="display_name"
           placeholder="2158 N. Damen"
           required
-          className={authInput}
+          className={`${authInput} max-sm:text-[16px]`}
         />
       </div>
 

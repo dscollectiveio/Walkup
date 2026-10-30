@@ -54,7 +54,7 @@ export function OwnershipAmendmentForm({
             name="effective_from"
             type="date"
             required
-            className="mt-1 w-full rounded-lg border border-line-strong px-3 py-2 text-[13px] text-ink"
+            className="mt-1 w-full rounded-lg border border-line-strong px-3 py-2 text-[16px] sm:text-[13px] text-ink"
           />
         </div>
         <div>
@@ -66,7 +66,7 @@ export function OwnershipAmendmentForm({
             id="recorded_document_ref"
             name="recorded_document_ref"
             placeholder="deed reference, amendment number"
-            className="mt-1 w-full rounded-lg border border-line-strong px-3 py-2 text-[13px] text-ink"
+            className="mt-1 w-full rounded-lg border border-line-strong px-3 py-2 text-[16px] sm:text-[13px] text-ink"
           />
         </div>
       </div>
@@ -80,7 +80,7 @@ export function OwnershipAmendmentForm({
           id="reason"
           name="reason"
           placeholder="unit 3 sale, amendment recorded 2026-08-01"
-          className="mt-1 w-full rounded-lg border border-line-strong px-3 py-2 text-[13px] text-ink"
+          className="mt-1 w-full rounded-lg border border-line-strong px-3 py-2 text-[16px] sm:text-[13px] text-ink"
         />
       </div>
 
@@ -109,14 +109,14 @@ export function OwnershipAmendmentForm({
                 required
                 value={values[u.id]}
                 onChange={(e) => setValues((v) => ({ ...v, [u.id]: e.target.value }))}
-                className="figures w-28 rounded-lg border border-line-strong px-2 py-1 text-right text-[13px] text-ink"
+                className="figures w-28 rounded-lg border border-line-strong px-2 py-1 max-sm:min-h-[44px] text-right text-[16px] sm:text-[13px] text-ink"
               />
               <span className="text-[12px] text-mute">%</span>
             </div>
           </div>
         ))}
         {!atHundred ? (
-          <p className="text-[11px] text-mute-soft">Percentages must add up to exactly 100 to save.</p>
+          <p className="text-[12px] sm:text-[11px] text-mute-soft">Percentages must add up to exactly 100 to save.</p>
         ) : null}
       </div>
 
@@ -137,7 +137,7 @@ export function OwnershipAmendmentForm({
         <button
           type="button"
           onClick={() => setOpen(false)}
-          className="rounded-md border border-line-strong px-4 py-2 text-[13px] text-ink hover:bg-fill"
+          className="rounded-md border border-line-strong px-4 py-2 max-sm:min-h-[44px] text-[13px] text-ink hover:bg-fill"
         >
           Cancel
         </button>

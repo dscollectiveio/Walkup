@@ -130,7 +130,7 @@ export default async function OwnerPayPage() {
               {fields.map((f) => (f.value?.trim() ? <CopyField key={f.label} label={f.label} value={f.value.trim()} /> : null))}
               {a.dues_payment_notes?.trim() ? (
                 <div className="py-2">
-                  <div className="text-[11px] text-mute">Notes from the board</div>
+                  <div className="text-[12px] text-mute">Notes from the board</div>
                   <p className="whitespace-pre-wrap break-words text-[14px] text-ink">{a.dues_payment_notes.trim()}</p>
                 </div>
               ) : null}

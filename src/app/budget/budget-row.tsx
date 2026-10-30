@@ -41,7 +41,7 @@ export function BudgetRow({
       <td className="py-2 text-ink">
         {name}
         {hint ? (
-          <Link href={hint.href} className="mt-0.5 block text-[11px] text-mute underline-offset-2 hover:underline">
+          <Link href={hint.href} className="mt-0.5 block text-[12px] text-mute underline-offset-2 hover:underline sm:text-[11px]">
             {hint.text}
           </Link>
         ) : null}
@@ -62,18 +62,18 @@ export function BudgetRow({
                 value={value}
                 onChange={(e) => setValue(e.target.value)}
                 placeholder="0.00"
-                className="figures w-24 rounded-lg border border-line-strong px-2 py-1 text-right text-[13px] text-ink"
+                className="figures min-h-[44px] w-28 rounded-lg border border-line-strong px-2 py-1 text-right text-[16px] text-ink sm:min-h-0 sm:w-24 sm:text-[13px]"
               />
               <button
                 type="submit"
                 disabled={pending}
-                className="rounded-md border border-line-strong px-2 py-1 text-[11px] text-mute hover:bg-fill disabled:opacity-50"
+                className="min-h-[44px] min-w-[44px] rounded-md border border-line-strong px-2 py-1 text-[12px] text-mute hover:bg-fill disabled:opacity-50 sm:min-h-0 sm:min-w-0 sm:text-[11px]"
               >
                 {pending ? "…" : "Set"}
               </button>
             </form>
             {state?.error ? (
-              <div className="mt-1 text-[11px] text-bad-text">{state.error}</div>
+              <div className="mt-1 text-[12px] text-bad-text sm:text-[11px]">{state.error}</div>
             ) : null}
           </>
         ) : (

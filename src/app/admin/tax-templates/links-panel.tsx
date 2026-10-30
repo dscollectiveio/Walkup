@@ -52,7 +52,7 @@ function LinkRowView({ row, pending, onVerify, onToggle }: { row: AdminLinkRow; 
           <span className={pill("mute")}>{row.state_code ?? "Federal"}</span>
           {!row.active ? <span className={pill("warning")}>Inactive: boards don&rsquo;t see it</span> : null}
         </p>
-        <p className="mt-0.5 break-all font-mono text-[11px] text-mute-soft">{row.url}</p>
+        <p className="mt-0.5 break-all font-mono text-[12px] sm:text-[11px] text-mute-soft">{row.url}</p>
         <p className="mt-1 flex flex-wrap items-center gap-2 text-[12px] text-mute">
           <span>retrieved {dateWords(row.retrieved_on, "short")}</span>
           <span>·</span>
@@ -64,7 +64,7 @@ function LinkRowView({ row, pending, onVerify, onToggle }: { row: AdminLinkRow; 
           <span>·</span>
           <span>automatic check: {checkWords(row.last_check_status, row.last_checked_at)}</span>
         </p>
-        {row.retrieved_note ? <p className="mt-1 text-[11px] text-mute-soft">{row.retrieved_note}</p> : null}
+        {row.retrieved_note ? <p className="mt-1 text-[12px] sm:text-[11px] text-mute-soft">{row.retrieved_note}</p> : null}
       </div>
       <span className="flex flex-wrap gap-2">
         {row.active ? (

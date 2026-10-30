@@ -34,9 +34,9 @@ const SKIP_WHY = new Set(["preferred", "trade", "board_reviews", "would_hire_aga
 /** Right-hand offsets of the rules between the columns (running width to the right plus half a 0.75rem gap). */
 const LINES = ["xl:right-[11.375rem]", "xl:right-[24.125rem]", "xl:right-[39.875rem]", "xl:right-[50.625rem]"];
 
-const field = "block min-h-[34px] w-full rounded-md border border-line-strong bg-paper px-2.5 text-[16px] text-ink sm:text-[13px]";
+const field = "block min-h-[44px] sm:min-h-[34px] w-full rounded-md border border-line-strong bg-paper px-2.5 text-[16px] text-ink sm:text-[13px]";
 const pill =
-  "inline-flex min-h-[32px] cursor-pointer items-center rounded-full border border-line-strong bg-paper px-3 text-[12px] font-medium text-ink hover:bg-fill has-[:checked]:border-ink has-[:checked]:bg-ink has-[:checked]:text-paper has-[:focus-visible]:outline has-[:focus-visible]:outline-2 has-[:focus-visible]:outline-brass";
+  "inline-flex min-h-[44px] sm:min-h-[32px] cursor-pointer items-center rounded-full border border-line-strong bg-paper px-3 text-[12px] font-medium text-ink hover:bg-fill has-[:checked]:border-ink has-[:checked]:bg-ink has-[:checked]:text-paper has-[:focus-visible]:outline has-[:focus-visible]:outline-2 has-[:focus-visible]:outline-brass";
 
 /** Five stars, filled gold to the rating: 4.5 fills four and a half. The number is always written beside it. */
 function Stars({ rating }: { rating: number }) {
@@ -137,7 +137,7 @@ export function SavedTable({
               setHasPhone(false);
               setHasEmail(false);
             }}
-            className="inline-flex min-h-[32px] items-center px-1 text-[12px] font-medium text-ink underline underline-offset-2"
+            className="inline-flex min-h-[44px] sm:min-h-[32px] items-center px-1 text-[12px] font-medium text-ink underline underline-offset-2"
           >
             Clear
           </button>

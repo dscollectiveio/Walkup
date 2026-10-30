@@ -35,7 +35,7 @@ export function RefreshButton({ formId }: { formId: string }) {
       >
         {pending ? "Refreshing…" : "Refresh from your records"}
       </button>
-      {msg ? <span className="text-[11px] text-mute">{msg}</span> : null}
+      {msg ? <span className="text-[12px] text-mute">{msg}</span> : null}
     </span>
   );
 }
@@ -63,7 +63,7 @@ export function MarkFiled({ formId, label = "Mark as filed" }: { formId: string;
       </p>
       <div>
         <label htmlFor="filed_on" className="block text-[12px] font-medium text-ink">Filed on</label>
-        <input id="filed_on" name="filed_on" type="date" required className="mt-1 rounded-lg border border-line-strong bg-paper px-3 py-2 text-[13px] text-ink" />
+        <input id="filed_on" name="filed_on" type="date" required className="mt-1 min-h-[44px] rounded-lg border border-line-strong bg-paper px-3 py-2 text-[16px] text-ink sm:min-h-0 sm:text-[13px]" />
       </div>
       <div>
         <label htmlFor="proof" className="block text-[12px] font-medium text-ink">
@@ -73,7 +73,7 @@ export function MarkFiled({ formId, label = "Mark as filed" }: { formId: string;
       </div>
       {state?.error ? <p className="text-[12px] text-bad-text">{state.error}</p> : null}
       {state?.ok ? <p className="text-[12px] text-good-text">Recorded as filed.</p> : null}
-      <div className="flex gap-2">
+      <div className="flex flex-wrap gap-2">
         <button type="submit" disabled={pending} className={btnPrimary}>
           {pending ? "Saving…" : "Record it"}
         </button>

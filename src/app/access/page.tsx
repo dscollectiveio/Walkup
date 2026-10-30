@@ -177,7 +177,7 @@ export default async function AccessPage() {
                   <p className="text-[14px] font-medium text-ink">{p.name}</p>
                   <p className="text-[12px] text-mute">{p.roles.map((r) => ROLE_LABEL[r.role] ?? r.role).join(", ")}</p>
                 </div>
-                <div className="flex items-center gap-4 text-[12px] text-mute">
+                <div className="flex flex-wrap items-center gap-x-4 gap-y-1 text-[12px] text-mute">
                   {p.roles
                     .filter((r) => r.expiresOn)
                     .map((r) => {

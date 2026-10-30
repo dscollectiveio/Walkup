@@ -56,11 +56,11 @@ export interface UnitPlan {
 }
 
 const field =
-  "figures h-9 w-full rounded-md border border-line-strong bg-paper px-2 text-right text-[13px] text-ink";
+  "figures h-11 w-full rounded-md border border-line-strong bg-paper px-2 text-right text-[16px] text-ink sm:h-9 sm:text-[13px]";
 const primary =
-  "inline-flex h-8 items-center whitespace-nowrap rounded-md bg-ink px-3 text-[12px] font-medium text-paper transition-colors hover:bg-ink-mid focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-brass disabled:opacity-50";
+  "inline-flex h-11 items-center whitespace-nowrap sm:h-8 rounded-md bg-ink px-3 text-[12px] font-medium text-paper transition-colors hover:bg-ink-mid focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-brass disabled:opacity-50";
 const quiet =
-  "inline-flex h-8 items-center whitespace-nowrap rounded-md border border-line-strong px-3 text-[12px] font-medium text-ink transition-colors hover:bg-fill";
+  "inline-flex h-11 items-center whitespace-nowrap sm:h-8 rounded-md border border-line-strong px-3 text-[12px] font-medium text-ink transition-colors hover:bg-fill";
 
 /**
  * One unit as its own card in "Where every unit stands": who and where it
@@ -185,7 +185,7 @@ export function UnitCard({
     setRecording(false);
   };
   const panelButton = (active: boolean) =>
-    `inline-flex h-8 items-center whitespace-nowrap rounded-md bg-ink px-3 text-[12px] font-medium text-paper transition-colors hover:bg-ink-mid focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-brass ${
+    `inline-flex h-11 items-center whitespace-nowrap sm:h-8 rounded-md bg-ink px-3 text-[12px] font-medium text-paper transition-colors hover:bg-ink-mid focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-brass ${
       active ? "ring-2 ring-brass ring-offset-1 ring-offset-paper" : ""
     }`;
   const compact = yearProgress(plan?.annualCents ?? 0, paidCents, todayKey);
@@ -203,7 +203,7 @@ export function UnitCard({
           onClick={() => setOpen((v) => !v)}
           aria-expanded={open}
           aria-label={`${open ? "Collapse" : "Expand"} ${label}`}
-          className="flex min-w-0 flex-1 items-center gap-3 text-left focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-brass"
+          className="flex min-h-[44px] min-w-0 flex-1 items-center gap-3 text-left focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-brass"
         >
           <svg width="12" height="12" viewBox="0 0 12 12" aria-hidden="true" className={`shrink-0 transition-transform ${open ? "rotate-90" : ""}`}>
             <path d="M4 2l4 4-4 4" stroke="currentColor" strokeWidth="1.6" fill="none" strokeLinecap="round" strokeLinejoin="round" />
@@ -216,6 +216,10 @@ export function UnitCard({
           </span>
         </button>
         {/* What is owed, on the right of the bar, the way a form's due date is. */}
+        <p className="flex items-baseline whitespace-nowrap text-right sm:hidden">
+          <span className="mr-1.5 text-[11px] font-medium uppercase tracking-wide text-mute">Owed</span>
+          <span className={`tabular text-[14px] font-bold ${overdue ? "rounded bg-bad-tint px-1.5 text-bad-text" : ""}`}>{owedLabel}</span>
+        </p>
         <p className="hidden items-baseline whitespace-nowrap text-right sm:flex">
           <span className="mr-1.5 text-[11px] font-medium uppercase tracking-wide text-mute">Owed</span>
           <span className={`tabular text-[14px] font-bold ${overdue ? "rounded bg-bad-tint px-1.5 text-bad-text" : ""}`}>{owedLabel}</span>
@@ -227,7 +231,7 @@ export function UnitCard({
           type="button"
           onClick={() => setOpen((v) => !v)}
           aria-expanded={open}
-          className="inline-flex shrink-0 items-center gap-1.5 rounded-md bg-ink px-3 py-1.5 text-[12px] font-medium text-paper transition-colors hover:bg-ink-mid focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-brass"
+          className="inline-flex min-h-[44px] shrink-0 items-center gap-1.5 rounded-md bg-ink px-3 py-1.5 sm:min-h-0 text-[12px] font-medium text-paper transition-colors hover:bg-ink-mid focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-brass"
         >
           {open ? "Collapse" : "Expand"}
           <svg width="10" height="10" viewBox="0 0 12 12" aria-hidden="true" className={`transition-transform ${open ? "rotate-90" : ""}`}>
@@ -278,7 +282,7 @@ export function UnitCard({
                     onValueChange={setAnnual}
                     placeholder="$5,400"
                     autoFocus
-                    className="figures mt-1 block h-11 w-full rounded-md border border-line-strong bg-paper px-3 text-right text-[14px] text-ink"
+                    className="figures mt-1 block h-11 w-full rounded-md border border-line-strong bg-paper px-3 text-right text-[16px] text-ink sm:text-[14px]"
                   />
                 </label>
                 <label className="block text-[12px] font-medium text-ink">
@@ -287,7 +291,7 @@ export function UnitCard({
                     name="frequency"
                     value={frequency}
                     onChange={(e) => setFrequency(e.target.value as UnitPlan["frequency"])}
-                    className="mt-1 block h-11 w-full rounded-md border border-line-strong bg-paper px-3 text-[14px] text-ink"
+                    className="mt-1 block h-11 w-full rounded-md border border-line-strong bg-paper px-3 text-[16px] text-ink sm:text-[14px]"
                   >
                     {PLAN_FREQUENCIES.map((f) => (
                       <option key={f} value={f}>
@@ -302,7 +306,7 @@ export function UnitCard({
                     name="note"
                     defaultValue={plan?.note ?? ""}
                     placeholder="includes parking spot"
-                    className="mt-1 block h-11 w-full rounded-md border border-line-strong bg-paper px-3 text-[14px] text-ink"
+                    className="mt-1 block h-11 w-full rounded-md border border-line-strong bg-paper px-3 text-[16px] text-ink sm:text-[14px]"
                   />
                 </label>
               </div>
@@ -310,7 +314,7 @@ export function UnitCard({
                 <button type="submit" disabled={planPending} className={primary}>
                   {planPending ? "Saving…" : "Save"}
                 </button>
-                <button type="button" onClick={() => setEditingPlan(false)} className="h-8 text-[12px] text-mute hover:underline">
+                <button type="button" onClick={() => setEditingPlan(false)} className="h-11 px-2 text-[12px] text-mute hover:underline sm:h-8 sm:px-0">
                   Cancel
                 </button>
                 <span className="figures text-[13px] text-mute">{preview > 0 ? `That is ${money(preview)} ${FREQUENCY_WORDS[frequency]}.` : ""}</span>
@@ -334,7 +338,7 @@ export function UnitCard({
                   </div>
                   <div className="text-[12px] text-mute">
                     {manager.email ? (
-                      <a href={`mailto:${manager.email}`} className="underline underline-offset-2 hover:text-ink">
+                      <a href={`mailto:${manager.email}`} className="break-all underline underline-offset-2 hover:text-ink">
                         {manager.email}
                       </a>
                     ) : (
@@ -384,25 +388,25 @@ export function UnitCard({
               <input type="hidden" name="unit_id" value={unitId} />
               <label className="block text-[11px] text-mute">
                 Name
-                <input name="manager_name" defaultValue={manager?.name ?? ""} required autoFocus className="mt-0.5 block h-9 w-full rounded-md border border-line-strong bg-paper px-2 text-[13px] text-ink" />
+                <input name="manager_name" defaultValue={manager?.name ?? ""} required autoFocus className="mt-0.5 block h-11 w-full rounded-md border border-line-strong bg-paper px-2 text-[16px] text-ink sm:h-9 sm:text-[13px]" />
               </label>
               <label className="block text-[11px] text-mute">
                 Company <span className="text-mute-soft">(optional)</span>
-                <input name="manager_company" defaultValue={manager?.company ?? ""} className="mt-0.5 block h-9 w-full rounded-md border border-line-strong bg-paper px-2 text-[13px] text-ink" />
+                <input name="manager_company" defaultValue={manager?.company ?? ""} className="mt-0.5 block h-11 w-full rounded-md border border-line-strong bg-paper px-2 text-[16px] text-ink sm:h-9 sm:text-[13px]" />
               </label>
               <label className="block text-[11px] text-mute">
                 Email
-                <input name="manager_email" type="email" defaultValue={manager?.email ?? ""} className="mt-0.5 block h-9 w-full rounded-md border border-line-strong bg-paper px-2 text-[13px] text-ink" />
+                <input name="manager_email" type="email" defaultValue={manager?.email ?? ""} className="mt-0.5 block h-11 w-full rounded-md border border-line-strong bg-paper px-2 text-[16px] text-ink sm:h-9 sm:text-[13px]" />
               </label>
               <label className="block text-[11px] text-mute">
                 Phone <span className="text-mute-soft">(optional)</span>
-                <input name="manager_phone" type="tel" defaultValue={manager?.phone ?? ""} className="mt-0.5 block h-9 w-full rounded-md border border-line-strong bg-paper px-2 text-[13px] text-ink" />
+                <input name="manager_phone" type="tel" defaultValue={manager?.phone ?? ""} className="mt-0.5 block h-11 w-full rounded-md border border-line-strong bg-paper px-2 text-[16px] text-ink sm:h-9 sm:text-[13px]" />
               </label>
               <div className="flex flex-wrap items-center gap-3 sm:col-span-2">
                 <button type="submit" disabled={managerPending} className={primary}>
                   {managerPending ? "Saving…" : "Save"}
                 </button>
-                <button type="button" onClick={() => setEditingManager(false)} className="h-8 text-[12px] text-mute hover:underline">
+                <button type="button" onClick={() => setEditingManager(false)} className="h-11 px-2 text-[12px] text-mute hover:underline sm:h-8 sm:px-0">
                   Cancel
                 </button>
                 <p className="text-[11px] text-mute-soft">
@@ -428,7 +432,7 @@ export function UnitCard({
                       aria-checked={active}
                       disabled={!canEdit || contactBusy || blocked}
                       onClick={() => !active && choose(who)}
-                      className={`inline-flex min-h-[36px] items-center rounded-full px-4 text-[12px] font-medium transition-colors duration-300 disabled:cursor-not-allowed ${
+                      className={`inline-flex min-h-[44px] items-center rounded-full sm:min-h-[36px] px-4 text-[12px] font-medium transition-colors duration-300 disabled:cursor-not-allowed ${
                         active ? "bg-ink text-paper" : "text-mute hover:text-ink disabled:opacity-50"
                       }`}
                     >
@@ -502,10 +506,10 @@ export function UnitCard({
               {isAdmin ? (
                 <fieldset className="flex items-center gap-4 pb-2 text-[12px] text-ink">
                   <legend className="sr-only">Voluntary or required</legend>
-                  <label className="flex items-center gap-1.5">
+                  <label className="flex min-h-[44px] items-center gap-1.5 sm:min-h-0">
                     <input type="radio" checked={mode === "voluntary"} onChange={() => setMode("voluntary")} /> Voluntary
                   </label>
-                  <label className="flex items-center gap-1.5">
+                  <label className="flex min-h-[44px] items-center gap-1.5 sm:min-h-0">
                     <input type="radio" checked={mode === "required"} onChange={() => setMode("required")} /> Required
                   </label>
                 </fieldset>
@@ -520,14 +524,14 @@ export function UnitCard({
                     min={todayKey}
                     max={lastDay}
                     required
-                    className="mt-0.5 block h-9 rounded-md border border-line-strong bg-paper px-2 text-[13px] text-ink"
+                    className="mt-0.5 block h-11 rounded-md border border-line-strong bg-paper px-2 text-[16px] text-ink sm:h-9 sm:text-[13px]"
                   />
                 </label>
               ) : null}
               <button type="submit" disabled={reservePending} className={primary}>
                 {reservePending ? "Saving…" : mode === "required" && isAdmin ? "Charge it" : "Save"}
               </button>
-              <button type="button" onClick={() => setEditingReserve(false)} className="h-8 text-[12px] text-mute hover:underline">
+              <button type="button" onClick={() => setEditingReserve(false)} className="h-11 px-2 text-[12px] text-mute hover:underline sm:h-8 sm:px-0">
                 Cancel
               </button>
               <p className="w-full text-[11px] text-mute-soft">
@@ -553,13 +557,13 @@ export function UnitCard({
                   name="received_on"
                   defaultValue={todayKey}
                   required
-                  className="mt-0.5 block h-9 rounded-md border border-line-strong bg-paper px-2 text-[13px] text-ink"
+                  className="mt-0.5 block h-11 rounded-md border border-line-strong bg-paper px-2 text-[16px] text-ink sm:h-9 sm:text-[13px]"
                 />
               </label>
               <button type="submit" disabled={givePending} className={primary}>
                 {givePending ? "Recording…" : "Record"}
               </button>
-              <button type="button" onClick={() => setRecording(false)} className="h-8 text-[12px] text-mute hover:underline">
+              <button type="button" onClick={() => setRecording(false)} className="h-11 px-2 text-[12px] text-mute hover:underline sm:h-8 sm:px-0">
                 Cancel
               </button>
               <p className="w-full text-[11px] text-mute-soft">
@@ -635,7 +639,7 @@ export function UnitCard({
               </div>
             ))}
           </div>
-          <div className="mt-0.5 grid grid-cols-4 gap-1 text-[10px] text-mute-soft" aria-hidden="true">
+          <div className="mt-0.5 grid grid-cols-4 gap-1 text-[11px] text-mute-soft" aria-hidden="true">
             {compact.quarters.map((q) => (
               <span key={q.label} className={q.current ? "font-semibold text-ink" : ""}>
                 {q.label}

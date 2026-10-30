@@ -96,7 +96,7 @@ function Rule({
                 title={`Minimum required: ${formatPercent(test.threshold)}`}
               />
             </div>
-            <div className="mt-2 flex justify-between text-[13px]">
+            <div className="mt-2 flex flex-wrap justify-between gap-x-3 gap-y-1 text-[13px]">
               <span className="font-medium text-ink">
                 You&rsquo;re at {formatPercent(test.ratio)}
               </span>
@@ -122,11 +122,11 @@ function Rule({
         <dl className="mt-4 space-y-1 border-t border-line pt-3 text-[13px]">
           <div className="flex justify-between gap-4">
             <dt className="text-mute">{numeratorLabel}</dt>
-            <dd className="figures text-ink">{formatMoney(test.numeratorCents)}</dd>
+            <dd className="figures whitespace-nowrap text-ink">{formatMoney(test.numeratorCents)}</dd>
           </div>
           <div className="flex justify-between gap-4">
             <dt className="text-mute">{denominatorLabel}</dt>
-            <dd className="figures text-ink">{formatMoney(test.denominatorCents)}</dd>
+            <dd className="figures whitespace-nowrap text-ink">{formatMoney(test.denominatorCents)}</dd>
           </div>
         </dl>
 
@@ -855,21 +855,21 @@ export default async function TaxPage({ searchParams }: { searchParams: Promise<
             <dl className="max-w-md space-y-2 text-[13px]">
               <div className="flex justify-between gap-4">
                 <dt className="text-mute">Income that can be taxed</dt>
-                <dd className="figures text-ink">{formatMoney(result.nonexemptIncomeCents)}</dd>
+                <dd className="figures whitespace-nowrap text-ink">{formatMoney(result.nonexemptIncomeCents)}</dd>
               </div>
               <div className="flex justify-between gap-4 border-b border-line pb-2">
                 <dt className="text-mute">Allowance every association gets</dt>
-                <dd className="figures text-ink">−{formatMoney(result.specificDeductionCents)}</dd>
+                <dd className="figures whitespace-nowrap text-ink">−{formatMoney(result.specificDeductionCents)}</dd>
               </div>
               <div className="flex justify-between gap-4">
                 <dt className="text-mute">
                   Taxed at {(result.rate * 100).toFixed(0)}%
                 </dt>
-                <dd className="figures text-ink">{formatMoney(result.taxableIncomeCents)}</dd>
+                <dd className="figures whitespace-nowrap text-ink">{formatMoney(result.taxableIncomeCents)}</dd>
               </div>
               <div className="flex justify-between gap-4 border-t border-line-strong pt-2">
                 <dt className="font-semibold text-ink">Estimated tax</dt>
-                <dd className="figures text-[18px] text-ink">
+                <dd className="figures whitespace-nowrap text-[18px] text-ink">
                   {formatMoney(result.taxDueCents)}
                 </dd>
               </div>
@@ -889,8 +889,8 @@ export default async function TaxPage({ searchParams }: { searchParams: Promise<
           <ul className="divide-y divide-line text-[13px]">
             {(receipts ?? []).map((r) => (
               <li key={r.account_name} className="py-2.5">
-                <div className="flex items-center justify-between gap-3">
-                  <span className="text-ink">{r.account_name}</span>
+                <div className="flex flex-wrap items-center justify-between gap-x-3 gap-y-1">
+                  <span className="min-w-0 break-words text-ink">{r.account_name}</span>
                   <span className="flex items-center gap-3">
                     <span
                       className={`rounded-full px-2 py-0.5 text-[11px] ${
@@ -901,7 +901,7 @@ export default async function TaxPage({ searchParams }: { searchParams: Promise<
                     >
                       {r.is_exempt ? "owner fees" : "taxable"}
                     </span>
-                    <span className="figures text-ink">{money(r.total)}</span>
+                    <span className="figures whitespace-nowrap text-ink">{money(r.total)}</span>
                   </span>
                 </div>
                 <AccountLineDrilldown
@@ -919,11 +919,11 @@ export default async function TaxPage({ searchParams }: { searchParams: Promise<
           <ul className="divide-y divide-line text-[13px]">
             {(disbursements ?? []).map((d) => (
               <li key={d.account_name} className="py-2.5">
-                <div className="flex items-center justify-between gap-3">
-                  <span className="text-ink">
+                <div className="flex flex-wrap items-center justify-between gap-x-3 gap-y-1">
+                  <span className="min-w-0 break-words text-ink">
                     {d.account_name}
                     {d.account_type === "asset" ? (
-                      <span className="ml-2 text-[11px] text-mute-soft">major improvement</span>
+                      <span className="ml-2 text-[12px] text-mute-soft">major improvement</span>
                     ) : null}
                   </span>
                   <span className="flex items-center gap-3">
@@ -936,7 +936,7 @@ export default async function TaxPage({ searchParams }: { searchParams: Promise<
                     >
                       {d.is_exempt ? "on the building" : "doesn't count"}
                     </span>
-                    <span className="figures text-ink">{money(d.total)}</span>
+                    <span className="figures whitespace-nowrap text-ink">{money(d.total)}</span>
                   </span>
                 </div>
                 <AccountLineDrilldown
@@ -961,23 +961,23 @@ export default async function TaxPage({ searchParams }: { searchParams: Promise<
               <span className="min-w-0">
                 <span className="figures text-ink">{parameterValueWords(p)}</span>
                 <span className="text-mute">: {PARAMETER_LABEL[p.key] ?? p.key}</span>
-                <span className="block text-[11px] text-mute-soft">
+                <span className="block text-[12px] text-mute-soft">
                   {effectiveWords(p)}
                   {inForceIds.has(p.id) ? " · this year" : ""}
                 </span>
               </span>
               <span className="flex items-center gap-3">
                 {p.verifiedOn ? (
-                  <span className="text-[11px] text-good-text">checked {dateWords(p.verifiedOn, "short")}</span>
+                  <span className="text-[12px] text-good-text">checked {dateWords(p.verifiedOn, "short")}</span>
                 ) : (
-                  <span className="text-[11px] font-medium text-warning-text">not yet checked</span>
+                  <span className="text-[12px] font-medium text-warning-text">not yet checked</span>
                 )}
                 {p.sourceUrl ? (
                   <a
                     href={p.sourceUrl}
                     target="_blank"
                     rel="noreferrer"
-                    className="text-[11px] text-mute underline-offset-2 hover:underline"
+                    className="inline-flex min-h-[44px] items-center px-1 text-[12px] text-mute underline-offset-2 hover:underline sm:min-h-0 sm:px-0"
                   >
                     Source ↗
                   </a>
@@ -988,7 +988,7 @@ export default async function TaxPage({ searchParams }: { searchParams: Promise<
         </ul>
       </CollapsibleCard>
 
-      <p className="text-[11px] text-mute">{TAX_FOOTER}</p>
+      <p className="text-[12px] text-mute">{TAX_FOOTER}</p>
     </div>
   );
 }

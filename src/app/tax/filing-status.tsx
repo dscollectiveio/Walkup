@@ -49,14 +49,14 @@ export function FilingStatus({
             <button
               type="submit"
               disabled={savePending}
-              className="rounded-md bg-ink px-3 py-1.5 text-[12px] font-medium text-paper hover:bg-ink-mid disabled:opacity-50"
+              className="min-h-[44px] rounded-md bg-ink px-3 py-1.5 text-[12px] font-medium text-paper hover:bg-ink-mid disabled:opacity-50 sm:min-h-0"
             >
               {savePending ? "Saving…" : filing ? "Save again" : "Save this year's figures"}
             </button>
           </form>
         ) : null}
       </div>
-      {saveState?.error ? <p className="text-[11px] text-bad-text">{saveState.error}</p> : null}
+      {saveState?.error ? <p className="text-[12px] text-bad-text">{saveState.error}</p> : null}
       <p className="text-[12px] text-mute">
         Mark it filed from the{" "}
         <a href={formHref} className="underline underline-offset-2 hover:text-ink">

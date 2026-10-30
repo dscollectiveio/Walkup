@@ -85,7 +85,7 @@ export default async function EmergencyInfoPage() {
             );
           })}
         </ul>
-        <p className="px-5 pb-4 text-[11px] text-mute">General safety steps, the same for every building.</p>
+        <p className="px-5 pb-4 text-[12px] text-mute">General safety steps, the same for every building.</p>
       </section>
 
       <Card navy title="In this building">

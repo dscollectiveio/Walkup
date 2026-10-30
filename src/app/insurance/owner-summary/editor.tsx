@@ -359,7 +359,7 @@ export function OwnerSummaryEditor({
             {illinois ? (
               <p className={helpClass}>
                 Selling a unit? Illinois requires the association to tell buyers what insurance it provides for owners (
-                <a href={citation.url} target="_blank" rel="noopener noreferrer" className="underline underline-offset-2">
+                <a href={citation.url} target="_blank" rel="noopener noreferrer" className="inline-block py-2 underline underline-offset-2 sm:py-0">
                   Section 22.1
                 </a>
                 ). This summary can help answer that.

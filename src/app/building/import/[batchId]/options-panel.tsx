@@ -266,7 +266,7 @@ function TransactionOptions(p: SubProps) {
             })}
           </div>
         )}
-        <label className="flex items-start gap-3 text-[13px] text-ink">
+        <label className="flex items-start gap-3 max-sm:min-h-[44px] text-[13px] text-ink">
           <input
             type="checkbox"
             checked={options.mapping_confirmed === true}
@@ -346,9 +346,9 @@ function NewCategory({ initialName, onCancel, onCreated }: { initialName: string
       </div>
       <fieldset>
         <legend className={LABEL}>Is this money in or money out?</legend>
-        <div className="mt-1 flex gap-4 text-[13px]">
+        <div className="mt-1 flex flex-wrap gap-x-4 text-[13px]">
           {(["income", "expense"] as const).map((t) => (
-            <label key={t} className="flex items-center gap-2">
+            <label key={t} className="flex items-center gap-2 max-sm:min-h-[44px]">
               <input type="radio" name="new-cat-type" checked={type === t} onChange={() => setType(t)} />
               {t === "income" ? "Income" : "Expense"}
             </label>
@@ -357,12 +357,12 @@ function NewCategory({ initialName, onCancel, onCreated }: { initialName: string
       </fieldset>
       <fieldset>
         <legend className={LABEL}>Does this count toward your association&rsquo;s tax-exempt activity?</legend>
-        <div className="mt-1 flex gap-4 text-[13px]">
-          <label className="flex items-center gap-2">
+        <div className="mt-1 flex flex-wrap gap-x-4 text-[13px]">
+          <label className="flex items-center gap-2 max-sm:min-h-[44px]">
             <input type="radio" name="new-cat-exempt" checked={exempt === true} onChange={() => setExempt(true)} />
             Yes
           </label>
-          <label className="flex items-center gap-2">
+          <label className="flex items-center gap-2 max-sm:min-h-[44px]">
             <input type="radio" name="new-cat-exempt" checked={exempt === false} onChange={() => setExempt(false)} />
             No
           </label>
@@ -563,11 +563,11 @@ function UnitsOptions(p: SubProps) {
 
       <fieldset className="max-w-xl space-y-2">
         <legend className={LABEL}>If a unit already has a different owner</legend>
-        <label className="flex items-start gap-3 text-[13px] text-ink">
+        <label className="flex items-start gap-3 max-sm:min-h-[44px] text-[13px] text-ink">
           <input type="radio" name="replace" checked={!replace} onChange={() => save({ replace_owners: false }, (o) => ({ ...o, replace_owners: false }))} className="mt-1" />
           <span>Stop and show me</span>
         </label>
-        <label className="flex items-start gap-3 text-[13px] text-ink">
+        <label className="flex items-start gap-3 max-sm:min-h-[44px] text-[13px] text-ink">
           <input type="radio" name="replace" checked={replace} onChange={() => save({ replace_owners: true }, (o) => ({ ...o, replace_owners: true }))} className="mt-1" />
           <span>
             Replace the current owner
@@ -629,7 +629,7 @@ function UnitsOptions(p: SubProps) {
             >
               {splitting ? "Splitting..." : "Split equally"}
             </button>
-            <label className="flex items-center gap-2 text-[13px] text-ink">
+            <label className="flex items-center gap-2 max-sm:min-h-[44px] text-[13px] text-ink">
               <input type="checkbox" checked={skip} onChange={(e) => save({ skip_percentages: e.target.checked }, (o) => ({ ...o, skip_percentages: e.target.checked }))} className="h-5 w-5" />
               Leave percentages out for now
             </label>

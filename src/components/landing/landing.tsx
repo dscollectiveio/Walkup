@@ -1,7 +1,7 @@
 import Image from "next/image";
 import Link from "next/link";
-import { Download, FileCheck, FileText, HandCoins, HardHat, Eye, KeyRound, Landmark, ListChecks, MailCheck, ShieldCheck, Wrench } from "lucide-react";
-import { Lockup } from "@/components/mark";
+import { ArrowDown, Lock, Sparkles, Download, FileCheck, FileText, HandCoins, HardHat, Eye, KeyRound, Landmark, ListChecks, MailCheck, ShieldCheck, Wrench } from "lucide-react";
+import { Lockup, WalkupMark } from "@/components/mark";
 import {
   ANNUAL_NOTE,
   CONTACT_EMAIL,
@@ -18,6 +18,7 @@ import {
 } from "@/lib/site-config";
 import { WaitlistForm } from "./waitlist-form";
 import { HeroSlideshow } from "./hero-slideshow";
+import { ProblemSection } from "./problem-section";
 import { Reveal } from "./reveal";
 import { HowItWorksTimeline } from "./how-it-works-timeline";
 import { FeatureArt, type FeatureArtKind } from "./feature-art";
@@ -40,12 +41,14 @@ import { pricingWords } from "@/lib/billing/launch";
  * until there are real ones. No em dashes in anything a visitor reads. The navy bands use the fixed brand navy (not the `ink` token,
  * which flips in dark mode) so the hero reads the same in both themes.
  *
- * Every "Create your building, free" button goes to /signup and carries a
+ * Every "Try Walkup Free" button (the last one reads "Set Up Your Building in Minutes") goes to /signup and carries a
  * data-cta naming its section, to see which one converts.
  */
 
 const NAVY = "bg-[#1B2A41]";
-const CTA = "Create your building, free";
+const CTA = "Try Walkup Free";
+const CTA_HERO = "Try Walkup free";
+const CTA_FINAL = "Set Up Your Building in Minutes";
 
 const primaryBtn =
   "inline-flex min-h-[48px] items-center justify-center rounded-md bg-brass px-6 text-[15px] font-bold text-on-brass transition-colors hover:bg-[#E4B75B] focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ink";
@@ -179,7 +182,7 @@ export function Landing({ nonce }: { nonce?: string }) {
       <StructuredData nonce={nonce} />
       {/* ---------------------------------------------------------------- header */}
       <header className={`${NAVY} sticky top-0 z-40 border-b border-white/25 shadow-[0_1px_0_rgba(0,0,0,0.25)] text-white`}>
-        <div className="mx-auto flex max-w-[1100px] items-center justify-between px-6 py-4">
+        <div className="mx-auto flex max-w-[1280px] items-center justify-between px-4 py-3 sm:px-5">
           <Link href="/" aria-label="Walkup home">
             <Lockup onDark size={34} />
           </Link>
@@ -187,80 +190,76 @@ export function Landing({ nonce }: { nonce?: string }) {
             <a href="#features" className="hidden rounded-md px-3 py-2 text-white/80 hover:text-white sm:inline-block">Features</a>
             <a href="#pricing" className="hidden rounded-md px-3 py-2 text-white/80 hover:text-white sm:inline-block">Pricing</a>
             <a href="#faq" className="hidden rounded-md px-3 py-2 text-white/80 hover:text-white md:inline-block">FAQ</a>
-            <Link href="/login" className="rounded-md px-3 py-2 font-medium text-white hover:bg-white/10">Sign in</Link>
+            <Link href="/login" className="inline-flex min-h-[44px] items-center rounded-md px-3 font-medium text-white hover:bg-white/10">Sign in</Link>
             <Link href="/signup" data-cta="header" className="ml-1 hidden rounded-md bg-brass px-3.5 py-2 font-bold text-on-brass hover:bg-[#E4B75B] sm:inline-block">
-              Get started
+              {CTA_HERO}
             </Link>
           </nav>
         </div>
       </header>
 
       {/* ---------------------------------------------------------------- hero */}
-      <section className="land-taupe">
-        <div className="mx-auto grid max-w-[1100px] items-center gap-12 px-6 pb-20 pt-12 lg:grid-cols-[1.1fr_1fr] lg:pt-16">
-          <div>
+      <section id="hero" className="land-taupe relative flex min-h-[calc(100svh-4.3rem)] items-stretch overflow-hidden">
+        {/* The mark, large and faint at the top right, behind the screen window. Kept clear of the text. */}
+        <WalkupMark
+          variant="bare"
+          background="var(--w-land-taupe)"
+          size={340}
+          title=""
+          className="pointer-events-none absolute -right-20 -top-16 hidden opacity-[0.1] lg:block"
+        />
+        <div className="relative mx-auto grid w-full max-w-[1280px] items-start gap-8 px-4 pb-12 pt-8 sm:px-5 grid-cols-[minmax(0,1fr)] lg:grid-cols-[1.1fr_1fr] lg:gap-10 lg:pb-16 lg:pt-12">
+          <div className="lg:self-center">
             <p className="inline-flex rounded-full bg-[#1B2A41] px-3.5 py-1.5 text-[12px] font-medium text-white">
-              Software for self-managed condo associations in Illinois
+              Built for self-managed Illinois condo associations
             </p>
-            <h1 className="mt-5 text-[38px] font-bold leading-[1.08] tracking-tight sm:text-[48px]">
-              Run your condo association in 15 minutes a month.
+            <h1 className="mt-5 text-[34px] font-bold leading-[1.08] tracking-tight sm:text-[42px] xl:text-[46px]">
+              Run your condo HOA in{" "}
+              <span className="underline decoration-brass decoration-[5px] underline-offset-[7px]">15 minutes</span> a month.
+              <span className="mt-2 block text-[0.62em] font-medium leading-snug tracking-normal text-mute">Without missing a deadline.</span>
             </h1>
-            <p className="mt-5 max-w-xl text-[17px] leading-relaxed text-mute">
-              Walkup is{" "}
-              <strong className="font-bold text-ink underline decoration-brass decoration-2 underline-offset-4">bookkeeping</strong>,{" "}
-              <strong className="font-bold text-ink underline decoration-brass decoration-2 underline-offset-4">dues</strong>,{" "}
-              <strong className="font-bold text-ink underline decoration-brass decoration-2 underline-offset-4">tax</strong>,{" "}
-              <strong className="font-bold text-ink underline decoration-brass decoration-2 underline-offset-4">insurance</strong>,{" "}
-              <strong className="font-bold text-ink underline decoration-brass decoration-2 underline-offset-4">repairs and maintenance</strong>, and{" "}
-              <strong className="font-bold text-ink underline decoration-brass decoration-2 underline-offset-4">document storage</strong>{" "}
-              software for self-managed condo associations of 2 to 20 units.
+            <p className="mt-5 max-w-xl text-[18px] leading-relaxed text-ink">
+              Manage dues, bills, budgets, taxes, and records in one place your whole board can see.
             </p>
-            <div className="mt-8 flex flex-wrap gap-3">
-              <Link href="/signup" data-cta="hero" className={primaryBtn}>
-                {CTA}
+            <div className="mt-7 flex flex-col gap-3 sm:flex-row sm:flex-wrap">
+              <Link href="/signup" data-cta="hero" className={`${primaryBtn} w-full sm:w-auto`}>
+                {CTA_HERO}
               </Link>
-              <a href="#how-it-works" className={ghostBtn}>
+              <a href="#how-it-works" className={`${ghostBtn} w-full gap-2 sm:w-auto`}>
                 See how it works
+                <ArrowDown size={16} strokeWidth={2.2} aria-hidden="true" className="animate-bounce motion-reduce:animate-none" />
               </a>
             </div>
-            <p className="mt-4 text-[13px] text-mute">
-              {words.heroNote}
-            </p>
+            <ul aria-label="What to know before you start" className="mt-5 grid max-w-xl gap-x-6 gap-y-2 text-[14px] text-mute sm:grid-cols-2">
+              {[
+                [Lock, "Read-only bank access"],
+                [MailCheck, "Board approves every message"],
+                [Sparkles, `First ${FOUNDING.associations} boards are free for life`],
+                [Download, "Export anytime"],
+                // [Building2, "Built by a Chicago condo board president"],  // enable once true and approved
+              ].map(([Icon, label]) => {
+                const TrustIcon = Icon as typeof Lock;
+                return (
+                  <li key={label as string} className="flex items-center gap-2">
+                    <TrustIcon aria-hidden="true" size={16} strokeWidth={1.7} className="shrink-0" />
+                    {label as string}
+                  </li>
+                );
+              })}
+            </ul>
           </div>
-          <HeroSlideshow />
+          <div className="min-w-0 lg:w-full lg:max-w-[640px] lg:justify-self-end lg:self-center">
+            <HeroSlideshow />
+          </div>
         </div>
       </section>
 
       {/* ---------------------------------------------------------------- problem */}
-      <Reveal tone="blue">
-        <div className="mx-auto max-w-[1100px] px-6 py-12">
-        <SectionHeading
-          eyebrow="The volunteer board's problem"
-          title="Why is running a small condo association so hard?"
-          intro="Most self-managed condo associations run on one volunteer's spreadsheet, a trail of Zelle alerts, a stack of insurance papers and a shared folder nobody else can find. It works until someone misses a payment, a renewal, a tax deadline, or moves out."
-        />
-        <div className="mt-6 grid gap-3 md:grid-cols-2 lg:grid-cols-3">
-          {[
-            ["Dues slip, and so do neighbors.", "Who paid this quarter? Who's two months behind? When the answer lives in one person's bank app, chasing a neighbor gets awkward fast, and the reserve fund pays for it."],
-            ["Tax season turns into a scramble.", "Does the association qualify for Form 1120-H? Which contractors need a 1099? When is it due? Most volunteer treasurers find out in April, the hard way."],
-            ["Insurance renews before anyone looks.", "The master policy quietly auto-renews at a higher price. Nobody remembers what it covers, or what owners need in their own policy, until there's a claim."],
-            ["Repairs live in text threads.", "A leak is reported in a group chat, a quote sits in someone's email, and the yearly gutter cleaning is only done if somebody remembers. Contractors' W-9s and insurance certificates go missing."],
-            ["Documents are scattered.", "The declaration, the minutes, last year's budget and the policy are in five inboxes and a shared folder. When the board changes, nobody can find the one that matters."],
-            ["Everything leaves when the treasurer does.", "When the treasurer sells their unit, the history goes with them: logins, receipts, the budget and the reasons behind it. The next volunteer starts from zero."],
-          ].map(([t, b]) => (
-            <div key={t} className="rounded-xl border border-line bg-paper p-4">
-              <h3 className="text-[15px] font-bold text-ink">{t}</h3>
-              <p className="mt-1.5 text-[13px] leading-snug text-mute">{b}</p>
-            </div>
-          ))}
-        </div>
-        <p className="mt-5 text-[16px] font-semibold text-ink">Walkup puts all of it in one place the whole board can see, without hiring a management company.</p>
-        </div>
-      </Reveal>
+      <ProblemSection />
 
       {/* ---------------------------------------------------------------- features */}
       <Reveal id="features" tone="taupe">
-        <div className="mx-auto max-w-[1100px] px-6 py-20">
+        <div className="mx-auto max-w-[1280px] px-4 py-14 sm:px-5">
           <SectionHeading
             eyebrow="What Walkup does"
             title="HOA bookkeeping software that does the busywork for you"
@@ -292,7 +291,7 @@ export function Landing({ nonce }: { nonce?: string }) {
               data-cta="features-more"
               className="inline-flex min-h-[48px] items-center gap-2 rounded-md border border-line-strong px-6 text-[15px] font-semibold text-ink transition-colors hover:bg-fill"
             >
-              See every feature
+              See All Features
               <span aria-hidden="true">&rarr;</span>
             </Link>
           </div>
@@ -301,7 +300,7 @@ export function Landing({ nonce }: { nonce?: string }) {
 
       {/* ---------------------------------------------------------------- how it works */}
       <Reveal id="how-it-works" tone="white">
-        <div className="mx-auto max-w-[1100px] px-6 py-20">
+        <div className="mx-auto max-w-[1280px] px-4 py-14 sm:px-5 overflow-x-clip">
         <SectionHeading
           eyebrow="How it works"
           title="How long does it take to set up Walkup?"
@@ -333,7 +332,7 @@ export function Landing({ nonce }: { nonce?: string }) {
 
       {/* ---------------------------------------------------------------- founder */}
       <Reveal tone="blue">
-        <div className="mx-auto max-w-[1100px] px-6 py-20">
+        <div className="mx-auto max-w-[1280px] px-4 py-14 sm:px-5">
           <div className="grid items-center gap-10 md:grid-cols-[1fr_260px] md:gap-12 lg:grid-cols-[1fr_290px]">
           <div className="max-w-2xl">
             <p className="text-[12px] font-semibold uppercase tracking-[0.12em] text-eyebrow">Why Walkup exists</p>
@@ -391,7 +390,7 @@ export function Landing({ nonce }: { nonce?: string }) {
 
       {/* ---------------------------------------------------------------- trust */}
       <Reveal tone="taupe">
-        <div className="mx-auto max-w-[1100px] px-6 py-14">
+        <div className="mx-auto max-w-[1280px] px-4 py-10 sm:px-5">
           <p className="text-[12px] font-semibold uppercase tracking-[0.12em] text-eyebrow">Built to be trusted with money</p>
           <h2 className="mt-2 max-w-2xl text-[28px] font-bold leading-tight tracking-tight text-ink sm:text-[32px]">
             How does Walkup protect our association&rsquo;s money?
@@ -438,7 +437,7 @@ export function Landing({ nonce }: { nonce?: string }) {
 
       {/* ---------------------------------------------------------------- who it's for */}
       <Reveal tone="white">
-        <div className="mx-auto max-w-[1100px] px-6 py-12">
+        <div className="mx-auto max-w-[1280px] px-4 py-9 sm:px-5">
         <SectionHeading
           eyebrow="Is it right for you?"
           title="Who is Walkup built for?"
@@ -485,7 +484,7 @@ export function Landing({ nonce }: { nonce?: string }) {
 
       {/* ---------------------------------------------------------------- pricing */}
       <Reveal id="pricing" tone="blue">
-        <div className="mx-auto max-w-[1100px] px-6 py-20">
+        <div className="mx-auto max-w-[1280px] px-4 py-14 sm:px-5">
           <SectionHeading
             eyebrow="Pricing"
             title="How much does Walkup cost?"
@@ -501,7 +500,7 @@ export function Landing({ nonce }: { nonce?: string }) {
             {PLANS.map((p) => (
               <div
                 key={p.name}
-                className={`relative rounded-xl border bg-paper p-6 ${p.featured ? "border-brass shadow-lg" : "border-line"}`}
+                className={`relative flex flex-col rounded-xl border bg-paper p-6 ${p.featured ? "border-brass shadow-lg" : "border-line"}`}
               >
                 {p.featured ? (
                   <span className="absolute -top-3 left-6 rounded-full bg-brass px-3 py-0.5 text-[11px] font-bold uppercase tracking-[0.08em] text-on-brass">
@@ -518,6 +517,13 @@ export function Landing({ nonce }: { nonce?: string }) {
                   or <strong>${p.year} / year</strong>{" "}
                   <span className="text-mute">({ANNUAL_NOTE})</span>
                 </p>
+                <Link
+                  href="/signup"
+                  data-cta={`pricing-${p.name.toLowerCase()}`}
+                  className={`mt-5 w-full ${p.featured ? primaryBtn : navyBtn}`}
+                >
+                  {CTA}
+                </Link>
               </div>
             ))}
           </div>
@@ -526,7 +532,7 @@ export function Landing({ nonce }: { nonce?: string }) {
             {[
               [
                 "Founding offer",
-                `Free for your first year, for the first ${FOUNDING.associations} associations`,
+                `Free for life, for the first ${FOUNDING.associations} associations`,
               ],
               ["Free setup with a real person", "One 15-minute call and your board is live: owners, bank link and dues."],
             ].map(([t, b]) => (
@@ -548,7 +554,7 @@ export function Landing({ nonce }: { nonce?: string }) {
 
       {/* ---------------------------------------------------------------- FAQ */}
       <Reveal id="faq" tone="taupe">
-        <div className="mx-auto max-w-[1100px] px-6 py-20">
+        <div className="mx-auto max-w-[1280px] px-4 py-14 sm:px-5">
         <SectionHeading eyebrow="Questions" title="Frequently asked questions" />
         {/* Answers are in the HTML on load (details just hides them), so crawlers and AI tools can read every one. */}
         <div className="mt-8 space-y-8">
@@ -601,20 +607,20 @@ export function Landing({ nonce }: { nonce?: string }) {
 
       {/* ---------------------------------------------------------------- final CTA */}
       <Reveal tone="white">
-        <div className="mx-auto flex max-w-[1100px] flex-col items-start gap-6 px-6 py-16 md:flex-row md:items-center md:justify-between">
+        <div className="mx-auto flex max-w-[1280px] flex-col items-start gap-6 px-4 py-12 sm:px-5 md:flex-row md:items-center md:justify-between">
           <div className="max-w-xl">
             <h2 className="text-[26px] font-bold tracking-tight text-ink sm:text-[30px]">Give your board its evenings back.</h2>
             <p className="mt-2 text-[15px] text-mute">
-              {words.finalLine}. The first {FOUNDING.associations} associations get their first year free.
+              {words.finalLine}. The first {FOUNDING.associations} associations are free for life.
             </p>
             <p className="mt-3 text-[13px] text-mute">No card. Read-only bank access. Your records stay yours.</p>
           </div>
           <div className="flex flex-wrap gap-3">
             <Link href="/signup" data-cta="final" className={primaryBtn}>
-              {CTA}
+              {CTA_FINAL}
             </Link>
             <a href={bookingHref} target="_blank" rel="noopener noreferrer" className={ghostBtn}>
-              Book a 15-minute walkthrough
+              Book a 15-Minute Walkthrough
             </a>
           </div>
         </div>
@@ -622,7 +628,7 @@ export function Landing({ nonce }: { nonce?: string }) {
 
       {/* ---------------------------------------------------------------- footer */}
       <footer className="land-blue text-[13px]">
-        <div className="mx-auto max-w-[1100px] px-6 py-10">
+        <div className="mx-auto max-w-[1280px] px-4 py-8 sm:px-5">
         <div className="flex flex-col gap-6 md:flex-row md:items-start md:justify-between">
           <div className="max-w-md">
             <Link href="/" aria-label="Walkup home">

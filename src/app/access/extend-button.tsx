@@ -19,11 +19,11 @@ export function ExtendAccessButton({ personId }: { personId: string }) {
             if (r.error) setError(r.error);
           })
         }
-        className="text-[12px] font-medium text-ink underline underline-offset-2 hover:no-underline disabled:opacity-50"
+        className="text-[12px] font-medium text-ink underline underline-offset-2 hover:no-underline disabled:opacity-50 max-sm:inline-flex max-sm:min-h-[44px] max-sm:items-center"
       >
         {pending ? "Saving…" : "Extend 90 days"}
       </button>
-      {error ? <span className="text-[11px] text-bad-text">{error}</span> : null}
+      {error ? <span className="text-[12px] sm:text-[11px] text-bad-text">{error}</span> : null}
     </span>
   );
 }

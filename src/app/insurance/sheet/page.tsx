@@ -143,7 +143,7 @@ export default async function InsuranceSheetPage() {
               {rows(p, agentFor(p)).map((r) => (
                 <div key={r.label} className="flex justify-between gap-3 border-b border-line py-1 print:border-black/20">
                   <dt className="text-mute print:text-black">{r.label}</dt>
-                  <dd className="figures text-right text-ink">{r.value}</dd>
+                  <dd className="figures min-w-0 break-words text-right text-ink">{r.value}</dd>
                 </div>
               ))}
             </dl>

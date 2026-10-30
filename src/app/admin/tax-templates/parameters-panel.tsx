@@ -61,9 +61,9 @@ export function ParametersPanel({ rows }: { rows: ParameterRow[] }) {
                     </a>
                   </>
                 ) : null}
-                <span className="font-mono text-[11px] text-mute-soft">{p.key}</span>
+                <span className="font-mono text-[12px] sm:text-[11px] text-mute-soft">{p.key}</span>
               </p>
-              {p.notes ? <p className="mt-1 text-[11px] text-mute-soft">{p.notes}</p> : null}
+              {p.notes ? <p className="mt-1 text-[12px] sm:text-[11px] text-mute-soft">{p.notes}</p> : null}
             </div>
             {confirming === p.id ? (
               <span className="flex flex-wrap items-center gap-2">

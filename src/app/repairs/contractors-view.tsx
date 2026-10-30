@@ -413,17 +413,17 @@ function ContractorRow({ r, isBoard, todayIso }: { r: Row; isBoard: boolean; tod
             {/* Contact */}
             <div className="flex min-w-0 flex-wrap items-center gap-x-3 xl:flex-col xl:items-center xl:gap-x-0">
               {r.phone ? (
-                <a href={telHref(r.phone)} className={`${btnLink} !min-h-[24px] text-[12px]`}>
+                <a href={telHref(r.phone)} className={`${btnLink} !min-h-[44px] xl:!min-h-[24px] text-[12px]`}>
                   {r.phone}
                 </a>
               ) : null}
               {r.email ? (
-                <a href={mailtoLink(r.email)} title={r.email} className={`${btnLink} !min-h-[24px] max-w-full text-[12px] xl:truncate`}>
+                <a href={mailtoLink(r.email)} title={r.email} className={`${btnLink} !min-h-[44px] xl:!min-h-[24px] max-w-full break-all text-[12px] xl:break-normal xl:truncate`}>
                   {r.email}
                 </a>
               ) : null}
               {r.website ? (
-                <a href={safeHttpUrl(r.website) ?? undefined} target="_blank" rel="noopener noreferrer" className={`${btnLink} !min-h-[24px] text-[12px]`}>
+                <a href={safeHttpUrl(r.website) ?? undefined} target="_blank" rel="noopener noreferrer" className={`${btnLink} !min-h-[44px] xl:!min-h-[24px] text-[12px]`}>
                   Website
                 </a>
               ) : null}

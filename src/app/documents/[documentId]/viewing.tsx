@@ -5,8 +5,8 @@ import { renameDocument, retagDocument } from "../actions";
 import type { DocumentCategory } from "@/lib/documents/access";
 import type { PreviewKind } from "@/lib/documents/preview";
 
-const field = "w-full rounded-lg border border-line-strong bg-paper px-3 py-2 text-[13px] text-ink";
-const save = "rounded-md bg-ink px-4 py-2 text-[13px] font-medium text-paper hover:bg-ink-mid disabled:opacity-50";
+const field = "min-h-[44px] w-full min-w-0 rounded-lg border border-line-strong bg-paper px-3 py-2 text-[16px] text-ink sm:min-h-0 sm:text-[13px]";
+const save = "min-h-[44px] shrink-0 rounded-md bg-ink px-4 py-2 text-[13px] font-medium text-paper hover:bg-ink-mid disabled:opacity-50 sm:min-h-0";
 
 /**
  * The Viewing section's body: rename, refile and the summary as bullets on the
@@ -52,11 +52,11 @@ export function Viewing({
                   {renaming ? "Saving…" : "Save"}
                 </button>
               </div>
-              <p className="text-[11px] text-mute-soft">Leave it blank to go back to the original filename.</p>
+              <p className="text-[12px] text-mute-soft">Leave it blank to go back to the original filename.</p>
               {renameState && "error" in renameState && renameState.error ? (
-                <p className="text-[11px] text-bad-text">{renameState.error}</p>
+                <p className="text-[12px] text-bad-text">{renameState.error}</p>
               ) : renameState && "ok" in renameState ? (
-                <p className="text-[11px] text-good-text">Saved.</p>
+                <p className="text-[12px] text-good-text">Saved.</p>
               ) : null}
             </form>
 
@@ -78,11 +78,11 @@ export function Viewing({
                   {retagging ? "Saving…" : "Save"}
                 </button>
               </div>
-              <p className="text-[11px] text-mute-soft">Refiling changes where it shows up, not who can see it.</p>
+              <p className="text-[12px] text-mute-soft">Refiling changes where it shows up, not who can see it.</p>
               {retagState && "error" in retagState && retagState.error ? (
-                <p className="text-[11px] text-bad-text">{retagState.error}</p>
+                <p className="text-[12px] text-bad-text">{retagState.error}</p>
               ) : retagState && "ok" in retagState ? (
-                <p className="text-[11px] text-good-text">Saved.</p>
+                <p className="text-[12px] text-good-text">Saved.</p>
               ) : null}
             </form>
           </>
@@ -90,7 +90,7 @@ export function Viewing({
 
         {bullets.length > 0 ? (
           <div className="border-l-[3px] border-info bg-info-tint px-4 py-3">
-            <p className="text-[11px] font-medium text-info-text">Summary written by Walkup, not by a person</p>
+            <p className="text-[12px] font-medium text-info-text">Summary written by Walkup, not by a person</p>
             <ul className="mt-2 list-disc space-y-1.5 pl-5 text-[13px] leading-relaxed text-info-text">
               {bullets.map((b, i) => (
                 <li key={i}>{b}</li>

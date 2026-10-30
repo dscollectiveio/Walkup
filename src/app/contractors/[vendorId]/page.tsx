@@ -321,7 +321,7 @@ export default async function ContractorPage({ params }: { params: Promise<{ ven
           </p>
         ) : null}
         {str(v.contact_name) || str(v.address) ? (
-          <p className="text-[13px] text-mute">{[str(v.contact_name), str(v.address)].filter(Boolean).join(" · ")}</p>
+          <p className="break-words text-[13px] text-mute">{[str(v.contact_name), str(v.address)].filter(Boolean).join(" · ")}</p>
         ) : null}
         {otherContact ? (
           <p className="flex flex-wrap items-center gap-x-3 text-[13px] text-mute">
@@ -335,7 +335,7 @@ export default async function ContractorPage({ params }: { params: Promise<{ ven
               </a>
             ) : null}
             {str(v.other_contact_email) ? (
-              <a href={mailtoLink(v.other_contact_email as string)} className={btnLink}>
+              <a href={mailtoLink(v.other_contact_email as string)} className={`${btnLink} break-all`}>
                 {v.other_contact_email as string}
               </a>
             ) : null}
@@ -394,20 +394,20 @@ export default async function ContractorPage({ params }: { params: Promise<{ ven
           ) : null}
           <dl className="grid gap-x-6 gap-y-3 text-[13px] sm:grid-cols-2">
             <div>
-              <dt className="text-[11px] text-mute">License</dt>
+              <dt className="text-[12px] text-mute">License</dt>
               <dd className="text-ink">
                 {str(v.license_number) ?? "Not recorded"}
                 {v.license_expires_on ? <span className="text-mute"> · expires {humanDate(v.license_expires_on as string, today)}</span> : null}
               </dd>
             </div>
             <div>
-              <dt className="text-[11px] text-mute">Insurance certificate</dt>
+              <dt className="text-[12px] text-mute">Insurance certificate</dt>
               <dd className="text-ink">{v.insured_until ? `Runs until ${humanDate(v.insured_until as string, today)}` : "Not on file"}</dd>
             </div>
             {fin ? (
               <>
             <div>
-              <dt className="text-[11px] text-mute">W-9</dt>
+              <dt className="text-[12px] text-mute">W-9</dt>
               <dd className="text-ink">
                 {v.w9_on_file
                   ? `On file${v.w9_received_on ? ` since ${humanDate(v.w9_received_on as string, today)}` : ""}${v.tin_last4 ? ` · tax ID ending ${v.tin_last4 as string}` : ""}`
@@ -417,14 +417,14 @@ export default async function ContractorPage({ params }: { params: Promise<{ ven
               </dd>
             </div>
             <div>
-              <dt className="text-[11px] text-mute">Business type</dt>
+              <dt className="text-[12px] text-mute">Business type</dt>
               <dd className="text-ink">{v.entity_type ? (ENTITY_LABEL[v.entity_type as string] ?? (v.entity_type as string)) : "Not recorded"}</dd>
             </div>
               </>
             ) : null}
             {licenseLinks.length > 0 ? (
               <div>
-                <dt className="text-[11px] text-mute">Check license</dt>
+                <dt className="text-[12px] text-mute">Check license</dt>
                 <dd className="flex flex-wrap gap-3">
                   {licenseLinks.map((l) => (
                     <a key={l.trade} href={l.url} target="_blank" rel="noopener noreferrer" className={linkClass}>

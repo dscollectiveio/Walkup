@@ -73,7 +73,7 @@ export function ProgressCard({
         </ul>
       ) : null}
       <div className="mt-4 flex flex-wrap items-center gap-3">
-        <Link href="/dues/email#log" className="text-[13px] text-ink underline underline-offset-2">
+        <Link href="/dues/email#log" className="inline-flex min-h-[44px] items-center text-[13px] text-ink underline underline-offset-2">
           See the log
         </Link>
         {waiting > 0 && canResume ? (

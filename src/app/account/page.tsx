@@ -70,7 +70,7 @@ export default async function AccountPage({ searchParams }: { searchParams: Prom
         </div>
         <a
           href={`mailto:${SUPPORT_EMAIL}?subject=${encodeURIComponent("Help with my Walkup account")}`}
-          className="text-[13px] font-medium text-ink underline decoration-line-strong underline-offset-4 transition-colors duration-300 hover:decoration-ink"
+          className="inline-flex min-h-[44px] items-center text-[13px] font-medium text-ink underline decoration-line-strong underline-offset-4 transition-colors duration-300 hover:decoration-ink"
         >
           Get help
         </a>

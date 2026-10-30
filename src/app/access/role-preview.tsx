@@ -18,7 +18,7 @@ export function RolePreview({ tabsByRole }: { tabsByRole: Record<string, string[
         <caption className="sr-only">Which tabs each role gets, and what each role can do</caption>
         <thead>
           <tr>
-            <th scope="col" className="sticky left-0 z-10 w-44 border-b border-line-strong bg-paper px-3 py-2 text-left text-[11px] font-medium uppercase tracking-wide text-mute">
+            <th scope="col" className="sticky left-0 z-10 w-32 sm:w-44 border-b border-line-strong bg-paper px-3 py-2 text-left text-[11px] font-medium uppercase tracking-wide text-mute">
               Feature
             </th>
             {roles.map((r) => (
@@ -41,7 +41,7 @@ export function RolePreview({ tabsByRole }: { tabsByRole: Record<string, string[
                       <Check size={16} strokeWidth={2.4} aria-hidden="true" className="mx-auto text-good" />
                       <span className="sr-only">Yes</span>
                       {PREVIEW_LIMITS[r]?.[f.label] ? (
-                        <span className="mt-0.5 block text-[10px] leading-tight text-mute">{PREVIEW_LIMITS[r][f.label]}</span>
+                        <span className="mt-0.5 block text-[12px] leading-tight text-mute">{PREVIEW_LIMITS[r][f.label]}</span>
                       ) : null}
                     </>
                   ) : (

@@ -164,7 +164,7 @@ export function YourList({
               name="title"
               required
               placeholder="Get a snow contract"
-              className="min-w-0 flex-1 rounded-lg border border-line-strong px-3 py-1.5 text-[13px] text-ink"
+              className="min-w-0 flex-1 rounded-lg border border-line-strong px-3 py-1.5 text-[16px] text-ink max-sm:min-h-[44px] sm:text-[13px]"
             />
             <label htmlFor="task_owner" className="sr-only">
               Who owns it
@@ -173,7 +173,7 @@ export function YourList({
               id="task_owner"
               name="owner_person_id"
               defaultValue=""
-              className="rounded-lg border border-line-strong bg-paper px-2 py-1.5 text-[12px] text-ink"
+              className="rounded-lg border border-line-strong bg-paper px-2 py-1.5 text-[16px] text-ink max-sm:min-h-[44px] sm:text-[12px]"
             >
               <option value="">No owner</option>
               {persons.map((p) => (
@@ -185,14 +185,14 @@ export function YourList({
             <button
               type="submit"
               disabled={addPending}
-              className="rounded-md bg-ink px-3 py-1.5 text-[12px] font-medium text-paper hover:bg-ink-mid disabled:opacity-50"
+              className="rounded-md bg-ink px-3 py-1.5 text-[12px] font-medium text-paper hover:bg-ink-mid disabled:opacity-50 max-sm:min-h-[44px]"
             >
               {addPending ? "Adding…" : "Add"}
             </button>
             <button
               type="button"
               onClick={() => setAdding(false)}
-              className="text-[12px] text-mute underline-offset-2 hover:underline"
+              className="text-[12px] text-mute underline-offset-2 hover:underline max-sm:min-h-[44px] max-sm:px-2"
             >
               Cancel
             </button>

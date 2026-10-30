@@ -46,12 +46,29 @@ function Panel({ title, children }: { title: string; children: ReactNode }) {
         </span>
         {title}
       </div>
-      <div className="space-y-1.5 p-3">{children}</div>
+      <div className="space-y-1 p-2.5">{children}</div>
     </div>
   );
 }
 
 const Row = ({ children }: { children: ReactNode }) => <div className="flex items-center justify-between gap-2 text-[10.5px]">{children}</div>;
+
+function Btn({ children }: { children: ReactNode }) {
+  return (
+    <span className="whitespace-nowrap rounded border px-1.5 py-px text-[9px] font-bold text-white" style={{ background: INK, borderColor: INK }}>
+      {children}
+    </span>
+  );
+}
+
+function Tick() {
+  return (
+    <svg viewBox="0 0 12 12" className="h-3 w-3 shrink-0" aria-hidden="true">
+      <circle cx="6" cy="6" r="6" fill="#2f7a5c" />
+      <path d="M3.4 6.2l1.8 1.8 3.4-3.7" fill="none" stroke="#fff" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" />
+    </svg>
+  );
+}
 
 export function FeatureArt({ kind }: { kind: FeatureArtKind }) {
   switch (kind) {
@@ -68,38 +85,33 @@ export function FeatureArt({ kind }: { kind: FeatureArtKind }) {
               <span className="w-14 text-right font-semibold tabular-nums">{amt}</span>
             </Row>
           ))}
-          <div>
-            <div className="mb-0.5 flex justify-between text-[10px]">
-              <span className="font-medium">Landscaping</span>
-              <span className={`tabular-nums ${MUTE}`}>88% of budget</span>
-            </div>
-            <Bar pct={88} color="#d9a441" />
-          </div>
-          <Row>
-            <span className="font-semibold">Net income, Q3</span>
-            <span className="flex items-center gap-1.5 font-semibold tabular-nums">
-              $3,811
-              <span className="rounded border border-[#cdc6b6] px-1 py-px text-[8.5px]">PDF</span>
+          <div className="mt-1 flex items-center justify-between rounded-md bg-[#f6f2e8] px-2 py-1">
+            <span className="flex flex-col leading-tight">
+              <span className={`text-[9px] ${MUTE}`}>Net income, Q3</span>
+              <span className="text-[13px] font-bold tabular-nums">$3,811</span>
             </span>
-          </Row>
+            <Btn>Email to owners</Btn>
+          </div>
         </Panel>
       );
     case "dues":
       return (
         <Panel title="HOA dues">
-          {(
-            [
-              ["Unit 1", "Up to date", "good"],
-              ["Unit 2", "Up to date", "good"],
-              ["Unit 3", "$475 owed", "bad"],
-              ["Unit 4", "Up to date", "good"],
-            ] as const
-          ).map(([u, label, tone]) => (
-            <Row key={u}>
-              <span className="font-medium">{u}</span>
-              <Pill tone={tone}>{label}</Pill>
-            </Row>
-          ))}
+          <div className="flex gap-1">
+            {[1, 2, 3, 4].map((u) => (
+              <div key={u} className={`flex-1 rounded-md px-1.5 py-1 text-center text-[9px] font-semibold ${u === 3 ? "bg-[#f7ebe6] text-[#7a2519]" : "bg-[#e8f3ec] text-[#1f6b45]"}`}>
+                Unit {u}
+                <div className="text-[8.5px] font-medium">{u === 3 ? "Owes $475" : "Paid"}</div>
+              </div>
+            ))}
+          </div>
+          <div className="flex items-center justify-between gap-2 rounded-md border border-[#e6c9bf] bg-[#fdf6f3] px-2 py-1 text-[10px]">
+            <span className="min-w-0 flex-1 leading-tight">
+              <span className="block font-semibold">Reminder drafted for Unit 3</span>
+              <span className={`block text-[9px] ${MUTE}`}>Sends only when you approve</span>
+            </span>
+            <Btn>Approve</Btn>
+          </div>
         </Panel>
       );
     case "tax":
@@ -123,6 +135,10 @@ export function FeatureArt({ kind }: { kind: FeatureArtKind }) {
             </div>
             <Bar pct={100} color="#2f7a5c" mark={90} />
           </div>
+          <Row>
+            <span className={MUTE}>Filing deadline</span>
+            <Pill tone="warn">Apr 15 on your calendar</Pill>
+          </Row>
         </Panel>
       );
     case "insurance":
@@ -140,10 +156,10 @@ export function FeatureArt({ kind }: { kind: FeatureArtKind }) {
               <Pill tone={tone}>{label}</Pill>
             </Row>
           ))}
-          <Row>
-            <span className={MUTE}>Quote requests</span>
-            <Pill tone="info">3 drafted</Pill>
-          </Row>
+          <div className="flex items-center justify-between rounded-md bg-[#eaeff7] px-2 py-1 text-[10px]">
+            <span className="font-semibold">3 quote requests drafted</span>
+            <Btn>Review</Btn>
+          </div>
         </Panel>
       );
     case "contractor":
@@ -161,25 +177,41 @@ export function FeatureArt({ kind }: { kind: FeatureArtKind }) {
                 <span className="font-medium">{name}</span> <span className={MUTE}>{trade}</span>
               </span>
               <Pill tone={tag === "Saved" ? "good" : "info"}>{tag}</Pill>
+              <Btn>Get quote</Btn>
             </Row>
           ))}
+          <Row>
+            <span className={`flex items-center gap-1 ${MUTE}`}>
+              <Tick /> W-9 and insurance on file for saved
+            </span>
+          </Row>
         </Panel>
       );
     case "repairs":
       return (
         <Panel title="Repairs and upkeep">
-          {(
-            [
-              ["Roof leak, Unit 4", "Urgent", "bad"],
-              ["Gutter cleaning", "Upkeep", "warn"],
-              ["Hallway light", "Done", "good"],
-            ] as const
-          ).map(([t, label, tone]) => (
-            <Row key={t}>
-              <span className="min-w-0 flex-1 truncate font-medium">{t}</span>
-              <Pill tone={tone}>{label}</Pill>
-            </Row>
-          ))}
+          <div>
+            <div className="mb-1 flex items-center justify-between text-[10.5px]">
+              <span className="font-semibold">Roof leak, Unit 4</span>
+              <Pill tone="bad">Urgent</Pill>
+            </div>
+            <div className="flex items-center gap-1 text-[9px] font-semibold">
+              {["Reported", "In progress", "Done"].map((step, i) => (
+                <span key={step} className="flex flex-1 items-center gap-1">
+                  <span className={`h-1.5 flex-1 rounded-full ${i < 2 ? "bg-[#2f7a5c]" : "bg-[#ece5d6]"}`} />
+                  <span className={i < 2 ? "" : MUTE}>{step}</span>
+                </span>
+              ))}
+            </div>
+          </div>
+          <Row>
+            <span className="font-medium">Gutter cleaning</span>
+            <Pill tone="warn">Every spring</Pill>
+          </Row>
+          <Row>
+            <span className="font-medium">Hallway light</span>
+            <Pill tone="good">Done</Pill>
+          </Row>
         </Panel>
       );
   }

@@ -74,7 +74,7 @@ export default async function NewImportPage({ searchParams }: { searchParams: Pr
         warnings={file.warnings}
       />
       <p className="text-[12px] text-mute">
-        <Link href="/building/import" className={`${BTN_SECONDARY} !min-h-[36px] !px-3`}>
+        <Link href="/building/import" className={`${BTN_SECONDARY} !min-h-[36px] max-sm:!min-h-[44px] !px-3`}>
           Back to Import
         </Link>
       </p>

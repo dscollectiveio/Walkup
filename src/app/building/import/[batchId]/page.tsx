@@ -253,7 +253,7 @@ async function FixStep({ batch, supabase, sp, counts }: { batch: Batch; supabase
             key={t.key}
             href={`/building/import/${batch.id}?step=fix&tab=${t.key}`}
             aria-current={tab === t.key ? "page" : undefined}
-            className={`inline-flex min-h-[36px] items-center rounded-full px-3 text-[12px] font-medium ${tab === t.key ? "bg-ink text-paper" : "border border-line text-ink hover:bg-fill"}`}
+            className={`inline-flex min-h-[36px] max-sm:min-h-[44px] items-center rounded-full px-3 text-[12px] font-medium ${tab === t.key ? "bg-ink text-paper" : "border border-line text-ink hover:bg-fill"}`}
           >
             {t.label} ({counts[t.countKey].toLocaleString("en-US")})
           </Link>
@@ -268,7 +268,7 @@ async function FixStep({ batch, supabase, sp, counts }: { batch: Batch; supabase
         tab={tab}
       />
       {total > PAGE_SIZE ? (
-        <div className="flex items-center justify-between text-[13px]">
+        <div className="flex flex-wrap items-center justify-between gap-2 text-[13px]">
           {page > 1 ? (
             <Link href={`/building/import/${batch.id}?step=fix&tab=${tab}&page=${page - 1}`} className={BTN_SECONDARY}>
               Earlier rows

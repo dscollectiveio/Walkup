@@ -53,10 +53,10 @@ const METHOD_WORDS: Record<string, string> = {
 };
 
 const btnPrimary =
-  "inline-flex h-8 items-center rounded-md bg-ink px-3 text-[12px] font-medium text-paper hover:bg-ink-mid disabled:opacity-50";
+  "inline-flex h-11 items-center rounded-md bg-ink px-3 text-[12px] font-medium text-paper hover:bg-ink-mid disabled:opacity-50 sm:h-8";
 const btnGhost =
-  "inline-flex h-8 items-center rounded-md border border-line-strong bg-paper px-3 text-[12px] font-medium text-ink hover:bg-fill disabled:opacity-50";
-const link = "text-[12px] text-mute underline-offset-2 hover:text-ink hover:underline";
+  "inline-flex h-11 items-center rounded-md border border-line-strong bg-paper px-3 text-[12px] font-medium text-ink hover:bg-fill disabled:opacity-50 sm:h-8";
+const link = "inline-flex min-h-[44px] items-center text-[12px] text-mute sm:min-h-0 underline-offset-2 hover:text-ink hover:underline";
 
 /**
  * One decision per line, one button per decision. Everything here is a
@@ -159,7 +159,7 @@ export function NeedsYou({
                   </span>
                   <span className="ml-2 text-mute">late fee would be {money(it.amountCents)}</span>
                 </div>
-                <div className="flex items-center gap-3">
+                <div className="flex flex-wrap items-center gap-3">
                   <button
                     type="button"
                     disabled={busy}
@@ -253,7 +253,7 @@ function DepositLine({
           value={unitId}
           onChange={(e) => setUnitId(e.target.value)}
           aria-label="Unit this deposit is from"
-          className="h-8 rounded-md border border-line-strong bg-paper px-2 text-[12px] text-ink"
+          className="h-11 max-w-full rounded-md border border-line-strong bg-paper px-2 text-[16px] text-ink sm:h-8 sm:text-[12px]"
         >
           <option value="">{suggested ? "A different unit…" : "Choose a unit…"}</option>
           {units.map((u) => (
@@ -309,7 +309,7 @@ function ReportLine({
             value={note}
             onChange={(e) => setNote(e.target.value)}
             placeholder="Note to the owner (optional)"
-            className="h-8 min-w-[14rem] rounded-md border border-line-strong bg-paper px-2 text-[12px] text-ink"
+            className="h-11 w-full min-w-0 rounded-md border border-line-strong bg-paper px-2 text-[16px] text-ink sm:h-8 sm:w-auto sm:min-w-[14rem] sm:text-[12px]"
           />
           <button type="button" disabled={busy} onClick={() => onDismiss(note)} className={btnPrimary}>
             {busy ? "Saving…" : "Mark not received"}
@@ -319,7 +319,7 @@ function ReportLine({
           </button>
         </div>
       ) : (
-        <div className="flex items-center gap-3">
+        <div className="flex flex-wrap items-center gap-3">
           <button type="button" onClick={onLater} className={btnGhost}>
             Keep waiting
           </button>
@@ -362,7 +362,7 @@ function BehindLine({
           {unit?.ownerName ? ` · ${unit.ownerName}` : ""}
         </span>
       </div>
-      <div className="flex items-center gap-3">
+      <div className="flex flex-wrap items-center gap-3">
         {mailto ? (
           <a href={mailto} className={btnGhost} title="Opens a draft in your own mail app. Nothing is sent by Walkup">
             Draft a reminder

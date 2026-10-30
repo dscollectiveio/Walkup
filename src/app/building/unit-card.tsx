@@ -75,7 +75,7 @@ export function UnitCard({
 
   const deleteControl = canDelete ? (
     confirming ? (
-      <span className="flex items-center gap-2">
+      <span className="flex flex-wrap items-center gap-2">
         <button
           type="button"
           disabled={deletePending}
@@ -87,16 +87,16 @@ export function UnitCard({
               else setConfirming(false);
             })
           }
-          className="rounded-md border border-bad-line bg-bad-tint px-2.5 py-1 text-[11px] font-medium text-bad-text"
+          className="rounded-md border border-bad-line bg-bad-tint px-2.5 py-1 max-sm:min-h-[44px] text-[12px] sm:text-[11px] font-medium text-bad-text"
         >
           {deletePending ? "Deleting…" : "Confirm delete"}
         </button>
-        <button type="button" onClick={() => setConfirming(false)} className="text-[12px] text-mute underline-offset-2 hover:underline">
+        <button type="button" onClick={() => setConfirming(false)} className="text-[12px] text-mute underline-offset-2 hover:underline max-sm:inline-flex max-sm:min-h-[44px] max-sm:items-center">
           Cancel
         </button>
       </span>
     ) : (
-      <button type="button" onClick={() => setConfirming(true)} className="text-[12px] text-bad-text underline-offset-2 hover:underline">
+      <button type="button" onClick={() => setConfirming(true)} className="text-[12px] text-bad-text underline-offset-2 hover:underline max-sm:inline-flex max-sm:min-h-[44px] max-sm:items-center">
         Delete unit
       </button>
     )
@@ -125,14 +125,14 @@ export function UnitCard({
             type="submit"
             form={formId}
             disabled={pending}
-            className="inline-flex min-h-[28px] shrink-0 items-center rounded-md bg-ink px-3 text-[12px] font-medium text-paper hover:bg-ink-mid disabled:opacity-50"
+            className="inline-flex min-h-[28px] max-sm:min-h-[44px] shrink-0 items-center rounded-md bg-ink px-3 text-[12px] font-medium text-paper hover:bg-ink-mid disabled:opacity-50"
           >
             {pending ? "Saving…" : "Save"}
           </button>
           <button
             type="button"
             onClick={() => setEditing(false)}
-            className="inline-flex min-h-[28px] shrink-0 items-center rounded-md border border-line-strong bg-paper px-3 text-[12px] text-ink hover:bg-fill"
+            className="inline-flex min-h-[28px] max-sm:min-h-[44px] shrink-0 items-center rounded-md border border-line-strong bg-paper px-3 text-[12px] text-ink hover:bg-fill"
           >
             Cancel
           </button>
@@ -168,12 +168,12 @@ export function UnitCard({
                 type="submit"
                 form={formId}
                 disabled={pending}
-                className="inline-flex min-h-[32px] shrink-0 items-center rounded-md bg-ink px-4 text-[12px] font-medium text-paper hover:bg-ink-mid disabled:opacity-50"
+                className="inline-flex min-h-[32px] max-sm:min-h-[44px] shrink-0 items-center rounded-md bg-ink px-4 text-[12px] font-medium text-paper hover:bg-ink-mid disabled:opacity-50"
               >
                 {pending ? "Saving…" : "Save"}
               </button>
             </div>
-            {deleteError ? <p className="text-right text-[11px] text-bad-text">{deleteError}</p> : null}
+            {deleteError ? <p className="text-right text-[12px] sm:text-[11px] text-bad-text">{deleteError}</p> : null}
           </div>
         )}
         {fieldsHidden && state && "error" in state && state.error ? (
@@ -228,7 +228,7 @@ export function UnitCard({
               setFieldsHidden(false);
               setEditing(true);
             }}
-            className="inline-flex min-h-[28px] shrink-0 items-center rounded-md bg-ink px-3 text-[12px] font-medium text-paper hover:bg-ink-mid"
+            className="inline-flex min-h-[28px] max-sm:min-h-[44px] shrink-0 items-center rounded-md bg-ink px-3 text-[12px] font-medium text-paper hover:bg-ink-mid"
           >
             Edit
           </button>
@@ -239,9 +239,9 @@ export function UnitCard({
           onClick={() => onToggle()}
           aria-expanded={expanded}
           aria-label={`${expanded ? "Collapse" : "Expand"} ${unit.label} details`}
-          className="inline-flex min-h-[28px] shrink-0 items-center gap-1 rounded-md bg-ink px-3 text-[12px] font-medium text-paper transition-colors hover:bg-ink-mid focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-brass"
+          className="inline-flex min-h-[28px] max-sm:min-h-[44px] shrink-0 items-center justify-center gap-1 max-sm:min-w-[44px] rounded-md bg-ink px-3 text-[12px] font-medium text-paper transition-colors hover:bg-ink-mid focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-brass"
         >
-          {expanded ? "Collapse" : "Expand"}
+          <span className="max-sm:sr-only">{expanded ? "Collapse" : "Expand"}</span>
           <svg width="10" height="10" viewBox="0 0 12 12" aria-hidden="true" className={`transition-transform ${expanded ? "rotate-90" : ""}`}>
             <path d="M4 2l4 4-4 4" stroke="currentColor" strokeWidth="1.6" fill="none" strokeLinecap="round" strokeLinejoin="round" />
           </svg>
@@ -272,8 +272,8 @@ export function UnitCard({
                         </span>
                       ))}
                     </div>
-                    <div className="mt-1 text-[12px] text-mute">{[r.email, r.phone].filter(Boolean).join(" · ") || "No contact info on file"}</div>
-                    {r.mailingAddress ? <div className="text-[11px] text-mute-soft">{r.mailingAddress}</div> : null}
+                    <div className="mt-1 break-words text-[12px] text-mute">{[r.email, r.phone].filter(Boolean).join(" · ") || "No contact info on file"}</div>
+                    {r.mailingAddress ? <div className="break-words text-[12px] sm:text-[11px] text-mute-soft">{r.mailingAddress}</div> : null}
                   </div>
                   {r.invite ? (
                     <div className="ml-auto shrink-0">
@@ -307,14 +307,14 @@ export function UnitCard({
                   <button
                     type="button"
                     onClick={() => setAddingPerson(true)}
-                    className="inline-flex min-h-[32px] items-center rounded-md bg-ink px-3 text-[12px] font-medium text-paper hover:bg-ink-mid"
+                    className="inline-flex min-h-[32px] max-sm:min-h-[44px] items-center rounded-md bg-ink px-3 text-[12px] font-medium text-paper hover:bg-ink-mid"
                   >
                     Add a person
                   </button>
                 ) : <span />}
                 {deleteControl}
               </div>
-              {deleteError ? <p className="text-[11px] text-bad-text">{deleteError}</p> : null}
+              {deleteError ? <p className="text-[12px] sm:text-[11px] text-bad-text">{deleteError}</p> : null}
             </div>
           ) : null}
         </>

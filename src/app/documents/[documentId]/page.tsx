@@ -75,12 +75,12 @@ export default async function DocumentDetailPage({
       <div>
         <Link
           href="/documents"
-          className="text-[12px] text-mute underline-offset-2 hover:underline"
+          className="inline-flex min-h-[44px] items-center text-[12px] text-mute underline-offset-2 hover:underline sm:min-h-0"
         >
           ← Documents
         </Link>
         <div className="mt-2 flex flex-wrap items-center gap-2">
-          <h1 className="text-[20px] font-bold tracking-tight text-ink">{doc.title}</h1>
+          <h1 className="min-w-0 text-[20px] font-bold tracking-tight text-ink [overflow-wrap:anywhere]">{doc.title}</h1>
           {category ? (
             <TagChip
               label={category.label}
@@ -92,7 +92,7 @@ export default async function DocumentDetailPage({
             <UnfiledChip />
           )}
         </div>
-        <p className="mt-1 text-[13px] text-mute">
+        <p className="mt-1 break-words text-[13px] text-mute">
           {[
             doc.filename !== doc.title ? doc.filename : null,
             readableSize(doc.byte_size),
@@ -164,10 +164,10 @@ export default async function DocumentDetailPage({
                 <ul className="mt-2 space-y-1.5">
                   {versions.map((v) => (
                     <li key={v.id} className="flex items-center justify-between gap-3 text-[12px]">
-                      <span className="text-ink">
+                      <span className="min-w-0 text-ink">
                         Version {v.version_number}
                         {v.is_current_version ? (
-                          <span className="ml-1.5 text-[11px] text-mute">current</span>
+                          <span className="ml-1.5 text-[12px] text-mute">current</span>
                         ) : null}
                       </span>
                       <span className="flex items-center gap-3 text-mute">
@@ -217,7 +217,7 @@ export default async function DocumentDetailPage({
             <ul className="space-y-1 text-[13px]">
               {linkedTo.map((l) => (
                 <li key={l.key}>
-                  <Link href={l.href} className="inline-flex min-h-[36px] items-center text-ink underline underline-offset-2">
+                  <Link href={l.href} className="inline-flex min-h-[44px] items-center text-ink underline sm:min-h-[36px] underline-offset-2">
                     {l.label}
                   </Link>
                 </li>

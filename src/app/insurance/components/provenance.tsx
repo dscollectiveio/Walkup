@@ -53,7 +53,7 @@ export function OpenFileButton({
       <button
         type="button"
         disabled={busy}
-        className={`${className} min-h-[32px] disabled:opacity-60`}
+        className={`${className} min-h-[44px] disabled:opacity-60 sm:min-h-[32px]`}
         onClick={async () => {
           setError(null);
           // Opened before the await so pop-up blockers treat it as the click's window.
@@ -123,7 +123,7 @@ export function Provenance({
   }
   const showPage = (info.source === "extracted" || info.source === "confirmed") && documentId;
   return (
-    <div className="mt-1 space-y-0.5 text-[11px] text-mute">
+    <div className="mt-1 space-y-0.5 text-[12px] text-mute">
       <div className="flex flex-wrap items-baseline gap-x-2">
         <span>{line}</span>
         {showPage ? <OpenFileButton documentId={documentId} page={page} /> : null}

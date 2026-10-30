@@ -26,7 +26,7 @@ export function specsLine(u: UnitRecord): string {
   return parts.length > 0 ? parts.join(" · ") : "No specs on file";
 }
 
-const input = "mt-1 w-full rounded-lg border border-line-strong bg-paper px-3 py-2 text-[13px] text-ink";
+const input = "mt-1 w-full rounded-lg border border-line-strong bg-paper px-3 py-2 text-[16px] text-ink sm:text-[13px]";
 const label = "block text-[12px] font-medium text-ink";
 const optional = <span className="ml-1 font-normal text-mute-soft">optional</span>;
 

@@ -280,12 +280,12 @@ function StatCell({
         <div className="flex items-baseline justify-between gap-2">
           <div className={`figures text-[22px] leading-tight ${bad ? "text-bad-text" : "text-ink"}`}>{value}</div>
           {link ? (
-            <Link href={link.href} className="shrink-0 text-[11px] font-medium text-ink underline underline-offset-2">
+            <Link href={link.href} className="shrink-0 text-[12px] font-medium text-ink underline underline-offset-2">
               {link.label}
             </Link>
           ) : null}
         </div>
-        <p className="mt-0.5 text-[11px] leading-snug text-mute">{note}</p>
+        <p className="mt-0.5 text-[12px] leading-snug text-mute">{note}</p>
       </div>
     </div>
   );

@@ -16,7 +16,7 @@ export function FiscalYearSelect({ current, years }: { current: string; years: {
         id={id}
         value={current}
         onChange={(e) => router.push(`/tax?fy=${e.target.value}`)}
-        className="min-h-[36px] min-w-[10rem] rounded-lg border border-line-strong bg-paper px-3 text-[16px] text-ink sm:text-[13px]"
+        className="min-h-[44px] min-w-[10rem] sm:min-h-[36px] rounded-lg border border-line-strong bg-paper px-3 text-[16px] text-ink sm:text-[13px]"
       >
         {years.map((y) => (
           <option key={y.id} value={y.id}>

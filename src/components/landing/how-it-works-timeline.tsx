@@ -37,9 +37,9 @@ const STEPS = [
   },
   {
     Icon: HardHat,
-    title: "Add your existing contractors",
-    body: "Add the contractors you already use, with their W-9s and insurance certificates.",
-    why: "Why it matters: when something breaks, you can ask them for a quote in one click, expiring paperwork gets flagged, and your 1099 list is ready in January.",
+    title: "Add and find contractors",
+    body: "Add the contractors you already use, with their W-9s and insurance certificates, or search for new ones nearby when a job needs someone.",
+    why: "Why it matters: when something breaks, you can ask for quotes by email in one click, expiring paperwork gets flagged, and your 1099 list is ready in January.",
   },
 ];
 

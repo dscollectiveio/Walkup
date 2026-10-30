@@ -63,11 +63,11 @@ export function FiltersBar({
   ].filter((p): p is string => p !== null);
 
   const input =
-    "rounded-lg border border-line-strong bg-paper px-3 py-1.5 text-[13px] text-ink focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-1 focus-visible:outline-brass";
+    "rounded-lg border border-line-strong bg-paper px-3 py-1.5 min-h-[44px] text-[16px] text-ink sm:min-h-0 sm:text-[13px] focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-1 focus-visible:outline-brass";
 
   return (
     <details className="min-w-0 flex-1" open={open} onToggle={(e) => setOpen(e.currentTarget.open)}>
-      <summary className="cursor-pointer select-none text-[12px] text-mute hover:text-ink">
+      <summary className="cursor-pointer select-none py-3 text-[12px] text-mute hover:text-ink sm:py-0">
         Filter &amp; search{active ? (open ? " · on" : ` · ${onParts.join(" · ")}`) : ""}
       </summary>
       <div className="mt-2 flex flex-wrap items-center gap-2">
@@ -77,7 +77,7 @@ export function FiltersBar({
           value={text}
           onChange={(e) => setText(e.target.value)}
           placeholder="Search descriptions…"
-          className={`${input} min-w-[12rem] flex-1`}
+          className={`${input} min-w-0 flex-1 sm:min-w-[12rem]`}
         />
         <select
           aria-label="Range"
@@ -100,7 +100,7 @@ export function FiltersBar({
             type="button"
             onClick={() => go({ account: undefined })}
             aria-label={`Remove filter: ${accountChip}`}
-            className="inline-flex items-center gap-1 rounded-full border border-line-strong bg-fill px-2.5 py-1 text-[12px] text-ink hover:bg-paper"
+            className="inline-flex min-h-[44px] items-center gap-1 rounded-full border border-line-strong bg-fill px-3 py-1 text-[12px] sm:min-h-0 sm:px-2.5 text-ink hover:bg-paper"
           >
             {accountChip}
             <X size={12} strokeWidth={1.6} aria-hidden="true" />

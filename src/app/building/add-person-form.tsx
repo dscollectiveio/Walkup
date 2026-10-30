@@ -8,7 +8,7 @@ import { todayIso } from "@/lib/dates";
 import { ROLE_OPTIONS } from "./person-row";
 import { btnPrimary } from "@/components/repairs/styles";
 
-const input = "mt-1 w-full rounded-lg border border-line-strong bg-paper px-3 py-2 text-[13px] text-ink";
+const input = "mt-1 w-full rounded-lg border border-line-strong bg-paper px-3 py-2 text-[16px] text-ink sm:text-[13px]";
 const label = "block text-[12px] font-medium text-ink";
 const optional = <span className="ml-1 font-normal text-mute-soft">optional</span>;
 
@@ -74,7 +74,7 @@ export function AddPersonForm({
           <span className={label}>Role in the HOA</span>
           <div className="mt-1.5 flex flex-wrap gap-x-4 gap-y-1.5">
             {ROLE_OPTIONS.map((r) => (
-              <label key={r.value} className="flex items-center gap-1.5 text-[12px] text-ink">
+              <label key={r.value} className="flex items-center gap-1.5 text-[12px] text-ink max-sm:min-h-[44px]">
                 <input type="checkbox" name="roles" value={r.value} className="rounded border-line-strong" />
                 {r.label}
                 <span className="text-mute-soft">({r.hint})</span>
@@ -134,7 +134,7 @@ export function AddPersonForm({
         >
           {pending ? "Saving…" : "Add them"}
         </button>
-        <button type="button" onClick={onClose} className="rounded-md border border-line-strong px-4 py-2 text-[13px] text-ink hover:bg-fill">
+        <button type="button" onClick={onClose} className="rounded-md border border-line-strong px-4 py-2 max-sm:min-h-[44px] text-[13px] text-ink hover:bg-fill">
           Cancel
         </button>
       </div>

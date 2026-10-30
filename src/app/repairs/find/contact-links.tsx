@@ -2,7 +2,7 @@ import { telHref } from "@/components/repairs/emergency-banner";
 import { mailtoLink } from "@/lib/email/mailto";
 import { safeHttpUrl } from "@/lib/security/safe-url";
 
-const link = "inline-flex min-h-[24px] max-w-full items-center text-[12px] font-medium text-ink underline underline-offset-2 hover:text-ink-mid";
+const link = "inline-flex min-h-[44px] xl:min-h-[24px] max-w-full items-center text-[12px] font-medium text-ink underline underline-offset-2 hover:text-ink-mid";
 
 function host(url: string): string {
   try {
@@ -38,7 +38,7 @@ export function ContactLinks({
         </a>
       ) : null}
       {email ? (
-        <a href={mailtoLink(email)} title={email} className={`${link} xl:truncate`}>
+        <a href={mailtoLink(email)} title={email} className={`${link} break-all xl:break-normal xl:truncate`}>
           {email}
         </a>
       ) : null}

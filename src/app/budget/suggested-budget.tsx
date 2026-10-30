@@ -56,7 +56,7 @@ export function SuggestedBudget({
               type="button"
               onClick={() => setBump(b)}
               aria-pressed={bump === b}
-              className={`rounded-full px-2.5 py-1 font-medium ${bump === b ? "bg-ink text-paper" : "text-mute hover:text-ink"}`}
+              className={`min-h-[44px] rounded-full px-3 py-1 font-medium sm:min-h-0 sm:px-2.5 ${bump === b ? "bg-ink text-paper" : "text-mute hover:text-ink"}`}
             >
               {b === 0 ? "none" : `+${b}%`}
             </button>
@@ -68,8 +68,8 @@ export function SuggestedBudget({
       <ul className="mt-3 grid gap-x-6 gap-y-1 text-[12px] sm:grid-cols-2">
         {adjusted.map((l) => (
           <li key={l.accountId} className="flex justify-between gap-3">
-            <span className="text-mute">{l.name}</span>
-            <span className="figures text-ink">{money(l.amountCents)}</span>
+            <span className="min-w-0 break-words text-mute">{l.name}</span>
+            <span className="figures whitespace-nowrap text-ink">{money(l.amountCents)}</span>
           </li>
         ))}
       </ul>

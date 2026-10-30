@@ -31,7 +31,7 @@ export function ContactCard({ contact, children }: { contact: ContactCardContact
               <dt className="sr-only">Phone</dt>
               <dd>
                 {tel ? (
-                  <a href={tel} className="figures text-ink underline underline-offset-2">
+                  <a href={tel} className="figures inline-flex min-h-[44px] items-center text-ink underline underline-offset-2 sm:min-h-0">
                     {formatPhone(contact.phone)}
                   </a>
                 ) : (
@@ -44,7 +44,7 @@ export function ContactCard({ contact, children }: { contact: ContactCardContact
             <div className="flex gap-2">
               <dt className="sr-only">Email</dt>
               <dd className="min-w-0 break-all">
-                <a href={mailtoLink(contact.email)} className="text-ink underline underline-offset-2">
+                <a href={mailtoLink(contact.email)} className="inline-flex min-h-[44px] items-center text-ink underline underline-offset-2 sm:min-h-0">
                   {contact.email}
                 </a>
               </dd>
