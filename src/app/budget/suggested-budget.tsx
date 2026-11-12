@@ -43,7 +43,7 @@ export function SuggestedBudget({
       </p>
       <p className="mt-0.5 text-[12px] text-mute">
         {source === "budget"
-          ? "Last year's plan, copied forward. Add a few percent for rising costs if you like, then adjust any line."
+          ? "Last year's budget, copied forward. Add a few percent for rising costs if you like, then adjust any line."
           : "These are last year's actual totals, not a recommendation. Adjust any line afterwards."}
       </p>
 

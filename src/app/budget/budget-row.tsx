@@ -31,10 +31,15 @@ export function BudgetRow({
   hint?: { text: string; href: string } | null;
 }) {
   const [state, action, pending] = useActionState(saveBudgetLine, null);
-  const [value, setValue] = useState(budgeted !== null ? String(budgeted) : "");
+  // Whole dollars only: the box keeps the digits and shows them as $12,345 while you type.
+  const current = budgeted !== null ? String(Math.round(budgeted)) : "";
+  const [value, setValue] = useState(current);
+  // "Set" only matters once the box differs from what is saved.
+  const changed = value !== current;
+  const shown = value === "" ? "" : `$${Number(value).toLocaleString("en-US")}`;
 
   const money = (n: number) =>
-    new Intl.NumberFormat("en-US", { style: "currency", currency: "USD" }).format(n);
+    new Intl.NumberFormat("en-US", { style: "currency", currency: "USD", maximumFractionDigits: 0 }).format(n);
 
   return (
     <tr>
@@ -54,20 +59,21 @@ export function BudgetRow({
               <input type="hidden" name="fiscal_year_id" value={fiscalYearId} />
               <input type="hidden" name="account_id" value={accountId} />
               <input type="hidden" name="fund_id" value={fundId} />
+              <input type="hidden" name="amount" value={value} />
               <input
-                name="amount"
-                type="number"
-                min="0"
-                step="0.01"
-                value={value}
-                onChange={(e) => setValue(e.target.value)}
-                placeholder="0.00"
+                type="text"
+                inputMode="numeric"
+                autoComplete="off"
+                aria-label={`Budget for the year, ${name}`}
+                value={shown}
+                onChange={(e) => setValue(e.target.value.replace(/\D/g, "").replace(/^0+(?=\d)/, ""))}
+                placeholder="$0"
                 className="figures min-h-[44px] w-28 rounded-lg border border-line-strong px-2 py-1 text-right text-[16px] text-ink sm:min-h-0 sm:w-24 sm:text-[13px]"
               />
               <button
                 type="submit"
-                disabled={pending}
-                className="min-h-[44px] min-w-[44px] rounded-md border border-line-strong px-2 py-1 text-[12px] text-mute hover:bg-fill disabled:opacity-50 sm:min-h-0 sm:min-w-0 sm:text-[11px]"
+                disabled={pending || !changed}
+                className="min-h-[44px] min-w-[44px] rounded-md bg-ink px-2.5 py-1 text-[12px] font-medium text-paper hover:bg-ink-mid disabled:cursor-not-allowed disabled:opacity-35 disabled:hover:bg-ink sm:min-h-0 sm:min-w-0 sm:text-[11px]"
               >
                 {pending ? "…" : "Set"}
               </button>

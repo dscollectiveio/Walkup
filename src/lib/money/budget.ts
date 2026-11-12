@@ -83,8 +83,10 @@ export function forecastYearEnd(input: ForecastInput): Forecast | null {
 }
 
 /**
- * "Compared with last year, repairs are up $2,100 and everything else is
- * within $200." Null when there's no prior period to compare against.
+ * "That's $3,200 more than the same months last year, mostly insurance (up
+ * $8,360)." The figure is the net change in total spending; the driver is named
+ * "mostly" only when it is the same direction as the net and at least half of
+ * it. Null when there's no prior period to compare against.
  */
 export function comparisonSentence(
   current: { name: string; cents: number }[],
@@ -99,11 +101,14 @@ export function comparisonSentence(
   const changes = [...names]
     .map((n) => ({ name: n, delta: (cur.get(n) ?? 0) - (pri.get(n) ?? 0) }))
     .sort((a, b) => Math.abs(b.delta) - Math.abs(a.delta));
+  const net = changes.reduce((m, c) => m + c.delta, 0);
   const top = changes[0];
-  if (!top || top.delta === 0) return `Compared with ${priorLabel}, spending by category is about the same.`;
-  const rest = changes.slice(1);
-  const restMax = rest.reduce((m, c) => Math.max(m, Math.abs(c.delta)), 0);
-  const topPart = `${top.name.toLowerCase()} ${top.delta > 0 ? "is up" : "is down"} ${formatMoney(Math.abs(top.delta))}`;
-  if (rest.length === 0) return `Compared with ${priorLabel}, ${topPart}.`;
-  return `Compared with ${priorLabel}, ${topPart} and everything else is within ${formatMoney(restMax)}.`;
+  if (!top || (top.delta === 0 && net === 0)) return `Spending is about the same as ${priorLabel}.`;
+  const driver = `${top.name.toLowerCase()} (${top.delta > 0 ? "up" : "down"} ${formatMoney(Math.abs(top.delta))})`;
+  if (net === 0) return `Total spending is the same as ${priorLabel}, though ${driver} moved.`;
+  const direction = net > 0 ? "more" : "less";
+  const lead = `That's ${formatMoney(Math.abs(net))} ${direction} than ${priorLabel}`;
+  const sameWay = Math.sign(top.delta) === Math.sign(net) && Math.abs(top.delta) * 2 >= Math.abs(net);
+  if (changes.length === 1) return `${lead}, all in ${driver}.`;
+  return sameWay ? `${lead}, mostly ${driver}.` : `${lead}. The biggest change is ${driver}.`;
 }

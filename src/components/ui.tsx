@@ -122,7 +122,7 @@ export function Answer({
         {headline}
       </h2>
       {detail ? (
-        <p className={`mt-1 text-[13px] leading-relaxed ${tone.text} opacity-90`}>
+        <p className={`mt-1 whitespace-pre-line text-[13px] leading-relaxed ${tone.text} opacity-90`}>
           {detail}
         </p>
       ) : null}

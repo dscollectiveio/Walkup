@@ -1,36 +1,27 @@
 import Link from "next/link";
 import { ChevronRight } from "lucide-react";
 import { createClient } from "@/lib/supabase/server";
-import { Answer, Card, Empty, Restricted } from "@/components/ui";
+import { Card, Empty, Restricted } from "@/components/ui";
 import { formatMoney } from "@/lib/tax/form1120h";
-import { WhereItWent } from "./where-it-went";
 import { transfersInByMonth, type CashActivityRow } from "@/lib/money/cash";
 import { spendByAccount, type ExpenseActualRow } from "@/lib/money/spending";
-import { addMonths, monthKey, monthLongLabel, monthsBetween } from "@/lib/money/months";
+import { addMonths, monthKey, monthsBetween } from "@/lib/money/months";
 import { PERIOD_LABEL, parsePeriod, resolvePeriod, type PeriodKey } from "@/lib/money/period";
-import { comparisonSentence, forecastYearEnd, MIN_FORECAST_MONTHS, type BudgetStatus } from "@/lib/money/budget";
-import { buildPlanRows, paceShare, planHeadline, suggestAnnualFromSpend, type PlanRow } from "@/lib/money/plan";
-import { shortDate, todayIso as todayIsoOf } from "@/lib/dates";
+import { forecastYearEnd, MIN_FORECAST_MONTHS } from "@/lib/money/budget";
+import { buildPlanRows, suggestAnnualFromSpend, type PlanRow } from "@/lib/money/plan";
+import { dateRangeLabel, shortDate, todayIso as todayIsoOf } from "@/lib/dates";
 import { BudgetRow } from "./budget-row";
 import { AddCategoryForm } from "./add-category-form";
 import { SuggestedBudget } from "./suggested-budget";
 import { PlannedAmount } from "./planned-amount";
 import { inForce } from "@/lib/insurance/status";
 import { toCents } from "@/lib/money/cents";
-import { btnPrimary } from "@/components/repairs/styles";
+import { btnSecondary } from "@/components/repairs/styles";
 
 export const dynamic = "force-dynamic";
 
 const looseCents = (v: string | number | null | undefined) => Math.round(Number(v ?? 0) * 100);
 const dollars = (cents: number) => formatMoney(Math.round(cents / 100) * 100).replace(/\.00$/, "");
-
-const STATUS_STYLE: Record<BudgetStatus | "saved" | "none", { bar: string; text: string; word: string }> = {
-  on_track: { bar: "bg-moss", text: "text-good-text", word: "On track" },
-  watch: { bar: "bg-warning", text: "text-warning-text", word: "Watch" },
-  over: { bar: "bg-bad", text: "text-bad-text", word: "Over budget" },
-  saved: { bar: "bg-slate", text: "text-info-text", word: "Saved" },
-  none: { bar: "bg-line-strong", text: "text-mute", word: "No plan" },
-};
 
 interface Params {
   period?: string;
@@ -50,23 +41,31 @@ interface RecentEntry {
   cents: number;
 }
 
-/** The bar every row shares: planned = track, spent = fill, pace = thin marker. */
-function PlanBar({ spent, target, pace, bar }: { spent: number; target: number; pace: number; bar: string }) {
-  const used = target > 0 ? Math.min(100, (spent / target) * 100) : spent > 0 ? 100 : 0;
+/**
+ * The row bar, 5px. Within budget (or within 5% of it): one green fill, spent ÷ budget.
+ * Over budget: the whole bar is what was spent, green up to the budget and brick for the rest.
+ * `fill` recolors the single fill (the reserve's savings bar is navy).
+ */
+function BudgetBar({ spent, target, over = false, fill = "bg-moss" }: { spent: number; target: number; over?: boolean; fill?: string }) {
+  if (over && spent > 0) {
+    const within = Math.min(100, (target / spent) * 100);
+    return (
+      <div className="mt-1.5 flex h-[5px] overflow-hidden rounded-full bg-fill">
+        <div className="h-full bg-moss" style={{ width: `${within}%` }} />
+        <div className="h-full flex-1 bg-bad" />
+      </div>
+    );
+  }
+  const used = target > 0 ? Math.min(100, (spent / target) * 100) : 0;
   return (
-    <div className="relative mt-2 h-2.5 rounded-md bg-fill">
-      <div className={`h-full rounded-md ${bar}`} style={{ width: `${used}%` }} />
-      {target > 0 ? (
-        <span
-          aria-hidden="true"
-          title="Where you'd be if spending were spread evenly"
-          className="absolute -bottom-1 -top-1 w-px bg-ink"
-          style={{ left: `${Math.round(pace * 100)}%` }}
-        />
-      ) : null}
+    <div className="mt-1.5 h-[5px] overflow-hidden rounded-full bg-fill">
+      <div className={`h-full ${fill}`} style={{ width: `${used}%` }} />
     </div>
   );
 }
+
+/** Spent | Budget | Status as three fixed, right-aligned columns from sm up; "$spent of $budget" then the status below that on a phone. */
+const NUM_GRID = "sm:grid sm:grid-cols-[minmax(0,1fr)_5rem_6rem_7rem] sm:items-baseline sm:gap-x-3";
 
 export default async function BudgetPage({ searchParams }: { searchParams: Promise<Params> }) {
   const sp = await searchParams;
@@ -195,15 +194,14 @@ export default async function BudgetPage({ searchParams }: { searchParams: Promi
       : Promise.resolve({ data: null }),
   ]);
   const operatingBudgetRows = (budgetRows ?? []).filter((r) => r.fund_id === operatingFund.id);
+  // Spending plan only: income budget lines (assessments, laundry…) are not something to "spend".
+  const expenseIds = new Set(expenseAccounts.map((a) => a.id));
   const budgetByAccount = new Map(
-    operatingBudgetRows.filter((r) => looseCents(r.budgeted) > 0).map((r) => [r.account_id as string, looseCents(r.budgeted)]),
+    operatingBudgetRows
+      .filter((r) => looseCents(r.budgeted) > 0 && expenseIds.has(r.account_id as string))
+      .map((r) => [r.account_id as string, looseCents(r.budgeted)]),
   );
-  const annualRowByAccount = new Map(
-    operatingBudgetRows.map((r) => [
-      r.account_id as string,
-      { budgeted: Number(r.budgeted), actual: Number(r.actual), variance: Number(r.variance) },
-    ]),
-  );
+  const budgetedByAccount = new Map(operatingBudgetRows.map((r) => [r.account_id as string, Number(r.budgeted)]));
   const hasBudget = budgetByAccount.size > 0;
   const reserveBudgetRow =
     reserveFund && reserveCashAccount
@@ -218,13 +216,14 @@ export default async function BudgetPage({ searchParams }: { searchParams: Promi
       <div>
         <h1 className="text-[20px] font-bold tracking-tight text-ink">Budget &amp; spending</h1>
         <p className="mt-1 text-mute">
-          {association.display_name} · Fiscal year {fiscalYear.label} ({fiscalYear.starts_on} to {fiscalYear.ends_on})
+          {association.display_name} · Fiscal year {dateRangeLabel(fiscalYear.starts_on, fiscalYear.ends_on)}
         </p>
       </div>
     </div>
   );
 
-  const editTable = (
+  /** spentById: this period's spending per category (same figures as every other number on the page); null when the viewer can't see actuals. */
+  const renderEditTable = (spentById: Map<string, number> | null) => (
     <>
       {expenseAccounts.length === 0 ? (
         <Empty>No spending categories on file.</Empty>
@@ -235,13 +234,16 @@ export default async function BudgetPage({ searchParams }: { searchParams: Promi
               <tr className="border-b border-line text-left text-[11px] uppercase tracking-wide text-mute">
                 <th className="pb-2 font-medium">Category</th>
                 <th className="pb-2 text-right font-medium">Budget for the year</th>
-                <th className="pb-2 text-right font-medium">Spent so far this year</th>
-                <th className="pb-2 text-right font-medium">Over / under</th>
+                <th className="pb-2 text-right font-medium">{period === "month" ? "Spent this month" : "Spent so far this year"}</th>
+                <th className="pb-2 text-right font-medium">{period === "month" ? "Over / under this month\u2019s share" : "Over / under the budget"}</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-line">
               {expenseAccounts.map((a) => {
-                const annual = annualRowByAccount.get(a.id);
+                const annualBudget = budgetedByAccount.get(a.id) ?? null;
+                const spent = (spentById?.get(a.id) ?? 0) / 100;
+                // Over/under compares spending with the same share of the year the period covers.
+                const variance = annualBudget === null ? null : spent - annualBudget * p.budgetShare;
                 return (
                   <BudgetRow
                     key={a.id}
@@ -250,9 +252,9 @@ export default async function BudgetPage({ searchParams }: { searchParams: Promi
                     fundId={operatingFund.id}
                     accountId={a.id}
                     name={a.name}
-                    budgeted={annual?.budgeted ?? null}
-                    actual={annual?.actual ?? 0}
-                    variance={annual ? annual.variance : null}
+                    budgeted={annualBudget}
+                    actual={spent}
+                    variance={variance}
                     canEdit={canEdit}
                     canSeeActuals={canSeeActuals}
                     hint={/insurance/i.test(a.name) ? premiumsHint : null}
@@ -274,7 +276,7 @@ export default async function BudgetPage({ searchParams }: { searchParams: Promi
       <div className="space-y-6">
         {header}
         <Card navy title="Annual budget" hint="What the board has budgeted for the year.">
-          {editTable}
+          {renderEditTable(null)}
         </Card>
         <p className="text-[12px] text-mute">Spending detail is visible to board members and the accountant.</p>
       </div>
@@ -312,12 +314,16 @@ export default async function BudgetPage({ searchParams }: { searchParams: Promi
   // ---- Plan vs spent ---------------------------------------------------------
   const periodSpend = spendByAccount(expenses, p.startKey, p.endKey, operatingFund.id);
   const periodSpendById = new Map(periodSpend.map((a) => [a.accountId, a.cents]));
-  const planRows = buildPlanRows(budgetByAccount, periodSpendById, (id) => accountName.get(id) ?? "", p.budgetShare);
+  // Biggest dollars over first, so the eye lands on the real problems; under-budget rows follow.
+  const planRows = buildPlanRows(budgetByAccount, periodSpendById, (id) => accountName.get(id) ?? "", p.budgetShare).sort(
+    (a, b) => a.leftCents - b.leftCents || a.name.localeCompare(b.name),
+  );
+  /** One rule for "over": more than 5% past the budget so far. Anything closer counts as on budget. */
+  const isOver = (spent: number, target: number) => spent > target * 1.05;
+  const biggestOverage = planRows.find((r) => isOver(r.spentCents, r.targetCents)) ?? null;
   const unbudgetedSpend = periodSpend.filter((a) => !budgetByAccount.has(a.accountId));
-  const statusById = new Map(planRows.map((r) => [r.accountId, r.status]));
   const totalTarget = planRows.reduce((s, r) => s + r.targetCents, 0);
   const totalSpent = periodSpend.reduce((s, a) => s + a.cents, 0);
-  const pace = paceShare(p.startKey, p.endKey, today);
   const savedCents = [...transfersInByMonth(cash, "reserve").entries()]
     .filter(([k]) => k >= p.startKey && k <= p.endKey)
     .reduce((s, [, v]) => s + v, 0);
@@ -336,32 +342,6 @@ export default async function BudgetPage({ searchParams }: { searchParams: Promi
         monthsElapsed,
       })
     : null;
-  const headline = hasBudget
-    ? planHeadline({
-        periodLabel: period === "year" ? fiscalYear.label : period === "month" ? monthLongLabel(currentMonth) : p.label,
-        isFiscalYear: period === "year",
-        spentCents: totalSpent,
-        targetCents: totalTarget,
-        forecast,
-        rows: planRows,
-      })
-    : null;
-  const headlineDetail =
-    headline && !headline.detail && period === "year" && !forecast
-      ? `A year-end forecast appears after ${MIN_FORECAST_MONTHS} full months of the fiscal year.`
-      : headline?.detail;
-
-  // ---- Where the money went ---------------------------------------------------
-  const allSpend = spendByAccount(expenses, p.startKey, p.endKey);
-  const allSpendTotal = allSpend.reduce((s, a) => s + a.cents, 0);
-  const priorSpend = spendByAccount(expenses, addMonths(p.startKey, -12), addMonths(p.endKey, -12));
-  const comparison = comparisonSentence(
-    allSpend,
-    priorSpend,
-    (c) => formatMoney(c).replace(/\.00$/, ""),
-    period === "month" ? `${monthLongLabel(addMonths(currentMonth, -12))}` : "the same months last year",
-  );
-
   // ---- Suggested starting budget ----------------------------------------------
   const priorBudgetLines = (priorBudgetRows ?? [])
     .filter((r) => looseCents(r.budgeted) > 0 && expenseAccounts.some((a) => a.id === r.account_id))
@@ -385,11 +365,11 @@ export default async function BudgetPage({ searchParams }: { searchParams: Promi
       </div>
     ) : null;
 
-  const paceWords = `${Math.round(pace * 100)}% of ${period === "month" ? "the month" : "the period"} gone`;
-
-  const rowShell = "group border-b border-line/70 last:border-b-0";
+  const rowShell = "group";
+  // A hairline between rows that stops short of both side edges.
+  const rowLi = "relative after:pointer-events-none after:absolute after:inset-x-5 after:bottom-0 after:h-px after:bg-line last:after:hidden";
   const summaryShell =
-    "cursor-pointer list-none px-3 py-2.5 hover:bg-fill/40 [&::-webkit-details-marker]:hidden";
+    "cursor-pointer list-none px-5 py-2.5 hover:bg-fill/40 [&::-webkit-details-marker]:hidden";
 
   const recentList = (accountId: string) => {
     const list = (recentByAccount.get(accountId) ?? []).slice(0, 5);
@@ -416,36 +396,34 @@ export default async function BudgetPage({ searchParams }: { searchParams: Promi
   };
 
   const planRowItem = (r: PlanRow) => {
-    const style = STATUS_STYLE[r.status];
-    const used = r.targetCents > 0 ? Math.round((r.spentCents / r.targetCents) * 100) : 0;
+    const over = isOver(r.spentCents, r.targetCents);
+    const statusText = over
+      ? `${dollars(-r.leftCents)} over`
+      : r.leftCents < 0
+        ? "On budget"
+        : `${dollars(r.leftCents)} left`;
     return (
-      <li key={r.accountId}>
+      <li key={r.accountId} className={rowLi}>
         <details className={rowShell}>
           <summary className={summaryShell}>
-            <div className="flex items-baseline justify-between gap-3">
+            <div className={NUM_GRID}>
               <span className="flex min-w-0 items-center gap-2">
                 <ChevronRight size={14} strokeWidth={1.6} aria-hidden="true" className="shrink-0 text-mute-soft transition-transform group-open:rotate-90" />
                 <span className="truncate text-[13px] font-medium text-ink">{r.name}</span>
-                <span className={`text-[11px] font-medium ${style.text}`}>
-                  {r.status === "on_track" ? (r.spentCents === 0 ? "Nothing yet" : style.word) : `${r.pctOver}% over`}
-                </span>
               </span>
-              <span className="shrink-0 whitespace-nowrap text-[12px]">
-                <span className="figures text-ink">{dollars(r.spentCents)}</span>
-                <span className="text-mute"> of {dollars(r.targetCents)}</span>
+              <div className="mt-0.5 pl-[22px] text-[13px] sm:contents sm:pl-0">
+                <span className="figures font-medium text-ink sm:block sm:text-right">{dollars(r.spentCents)}</span>
+                <span className="figures ml-1 text-mute sm:ml-0 sm:block sm:text-right">of {dollars(r.targetCents)}</span>
+              </div>
+              <span className={`figures block pl-[22px] text-[13px] font-medium sm:pl-0 sm:text-right ${over ? "text-bad-text" : "text-good-text"}`}>
+                {statusText}
               </span>
             </div>
-            <PlanBar spent={r.spentCents} target={r.targetCents} pace={pace} bar={style.bar} />
-            <div className="mt-1 flex justify-between text-[12px] text-mute sm:text-[11px]">
-              <span className={r.leftCents < 0 ? style.text : ""}>
-                {r.leftCents >= 0 ? `${dollars(r.leftCents)} left to spend` : `${dollars(-r.leftCents)} over`}
-              </span>
-              <span>{used}% used</span>
-            </div>
+            <BudgetBar spent={r.spentCents} target={r.targetCents} over={over} />
           </summary>
-          <div className="bg-fill/30 px-3 pb-3 pl-9 text-[12px]">
+          <div className="bg-fill/30 px-5 pb-3 pl-11 text-[12px]">
             <p className="py-2 text-mute">
-              Plan:{" "}
+              Budget:{" "}
               <PlannedAmount
                 associationId={association.id}
                 fiscalYearId={fiscalYear.id}
@@ -483,7 +461,7 @@ export default async function BudgetPage({ searchParams }: { searchParams: Promi
           ))}
         </nav>
         {canEdit && hasBudget ? (
-          <a href={editHref} className="inline-flex min-h-[44px] items-center text-[12px] font-medium text-ink underline-offset-2 hover:underline sm:min-h-0">
+          <a href={editHref} className={btnSecondary}>
             Edit budget
           </a>
         ) : null}
@@ -493,148 +471,107 @@ export default async function BudgetPage({ searchParams }: { searchParams: Promi
         <Card
           navy
           title="Set a budget in 5 minutes"
-          hint="One number per category for the year. Then this page can tell you whether spending is on plan and where the year is heading."
+          hint="One number per category for the year. Then this page can tell you whether spending is on budget and where the year is heading."
         >
           {suggestion}
-          {editTable}
+          {renderEditTable(periodSpendById)}
         </Card>
       ) : (
         <>
-          <Card navy title="Where the money went" hint="Biggest first. Hover or tap a slice or a row; click one to see its transactions. Moves to the reserve aren't included because they're savings, not spending.">
-            {allSpend.length === 0 ? (
-              <div className="py-6 text-center">
-                <p className="text-[13px] text-mute">Nothing posted for {p.label.toLowerCase()} yet.</p>
-                <Link
-                  href="/bank-feed"
-                  className={`mt-3 ${btnPrimary}`}
-                >
-                  Categorize transactions on the bank feed →
-                </Link>
-              </div>
-            ) : (
-              <WhereItWent
-                slices={allSpend.map((a) => ({
-                  id: a.accountId,
-                  label: a.name,
-                  valueCents: a.cents,
-                  href: transactionsFor(a.accountId),
-                  status: statusById.get(a.accountId) ?? "none",
-                }))}
-                totalCents={allSpendTotal}
-                monthCount={p.months.length}
-                periodLabel={period === "month" ? `in ${p.label}` : `in fiscal year ${fiscalYear.label} so far`}
-                comparison={comparison}
-              />
-            )}
-          </Card>
-
-          <details id="edit-budget" open={editOpen} className="rounded-xl border border-line bg-paper">
-            <summary className="cursor-pointer list-none px-5 py-4 [&::-webkit-details-marker]:hidden">
-              <span className="font-bold tracking-tight text-ink">{canEdit ? "Edit the full budget" : "The full budget"}</span>
-              <span className="ml-3 text-[12px] text-mute">
-                {canEdit ? "Every category, one number for the year. Tip: you can also click any plan figure above." : "Every category for the year."}
-              </span>
-            </summary>
-            <div className="border-t border-line px-5 py-4">{editTable}</div>
-          </details>
-
-          <Card
-            navy
-            title="Plan vs. spent"
-            hint={p.budgetCaption}
-            action={<span className="whitespace-nowrap text-[12px] text-ondark-mute">{paceWords}</span>}
-          >
-            {headline ? <Answer status={headline.status} headline={headline.headline} detail={headlineDetail} /> : null}
-
-            {/* The whole budget on one bar, before the category by category view. */}
-            <div className="mt-4 rounded-lg border border-line bg-fill/30 px-4 py-3">
-              <div className="flex flex-wrap items-baseline justify-between gap-2 text-[13px]">
-                <span className="text-mute">
-                  Spent <span className="figures text-ink">{dollars(totalSpent)}</span> of{" "}
-                  <span className="figures text-ink">{dollars(totalTarget)}</span> planned
-                </span>
-                <span className={`figures font-medium ${totalTarget - totalSpent >= 0 ? "text-good-text" : "text-bad-text"}`}>
-                  {totalTarget - totalSpent >= 0 ? `${dollars(totalTarget - totalSpent)} left` : `${dollars(totalSpent - totalTarget)} over`}
-                </span>
-              </div>
-              <PlanBar
-                spent={totalSpent}
-                target={totalTarget}
-                pace={pace}
-                bar={totalSpent > totalTarget * 1.1 ? STATUS_STYLE.over.bar : totalSpent > totalTarget ? STATUS_STYLE.watch.bar : STATUS_STYLE.on_track.bar}
-              />
-              <p className="mt-1.5 text-[12px] text-mute-soft sm:text-[11px]">The thin line is where you&rsquo;d be if spending were spread evenly.</p>
+          <Card navy title="Budget vs. Spent" hint={p.budgetCaption}>
+            <div className="pb-4">
+              <p className={`text-[20px] font-semibold leading-tight ${isOver(totalSpent, totalTarget) ? "text-bad-text" : "text-good-text"}`}>
+                {isOver(totalSpent, totalTarget)
+                  ? `Over so far: ${dollars(totalSpent - totalTarget)}`
+                  : totalSpent > totalTarget
+                    ? "On budget so far"
+                    : `Under so far: ${dollars(totalTarget - totalSpent)}`}
+              </p>
+              {period === "year" ? (
+                <p className="mt-1.5 text-[13px] text-ink">
+                  {forecast
+                    ? Math.abs(forecast.overUnderCents) < 10000
+                      ? "On pace for the year: right on budget"
+                      : `On pace for the year: ${dollars(Math.abs(forecast.overUnderCents))} ${forecast.overUnderCents > 0 ? "over" : "under"}`
+                    : `On pace for the year: forecast appears after ${MIN_FORECAST_MONTHS} full months`}
+                </p>
+              ) : null}
+              {biggestOverage ? (
+                <p className="mt-0.5 text-[13px] text-mute">
+                  Biggest overage: {biggestOverage.name} ({dollars(-biggestOverage.leftCents)})
+                </p>
+              ) : null}
             </div>
 
-            <ul className="mt-4 overflow-hidden rounded-lg border border-line">
-              {planRows.map(planRowItem)}
+            {/* Rows sit directly in the card, edge to edge (the card's own padding is cancelled). */}
+            <details open className="group/cat -mx-5 -mb-4 border-t border-line">
+              <summary className="flex min-h-[44px] cursor-pointer list-none items-center justify-between gap-3 px-5 py-2.5 text-[12px] font-medium text-mute hover:text-ink sm:min-h-0 [&::-webkit-details-marker]:hidden">
+                <span className="group-open/cat:hidden">Show categories</span>
+                <span className="hidden group-open/cat:inline">Hide categories</span>
+                <ChevronRight size={14} strokeWidth={1.6} aria-hidden="true" className="shrink-0 transition-transform group-open/cat:rotate-90" />
+              </summary>
+              <ul className="border-t border-line">
+                {planRows.map(planRowItem)}
 
-              {unbudgetedSpend.map((a) => (
-                <li key={a.accountId}>
-                  <details className={rowShell}>
-                    <summary className={summaryShell}>
-                      <div className="flex items-baseline justify-between gap-3">
-                        <span className="flex min-w-0 items-center gap-2">
-                          <ChevronRight size={14} strokeWidth={1.6} aria-hidden="true" className="shrink-0 text-mute-soft transition-transform group-open:rotate-90" />
-                          <span className="truncate text-[13px] font-medium text-ink">{a.name}</span>
-                          <span className={`text-[11px] font-medium ${STATUS_STYLE.none.text}`}>{STATUS_STYLE.none.word}</span>
-                        </span>
-                        <span className="figures shrink-0 whitespace-nowrap text-[12px] text-ink">{dollars(a.cents)}</span>
-                      </div>
-                      <PlanBar spent={a.cents} target={0} pace={pace} bar={STATUS_STYLE.none.bar} />
-                      <div className="mt-1 text-[12px] text-mute sm:text-[11px]">Spent with no plan set. Add one so it&rsquo;s tracked like the rest.</div>
-                    </summary>
-                    <div className="bg-fill/30 px-3 pb-3 pl-9 text-[12px]">
-                      <p className="py-2 text-mute">
-                        <PlannedAmount
-                          associationId={association.id}
-                          fiscalYearId={fiscalYear.id}
-                          fundId={operatingFund.id}
-                          accountId={a.accountId}
-                          annualCents={null}
-                          suggestedAnnualCents={suggestAnnualFromSpend(a.cents, p.budgetShare)}
-                          canEdit={canEdit}
-                          openLabel="Add to budget"
-                        />
-                        {canEdit ? (
-                          <span className="ml-2 text-mute-soft">
-                            (pre-filled from this period&rsquo;s spending, {dollars(suggestAnnualFromSpend(a.cents, p.budgetShare))} a year)
+                {unbudgetedSpend.map((a) => (
+                  <li key={a.accountId} className={rowLi}>
+                    <details className={rowShell}>
+                      <summary className={summaryShell}>
+                        <div className="flex flex-wrap items-baseline justify-between gap-x-3 gap-y-1">
+                          <span className="flex min-w-0 items-center gap-2">
+                            <ChevronRight size={14} strokeWidth={1.6} aria-hidden="true" className="shrink-0 text-mute-soft transition-transform group-open:rotate-90" />
+                            <span className="truncate text-[13px] font-medium text-ink">{a.name}</span>
                           </span>
-                        ) : null}
-                      </p>
-                      {recentList(a.accountId)}
-                    </div>
-                  </details>
-                </li>
-              ))}
+                          <span className="flex flex-wrap items-baseline gap-x-2 pl-[22px] text-[13px] sm:pl-0">
+                            <span className="figures font-medium text-ink">{dollars(a.cents)}</span>
+                            <span className="text-mute-soft">·</span>
+                            <span className="text-mute">No budget set</span>
+                            {canEdit ? (
+                              <>
+                                <span className="text-mute-soft">·</span>
+                                <PlannedAmount
+                                  associationId={association.id}
+                                  fiscalYearId={fiscalYear.id}
+                                  fundId={operatingFund.id}
+                                  accountId={a.accountId}
+                                  annualCents={null}
+                                  suggestedAnnualCents={suggestAnnualFromSpend(a.cents, p.elapsedShare)}
+                                  canEdit={canEdit}
+                                  openLabel="Add budget"
+                                />
+                              </>
+                            ) : null}
+                          </span>
+                        </div>
+                      </summary>
+                      <div className="bg-fill/30 px-5 pb-3 pl-11 text-[12px]">{recentList(a.accountId)}</div>
+                    </details>
+                  </li>
+                ))}
+              </ul>
 
               {reserveFund && reserveCashAccount ? (
-                <li>
+                <div className="border-t border-line">
+                  <p className="px-5 pt-3 text-[11px] font-medium uppercase tracking-wide text-mute">Savings</p>
                   <details className={rowShell}>
                     <summary className={summaryShell}>
-                      <div className="flex items-baseline justify-between gap-3">
+                      <div className="flex flex-wrap items-baseline justify-between gap-x-3 gap-y-1">
                         <span className="flex min-w-0 items-center gap-2">
                           <ChevronRight size={14} strokeWidth={1.6} aria-hidden="true" className="shrink-0 text-mute-soft transition-transform group-open:rotate-90" />
                           <span className="truncate text-[13px] font-medium text-ink">Set aside for the reserve</span>
-                          <span className={`text-[11px] font-medium ${STATUS_STYLE.saved.text}`}>
-                            {reservePlanCents === null
-                              ? "Savings"
-                              : savedCents >= reservePlanCents
-                                ? "On plan ✓"
-                                : `${dollars(reservePlanCents - savedCents)} short`}
-                          </span>
                         </span>
-                        <span className="shrink-0 whitespace-nowrap text-[12px]">
-                          <span className="figures text-ink">{dollars(savedCents)}</span>
-                          {reservePlanCents !== null ? <span className="text-mute"> of {dollars(reservePlanCents)}</span> : null}
+                        <span className="pl-[22px] text-[13px] sm:pl-0">
+                          <span className="figures font-medium text-ink">{dollars(savedCents)}</span>
+                          <span className="text-mute"> set aside</span>
+                          {reservePlanCents !== null ? <span className="figures text-mute"> of {dollars(reservePlanCents)}</span> : null}
                         </span>
                       </div>
-                      <PlanBar spent={savedCents} target={reservePlanCents ?? 0} pace={pace} bar={STATUS_STYLE.saved.bar} />
-                      <div className="mt-1 text-[12px] text-mute-soft sm:text-[11px]">Savings, not spending, never counted as over budget.</div>
+                      {reservePlanCents !== null ? <BudgetBar spent={savedCents} target={reservePlanCents} fill="bg-ink" /> : null}
+                      <p className="mt-1.5 text-[12px] text-mute">Savings, not spending. Never counted as over budget.</p>
                     </summary>
-                    <div className="bg-fill/30 px-3 pb-3 pl-9 text-[12px]">
+                    <div className="bg-fill/30 px-5 pb-3 pl-11 text-[12px]">
                       <p className="py-2 text-mute">
-                        Plan to set aside:{" "}
+                        Budget to set aside:{" "}
                         <PlannedAmount
                           associationId={association.id}
                           fiscalYearId={fiscalYear.id}
@@ -649,16 +586,26 @@ export default async function BudgetPage({ searchParams }: { searchParams: Promi
                       <p className="text-mute-soft">Counts money moved from the operating account to the reserve in this period.</p>
                     </div>
                   </details>
-                </li>
+                </div>
               ) : null}
-            </ul>
 
-            <p className="mt-2 text-[12px] text-mute-soft sm:text-[11px]">
-              On track: at or under plan · Watch: up to 10% over · Over budget: more than 10% over. Click a row for what&rsquo;s in it.
-            </p>
+              <p className="border-t border-line px-5 py-3 text-[12px] text-mute">
+                Green: under budget or within 5%. Red: more than 5% over. Click a row for what&rsquo;s in it.
+              </p>
+            </details>
           </Card>
 
-
+          {/* Always here at the bottom; the header expands it. "Edit budget" opens it. */}
+          <details id="edit-budget" open={editOpen} className="group rounded-xl border border-line bg-paper">
+            <summary className="band flex cursor-pointer list-none items-center justify-between gap-3 rounded-[7px] bg-ink px-5 py-3 group-open:rounded-b-none [&::-webkit-details-marker]:hidden">
+              <span className="min-w-0">
+                <span className="eyebrow block text-paper">{canEdit ? "Edit the full budget" : "The full budget"}</span>
+                <span className="mt-1 block text-[13px] text-ondark-mute">Every category, one number for the year.</span>
+              </span>
+              <ChevronRight size={16} strokeWidth={1.8} aria-hidden="true" className="shrink-0 text-ondark-mute transition-transform group-open:rotate-90" />
+            </summary>
+            <div className="px-5 py-4">{renderEditTable(periodSpendById)}</div>
+          </details>
         </>
       )}
     </div>

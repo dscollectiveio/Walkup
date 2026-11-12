@@ -20,10 +20,14 @@ export interface ResolvedPeriod {
   /** Last month in the period (inclusive) — never past the current month. */
   endKey: string;
   months: string[];
-  /** Share of the annual budget that applies to this period. */
+  /** Share of the annual budget compared against spending: 1 for This year (the budget as set), the day-based share for a month. */
   budgetShare: number;
-  /** Plain-words explanation of that share, shown under the budget bars. */
+  /** Share of the fiscal year elapsed through today (by day), whatever the period; for annualizing spend. */
+  elapsedShare: number;
+  /** Plain-words explanation of that share, shown under the card title. */
   budgetCaption: string;
+  /** "Through Nov 12": the date the budgets are prorated to. */
+  throughLabel: string;
   /** First and last calendar day covered, for filtering dated rows. */
   startDate: string;
   endDate: string;
@@ -49,7 +53,6 @@ export function resolvePeriod(key: PeriodKey, fy: FiscalYearLike, today: Date): 
   const current = monthKey(today);
   const fyStart = monthKeyOf(fy.starts_on);
   const fyEnd = monthKeyOf(fy.ends_on);
-  const fyMonths = Math.max(1, monthsBetween(fyStart, fyEnd).length);
 
   let startKey: string;
   let endKey: string;
@@ -66,20 +69,44 @@ export function resolvePeriod(key: PeriodKey, fy: FiscalYearLike, today: Date): 
   if (endKey < startKey) endKey = startKey;
 
   const months = monthsBetween(startKey, endKey);
-  const share = Math.min(1, months.length / fyMonths);
 
+  // Budgets are prorated by the day: days from the period's first day to today
+  // (or the period's end, once it is over), over the days in the fiscal year.
+  // The same basis the year-end projection uses, so there is one elapsed figure.
+  const dayNum = (iso: string) => {
+    const [y, m, d] = iso.slice(0, 10).split("-").map(Number);
+    return Math.round(Date.UTC(y, m - 1, d) / 86_400_000);
+  };
+  const todayIso = `${today.getFullYear()}-${String(today.getMonth() + 1).padStart(2, "0")}-${String(today.getDate()).padStart(2, "0")}`;
+  const budgetStart = key === "year" ? fy.starts_on : `${startKey.slice(0, 7)}-01`;
+  const periodEnd = key === "year" ? fy.ends_on : lastDayOfMonth(endKey);
+  const through = todayIso < periodEnd ? todayIso : periodEnd;
+  const daysIn = Math.max(1, dayNum(through) - dayNum(budgetStart) + 1);
+  const fyDays = Math.max(1, dayNum(fy.ends_on) - dayNum(fy.starts_on) + 1);
+  const share = Math.min(1, daysIn / fyDays);
+
+  const MONTHS = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
+  const short = (iso: string) => `${MONTHS[Number(iso.slice(5, 7)) - 1]} ${Number(iso.slice(8, 10))}`;
+  const range = `${short(budgetStart)} to ${short(through)}`;
+  // This year is compared with each full-year budget exactly as set; a single month is
+  // compared with its day-based share, since a year's number means nothing against one month.
   const budgetCaption =
-    key === "month"
-      ? `Compared with 1/${fyMonths} of each annual budget: one month's share.`
-      : `Compared with ${months.length}/${fyMonths} of each annual budget: the share for the months so far this year, not the full-year number.`;
+    key === "year"
+      ? `Spending from ${range} against each full-year budget.`
+      : through === todayIso
+        ? `Each budget is prorated to today, ${range}.`
+        : `Each budget covers ${range}.`;
+  const throughLabel = through === todayIso ? `Through ${short(through)}` : `Through ${short(through)} (period over)`;
 
   return {
     key,
     startKey,
     endKey,
     months,
-    budgetShare: share,
+    budgetShare: key === "year" ? 1 : share,
+    elapsedShare: share,
     budgetCaption,
+    throughLabel,
     startDate: startKey.slice(0, 10),
     endDate: lastDayOfMonth(endKey),
     label,

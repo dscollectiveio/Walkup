@@ -9,26 +9,37 @@ const SEPT_30 = new Date("2026-09-30T12:00:00");
 const fmt = (c: number) => `$${(c / 100).toLocaleString("en-US")}`;
 
 describe("resolvePeriod", () => {
-  it("pro-rates 'This year' by months elapsed — September is 9/12", () => {
+  it("compares 'This year' with the full-year budget; the elapsed share is by the day (273 of 365)", () => {
     const p = resolvePeriod("year", FY, SEPT_30);
     expect(p.startKey).toBe("2026-01-01");
     expect(p.endKey).toBe("2026-09-01");
     expect(p.months).toHaveLength(9);
-    expect(p.budgetShare).toBeCloseTo(9 / 12);
-    expect(p.budgetCaption).toContain("9/12");
+    expect(p.budgetShare).toBe(1);
+    expect(p.elapsedShare).toBeCloseTo(273 / 365);
+    expect(p.budgetCaption).toBe("Spending from Jan 1 to Sep 30 against each full-year budget.");
+    expect(p.throughLabel).toBe("Through Sep 30");
     expect(p.endDate).toBe("2026-09-30");
   });
 
-  it("uses 1/12 of the annual budget for this month", () => {
+  it("prorates this month by the day, against the year's days", () => {
     const m = resolvePeriod("month", FY, SEPT_30);
     expect(m.months).toEqual(["2026-09-01"]);
-    expect(m.budgetShare).toBeCloseTo(1 / 12);
+    expect(m.budgetShare).toBeCloseTo(30 / 365);
+    expect(m.elapsedShare).toBeCloseTo(30 / 365);
+    expect(m.budgetCaption).toBe("Each budget is prorated to today, Sep 1 to Sep 30.");
   });
 
   it("handles a fiscal year that doesn't start in January", () => {
     const p = resolvePeriod("year", { label: "FY27", starts_on: "2026-07-01", ends_on: "2027-06-30" }, SEPT_30);
     expect(p.months).toEqual(["2026-07-01", "2026-08-01", "2026-09-01"]);
-    expect(p.budgetShare).toBeCloseTo(3 / 12);
+    expect(p.budgetShare).toBe(1);
+    expect(p.elapsedShare).toBeCloseTo(92 / 365);
+  });
+
+  it("stops at the end of the fiscal year once it is over", () => {
+    const p = resolvePeriod("year", FY, new Date("2027-02-10T12:00:00"));
+    expect(p.budgetShare).toBe(1);
+    expect(p.budgetCaption).toBe("Spending from Jan 1 to Dec 31 against each full-year budget.");
   });
 });
 
@@ -146,7 +157,17 @@ describe("comparisonSentence", () => {
         fmt,
         "last year",
       ),
-    ).toBe("Compared with last year, repairs is up $210 and everything else is within $10.");
+    ).toBe("That's $220 more than last year, mostly repairs (up $210).");
+  });
+  it("uses the net change, and doesn't say 'mostly' when the driver runs against it", () => {
+    expect(
+      comparisonSentence(
+        [{ name: "Repairs", cents: 500_00 }, { name: "Utilities", cents: 100_00 }, { name: "Insurance", cents: 100_00 }],
+        [{ name: "Repairs", cents: 100_00 }, { name: "Utilities", cents: 400_00 }, { name: "Insurance", cents: 400_00 }],
+        fmt,
+        "last year",
+      ),
+    ).toBe("That's $200 less than last year. The biggest change is repairs (up $400).");
   });
   it("is null without a prior period", () => {
     expect(comparisonSentence([{ name: "Repairs", cents: 1 }], [], fmt, "last year")).toBeNull();

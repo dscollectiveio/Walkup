@@ -49,7 +49,7 @@ const STEPS: Record<string, TourStep> = {
     id: "budget",
     target: "budget",
     title: "Budget & Spending",
-    body: "Plan vs. spent, biggest category first, so surprises jump out.",
+    body: "Budget vs. spent, worst category first, so surprises jump out.",
   },
   duesBoard: {
     id: "dues",

@@ -28,11 +28,11 @@ export function PlannedAmount({
   fundId: string;
   accountId: string;
   annualCents: number | null;
-  /** Pre-filled when there's no plan yet — e.g. this year's spend, annualized. */
+  /** Pre-filled when there's no budget yet — e.g. this year's spend, annualized. */
   suggestedAnnualCents?: number;
   canEdit: boolean;
   label?: string;
-  /** Text of the button when nothing is planned yet. */
+  /** Text of the button when nothing is budgeted yet. */
   openLabel?: string;
 }) {
   const [editing, setEditing] = useState(false);
@@ -70,13 +70,13 @@ export function PlannedAmount({
       <button
         type="button"
         onClick={open}
-        title={annualCents !== null ? `${dollars(annualCents)} ${label}: click to change` : "Set a plan for this category"}
+        title={annualCents !== null ? `${dollars(annualCents)} ${label}: click to change` : "Set a budget for this category"}
         className="inline-flex min-h-[44px] items-center rounded px-1 underline decoration-dotted sm:min-h-0 decoration-line-strong underline-offset-4 hover:bg-fill hover:text-ink"
       >
         {annualCents !== null ? (
           <span className="figures">{dollars(annualCents)}</span>
         ) : (
-          <span className="text-[12px] font-medium text-ink">{openLabel ?? "Set a plan"}</span>
+          <span className="text-[12px] font-medium text-ink">{openLabel ?? "Set a budget"}</span>
         )}
       </button>
     );
@@ -100,7 +100,7 @@ export function PlannedAmount({
             }
             if (e.key === "Escape") setEditing(false);
           }}
-          aria-label={`Planned amount ${label}`}
+          aria-label={`Budgeted amount ${label}`}
           disabled={pending}
           className="figures min-h-[44px] w-28 rounded-md border border-line-strong bg-paper py-1 pl-5 pr-2 text-right text-[16px] text-ink sm:min-h-0 sm:text-[13px]"
         />
