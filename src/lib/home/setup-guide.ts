@@ -21,6 +21,8 @@ export interface SetupStep {
   overridden?: boolean;
   /** Ticks on its own as a side effect of another step; never blocks "complete". */
   informational?: boolean;
+  /** A hand tick to "done" is ignored while the data shows work left, so the guide can't contradict the dashboard. */
+  noManualDone?: boolean;
   /** Shown when this is the step the admin should do next. */
   instructions: string[];
 }
@@ -344,6 +346,7 @@ export function buildSetupGuide(input: SetupInputs): SetupSection[] {
           href: "/bank-feed?status=needs",
           done: backlogDone,
           doneOn: null,
+          noManualDone: !backlogDone,
           instructions: [
             "Click a recommended category to post that row; “Post all N recommended” does every one your own history backs.",
             "Deposits from owners are Dues. Pick the unit. Transfers between your own accounts are Transfers.",
@@ -599,6 +602,7 @@ export function applySetupOverrides(sections: SetupSection[], overrides: unknown
     steps: section.steps.map((step) => {
       const o = map[step.key];
       if (o !== "done" && o !== "not_done") return { ...step, autoDone: step.done };
+      if (o === "done" && step.noManualDone) return { ...step, autoDone: step.done };
       const done = o === "done";
       return { ...step, autoDone: step.done, overridden: done !== step.done, done, doneOn: done === step.done ? step.doneOn : null };
     }),

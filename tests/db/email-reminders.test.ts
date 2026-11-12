@@ -727,7 +727,7 @@ describe("email reminders and statements (0055)", () => {
       // within repeat_every_days: waits; after it: eligible again once the weekly cap has aged out
       await q(`update public.reminder_rules set last_run_on = null`);
       expect((await run("2026-10-17")).rows).toHaveLength(0);
-      await q(`update public.email_outbox set created_at = now() - interval '10 days', queued_at = now() - interval '10 days'`);
+      await q(`update public.email_outbox set created_at = timestamptz '2026-10-14', queued_at = timestamptz '2026-10-14'`);
       await q(`update public.reminder_rules set last_run_on = null`);
       expect((await run("2026-10-24")).rows).toHaveLength(1);
 

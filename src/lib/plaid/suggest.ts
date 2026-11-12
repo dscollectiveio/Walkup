@@ -27,25 +27,51 @@ const EXPENSE_KEYWORDS: { pattern: RegExp; accountName: string }[] = [
   { pattern: /water bill|\bwater\b/i, accountName: "Utilities" },
   { pattern: /gas company|\bnicor\b/i, accountName: "Utilities" },
   { pattern: /west bend|\binsuran/i, accountName: "Insurance" },
-  { pattern: /home depot|lowe'?s|ace hardware/i, accountName: "Repairs & Maintenance" },
-  { pattern: /landscap|snow removal|lawn/i, accountName: "Landscaping / Snow Removal" },
+  {
+    pattern: /home depot|lowe'?s|ace hardware/i,
+    accountName: "Repairs & Maintenance",
+  },
+  {
+    pattern: /landscap|snow removal|lawn/i,
+    accountName: "Landscaping / Snow Removal",
+  },
   { pattern: /janitorial|cleaning service/i, accountName: "Janitorial" },
-  { pattern: /tax service|\battorney\b|law offices|\bcpa\b|accounting/i, accountName: "Professional Fees" },
-  { pattern: /community assoc|management (co|company)/i, accountName: "Professional Fees" },
-  { pattern: /secretary of state|illinois secretary/i, accountName: "State Filing Fees" },
-  { pattern: /chargeback|return item|\bnsf\b|service charge|maintenance fee/i, accountName: "Bank & Merchant Fees" },
+  {
+    pattern: /tax service|\battorney\b|law offices|\bcpa\b|accounting/i,
+    accountName: "Professional Fees",
+  },
+  {
+    pattern: /community assoc|management (co|company)/i,
+    accountName: "Professional Fees",
+  },
+  {
+    pattern: /secretary of state|illinois secretary/i,
+    accountName: "State Filing Fees",
+  },
+  {
+    pattern: /chargeback|return item|\bnsf\b|service charge|maintenance fee/i,
+    accountName: "Bank & Merchant Fees",
+  },
 ];
 
 const TRANSFER_PATTERN = /\btransfer\b|webxfr|chasbk|\bxfer\b/i;
+/** "INTRST PYMNT", "INTEREST PAID": the bank paying interest, which is income, not an owner payment. */
+const INTEREST_PATTERN = /\binterest\b|\bintrst\b/i;
 const DUES_PATTERN = /\bdeposit\b|\bzelle\b|\bach credit\b/i;
 
-function findAccountByName(accounts: SuggestableAccount[], name: string): string | null {
+function findAccountByName(
+  accounts: SuggestableAccount[],
+  name: string,
+): string | null {
   const lower = name.toLowerCase();
   return accounts.find((a) => a.name.toLowerCase() === lower)?.id ?? null;
 }
 
 /** Overlap between the description's words and an account's own name — the fallback when no keyword matches. */
-function bestOverlapMatch(description: string, accounts: SuggestableAccount[]): string | null {
+function bestOverlapMatch(
+  description: string,
+  accounts: SuggestableAccount[],
+): string | null {
   const words = new Set(description.toLowerCase().match(/[a-z]{3,}/g) ?? []);
   if (words.size === 0) return null;
 
@@ -53,7 +79,8 @@ function bestOverlapMatch(description: string, accounts: SuggestableAccount[]): 
   for (const account of accounts) {
     const accountWords = account.name.toLowerCase().match(/[a-z]{3,}/g) ?? [];
     const score = accountWords.filter((w) => words.has(w)).length;
-    if (score > 0 && (!best || score > best.score)) best = { id: account.id, score };
+    if (score > 0 && (!best || score > best.score))
+      best = { id: account.id, score };
   }
   return best?.id ?? null;
 }
@@ -71,6 +98,10 @@ export function suggestCategorization(
   }
 
   if (amount > 0) {
+    if (INTEREST_PATTERN.test(description)) {
+      const interest = findAccountByName(incomeAccounts, "Interest Income");
+      if (interest) return { kind: "income", accountId: interest };
+    }
     if (DUES_PATTERN.test(description)) {
       return { kind: "dues", accountId: null };
     }

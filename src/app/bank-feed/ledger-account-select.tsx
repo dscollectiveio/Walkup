@@ -73,7 +73,10 @@ export function LedgerAccountSelect({
                   return;
                 }
                 setValue(created.accountId);
-                const result = await setConnectionLedgerAccount(connectionId, created.accountId);
+                const result = await setConnectionLedgerAccount(
+                  connectionId,
+                  created.accountId,
+                );
                 if (result.error) setError(result.error);
               })
             }

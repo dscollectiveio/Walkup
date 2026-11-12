@@ -7,6 +7,10 @@ import { createClient } from "@/lib/supabase/server";
 import { PENDING_INVITE_COOKIE } from "@/lib/invite-cookie";
 import { SUPPORT_EMAIL } from "@/lib/site-config";
 import { MIN_PASSWORD } from "@/lib/security/password";
+import { existsSync, readFileSync, writeFileSync } from "node:fs";
+import path from "node:path";
+import { devAccount, isDevRole, type DevAccount } from "@/lib/dev/roles";
+import { freshTotp } from "@/lib/dev/totp";
 
 export async function signIn(_prev: unknown, formData: FormData) {
   const email = String(formData.get("email") ?? "").trim();
@@ -237,34 +241,101 @@ export async function devAuthAvailable(): Promise<boolean> {
 }
 
 /**
- * Signs in as the development account.
+ * Signs in as one of the development role accounts (lib/dev/roles), then finishes the two-step check.
  *
- * This is NOT an auth bypass. It performs a real password sign-in against
- * Supabase Auth and receives a real JWT, so `auth.uid()` is populated and
- * every RLS policy in 0002 applies exactly as it does for any other user.
+ * This is NOT an auth bypass. It performs a real password sign-in against Supabase Auth and receives a real
+ * JWT, so `auth.uid()` is populated and every RLS policy applies exactly as it does for any other user. Each
+ * role is its own account holding only that role, so the pages, the sidebar and the data are what a person
+ * with that access really sees. A true bypass (faking a session, or reading with the service role) would make
+ * every page appear to work while testing nothing.
  *
- * A true bypass — faking a session, or reading with the service role — would
- * make every page appear to work while testing nothing, because RLS is the
- * only thing standing between one owner and their neighbour's balance.
- *
- * The account is a separate identity (walkup-dev@dscollective.io), not Doug's.
- * Delete it before real financial data exists. See docs/DECISIONS.md #19.
+ * The accounts live in the development database only. Gated by devAuthAvailable(), like the original button
+ * (docs/DECISIONS.md #19). The board admin is the original dev account.
  */
-export async function devSignIn() {
+export async function devSignInAs(role: string) {
   if (!(await devAuthAvailable())) {
     return { error: "Development sign-in is not available in this environment." };
   }
+  if (!isDevRole(role)) return { error: "That is not a role this app has." };
+  const account = devAccount(role);
+  if (!account) return { error: "Development sign-in is not available in this environment." };
 
   const supabase = await createClient();
-  const { error } = await supabase.auth.signInWithPassword({
-    email: process.env.DEV_AUTH_EMAIL!,
-    password: process.env.DEV_AUTH_PASSWORD!,
-  });
-
+  const { error } = await supabase.auth.signInWithPassword({ email: account.email, password: account.password });
   if (error) {
-    return { error: `Development sign-in failed: ${error.message}` };
+    const missing = /invalid login/i.test(error.message);
+    return {
+      error: missing
+        ? "That account is not in this database yet. Run the seed: node scripts/dev/role-accounts-sql.mjs (see the file header)."
+        : `Development sign-in failed: ${error.message}`,
+    };
+  }
+
+  const mfa = await completeDevMfa(supabase, account);
+  if (mfa.error) {
+    await supabase.auth.signOut();
+    return { error: mfa.error };
   }
 
   revalidatePath("/", "layout");
   redirect("/");
+}
+
+// The one-time-code secrets of the role accounts, enrolled on first use. Gitignored with the other .env files.
+const ROLE_TOTP_FILE = path.join(process.cwd(), ".env.dev-role-totp.local");
+
+function storedSecret(role: string): string | null {
+  try {
+    if (!existsSync(ROLE_TOTP_FILE)) return null;
+    const all = JSON.parse(readFileSync(ROLE_TOTP_FILE, "utf8")) as Record<string, string>;
+    return typeof all[role] === "string" ? all[role] : null;
+  } catch {
+    return null;
+  }
+}
+
+function storeSecret(role: string, secret: string) {
+  let all: Record<string, string> = {};
+  try {
+    if (existsSync(ROLE_TOTP_FILE)) all = JSON.parse(readFileSync(ROLE_TOTP_FILE, "utf8")) as Record<string, string>;
+  } catch {
+    all = {};
+  }
+  all[role] = secret;
+  writeFileSync(ROLE_TOTP_FILE, JSON.stringify(all, null, 2), { mode: 0o600 });
+}
+
+/** Clears the sign-in's second step the way a person with an authenticator app does: enrol once, then answer with a code. */
+async function completeDevMfa(supabase: Awaited<ReturnType<typeof createClient>>, account: DevAccount): Promise<{ error?: string }> {
+  const { data: factors } = await supabase.auth.mfa.listFactors();
+  const verified = factors?.totp?.[0];
+  let factorId: string;
+  let secret: string | null;
+
+  if (verified) {
+    factorId = verified.id;
+    secret = account.totpSecret ?? storedSecret(account.role);
+    if (!secret) {
+      return { error: "This account has an authenticator whose secret was not saved. Remove its factor in the dev database and try again." };
+    }
+  } else {
+    for (const f of factors?.all ?? []) {
+      if (f.status === "unverified") await supabase.auth.mfa.unenroll({ factorId: f.id });
+    }
+    const { data, error } = await supabase.auth.mfa.enroll({ factorType: "totp", friendlyName: "Dev role sign-in" });
+    if (error || !data) return { error: `Could not enrol the dev authenticator: ${error?.message ?? "no answer"}` };
+    factorId = data.id;
+    secret = data.totp.secret;
+    storeSecret(account.role, secret);
+  }
+
+  const { data: challenge, error: challengeError } = await supabase.auth.mfa.challenge({ factorId });
+  if (challengeError || !challenge) return { error: `Could not start the two-step check: ${challengeError?.message ?? "no answer"}` };
+  const { error: verifyError } = await supabase.auth.mfa.verify({
+    factorId,
+    challengeId: challenge.id,
+    code: await freshTotp(secret),
+  });
+  if (verifyError) return { error: `The two-step check failed: ${verifyError.message}` };
+  return {};
 }

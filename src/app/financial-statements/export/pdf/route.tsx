@@ -22,11 +22,11 @@ export async function GET(request: NextRequest) {
   const offset = Math.max(0, Math.trunc(Number(params.get("offset") ?? 0)) || 0);
 
   const supabase = await createClient();
-  const loaded = await loadForReport(supabase, { periods: params.get("periods"), period, offset });
+  const loaded = await loadForReport(supabase, { query: params, period, offset });
   if (loaded === "restricted") {
     return NextResponse.json({ error: "Not authorized." }, { status: 403 });
   }
-  const report = buildReport(loaded);
+  const report = buildReport(loaded.statements, { compare: loaded.compare, blank: loaded.blank });
   if (!report) {
     return NextResponse.json({ error: "No fiscal year is set up yet." }, { status: 404 });
   }

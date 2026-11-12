@@ -118,6 +118,9 @@ export function ProblemSection() {
               <p className="mt-1.5 text-[13.5px] leading-snug text-mute">{body}</p>
               <div className="mt-auto pt-3">
                 <p className="border-t border-white/20 pt-2.5 text-[13px] font-semibold leading-snug text-[#e0b866]">{fix}</p>
+                {label === "Taxes" && (
+                  <p className="mt-1.5 text-[12px] leading-snug text-mute">Draft figures, for your accountant to review.</p>
+                )}
               </div>
             </div>
           ))}

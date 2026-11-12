@@ -8,6 +8,7 @@ import { AccessEnded } from "@/components/access-ended";
 import Link from "next/link";
 import { Sidebar } from "@/components/sidebar/sidebar";
 import { AppFrame } from "@/components/app-frame";
+import { DropdownDismiss } from "@/components/dropdown-dismiss";
 import { TopBar } from "@/components/sidebar/top-bar";
 import { AppTour } from "@/components/tour/app-tour";
 import { tourRoleFrom, type TourRole } from "@/lib/tour/steps";
@@ -52,9 +53,8 @@ export default async function RootLayout({
 }: Readonly<{ children: React.ReactNode }>) {
   const supabase = await createClient();
   const jar = await cookies();
-  // walkup.sidebar is the preference; the older "sidebar=collapsed" cookie still counts as the rail.
-  const sidebarMode: "expanded" | "rail" =
-    jar.get("walkup.sidebar")?.value === "rail" || jar.get("sidebar")?.value === "collapsed" ? "rail" : "expanded";
+  // walkup.sidebar is the preference; collapsed (the icon rail) is the default until someone expands it.
+  const sidebarMode: "expanded" | "rail" = jar.get("walkup.sidebar")?.value === "expanded" ? "expanded" : "rail";
 
   // getClaims(), not getUser(): this layout never gates access itself (proxy.ts
   // already verified this request), so a second network round-trip to the auth
@@ -139,6 +139,7 @@ export default async function RootLayout({
         <script nonce={nonce} dangerouslySetInnerHTML={{ __html: THEME_SCRIPT }} />
       </head>
       <body className="min-h-screen bg-bone text-ink antialiased">
+        <DropdownDismiss />
         <AppFrame
           signedIn={Boolean(user)}
           sidebar={
@@ -172,10 +173,8 @@ export default async function RootLayout({
           footer={
             <footer className="mx-auto max-w-[1100px] px-6 pb-12 text-[11px] leading-relaxed text-mute-soft min-[900px]:px-8">
             <p className="max-w-3xl">
-              Walkup is not a tax adviser or a lawyer. The tax numbers here are
-              worked out from your own records, but nobody has checked them
-              against this year&rsquo;s IRS rules. Have an accountant look before
-              you file anything.
+              Walkup isn&rsquo;t an accountant or lawyer. Have one review these
+              before you rely on them for filings.
             </p>
             <p className="mt-3 space-x-3">
               <Link href="/security" className="underline-offset-2 hover:underline">

@@ -25,6 +25,7 @@ import { getConnectionBalance } from "@/app/bank-feed/balances";
 import { buildPlanRows, overBudgetAlerts } from "@/lib/money/plan";
 import { dateOfKey, monthLongLabel, monthShortLabel } from "@/lib/money/months";
 import { TodoCard } from "@/components/home/todo-card";
+import { AnnouncementsCard } from "@/components/home/announcements-card";
 import { AnnouncementsStrip } from "@/components/home/announcements-strip";
 import { BillingNotice } from "@/components/home/billing-notice";
 import { BillingNotices } from "@/components/home/billing-notices";
@@ -58,6 +59,8 @@ import { getViewer } from "@/lib/owner/viewer";
 import { SHARE_DESCRIPTION, SHARE_TITLE, SITE_DESCRIPTION, SITE_TITLE, SITE_URL } from "@/lib/site-config";
 import type { Metadata } from "next";
 import { headers } from "next/headers";
+
+const SHOW_ANNOUNCEMENTS_STRIP = false;
 
 export const dynamic = "force-dynamic";
 
@@ -845,8 +848,9 @@ export default async function HomePage() {
   // --------------------------------------------------------------------------
   return (
     <div className="space-y-6">
-      {notices ? (
-        <AnnouncementsStrip rows={notices.rows} unread={notices.unread} todayIso={buildingToday} canPost={isBoard} />
+      {/* Hidden for now (not removed): flip SHOW_ANNOUNCEMENTS_STRIP to bring it back. */}
+      {SHOW_ANNOUNCEMENTS_STRIP && (notices || urgent.length > 0) ? (
+        <AnnouncementsStrip rows={notices?.rows ?? []} alerts={urgent} unread={notices?.unread ?? new Set()} todayIso={buildingToday} canPost={isBoard} />
       ) : null}
 
       <Greeting
@@ -866,23 +870,8 @@ export default async function HomePage() {
         </p>
       ) : null}
 
-
-      {ownerInsurance ? (
-        <Card navy title="What the building's insurance covers">
-          <p className="text-[13px] text-ink">
-            What the building&rsquo;s master policy covers, and what it leaves for your own condo (HO-6) policy.
-          </p>
-          <Link
-            href="/insurance"
-            className={`${btnSecondary} mt-3`}
-          >
-            Read the summary
-          </Link>
-        </Card>
-      ) : null}
-
-      {/* Where the association stands first, then To-do and setup (Worth a minute, then setup), half and half. */}
-      <div className="grid items-stretch gap-4 lg:grid-cols-2">
+      {/* Where the association stands (60%) beside the setup guide (40%). What needs the board rides in the banner above. */}
+      <div className="grid items-stretch gap-4 lg:grid-cols-[3fr_2fr]">
         <Standing
           totalCents={totalCents}
           operatingCents={operatingCents}
@@ -895,23 +884,16 @@ export default async function HomePage() {
         />
         <div className="flex min-h-0 min-w-0 flex-col gap-4 lg:h-0 lg:min-h-full">
           <TodoCard
-            items={urgent}
-            emptyNote={
-              booksVisible
-                ? "The books balance and every unit is current."
-                : "No activity has been recorded yet, so there's nothing to flag."
-            }
             canRestoreSetup={canSetTarget && !isSetupComplete(setupSections) && association.setup_dismissed_at !== null}
             setup={
               showSetupGuide
-                ? (notices) => (
+                ? () => (
                     <SetupGuidePanel
                       sections={setupSections}
                       activeStepKey={nextStep(setupSections)?.key ?? null}
                       done={setupCounts.done}
                       total={setupCounts.total}
                       readOnly={!canSetTarget}
-                      notices={notices}
                     />
                   )
                 : null
@@ -929,8 +911,29 @@ export default async function HomePage() {
         </div>
       </div>
 
-      <div className={`grid items-stretch gap-4 ${reminders.length > 0 ? "lg:grid-cols-[3fr_2fr]" : ""}`}>
-        {reminders.length > 0 ? <ComingUp reminders={reminders} today={today} /> : null}
+      {ownerInsurance ? (
+        <Card navy title="What the building's insurance covers">
+          <p className="text-[13px] text-ink">
+            What the building&rsquo;s master policy covers, and what it leaves for your own condo (HO-6) policy.
+          </p>
+          <Link
+            href="/insurance"
+            className={`${btnSecondary} mt-3`}
+          >
+            Read the summary
+          </Link>
+        </Card>
+      ) : null}
+
+      <div className="grid items-stretch gap-4 lg:grid-cols-[3fr_2fr]">
+        {reminders.length > 0 ? (
+          <div className="flex min-w-0 flex-col gap-4 lg:h-0 lg:min-h-full">
+            <ComingUp reminders={reminders} today={today} />
+            <AnnouncementsCard rows={notices?.rows ?? []} unread={notices?.unread ?? new Set()} canPost={isBoard} />
+          </div>
+        ) : (
+          <AnnouncementsCard rows={notices?.rows ?? []} unread={notices?.unread ?? new Set()} canPost={isBoard} />
+        )}
         <Building units={buildingUnits} duesLine={duesLine} />
       </div>
 

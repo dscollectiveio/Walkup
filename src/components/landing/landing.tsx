@@ -1,6 +1,6 @@
 import Image from "next/image";
 import Link from "next/link";
-import { ArrowDown, Lock, Sparkles, Download, FileCheck, FileText, HandCoins, HardHat, Eye, KeyRound, Landmark, ListChecks, MailCheck, ShieldCheck, Wrench } from "lucide-react";
+import { ArrowDown, Building2, Lock, Sparkles, Download, FileCheck, FileText, HandCoins, HardHat, Eye, KeyRound, Landmark, ListChecks, MailCheck, ShieldCheck, Wrench } from "lucide-react";
 import { Lockup, WalkupMark } from "@/components/mark";
 import {
   ANNUAL_NOTE,
@@ -178,7 +178,7 @@ export function Landing({ nonce }: { nonce?: string }) {
   // Early-access wording until paid plans are really live (lib/billing/launch).
   const words = pricingWords();
   return (
-    <div className="landing-smooth bg-bone text-ink">
+    <div data-theme="light" data-force-light className="landing-smooth bg-bone text-ink">
       <StructuredData nonce={nonce} />
       {/* ---------------------------------------------------------------- header */}
       <header className={`${NAVY} sticky top-0 z-40 border-b border-white/25 shadow-[0_1px_0_rgba(0,0,0,0.25)] text-white`}>
@@ -191,8 +191,9 @@ export function Landing({ nonce }: { nonce?: string }) {
             <a href="#pricing" className="hidden rounded-md px-3 py-2 text-white/80 hover:text-white sm:inline-block">Pricing</a>
             <a href="#faq" className="hidden rounded-md px-3 py-2 text-white/80 hover:text-white md:inline-block">FAQ</a>
             <Link href="/login" className="inline-flex min-h-[44px] items-center rounded-md px-3 font-medium text-white hover:bg-white/10">Sign in</Link>
-            <Link href="/signup" data-cta="header" className="ml-1 hidden rounded-md bg-brass px-3.5 py-2 font-bold text-on-brass hover:bg-[#E4B75B] sm:inline-block">
-              {CTA_HERO}
+            <Link href="/signup" data-cta="header" className="ml-1 inline-flex min-h-[40px] items-center rounded-md bg-brass px-3 py-2 font-bold text-on-brass hover:bg-[#E4B75B] sm:inline-block sm:min-h-0 sm:px-3.5">
+              <span className="sm:hidden">Sign up</span>
+              <span className="hidden sm:inline">{CTA_HERO}</span>
             </Link>
           </nav>
         </div>
@@ -236,7 +237,7 @@ export function Landing({ nonce }: { nonce?: string }) {
                 [MailCheck, "Board approves every message"],
                 [Sparkles, `First ${FOUNDING.associations} boards are free for life`],
                 [Download, "Export anytime"],
-                // [Building2, "Built by a Chicago condo board president"],  // enable once true and approved
+                [Building2, "Built by a Chicago condo board president"],
               ].map(([Icon, label]) => {
                 const TrustIcon = Icon as typeof Lock;
                 return (
@@ -281,6 +282,40 @@ export function Landing({ nonce }: { nonce?: string }) {
                 <p className="mt-1.5 text-[14px] leading-relaxed text-mute">{f.body}</p>
               </article>
             ))}
+          </div>
+          <div className="mt-8 grid gap-3 border-t border-line pt-8 md:grid-cols-2" aria-label="Sample year-end output">
+            <article className="rounded-xl border border-line bg-paper p-4">
+              <p className="text-[12px] font-semibold uppercase tracking-[0.12em] text-eyebrow">Sample: your tax summary</p>
+              <h3 className="mt-1 text-[17px] font-bold text-ink">Form 1120-H, with the numbers shown</h3>
+              <dl className="mt-2 divide-y divide-line text-[15px]">
+                {[
+                  ["Income from members (60% test)", "94%, passes"],
+                  ["Spent on the building (90% test)", "97%, passes"],
+                  ["Other income, like interest", "$412"],
+                  ["Tax owed", "$0"],
+                ].map(([k, v]) => (
+                  <div key={k} className="flex items-center justify-between gap-3 py-1.5">
+                    <dt className="text-mute">{k}</dt>
+                    <dd className="font-semibold text-ink">{v}</dd>
+                  </div>
+                ))}
+              </dl>
+            </article>
+            <article className="rounded-xl border border-line bg-paper p-4">
+              <p className="text-[12px] font-semibold uppercase tracking-[0.12em] text-eyebrow">Sample: your handoff packet</p>
+              <h3 className="mt-1 text-[17px] font-bold text-ink">Everything the next board needs</h3>
+              <ul className="mt-2 space-y-2 text-[15px] text-mute">
+                {["Year-end financial statements", "Who owes what, by unit", "Insurance, vendors and W-9s on file", "This year's filed tax return"].map((t) => (
+                  <li key={t} className="flex items-start gap-2">
+                    <Check />
+                    <span>{t}</span>
+                  </li>
+                ))}
+              </ul>
+            </article>
+            <p className="text-[12px] text-mute md:col-span-2">
+              Made-up numbers for illustration. Tax figures are provisional until your accountant reviews them.
+            </p>
           </div>
           <div className="mt-10 flex flex-wrap items-center gap-3">
             <Link href="/signup" data-cta="features" className={navyBtn}>
@@ -491,7 +526,14 @@ export function Landing({ nonce }: { nonce?: string }) {
             intro={words.pricingIntro}
           />
 
-          <div className="mt-8 rounded-xl border border-brass/50 bg-brass/10 px-5 py-4 text-[14px] text-ink">
+          <div className="mt-8 flex items-center gap-2 rounded-xl border border-brass bg-brass/15 px-5 py-4 text-[15px] text-ink">
+            <Sparkles aria-hidden="true" size={18} strokeWidth={1.7} className="shrink-0" />
+            <span>
+              <strong>Founding offer:</strong> the first {FOUNDING.associations} boards are free for life.
+            </span>
+          </div>
+
+          <div className="mt-4 rounded-xl border border-brass/50 bg-brass/10 px-5 py-4 text-[14px] text-ink">
             <strong>{words.calloutLead}</strong> {words.calloutRest}
           </div>
 
@@ -642,6 +684,7 @@ export function Landing({ nonce }: { nonce?: string }) {
           <nav aria-label="Footer" className="flex flex-wrap gap-x-5 gap-y-2">
             <Link href="/login" className="hover:text-ink hover:underline">Sign in</Link>
             <Link href="/signup" className="hover:text-ink hover:underline">Create an account</Link>
+            <Link href="/form-1120-h" className="hover:text-ink hover:underline">Form 1120-H guide</Link>
             <Link href="/security" className="hover:text-ink hover:underline">Security</Link>
             <Link href="/privacy" className="hover:text-ink hover:underline">Privacy Policy</Link>
             <Link href="/terms" className="hover:text-ink hover:underline">Terms of Service</Link>

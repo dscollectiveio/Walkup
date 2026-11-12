@@ -278,6 +278,8 @@ export function assembleReminders({
   // The board's own lead time (renewal_reminder_days, per policy) is when to
   // start shopping; overdue reads as today, like the access review below. A
   // policy whose renewal is already saved has nothing left to shop for.
+  // Policies renewing the same day with the same lead time share one reminder.
+  const shopping = new Map<string, { due: Date; renews: Date; kinds: string[] }>();
   for (const r of renewals) {
     if (r.renewed) continue;
     const start = new Date(r.due.getFullYear(), r.due.getMonth(), r.due.getDate() - r.leadDays);
@@ -286,10 +288,17 @@ export function assembleReminders({
     const short = coverageShort(r.coverage);
     // "master", "D&O", "liability": an acronym keeps its capitals.
     const kind = r.coverage === "property" ? "master" : /^[A-Z&]+$/.test(short) ? short : short.toLowerCase();
+    const key = `${due.getTime()}|${r.due.getTime()}`;
+    const group = shopping.get(key) ?? { due, renews: r.due, kinds: [] };
+    group.kinds.push(kind);
+    shopping.set(key, group);
+  }
+  for (const g of shopping.values()) {
+    const list = g.kinds.length === 1 ? g.kinds[0] : `${g.kinds.slice(0, -1).join(", ")} and ${g.kinds[g.kinds.length - 1]}`;
     reminders.push({
       name: "Get insurance quotes",
-      kind: `Your ${kind} policy renews on ${formatDueDate(r.due, today)}. This is a good time to get quotes.`,
-      due,
+      kind: `Your ${list} ${g.kinds.length === 1 ? "policy renews" : "policies renew"} on ${formatDueDate(g.renews, today)}. This is a good time to get quotes.`,
+      due: g.due,
       href: "/insurance?view=quotes&new=1",
     });
   }

@@ -1,4 +1,9 @@
-import { createHash, createPublicKey, timingSafeEqual, verify } from "node:crypto";
+import {
+  createHash,
+  createPublicKey,
+  timingSafeEqual,
+  verify,
+} from "node:crypto";
 
 /**
  * Plaid webhook verification, pure so it can be tested without Plaid: the
@@ -45,7 +50,9 @@ const b64urlToBuffer = (s: string) => Buffer.from(s, "base64url");
 function parseJson(buf: Buffer): Record<string, unknown> | null {
   try {
     const v = JSON.parse(buf.toString("utf8"));
-    return v && typeof v === "object" && !Array.isArray(v) ? (v as Record<string, unknown>) : null;
+    return v && typeof v === "object" && !Array.isArray(v)
+      ? (v as Record<string, unknown>)
+      : null;
   } catch {
     return null;
   }
@@ -64,14 +71,19 @@ export async function verifyPlaidWebhook(input: {
 
   if (!input.verificationHeader) return fail("missing_header");
   const parts = input.verificationHeader.split(".");
-  if (parts.length !== 3 || parts.some((p) => p.length === 0)) return fail("malformed");
+  if (parts.length !== 3 || parts.some((p) => p.length === 0))
+    return fail("malformed");
   const [h, p, sig] = parts;
 
   const header = parseJson(b64urlToBuffer(h));
   if (!header) return fail("malformed");
   // Exactly ES256: never "none", never an HMAC variant a forger could key with a public value.
   if (header.alg !== "ES256") return fail("bad_alg");
-  if (typeof header.kid !== "string" || !/^[A-Za-z0-9_-]{1,64}$/.test(header.kid)) return fail("malformed");
+  if (
+    typeof header.kid !== "string" ||
+    !/^[A-Za-z0-9_-]{1,64}$/.test(header.kid)
+  )
+    return fail("malformed");
 
   let jwk: PlaidJwk | null;
   try {
@@ -80,12 +92,16 @@ export async function verifyPlaidWebhook(input: {
     return fail("key_fetch_failed");
   }
   if (!jwk) return fail("unknown_key");
-  if (jwk.expired_at != null && jwk.expired_at <= now) return fail("expired_key");
+  if (jwk.expired_at != null && jwk.expired_at <= now)
+    return fail("expired_key");
   if (jwk.kty !== "EC" || jwk.crv !== "P-256") return fail("unknown_key");
 
   let key;
   try {
-    key = createPublicKey({ key: { kty: jwk.kty, crv: jwk.crv, x: jwk.x, y: jwk.y }, format: "jwk" });
+    key = createPublicKey({
+      key: { kty: jwk.kty, crv: jwk.crv, x: jwk.x, y: jwk.y },
+      format: "jwk",
+    });
   } catch {
     return fail("unknown_key");
   }
@@ -94,7 +110,12 @@ export async function verifyPlaidWebhook(input: {
   if (signature.length !== 64) return fail("bad_signature");
   let valid = false;
   try {
-    valid = verify("sha256", Buffer.from(`${h}.${p}`), { key, dsaEncoding: "ieee-p1363" }, signature);
+    valid = verify(
+      "sha256",
+      Buffer.from(`${h}.${p}`),
+      { key, dsaEncoding: "ieee-p1363" },
+      signature,
+    );
   } catch {
     valid = false;
   }
@@ -103,13 +124,16 @@ export async function verifyPlaidWebhook(input: {
   const payload = parseJson(b64urlToBuffer(p));
   if (!payload) return fail("malformed");
   const { iat, request_body_sha256: claimed } = payload;
-  if (typeof iat !== "number" || !Number.isFinite(iat)) return fail("malformed");
+  if (typeof iat !== "number" || !Number.isFinite(iat))
+    return fail("malformed");
   if (now - iat > MAX_WEBHOOK_AGE_SECONDS) return fail("stale");
   if (iat - now > MAX_WEBHOOK_AGE_SECONDS) return fail("stale"); // from the future: clock games
-  if (typeof claimed !== "string" || !/^[0-9a-f]{64}$/i.test(claimed)) return fail("malformed");
+  if (typeof claimed !== "string" || !/^[0-9a-f]{64}$/i.test(claimed))
+    return fail("malformed");
 
   const actual = createHash("sha256").update(input.rawBody, "utf8").digest();
-  if (!timingSafeEqual(actual, Buffer.from(claimed, "hex"))) return fail("body_mismatch");
+  if (!timingSafeEqual(actual, Buffer.from(claimed, "hex")))
+    return fail("body_mismatch");
 
   return { ok: true };
 }
@@ -148,15 +172,18 @@ export function cachedKeyFetcher(
     if (missAt !== undefined && now - missAt < missTtl) return null;
     const pending = inFlight.get(kid);
     if (pending) return pending;
-    if (inFlight.size >= maxConcurrent) throw new Error("too many key lookups in flight");
+    if (inFlight.size >= maxConcurrent)
+      throw new Error("too many key lookups in flight");
     const request = (async () => {
       try {
         const key = await fetchKey(kid);
         if (key) {
-          if (cache.size >= max) cache.delete(cache.keys().next().value as string);
+          if (cache.size >= max)
+            cache.delete(cache.keys().next().value as string);
           cache.set(kid, { key, at: clock() });
         } else {
-          if (misses.size >= maxMisses) misses.delete(misses.keys().next().value as string);
+          if (misses.size >= maxMisses)
+            misses.delete(misses.keys().next().value as string);
           misses.set(kid, clock());
         }
         return key;

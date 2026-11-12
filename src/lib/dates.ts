@@ -13,6 +13,16 @@ export function shortDate(dateIso: string, todayIso: string): string {
   return String(y) === todayIso.slice(0, 4) ? base : `${base}, ${y}`;
 }
 
+/** "Jul 1 to Aug 31, 2026", or with both years when the range crosses one. */
+export function dateRangeLabel(startIso: string, endIso: string): string {
+  const [sy, sm, sd] = startIso.slice(0, 10).split("-").map(Number);
+  const [ey, em, ed] = endIso.slice(0, 10).split("-").map(Number);
+  if (!sy || !ey) return `${startIso} to ${endIso}`;
+  const a = `${MONTHS[sm - 1]} ${sd}`;
+  const b = `${MONTHS[em - 1]} ${ed}`;
+  return sy === ey ? `${a} to ${b}, ${ey}` : `${a}, ${sy} to ${b}, ${ey}`;
+}
+
 /** Today as "YYYY-MM-DD" in the machine's local zone. */
 export function todayIso(now: Date = new Date()): string {
   return `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, "0")}-${String(now.getDate()).padStart(2, "0")}`;

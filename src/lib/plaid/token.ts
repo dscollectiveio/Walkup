@@ -1,6 +1,11 @@
 import "server-only";
 import type { SupabaseClient } from "@supabase/supabase-js";
-import { isSealed, openSecret, sealSecret, sealingEnabled } from "@/lib/security/secret-box";
+import {
+  isSealed,
+  openSecret,
+  sealSecret,
+  sealingEnabled,
+} from "@/lib/security/secret-box";
 
 /**
  * Reads a bank connection's Plaid access token as the signed-in board admin
@@ -13,9 +18,12 @@ export async function readBankToken(
   supabase: SupabaseClient,
   connectionId: string,
 ): Promise<{ token: string | null; error: { message: string } | null }> {
-  const { data, error } = await supabase.rpc("get_bank_access_token", { p_connection_id: connectionId });
+  const { data, error } = await supabase.rpc("get_bank_access_token", {
+    p_connection_id: connectionId,
+  });
   if (error) return { token: null, error };
-  if (!data) return { token: null, error: { message: "No access token on file." } };
+  if (!data)
+    return { token: null, error: { message: "No access token on file." } };
 
   const stored = data as string;
   let token: string;

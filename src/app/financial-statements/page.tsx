@@ -1,15 +1,24 @@
 import Link from "next/link";
 import { redirect } from "next/navigation";
-import { ChevronRight } from "lucide-react";
+import { ChevronRight, Download, MoreHorizontal } from "lucide-react";
 import { createClient } from "@/lib/supabase/server";
 import { Card, Empty, Restricted, money } from "@/components/ui";
 import { BoardOnly, viewerIsOwnerOnly } from "@/components/board-only";
 import { shortDate, todayIso } from "@/lib/dates";
 import { statementHref, type PeriodGrain } from "./periods";
 import { loadStatement, type AccountLine, type LineEntry } from "./data";
-import { headlineFor, parseSelection, periodKeyFor, varianceWords } from "./summary";
+import { headlineFor, parseSelection, varianceWords } from "./summary";
+import {
+  activePick,
+  booksStartIdx,
+  clampRange,
+  idxOfIso,
+  parseKey,
+  pickerStateFor,
+  resolveView,
+} from "./range";
 import { MultiPeriodView } from "./multi-view";
-import { ReportActions } from "./report-actions";
+import { DownloadMenu, ReportActions } from "./report-actions";
 import { buildReport } from "./report";
 import { PeriodPicker } from "./period-picker";
 import { btnPrimary } from "@/components/repairs/styles";
@@ -42,7 +51,7 @@ function LineRow({
   const variance = budget !== null && budget !== undefined ? varianceWords(row.amount, budget, row.account_type) : null;
   return (
     <details className="group border-b border-line/70 last:border-b-0">
-      <summary className="flex cursor-pointer list-none items-center gap-3 px-3 py-2.5 hover:bg-fill/40 [&::-webkit-details-marker]:hidden">
+      <summary className="flex cursor-pointer list-none items-center gap-3 px-5 py-2.5 hover:bg-fill/40 [&::-webkit-details-marker]:hidden">
         <ChevronRight
           size={14}
           strokeWidth={1.6}
@@ -55,7 +64,7 @@ function LineRow({
             <span className={`block text-[12px] sm:hidden ${TONE_TEXT[variance.tone]}`}>{variance.words}</span>
           ) : null}
         </span>
-        <span className="hidden w-36 items-center gap-2 sm:flex">
+        <span className="-my-2.5 hidden w-36 items-center gap-2 self-stretch border-l border-line/60 pl-3 sm:flex">
           <span className="h-1.5 flex-1 overflow-hidden rounded-full bg-fill">
             <span
               className={`block h-full rounded-full ${tone === "income" ? "bg-moss" : "bg-brass"}`}
@@ -65,16 +74,16 @@ function LineRow({
           <span className="figures w-9 text-right text-[11px] text-mute">{Math.round(share)}%</span>
         </span>
         {budget !== null && budget !== undefined ? (
-          <span className="hidden w-32 text-right sm:block">
+          <span className="-my-2.5 hidden w-32 flex-col justify-center self-stretch border-l border-line/60 px-3 text-right sm:flex">
             <span className="figures block text-[12px] text-mute">{money(budget)}</span>
             {variance ? (
               <span className={`block text-[11px] ${TONE_TEXT[variance.tone]}`}>{variance.words}</span>
             ) : null}
           </span>
         ) : null}
-        <span className="figures w-28 whitespace-nowrap text-right text-ink">{money(row.amount)}</span>
+        <span className="figures -my-2.5 -mr-5 flex w-32 items-center justify-end self-stretch whitespace-nowrap border-l border-line/60 bg-[var(--w-total-col)] pl-3 pr-5 font-medium text-ink">{money(row.amount)}</span>
       </summary>
-      <ul className="divide-y divide-line/60 bg-fill/30 pl-10 pr-3 text-[12px]">
+      <ul className="divide-y divide-line/60 bg-fill/30 pl-[3.25rem] pr-5 text-[12px]">
         {entries.length === 0 ? (
           <li className="py-2 text-mute-soft">No entries found.</li>
         ) : (
@@ -103,20 +112,67 @@ function LineRow({
   );
 }
 
-function SectionBand({ label, action }: { label: string; action?: React.ReactNode }) {
+function SectionBand({ label, action, collapsible = false }: { label: string; action?: React.ReactNode; collapsible?: boolean }) {
+  const cls =
+    "flex items-center justify-between border-b border-line bg-paper px-5 py-3 text-[11px] font-semibold uppercase tracking-[0.07em] text-section-label";
+  if (!collapsible) {
+    return (
+      <div className={cls}>
+        <span>{label}</span>
+        {action}
+      </div>
+    );
+  }
   return (
-    <div className="flex items-center justify-between bg-fill/60 px-3 py-2 text-[11px] font-medium uppercase tracking-[0.07em] text-section-label">
-      <span>{label}</span>
+    <summary className={`${cls} cursor-pointer list-none [&::-webkit-details-marker]:hidden`}>
+      <span className="inline-flex items-center gap-3">
+        <ChevronRight size={14} strokeWidth={1.6} aria-hidden="true" className="shrink-0 transition-transform group-open/sec:rotate-90" />
+        {label}
+      </span>
       {action}
-    </div>
+    </summary>
   );
 }
 
-function TotalRow({ label, amount, strong = false }: { label: string; amount: number; strong?: boolean }) {
+function TotalRow({
+  label,
+  amount,
+  strong = false,
+  bad = false,
+  rails = false,
+  budget,
+  type,
+}: {
+  label: string;
+  amount: number;
+  strong?: boolean;
+  bad?: boolean;
+  /** The Share and Budget columns are showing: keep their dividing lines running through this row. */
+  rails?: boolean;
+  /** This total's budget, with how far the actual is over or under it. */
+  budget?: number | null;
+  type?: "income" | "expense";
+}) {
+  const variance = budget !== null && budget !== undefined && type ? varianceWords(amount, budget, type) : null;
   return (
-    <div className={`flex items-center gap-3 px-3 py-2.5 ${strong ? "border-t-2 border-ink" : ""}`}>
-      <span className={`flex-1 pl-[26px] ${strong ? "text-[14px] font-bold" : "font-semibold"} text-ink`}>{label}</span>
-      <span className={`figures w-28 text-right ${strong ? "text-[14px] font-bold" : "font-semibold"} text-ink`}>
+    <div className={`flex items-center gap-3 px-5 py-2.5 ${strong ? "border-t-2 border-ink py-3" : "border-t-2 border-line-strong bg-fill/50"}`}>
+      <span className={`flex-1 pl-[26px] ${strong ? "text-[14px] font-bold" : "font-medium"} text-ink`}>{label}</span>
+      {rails ? (
+        <>
+          <span aria-hidden="true" className={`${strong ? "-my-3" : "-my-2.5"} hidden w-36 self-stretch border-l border-line/60 sm:block`} />
+          <span className={`${strong ? "-my-3" : "-my-2.5"} hidden w-32 flex-col justify-center self-stretch border-l border-line/60 px-3 text-right sm:flex`}>
+            {budget !== null && budget !== undefined ? (
+              <>
+                <span className="figures block text-[12px] font-normal text-mute">{money(budget)}</span>
+                {variance ? <span className={`block text-[11px] font-normal ${TONE_TEXT[variance.tone]}`}>{variance.words}</span> : null}
+              </>
+            ) : null}
+          </span>
+        </>
+      ) : null}
+      <span
+        className={`figures ${strong ? "-my-3" : "-my-2.5"} -mr-5 flex w-32 items-center justify-end self-stretch border-l border-line/60 pl-3 ${strong ? "bg-[var(--w-total-col)]" : "bg-fill"} pr-5 ${strong ? `text-[14px] font-bold ${bad ? "text-bad-text" : "text-good-text"}` : "font-medium text-ink"}`}
+      >
         {money(amount)}
       </span>
     </div>
@@ -126,17 +182,27 @@ function TotalRow({ label, amount, strong = false }: { label: string; amount: nu
 export default async function FinancialStatementsPage({
   searchParams,
 }: {
-  searchParams: Promise<{ view?: string; period?: string; offset?: string; sort?: string; periods?: string }>;
+  searchParams: Promise<{
+    view?: string;
+    period?: string;
+    offset?: string;
+    periods?: string;
+    from?: string;
+    to?: string;
+    cols?: string;
+    cmp?: string;
+    from2?: string;
+    to2?: string;
+    pick?: string;
+  }>;
 }) {
   const sp = await searchParams;
   const period: PeriodGrain =
     sp.period === "quarterly" ? "quarterly" : sp.period === "annual" ? "annual" : "monthly";
   const offset = Math.max(0, Math.trunc(Number(sp.offset ?? 0)) || 0);
-  // Old links used view=expenses for "largest first"; sort=size is the same thing.
-  const sort: "account" | "size" = sp.sort === "size" || sp.view === "expenses" ? "size" : "account";
 
   const supabase = await createClient();
-  const statement = await loadStatement(supabase, sort === "size" ? "expenses" : "total", period, offset);
+  const statement = await loadStatement(supabase, "total", period, offset);
   if ("restricted" in statement) {
     if (await viewerIsOwnerOnly()) {
       return (
@@ -150,18 +216,26 @@ export default async function FinancialStatementsPage({
     return <Restricted what="financial statements" />;
   }
 
-  // Several periods chosen: side-by-side columns. A single one is just the ordinary view.
+  // A date range, a comparison, or several periods: side-by-side columns. One month is just the ordinary view.
+  const todayStr = todayIso();
+  const nowIdx = idxOfIso(todayStr);
+  const view = resolveView(sp, statement.fiscalYears, todayStr);
+  const from = parseKey(sp.from);
+  if (view) {
+    const first =
+      view.kind === "compare" ? view.p1 : view.kind === "combined" ? view.range : (view.range ?? { from: nowIdx, to: nowIdx });
+    const state = pickerStateFor(view, first, activePick(sp.pick, first, todayStr, statement.fiscalYears));
+    return <MultiPeriodView view={view} fiscalYears={statement.fiscalYears} state={state} />;
+  }
+  if (sp.from && from !== null) {
+    // A "range" of one month: the ordinary single-month view.
+    const only = clampRange(from, parseKey(sp.to) ?? from, booksStartIdx(statement.fiscalYears) ?? nowIdx - 11, nowIdx);
+    redirect(statementHref("/financial-statements", "total", "monthly", nowIdx - only.from, { pick: sp.pick }));
+  }
   if (sp.periods) {
-    const selection = parseSelection(sp.periods, statement.fiscalYears, todayIso());
-    if (selection && selection.items.length > 1) {
-      return <MultiPeriodView selection={selection} sort={sort} fiscalYears={statement.fiscalYears} />;
-    }
+    const selection = parseSelection(sp.periods, statement.fiscalYears, todayStr);
     if (selection) {
-      redirect(
-        statementHref("/financial-statements", "total", selection.grain, selection.items[0].offset, {
-          sort: sort === "size" ? "size" : undefined,
-        }),
-      );
+      redirect(statementHref("/financial-statements", "total", selection.grain, selection.items[0].offset));
     }
   }
 
@@ -179,13 +253,15 @@ export default async function FinancialStatementsPage({
     prior,
     budgetByAccount,
     budgetNote,
+    budgetTotals,
     entriesByAccount,
     postedThrough,
   } = statement;
   const rows = [...incomeRows, ...expenseRows];
   const today = todayIso();
-  const extra = { sort: sort === "size" ? "size" : undefined };
-  const here = (p: PeriodGrain, o: number) => statementHref("/financial-statements", "total", p, o, extra);
+  const shownRange = bounds ? { from: idxOfIso(bounds.start), to: idxOfIso(bounds.end) } : { from: nowIdx, to: nowIdx };
+  const pickerState = pickerStateFor(null, shownRange, activePick(sp.pick, shownRange, today, fiscalYears));
+  const here = (p: PeriodGrain, o: number) => statementHref("/financial-statements", "total", p, o);
 
   const headline = bounds
     ? headlineFor({
@@ -234,14 +310,7 @@ export default async function FinancialStatementsPage({
           >
             ←
           </Link>
-          <PeriodPicker
-            label={bounds?.label ?? "Choose a period"}
-            grain={period}
-            selectedKeys={bounds ? [periodKeyFor(period, bounds)] : []}
-            fiscalYears={fiscalYears}
-            today={today}
-            sort={sort}
-          />
+          <PeriodPicker state={pickerState} fiscalYears={fiscalYears} today={today} />
           <Link
             href={here(period, Math.max(0, offset - 1))}
             aria-label="Later period"
@@ -251,24 +320,27 @@ export default async function FinancialStatementsPage({
             →
           </Link>
         </div>
+        {rows.length === 0 && bounds ? (
+          // Nothing posted in this period: no PDF or email to share, but the Excel file is still on offer.
+          <DownloadMenu excelHref={excelHref} />
+        ) : null}
         {rows.length > 0 && report ? (
           <div className="relative flex flex-wrap items-center gap-2">
-            <ReportActions report={report} pdfHref={pdfHref} />
+            <ReportActions report={report} pdfHref={pdfHref} excelHref={excelHref} />
             <details className="sm:relative">
               <summary
                 aria-label="More ways to share"
                 className={`${toolBtn} cursor-pointer list-none px-2.5 [&::-webkit-details-marker]:hidden`}
               >
-                ···
+                <MoreHorizontal size={18} strokeWidth={2.4} aria-hidden="true" />
               </summary>
               <div className="absolute inset-x-0 z-10 mt-1 min-w-[16rem] rounded-lg border border-line bg-paper p-1 text-[13px] shadow-lg sm:inset-x-auto sm:right-0 sm:w-64">
-                <a href={excelHref} className="block min-h-[44px] rounded-md px-3 py-2 text-ink hover:bg-fill">
-                  Export to Excel
-                </a>
-                <div className="my-1 border-t border-line" />
-                <a href={yearEndHref} className="block min-h-[44px] rounded-md px-3 py-2 hover:bg-fill">
-                  <span className="block text-ink">Year-end package for your accountant</span>
-                  <span className="block text-[12px] text-mute sm:text-[11px]">Excel: statement, trial balance, general ledger</span>
+                <a href={yearEndHref} download className="flex min-h-[44px] items-center gap-2.5 rounded-md px-3 py-2 hover:bg-fill">
+                  <Download size={16} strokeWidth={1.8} aria-hidden="true" className="shrink-0 text-ink-mid" />
+                  <span>
+                    <span className="block text-ink">Year-end package for your accountant</span>
+                    <span className="block text-[12px] text-mute sm:text-[11px]">Excel: statement, trial balance, general ledger</span>
+                  </span>
                 </a>
               </div>
             </details>
@@ -281,7 +353,7 @@ export default async function FinancialStatementsPage({
         title={bounds ? bounds.label : "No period available"}
         hint={
           postedThrough
-            ? `Posted to the books · current through ${shortDate(postedThrough, today)}`
+            ? `Posted to the books · current through ${shortDate(postedThrough, today)}${budgetByAccount ? ` · Budget is ${budgetNote?.toLowerCase()}` : ""}`
             : "Posted to the books"
         }
       >
@@ -298,30 +370,21 @@ export default async function FinancialStatementsPage({
             </Link>
           </div>
         ) : (
-          <div className="space-y-5">
-            {/* The statement */}
-            <section>
-              <div className="flex flex-wrap items-baseline justify-between gap-2">
-                <h3 className="text-[11px] font-medium uppercase tracking-[0.07em] text-section-label">
-                  What came in and went out
-                </h3>
-                <span className="text-[12px] text-mute-soft sm:text-[11px]">
-                  Click a line to see the entries behind it
-                  {budgetByAccount ? ` · Budget column is ${budgetNote?.toLowerCase()}` : ""}
-                </span>
-              </div>
-              <div className="mt-2 overflow-hidden rounded-lg border border-line text-[13px]">
-                {budgetByAccount ? (
-                  <div className="hidden items-center gap-3 border-b border-line px-3 py-1.5 text-[11px] text-mute sm:flex">
-                    <span className="w-[14px]" />
-                    <span className="flex-1" />
-                    <span className="w-36 text-right">Share</span>
-                    <span className="w-32 text-right">Budget</span>
-                    <span className="w-28 text-right">Actual</span>
-                  </div>
-                ) : null}
-
-                <SectionBand label="Income" />
+          <div className="-mx-5 -my-4 overflow-hidden rounded-b-[7px] text-[13px]">
+            <div className="flex h-10 items-center gap-3 bg-[var(--w-head-strong)] px-5 text-[12px] font-medium text-ink shadow-[inset_0_-1px_0_0_var(--w-head-line)]">
+              <span className="w-[14px]" />
+              <span className="flex-1">Category <span className="font-normal text-mute">· click a line to see its entries</span></span>
+              {budgetByAccount ? (
+                <>
+                  <span className="hidden w-36 items-center self-stretch border-l border-line/60 pl-3 sm:flex">Share</span>
+                  <span className="hidden w-32 items-center justify-end self-stretch border-l border-line/60 px-3 sm:flex">Budget</span>
+                </>
+              ) : null}
+              <span className="flex w-32 items-center justify-end self-stretch border-l border-line/60 pl-3">Actual</span>
+            </div>
+            <div>
+                <details open className="group/sec">
+                <SectionBand label="Income" collapsible />
                 {incomeRows.map((r) => (
                   <LineRow
                     key={r.account_id}
@@ -333,21 +396,11 @@ export default async function FinancialStatementsPage({
                     tone="income"
                   />
                 ))}
-                <TotalRow label="Total income" amount={totalIncome} />
+                </details>
+                <TotalRow label="Total income" amount={totalIncome} rails={Boolean(budgetByAccount)} budget={budgetTotals?.income} type="income" />
 
-                <SectionBand
-                  label="Expenses"
-                  action={
-                    <Link
-                      href={statementHref("/financial-statements", "total", period, offset, {
-                        sort: sort === "size" ? undefined : "size",
-                      })}
-                      className="-my-3.5 inline-flex items-center py-3.5 normal-case tracking-normal text-mute underline-offset-2 hover:text-ink hover:underline sm:my-0 sm:py-0"
-                    >
-                      {sort === "size" ? "Sort by account" : "Sort by size"}
-                    </Link>
-                  }
-                />
+                <details open className="group/sec">
+                <SectionBand collapsible label="Expenses" />
                 {expenseRows.map((r) => (
                   <LineRow
                     key={r.account_id}
@@ -359,10 +412,10 @@ export default async function FinancialStatementsPage({
                     tone="expense"
                   />
                 ))}
-                <TotalRow label="Total expenses" amount={totalExpenses} />
-                <TotalRow label={netIncome < 0 ? "Left over (short)" : "Left over"} amount={netIncome} strong />
-              </div>
-            </section>
+                </details>
+                <TotalRow label="Total expenses" amount={totalExpenses} rails={Boolean(budgetByAccount)} budget={budgetTotals?.expense} type="expense" />
+                <TotalRow label={netIncome < 0 ? "Deficit" : "Excess"} amount={netIncome < 0 ? -netIncome : netIncome} strong bad={netIncome < 0} rails={Boolean(budgetByAccount)} />
+            </div>
           </div>
         )}
       </Card>

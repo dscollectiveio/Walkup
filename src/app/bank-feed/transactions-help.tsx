@@ -7,19 +7,19 @@ import { HEADER_BUTTON } from "@/components/ui";
 const STEPS: { title: string; body: string }[] = [
   {
     title: "Start with what's waiting",
-    body: "The list opens on “Needs category”. “N to go” at the top counts down and the bar beside it fills as you work.",
+    body: "The list opens on “To sort”, everything not yet posted. “N of M sorted” at the top counts up and the bar beside it fills as you work.",
   },
   {
-    title: "Click the recommended category",
-    body: "One click files the row and posts it to the books. “Save for later” files it without posting; the Post button at the top posts everything saved. A filled chip is how you filed that payee before; an outlined one is a guess. “+3 more” means the other transactions from the same payee go with it.",
+    title: "Post a suggestion, or pick a category",
+    body: "A row with a category shown has a Post button: one tap files it and posts it to the books, just that row. Tap the category to change it first. A row with no suggestion has a Categorize button. Skipping a row just means leaving it in the list.",
   },
   {
     title: "Pick one yourself when needed",
-    body: "No recommendation, or it’s wrong? Click the row and start typing (Utilities, Dues, Transfer, Not for the books), then pick from the list and Save & post.",
+    body: "No recommendation, or it’s wrong? Click the row and start typing (Utilities, Dues, Transfer, Not for the books), then pick from the list and Post.",
   },
   {
     title: "Do many at once",
-    body: "“Post all N recommended” posts every recommendation your own history backs. Or tick the boxes on the left: a bar appears at the bottom of the screen to file them all together.",
+    body: "Tick the boxes on the left (the box in the header selects every row shown): a bar appears at the bottom of the screen to file them all together.",
   },
   {
     title: "Undo any time",
@@ -27,7 +27,8 @@ const STEPS: { title: string; body: string }[] = [
   },
 ];
 
-const KEYBOARD = "Keyboard: j/k move · Enter posts · c categorizes · x marks not for the books · Esc closes.";
+const KEYBOARD =
+  "Keyboard: j/k move · Enter posts · c categorizes · x marks not for the books · Esc closes.";
 
 /** "How this works" for the Transactions card — a short, plain walkthrough in a dialog. */
 export function TransactionsHelp() {
@@ -57,10 +58,15 @@ export function TransactionsHelp() {
       >
         <header className="flex items-start justify-between gap-4 rounded-t-xl band bg-ink px-5 py-3">
           <div>
-            <h2 id="transactions-help-title" className="font-bold tracking-tight text-paper">
+            <h2
+              id="transactions-help-title"
+              className="font-bold tracking-tight text-paper"
+            >
               How to categorize transactions
             </h2>
-            <p className="mt-0.5 text-[12px] text-ondark-mute">About 10 minutes for a typical month.</p>
+            <p className="mt-0.5 text-[12px] text-ondark-mute">
+              About 10 minutes for a typical month.
+            </p>
           </div>
           <button
             type="button"
@@ -82,8 +88,12 @@ export function TransactionsHelp() {
                 {i + 1}
               </span>
               <div>
-                <div className="text-[13px] font-bold text-ink">{step.title}</div>
-                <p className="mt-0.5 text-[13px] leading-relaxed text-mute">{step.body}</p>
+                <div className="text-[13px] font-bold text-ink">
+                  {step.title}
+                </div>
+                <p className="mt-0.5 text-[13px] leading-relaxed text-mute">
+                  {step.body}
+                </p>
               </div>
             </li>
           ))}

@@ -298,7 +298,7 @@ export function Sidebar({
         </div>
 
         {!narrow ? (
-          <div className={`border-t border-nav-divider pt-2 ${expanded ? "px-3" : ""}`}>
+          <div className={`border-t border-nav-rule pt-2 ${expanded ? "px-3" : ""}`}>
           <button
             type="button"
             onClick={toggle}
@@ -327,7 +327,7 @@ export function Sidebar({
           </div>
         ) : null}
 
-        <div className={`flex items-center border-t border-nav-divider ${expanded ? "gap-2.5 px-3 py-3" : "flex-col gap-2 py-3"} pb-[max(0.75rem,env(safe-area-inset-bottom))]`}>
+        <div className={`flex items-center ${expanded ? "gap-2.5 px-3 py-3" : "flex-col gap-2 py-3"} pb-[max(0.75rem,env(safe-area-inset-bottom))]`}>
           <Link
             href="/account"
             title="Your account"
@@ -345,7 +345,7 @@ export function Sidebar({
               <span className="sr-only">Your account</span>
             )}
           </Link>
-          <ThemeToggle className={expanded ? "ml-auto" : ""} />
+          <ThemeToggle showLabel={expanded} className={expanded ? "ml-auto" : ""} />
         </div>
         </div>
       </nav>

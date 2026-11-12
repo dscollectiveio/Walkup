@@ -2,7 +2,9 @@ import { NextResponse, type NextRequest } from "next/server";
 import ExcelJS from "exceljs";
 import { createClient } from "@/lib/supabase/server";
 import { loadStatement } from "../data";
+import { buildReport, lastColumn, lastColumnLabel, loadForReport, shownAmount } from "../report";
 import type { PeriodGrain, ViewMode } from "../periods";
+import { BRAND, banner, bottomRow, brandedSheet, footnote, headerRow, lineRow, preparedNote, sectionBand, totalRow } from "./excel-style";
 
 export const dynamic = "force-dynamic";
 
@@ -22,6 +24,55 @@ export async function GET(request: NextRequest) {
   const yearEnd = params.get("pack") === "year-end";
 
   const supabase = await createClient();
+
+  // Several periods chosen: one sheet, a column per period and a Total, the same figures the page shows.
+  if ((params.get("periods") || params.get("from") || params.get("cmp")) && !yearEnd) {
+    const loaded = await loadForReport(supabase, { query: params, period, offset });
+    if (loaded === "restricted") return NextResponse.json({ error: "Not authorized." }, { status: 403 });
+    const report = buildReport(loaded.statements, { compare: loaded.compare, blank: loaded.blank });
+    if (!report) return NextResponse.json({ error: "No fiscal year is set up yet." }, { status: 404 });
+
+    const wb = new ExcelJS.Workbook();
+    wb.creator = "Walkup";
+    wb.created = new Date();
+    const lastCol = report.labels.length + 2;
+    const ws = brandedSheet(wb, "Profit & Loss", { landscape: report.labels.length > 3, freezeRow: 5 });
+    ws.getColumn(1).width = 38;
+    for (let c = 2; c <= lastCol; c++) ws.getColumn(c).width = 17;
+    banner(ws, lastCol, report.associationName, `Profit & Loss  ·  ${report.rangeLabel}`);
+    headerRow(ws.addRow(["Category", ...report.labels, lastColumnLabel(report)]), lastCol, 2);
+    // A period with nothing posted is left blank, never zero; so is a difference that can't be worked out.
+    const cellsFor = (amounts: number[]) => [...amounts.map((n, i) => shownAmount(report, i, n)), lastColumn(report, amounts)];
+    const addBlock = (label: string, rows: typeof report.income, totals: number[], totalLabel: string) => {
+      sectionBand(ws, lastCol, label);
+      for (const r of rows) lineRow(ws.addRow([r.account_name, ...cellsFor(r.amounts)]), lastCol, 2, { tintLast: true });
+      totalRow(ws.addRow([totalLabel, ...cellsFor(totals)]), lastCol, 2);
+    };
+    addBlock("Income", report.income, report.incomeTotals, "Total income");
+    ws.addRow([]).height = 8;
+    addBlock("Expenses", report.expenses, report.expenseTotals, "Total expenses");
+    ws.addRow([]).height = 8;
+    // The bottom line, worded like the page: Excess or Deficit (no minus sign). Comparisons show the signed difference.
+    const netCells = cellsFor(report.netTotals);
+    const overall = report.compare ? report.netTotals[0] : lastColumn(report, report.netTotals);
+    const shownNet = netCells.map((v) => (v === null ? null : report.compare && v === netCells[netCells.length - 1] ? v : Math.abs(v)));
+    const netRow = ws.addRow([(overall ?? 0) < 0 ? "Deficit" : "Excess", ...shownNet]);
+    bottomRow(
+      netRow,
+      lastCol,
+      2,
+      netCells.map((v, i) => (v === null ? "plain" : report.compare && i === netCells.length - 1 ? "plain" : v < 0 ? "bad" : "good")),
+    );
+    footnote(ws, lastCol, preparedNote());
+    const fname = `${report.associationName} - Profit & Loss - ${report.rangeLabel}.xlsx`.replace(/[/\\?%*:|"<>]/g, "-");
+    return new NextResponse((await wb.xlsx.writeBuffer()) as unknown as BodyInit, {
+      headers: {
+        "Content-Type": "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+        "Content-Disposition": `attachment; filename="${fname.replace(/[^\x20-\x7e]/g, "-")}"; filename*=UTF-8''${encodeURIComponent(fname)}`,
+      },
+    });
+  }
+
   const statement = await loadStatement(supabase, view, period, offset);
   if ("restricted" in statement) {
     return NextResponse.json({ error: "Not authorized." }, { status: 403 });
@@ -37,52 +88,28 @@ export async function GET(request: NextRequest) {
   const workbook = new ExcelJS.Workbook();
   workbook.creator = "Walkup";
   workbook.created = new Date();
-  const sheet = workbook.addWorksheet(bounds.label.slice(0, 31) || "Statement");
+  const sheet = brandedSheet(workbook, bounds.label || "Statement", { freezeRow: 5 });
+  sheet.getColumn(1).width = 42;
+  sheet.getColumn(2).width = 20;
+  banner(sheet, 2, association.display_name, `${title}  ·  ${bounds.label}`);
+  headerRow(sheet.addRow(["Category", "Amount"]), 2, 2);
 
-  sheet.columns = [
-    { header: "Account", key: "account", width: 36 },
-    { header: "Amount", key: "amount", width: 16 },
-  ];
-
-  sheet.mergeCells("A1:B1");
-  sheet.getCell("A1").value = association.display_name;
-  sheet.getCell("A1").font = { bold: true, size: 14 };
-  sheet.mergeCells("A2:B2");
-  sheet.getCell("A2").value = `${title}: ${bounds.label}`;
-  sheet.getCell("A2").font = { size: 11, color: { argb: "FF6E7385" } };
-  sheet.addRow([]);
-
-  const headerRow = sheet.addRow(["Account", "Amount"]);
-  headerRow.font = { bold: true };
-  headerRow.eachCell((cell) => {
-    cell.border = { bottom: { style: "thin", color: { argb: "FFDCD8CF" } } };
-  });
-
-  const moneyFormat = '"$"#,##0.00;[Red]-"$"#,##0.00';
   const addSection = (label: string, rows: typeof incomeRows, total: number, totalLabel: string) => {
-    const sectionRow = sheet.addRow([label]);
-    sectionRow.font = { bold: true, color: { argb: "FF6E7385" } };
-    for (const r of rows) {
-      const row = sheet.addRow([r.account_name, r.amount]);
-      row.getCell(2).numFmt = moneyFormat;
-    }
-    const totalRow = sheet.addRow([totalLabel, total]);
-    totalRow.font = { bold: true };
-    totalRow.getCell(2).numFmt = moneyFormat;
+    sectionBand(sheet, 2, label);
+    for (const r of rows) lineRow(sheet.addRow([r.account_name, r.amount]), 2, 2, { tintLast: true });
+    totalRow(sheet.addRow([totalLabel, total]), 2, 2);
   };
 
   if (view === "total") {
     addSection("Income", incomeRows, totalIncome, "Total income");
+    sheet.addRow([]).height = 8;
     addSection("Expenses", expenseRows, totalExpenses, "Total expenses");
-    const netRow = sheet.addRow(["Net income", netIncome]);
-    netRow.font = { bold: true, size: 12 };
-    netRow.getCell(2).numFmt = moneyFormat;
-    netRow.eachCell((cell) => {
-      cell.border = { top: { style: "medium", color: { argb: "FFC9C4B8" } } };
-    });
+    sheet.addRow([]).height = 8;
+    bottomRow(sheet.addRow([netIncome < 0 ? "Deficit" : "Excess", Math.abs(netIncome)]), 2, 2, [netIncome < 0 ? "bad" : "good"]);
   } else {
     addSection("Expenses", expenseRows, totalExpenses, "Total expenses");
   }
+  footnote(sheet, 2, preparedNote());
 
   // Year-end package: the statement plus what an accountant asks for —
   // a trial balance and the general ledger for the fiscal year. Same RLS-
@@ -113,16 +140,10 @@ export async function GET(request: NextRequest) {
           .limit(10000),
       ]);
 
-      const tbSheet = workbook.addWorksheet("Trial balance");
-      tbSheet.columns = [
-        { header: "Code", key: "code", width: 10 },
-        { header: "Account", key: "name", width: 36 },
-        { header: "Type", key: "type", width: 12 },
-        { header: "Debits", key: "debit", width: 16 },
-        { header: "Credits", key: "credit", width: 16 },
-        { header: "Net (debit +)", key: "net", width: 16 },
-      ];
-      tbSheet.getRow(1).font = { bold: true };
+      const tbSheet = brandedSheet(workbook, "Trial balance", { landscape: true, freezeRow: 5, tab: BRAND.gold });
+      [10, 36, 12, 16, 16, 16].forEach((w, i) => (tbSheet.getColumn(i + 1).width = w));
+      banner(tbSheet, 6, association.display_name, `Trial balance  ·  ${bounds.label}`);
+      headerRow(tbSheet.addRow(["Code", "Account", "Type", "Debits", "Credits", "Net (debit +)"]), 6, 4, { 1: "left", 2: "left", 3: "left" });
       const byCode = new Map<string, { code: string; name: string; type: string; debit: number; credit: number; net: number }>();
       for (const r of tb ?? []) {
         const row = byCode.get(r.code) ?? { code: r.code, name: r.name, type: r.type, debit: 0, credit: 0, net: 0 };
@@ -132,28 +153,19 @@ export async function GET(request: NextRequest) {
         byCode.set(r.code, row);
       }
       for (const row of byCode.values()) {
-        const added = tbSheet.addRow(row);
-        for (const c of [4, 5, 6]) added.getCell(c).numFmt = moneyFormat;
+        lineRow(tbSheet.addRow([row.code, row.name, row.type.charAt(0).toUpperCase() + row.type.slice(1), row.debit, row.credit, row.net]), 6, 4, { tintLast: true });
       }
       const totals = [...byCode.values()].reduce(
         (acc, r) => ({ debit: acc.debit + r.debit, credit: acc.credit + r.credit }),
         { debit: 0, credit: 0 },
       );
-      const totalRow = tbSheet.addRow({ name: "Totals", debit: totals.debit, credit: totals.credit, net: totals.debit - totals.credit });
-      totalRow.font = { bold: true };
-      for (const c of [4, 5, 6]) totalRow.getCell(c).numFmt = moneyFormat;
+      totalRow(tbSheet.addRow(["", "Totals", "", totals.debit, totals.credit, totals.debit - totals.credit]), 6, 4);
+      footnote(tbSheet, 6, preparedNote());
 
-      const glSheet = workbook.addWorksheet("General ledger");
-      glSheet.columns = [
-        { header: "Date", key: "date", width: 12 },
-        { header: "Memo", key: "memo", width: 44 },
-        { header: "Code", key: "code", width: 10 },
-        { header: "Account", key: "account", width: 32 },
-        { header: "Debit", key: "debit", width: 14 },
-        { header: "Credit", key: "credit", width: 14 },
-        { header: "Source", key: "source", width: 12 },
-      ];
-      glSheet.getRow(1).font = { bold: true };
+      const glSheet = brandedSheet(workbook, "General ledger", { landscape: true, freezeRow: 5, tab: BRAND.gold });
+      [14, 44, 10, 32, 15, 15, 12].forEach((w, i) => (glSheet.getColumn(i + 1).width = w));
+      banner(glSheet, 7, association.display_name, `General ledger  ·  ${bounds.label}`);
+      headerRow(glSheet.addRow(["Date", "Memo", "Code", "Account", "Debit", "Credit", "Source"]), 7, 5, { 1: "left", 2: "left", 3: "left", 4: "left", 7: "left" });
       type GlLine = {
         debit: string | number;
         credit: string | number;
@@ -169,18 +181,23 @@ export async function GET(request: NextRequest) {
         }))
         .sort((a, b) => a.entry.entry_date.localeCompare(b.entry.entry_date) || a.account.code.localeCompare(b.account.code));
       for (const l of glRows) {
-        const added = glSheet.addRow({
-          date: l.entry.entry_date,
-          memo: l.entry.memo ?? l.line_memo ?? "",
-          code: l.account.code,
-          account: l.account.name,
-          debit: Number(l.debit) || null,
-          credit: Number(l.credit) || null,
-          source: l.entry.source,
-        });
-        added.getCell(5).numFmt = moneyFormat;
-        added.getCell(6).numFmt = moneyFormat;
+        const added = glSheet.addRow([
+          new Date(`${l.entry.entry_date}T00:00:00Z`),
+          l.entry.memo ?? l.line_memo ?? "",
+          l.account.code,
+          l.account.name,
+          Number(l.debit) || null,
+          Number(l.credit) || null,
+          l.entry.source,
+        ]);
+        lineRow(added, 7, 5, { money: [5, 6] });
+        added.getCell(1).numFmt = "mmm d, yyyy";
+        added.getCell(1).alignment = { vertical: "middle", horizontal: "left", indent: 1 };
+        for (const c of [2, 3, 4, 7]) added.getCell(c).alignment = { vertical: "middle", horizontal: "left" };
+        
       }
+      glSheet.autoFilter = { from: { row: 5, column: 1 }, to: { row: 5, column: 7 } };
+      footnote(glSheet, 7, preparedNote());
     }
   }
 

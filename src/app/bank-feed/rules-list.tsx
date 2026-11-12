@@ -16,7 +16,13 @@ export interface RuleRecord {
  * as a fragment so the button sits at the right of a flex-wrap row and the
  * list takes the full width below it.
  */
-export function RulesToggle({ rules, canEdit }: { rules: RuleRecord[]; canEdit: boolean }) {
+export function RulesToggle({
+  rules,
+  canEdit,
+}: {
+  rules: RuleRecord[];
+  canEdit: boolean;
+}) {
   const [open, setOpen] = useState(false);
   if (rules.length === 0) return null;
   return (
@@ -32,8 +38,8 @@ export function RulesToggle({ rules, canEdit }: { rules: RuleRecord[]; canEdit: 
       {open ? (
         <div className="basis-full rounded-lg border border-line bg-fill/40 px-3 py-1">
           <p className="py-2 text-[12px] text-mute">
-            Pre-fill new transactions as they sync; a person still posts them. Saved when you answer yes to “Always
-            file … as …?”.
+            Pre-fill new transactions as they sync; a person still posts them.
+            Saved when you answer yes to “Always file … as …?”.
           </p>
           <RulesList rules={rules} canEdit={canEdit} />
         </div>
@@ -42,14 +48,23 @@ export function RulesToggle({ rules, canEdit }: { rules: RuleRecord[]; canEdit: 
   );
 }
 
-function RulesList({ rules, canEdit }: { rules: RuleRecord[]; canEdit: boolean }) {
+function RulesList({
+  rules,
+  canEdit,
+}: {
+  rules: RuleRecord[];
+  canEdit: boolean;
+}) {
   const [pending, start] = useTransition();
   const [error, setError] = useState<string | null>(null);
 
   return (
     <ul className="divide-y divide-line text-[13px]">
       {rules.map((r) => (
-        <li key={r.id} className="flex flex-wrap items-center justify-between gap-2 py-2">
+        <li
+          key={r.id}
+          className="flex flex-wrap items-center justify-between gap-2 py-2"
+        >
           <div>
             <span className="text-ink">“{r.pattern}”</span>
             <span className="ml-2 text-[12px] text-mute">
@@ -80,7 +95,9 @@ function RulesList({ rules, canEdit }: { rules: RuleRecord[]; canEdit: boolean }
           ) : null}
         </li>
       ))}
-      {error ? <li className="py-2 text-[12px] text-bad-text">{error}</li> : null}
+      {error ? (
+        <li className="py-2 text-[12px] text-bad-text">{error}</li>
+      ) : null}
     </ul>
   );
 }

@@ -27,6 +27,8 @@ export interface IncomingTransaction {
   account_id?: string | null;
   pending_transaction_id?: string | null;
   category?: string[] | null;
+  /** The bank's own wording; only present when the sync asked for it. */
+  original_description?: string | null;
 }
 
 export interface PriorRow {
@@ -36,7 +38,11 @@ export interface PriorRow {
   description: string;
 }
 
-export function fingerprint(postedOn: string, walkupAmount: number, description: string): string {
+export function fingerprint(
+  postedOn: string,
+  walkupAmount: number,
+  description: string,
+): string {
   return `${postedOn}|${walkupAmount.toFixed(2)}|${description.trim().toLowerCase()}`;
 }
 
@@ -76,7 +82,10 @@ export function planSyncWrites(
     const key = fingerprint(t.date, walkupAmount(t.amount), t.name);
     const candidates = unclaimed.get(key);
     if (candidates && candidates.length > 0) {
-      plan.adoptions.push({ priorId: candidates.shift() as string, incoming: t });
+      plan.adoptions.push({
+        priorId: candidates.shift() as string,
+        incoming: t,
+      });
       continue;
     }
     plan.inserts.push(t);
@@ -101,7 +110,10 @@ export interface CategorizationRule {
  * still fires on "COMED 8841 11/03". A pattern that normalizes to too little
  * to mean anything never matches.
  */
-export function matchRule(description: string, rules: CategorizationRule[]): CategorizationRule | null {
+export function matchRule(
+  description: string,
+  rules: CategorizationRule[],
+): CategorizationRule | null {
   const haystack = normalizeDescription(description);
   for (const r of rules) {
     const needle = normalizeDescription(r.pattern);

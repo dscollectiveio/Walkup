@@ -18,6 +18,7 @@ import {
   UserCog,
   PiggyBank,
   Scale,
+  FlaskConical,
   type LucideIcon,
 } from "lucide-react";
 import type { AppRole } from "@/lib/access/outside-roles";
@@ -114,7 +115,7 @@ export const NAV_GROUPS: NavGroupConfig[] = [
 
 // Nothing trails the groups for staff now that Documents sits under Building;
 // owners still get their own trailing run (OWNER_TRAILING_NAV).
-export const TRAILING_NAV: NavItemConfig[] = [];
+export const TRAILING_NAV: NavItemConfig[] = [{ href: "/test-space", label: "Test Space", icon: FlaskConical }];
 
 /**
  * Walkup's own plan (subscriptions plan 2.9). Board admins only: other board

@@ -1,6 +1,9 @@
 import "server-only";
 import type { SupabaseClient } from "@supabase/supabase-js";
-import { storeBankBalances, type StoredAccountInput } from "@/lib/bank/balances-store";
+import {
+  storeBankBalances,
+  type StoredAccountInput,
+} from "@/lib/bank/balances-store";
 import {
   plaidClient,
   plaidErrorLog,
@@ -58,7 +61,11 @@ export const MAX_PAGINATION_RESTARTS = 3;
  */
 export async function syncOneConnection(
   supabase: SupabaseClient,
-  connection: { id: string; association_id: string; sync_cursor: string | null },
+  connection: {
+    id: string;
+    association_id: string;
+    sync_cursor: string | null;
+  },
   accessToken: string,
   options: { autoPost: boolean; maxPages?: number },
 ): Promise<SyncResult | SyncFailure> {
@@ -82,9 +89,17 @@ export async function syncOneConnection(
   for (;;) {
     let page;
     try {
-      page = await client.transactionsSync({ access_token: accessToken, cursor });
+      // The bank's own wording (0091) is shown on the row instead of Plaid's consumer category.
+      page = await client.transactionsSync({
+        access_token: accessToken,
+        cursor,
+        options: { include_original_description: true },
+      });
     } catch (cause) {
-      if (isSyncMutationDuringPagination(cause) && restarts < MAX_PAGINATION_RESTARTS) {
+      if (
+        isSyncMutationDuringPagination(cause) &&
+        restarts < MAX_PAGINATION_RESTARTS
+      ) {
         // Batches already committed are idempotent (upserts keyed on the Plaid
         // id, retraction only sets removed_at), so replaying from the start is safe.
         restarts += 1;
@@ -114,14 +129,27 @@ export async function syncOneConnection(
     }
 
     const data = page.data;
-    const pageAccounts = (data as { accounts?: { account_id: string; name: string; mask?: string | null; type: unknown; balances: { current?: number | null } }[] }).accounts;
+    const pageAccounts = (
+      data as {
+        accounts?: {
+          account_id: string;
+          name: string;
+          mask?: string | null;
+          type: unknown;
+          balances: { current?: number | null };
+        }[];
+      }
+    ).accounts;
     if (pageAccounts && pageAccounts.length > 0) {
       latestAccounts = pageAccounts.map((a) => ({
         accountId: a.account_id,
         name: a.name,
         mask: a.mask ?? null,
         type: String(a.type),
-        currentCents: a.balances.current !== null && a.balances.current !== undefined ? Math.round(a.balances.current * 100) : null,
+        currentCents:
+          a.balances.current !== null && a.balances.current !== undefined
+            ? Math.round(a.balances.current * 100)
+            : null,
       }));
     }
     const batch = await applyBatch(
@@ -132,7 +160,8 @@ export async function syncOneConnection(
       options,
     );
     if ("error" in batch) return { error: batch.error };
-    for (const t of [...data.added, ...data.modified]) seen.add(t.transaction_id);
+    for (const t of [...data.added, ...data.modified])
+      seen.add(t.transaction_id);
     categorized += batch.categorized;
     posted += batch.posted;
     postErrors.push(...batch.postErrors);
@@ -155,7 +184,8 @@ export async function syncOneConnection(
     }
   }
 
-  if (latestAccounts.length > 0) await storeBankBalances(supabase, connection.id, latestAccounts, "sync");
+  if (latestAccounts.length > 0)
+    await storeBankBalances(supabase, connection.id, latestAccounts, "sync");
 
   // A sync that got this far means the login works: clear a stale 'error'.
   await supabase
@@ -164,7 +194,13 @@ export async function syncOneConnection(
     .eq("id", connection.id)
     .neq("status", "disconnected");
 
-  return { count: seen.size, categorized, posted, postErrors, ...(more ? { more } : {}) };
+  return {
+    count: seen.size,
+    categorized,
+    posted,
+    postErrors,
+    ...(more ? { more } : {}),
+  };
 }
 
 async function markError(supabase: SupabaseClient, connectionId: string) {
@@ -182,7 +218,10 @@ async function applyBatch(
   incoming: IncomingTransaction[],
   removed: string[],
   options: { autoPost: boolean },
-): Promise<{ categorized: number; posted: number; postErrors: string[] } | { error: string }> {
+): Promise<
+  | { categorized: number; posted: number; postErrors: string[] }
+  | { error: string }
+> {
   if (removed.length > 0) {
     const { error } = await supabase
       .from("bank_transactions")
@@ -196,20 +235,22 @@ async function applyBatch(
 
   if (incoming.length > 0) {
     const incomingIds = incoming.map((t) => t.transaction_id);
-    const [{ data: existing, error: existingError }, { data: prior, error: priorError }] =
-      await Promise.all([
-        supabase
-          .from("bank_transactions")
-          .select("plaid_transaction_id")
-          .eq("bank_connection_id", connection.id)
-          .in("plaid_transaction_id", incomingIds),
-        supabase
-          .from("bank_transactions")
-          .select("id, posted_on, amount, description")
-          .eq("association_id", connection.association_id)
-          .neq("bank_connection_id", connection.id)
-          .is("removed_at", null),
-      ]);
+    const [
+      { data: existing, error: existingError },
+      { data: prior, error: priorError },
+    ] = await Promise.all([
+      supabase
+        .from("bank_transactions")
+        .select("plaid_transaction_id")
+        .eq("bank_connection_id", connection.id)
+        .in("plaid_transaction_id", incomingIds),
+      supabase
+        .from("bank_transactions")
+        .select("id, posted_on, amount, description")
+        .eq("association_id", connection.association_id)
+        .neq("bank_connection_id", connection.id)
+        .is("removed_at", null),
+    ]);
     if (existingError) return { error: existingError.message };
     if (priorError) return { error: priorError.message };
 
@@ -230,6 +271,7 @@ async function applyBatch(
       description: t.name,
       pending: t.pending,
       raw_category: t.category?.[0] ?? null,
+      original_description: t.original_description ?? null,
       synced_at: new Date().toISOString(),
     });
 
@@ -260,7 +302,9 @@ async function applyBatch(
     const [{ data: rules }, { data: uncategorized }] = await Promise.all([
       supabase
         .from("bank_categorization_rules")
-        .select("id, pattern, posting_kind, account_id, matched_unit_id, vendor_id, auto_post")
+        .select(
+          "id, pattern, posting_kind, account_id, matched_unit_id, vendor_id, auto_post",
+        )
         .eq("association_id", connection.association_id)
         .order("created_at"),
       supabase
@@ -273,7 +317,10 @@ async function applyBatch(
 
     const readyToAutoPost: string[] = [];
     for (const row of uncategorized ?? []) {
-      const rule = matchRule(row.description, (rules ?? []) as CategorizationRule[]);
+      const rule = matchRule(
+        row.description,
+        (rules ?? []) as CategorizationRule[],
+      );
       if (!rule) continue;
       const { error } = await supabase
         .from("bank_transactions")
@@ -294,7 +341,9 @@ async function applyBatch(
     // One round trip; post_bank_transactions() loops the per-row RPC with
     // its own checks (0046), so nothing is bypassed.
     if (options.autoPost && readyToAutoPost.length > 0) {
-      const { data, error } = await supabase.rpc("post_bank_transactions", { p_ids: readyToAutoPost });
+      const { data, error } = await supabase.rpc("post_bank_transactions", {
+        p_ids: readyToAutoPost,
+      });
       if (error) postErrors.push(error.message);
       for (const r of (data ?? []) as { ok: boolean; error: string | null }[]) {
         if (r.ok) posted += 1;

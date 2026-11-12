@@ -1,13 +1,14 @@
 import Link from "next/link";
 import { CircleAlert } from "lucide-react";
 import { sortAnnouncements, type AnnouncementRow } from "@/lib/owner/announcements";
+import type { UrgentItem } from "@/lib/home/urgent-items";
 import { AnnouncementLines } from "./announcement-lines";
 
 /** How many notices the Dashboard banner lists before "View all". */
 export const ANNOUNCEMENTS_ON_HOME = 3;
 
 /**
- * The board's newest notices as a highlighted gold banner that hangs from the
+ * What needs the board (alerts) and the board's newest notices as a highlighted gold banner that hangs from the
  * bottom of the top bar on the Dashboard: pinned first, then newest, a few at
  * most. Each line opens as a pop-out (announcement-lines.tsx). The negative margins cancel <main>'s padding (app-frame.tsx) so it
  * sits flush against the bar. Board members get a Post link. When nothing is
@@ -15,11 +16,14 @@ export const ANNOUNCEMENTS_ON_HOME = 3;
  */
 export function AnnouncementsStrip({
   rows,
+  alerts = [],
   unread,
   todayIso,
   canPost,
 }: {
   rows: AnnouncementRow[];
+  /** What most needs a board member (urgent-items.ts), rotated in ahead of the announcements. */
+  alerts?: UrgentItem[];
   unread: Set<string>;
   todayIso: string;
   canPost: boolean;
@@ -29,8 +33,8 @@ export function AnnouncementsStrip({
   const unreadCount = sorted.filter((r) => unread.has(r.id)).length;
   const hang = "-mx-6 -mt-8 mb-10 rounded-b-xl min-[900px]:-mx-8";
 
-  // Nothing posted, no banner, for anyone.
-  if (visible.length === 0) return null;
+  // Nothing flagged and nothing posted, no banner, for anyone.
+  if (visible.length === 0 && alerts.length === 0) return null;
 
   return (
     <section
@@ -43,7 +47,7 @@ export function AnnouncementsStrip({
             <CircleAlert size={13} strokeWidth={2.4} aria-hidden="true" />
           </span>
           <h2 id="home-announcements-title" className="eyebrow text-warning-text">
-            Announcements
+            Alerts and announcements
           </h2>
           {unreadCount > 0 ? (
             <span className="rounded-full bg-brass px-2 py-0.5 text-[11px] font-semibold text-on-brass">{unreadCount} new</span>
@@ -55,12 +59,14 @@ export function AnnouncementsStrip({
               Post
             </Link>
           ) : null}
-          <Link href="/announcements" className="text-warning-text underline-offset-2 hover:underline">
-            View all{sorted.length > visible.length ? ` (${sorted.length})` : ""}
-          </Link>
+          {sorted.length > 0 ? (
+            <Link href="/announcements" className="text-warning-text underline-offset-2 hover:underline">
+              View all announcements{sorted.length > visible.length ? ` (${sorted.length})` : ""}
+            </Link>
+          ) : null}
         </div>
       </header>
-      <AnnouncementLines rows={visible} unreadIds={[...unread]} todayIso={todayIso} />
+      <AnnouncementLines rows={visible} alerts={alerts} unreadIds={[...unread]} todayIso={todayIso} />
     </section>
   );
 }

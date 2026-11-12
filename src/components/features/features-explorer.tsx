@@ -61,6 +61,33 @@ const matches = (f: Feature, q: string) =>
  * load (cards start open with JavaScript off), so search engines and AI
  * tools can read every feature.
  */
+const TREASURER_QUESTIONS = [
+  {
+    q: "How often should a condo board reconcile the bank account?",
+    a: "Monthly is the common advice. Walkup's bank feed brings in every transaction, so matching the books to the bank takes a few clicks.",
+  },
+  {
+    q: "Should reserve money be kept apart from operating money?",
+    a: "Yes. Most guidance says to hold them in separate accounts in the association's name. Walkup tracks the operating and reserve funds separately and reports on each.",
+  },
+  {
+    q: "How do we keep track of owners who haven't paid their dues?",
+    a: "Keep a ledger for every unit. Walkup shows where each unit stands, prepares reminder and late fee emails, and a board admin approves them before they go out.",
+  },
+  {
+    q: "Which contractors need a 1099?",
+    a: "It depends on what you paid each one and what they are. Walkup tracks payments and W-9s so you can see who is likely to need one. Confirm the rules with a tax professional.",
+  },
+  {
+    q: "Can a small association use Form 1120-H?",
+    a: "Many can. It depends on two tests, one on income and one on spending. Walkup shows the figures behind both. Its tax logic has not yet been reviewed by a CPA.",
+  },
+  {
+    q: "Where should the annual budget come from?",
+    a: "Start from last year's actual spending, add reserve contributions and known increases, then adjust. Walkup suggests a starting budget from last year.",
+  },
+];
+
 export function FeaturesExplorer({ categories }: { categories: Category[] }) {
   const [query, setQuery] = useState("");
   const [audience, setAudience] = useState<"all" | Audience>("all");
@@ -250,14 +277,22 @@ export function FeaturesExplorer({ categories }: { categories: Category[] }) {
           return (
             <Reveal key={c.id} id={`cat-${c.id}`} tone={TONES[i % 3]} className="scroll-mt-14">
               <div ref={(el) => void (sectionRefs.current[c.id] = el?.parentElement ?? null)} className="mx-auto max-w-[1100px] px-6 py-14">
-                <div className="flex items-start gap-4">
+                <div className="flex flex-wrap items-start gap-4">
                   <span aria-hidden="true" className="flex h-12 w-12 shrink-0 items-center justify-center rounded-xl bg-[#D9A441]/15 text-eyebrow">
                     <Icon size={24} strokeWidth={1.7} />
                   </span>
                   <div className="min-w-0">
-                    <h2 className="text-[26px] font-bold leading-tight tracking-tight text-ink sm:text-[30px]">{c.title}</h2>
+                    <h2 className="text-[26px] font-bold leading-tight tracking-tight text-ink sm:text-[30px]">{c.heading ?? c.title}</h2>
                     <p className="mt-2 max-w-2xl text-[16px] leading-relaxed text-mute">{c.blurb}</p>
                   </div>
+                  {c.id === "tax" && (
+                    <Link
+                      href="/form-1120-h"
+                      className="ml-auto inline-flex shrink-0 items-center rounded-lg bg-brass px-5 py-3 text-[15px] font-semibold text-on-brass hover:opacity-90 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-brass"
+                    >
+                      Form 1120-H guide →
+                    </Link>
+                  )}
                 </div>
 
                 <ul className="mt-8 grid items-start gap-4 md:grid-cols-2">
@@ -322,6 +357,24 @@ export function FeaturesExplorer({ categories }: { categories: Category[] }) {
           );
         })
       )}
+
+      {/* ------------------------------------------------------------ treasurer questions */}
+      <section aria-labelledby="treasurer-questions" className="bg-bone">
+        <div className="mx-auto max-w-[1100px] px-6 py-14">
+          <h2 id="treasurer-questions" className="text-[26px] font-bold tracking-tight text-ink sm:text-[30px]">
+            Questions condo treasurers ask
+          </h2>
+          <dl className="mt-6 grid gap-6 md:grid-cols-2">
+            {TREASURER_QUESTIONS.map((q) => (
+              <div key={q.q}>
+                <dt className="text-[16px] font-bold text-ink">{q.q}</dt>
+                <dd className="mt-1 text-[14px] leading-relaxed text-mute">{q.a}</dd>
+              </div>
+            ))}
+          </dl>
+          <p className="mt-6 text-[12px] text-mute">General information, not tax or legal advice. Rules vary by state and by your declaration.</p>
+        </div>
+      </section>
 
       {/* ------------------------------------------------------------ closing call to action */}
       <section className="land-blue">

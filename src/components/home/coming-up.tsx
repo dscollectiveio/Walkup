@@ -26,7 +26,7 @@ function daysLate(due: Date, today: Date): number {
  */
 export function ComingUp({ reminders, today }: { reminders: Reminder[]; today: Date }) {
   return (
-    <section className="flex max-h-[30rem] flex-col rounded-xl border border-line bg-paper lg:max-h-none">
+    <section className="flex max-h-[30rem] min-h-0 flex-1 flex-col lg:min-h-[18rem] rounded-xl border border-line bg-paper lg:max-h-none">
       <header className="flex min-h-[4rem] flex-col justify-center rounded-t-[7px] band bg-ink px-5 py-3">
         <h2 className="eyebrow text-paper">Coming up</h2>
         <p className="mt-0.5 text-[12px] text-ondark-mute">

@@ -14,14 +14,14 @@ const TTL_MS = 10 * 60 * 1000;
 
 const cache = new Map<string, { at: number; value: unknown }>();
 
-export async function rememberBalance<T extends { error?: string; needsReconnect?: boolean }>(
-  connectionId: string,
-  fetch: () => Promise<T>,
-): Promise<T> {
+export async function rememberBalance<
+  T extends { error?: string; needsReconnect?: boolean },
+>(connectionId: string, fetch: () => Promise<T>): Promise<T> {
   const hit = cache.get(connectionId);
   if (hit && Date.now() - hit.at < TTL_MS) return hit.value as T;
   const value = await fetch();
-  if (!value.error && !value.needsReconnect) cache.set(connectionId, { at: Date.now(), value });
+  if (!value.error && !value.needsReconnect)
+    cache.set(connectionId, { at: Date.now(), value });
   return value;
 }
 

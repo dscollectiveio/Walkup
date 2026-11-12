@@ -3,21 +3,31 @@
 import { useEffect, useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
 import { X } from "lucide-react";
-import { RANGE_LABEL, bankFeedHref, type FeedParams, type Range } from "./href";
+import { FilterSelect } from "./filter-select";
+import {
+  RANGES,
+  RANGE_LABEL,
+  bankFeedHref,
+  type FeedParams,
+  type Range,
+} from "./href";
 
 const DEBOUNCE_MS = 300;
 
 /**
  * Search and range for the transactions list, applied as you type: the bar
  * rewrites the same query params the page reads (router.replace, no scroll),
- * so the server re-filters and the URL stays shareable. Opens on its own when
- * a filter becomes active; collapsed, its summary names what is on.
+ * so the server re-filters and the URL stays shareable. Always showing:
+ * finding a payee is a core job, not an advanced one.
  */
 export function FiltersBar({
   current,
   accountLabel,
+  bankAccounts = [],
 }: {
   current: FeedParams;
+  /** The connected bank accounts (checking, savings, …) the list can be limited to. */
+  bankAccounts?: { id: string; label: string }[];
   /** Plain name of the category behind ?account=, for its chip. */
   accountLabel?: string | null;
 }) {
@@ -26,24 +36,21 @@ export function FiltersBar({
   const [text, setText] = useState(current.q ?? "");
   const [range, setRange] = useState<Range>(current.range);
 
-  const active = Boolean(current.q) || current.range !== "all" || Boolean(current.account);
-  const [open, setOpen] = useState(active);
-  // Something became active from outside the bar (a link, a chip): show it.
-  const [wasActive, setWasActive] = useState(active);
-  if (active !== wasActive) {
-    setWasActive(active);
-    if (active) setOpen(true);
-  }
-
   // Any change resets the page size: a new filter should start from the top.
   const go = (overrides: Partial<FeedParams>) =>
     startTransition(() => {
-      router.replace(bankFeedHref({ ...current, limit: undefined, ...overrides }), { scroll: false });
+      router.replace(
+        bankFeedHref({ ...current, limit: undefined, ...overrides }),
+        { scroll: false },
+      );
     });
 
   // The search is applied after a short pause in typing. Comparing hrefs
   // (strings) keeps the effect from restarting on unrelated re-renders.
-  const pendingHref = text !== (current.q ?? "") ? bankFeedHref({ ...current, limit: undefined, q: text }) : null;
+  const pendingHref =
+    text !== (current.q ?? "")
+      ? bankFeedHref({ ...current, limit: undefined, q: text })
+      : null;
   useEffect(() => {
     if (!pendingHref) return;
     const timer = setTimeout(() => {
@@ -54,47 +61,70 @@ export function FiltersBar({
 
   // The search box and the range select show (and clear) their own state, so
   // the only chip is the category filter, which has no control of its own.
-  // Collapsed, the summary names what is on instead.
-  const accountChip = current.account ? `Only ${accountLabel ?? "one category"}` : null;
-  const onParts = [
-    current.range !== "all" ? RANGE_LABEL[current.range] : null,
-    current.q ? `‘${current.q}’` : null,
-    accountChip,
-  ].filter((p): p is string => p !== null);
+  const accountChip = current.account
+    ? `Only ${accountLabel ?? "one category"}`
+    : null;
 
   const input =
     "rounded-lg border border-line-strong bg-paper px-3 py-1.5 min-h-[44px] text-[16px] text-ink sm:min-h-0 sm:text-[13px] focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-1 focus-visible:outline-brass";
 
   return (
-    <details className="min-w-0 flex-1" open={open} onToggle={(e) => setOpen(e.currentTarget.open)}>
-      <summary className="cursor-pointer select-none py-3 text-[12px] text-mute hover:text-ink sm:py-0">
-        Filter &amp; search{active ? (open ? " · on" : ` · ${onParts.join(" · ")}`) : ""}
-      </summary>
-      <div className="mt-2 flex flex-wrap items-center gap-2">
+    <div className="min-w-0 flex-1">
+      <div className="flex flex-wrap items-center gap-2">
         <input
           type="search"
-          aria-label="Search descriptions"
+          aria-label="Search by payee or description"
           value={text}
           onChange={(e) => setText(e.target.value)}
-          placeholder="Search descriptions…"
-          className={`${input} min-w-0 flex-1 sm:min-w-[12rem]`}
+          placeholder="Search by payee or description…"
+          className={`${input} min-w-0 flex-1 basis-full sm:basis-auto sm:min-w-[12rem]`}
         />
-        <select
-          aria-label="Range"
+        <FilterSelect
+          label="Date range"
           value={range}
-          onChange={(e) => {
-            const next = e.target.value as Range;
+          options={RANGES.map((r) => ({ value: r, label: RANGE_LABEL[r] }))}
+          onChange={(v) => {
+            const next = v as Range;
             setRange(next);
             go({ range: next });
           }}
-          className={input}
-        >
-          {(Object.keys(RANGE_LABEL) as Range[]).map((r) => (
-            <option key={r} value={r}>
-              {RANGE_LABEL[r]}
-            </option>
-          ))}
-        </select>
+        />
+        {range === "custom" ? (
+          <span className="inline-flex flex-wrap items-center gap-1.5 text-[12px] text-mute">
+            <input
+              type="date"
+              aria-label="From date"
+              value={current.from ?? ""}
+              max={current.to || undefined}
+              onChange={(e) => go({ range: "custom", from: e.target.value || undefined })}
+              className={input}
+            />
+            to
+            <input
+              type="date"
+              aria-label="To date"
+              value={current.to ?? ""}
+              min={current.from || undefined}
+              onChange={(e) => go({ range: "custom", to: e.target.value || undefined })}
+              className={input}
+            />
+          </span>
+        ) : null}
+        {bankAccounts.length > 0 ? (
+          <FilterSelect
+            label="Bank account"
+            value={current.bank ?? ""}
+            options={[
+              { value: "", label: "All bank accounts" },
+              ...(current.bank &&
+              !bankAccounts.some((a) => a.id === current.bank)
+                ? [{ value: current.bank, label: "Another account" }]
+                : []),
+              ...bankAccounts.map((a) => ({ value: a.id, label: a.label })),
+            ]}
+            onChange={(v) => go({ bank: v || undefined })}
+          />
+        ) : null}
         {accountChip ? (
           <button
             type="button"
@@ -106,8 +136,10 @@ export function FiltersBar({
             <X size={12} strokeWidth={1.6} aria-hidden="true" />
           </button>
         ) : null}
-        {isPending || pendingHref ? <span className="text-[11px] text-mute-soft">Updating…</span> : null}
+        {isPending || pendingHref ? (
+          <span className="text-[11px] text-mute-soft">Updating…</span>
+        ) : null}
       </div>
-    </details>
+    </div>
   );
 }

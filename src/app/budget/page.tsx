@@ -32,15 +32,6 @@ const STATUS_STYLE: Record<BudgetStatus | "saved" | "none", { bar: string; text:
   none: { bar: "bg-line-strong", text: "text-mute", word: "No plan" },
 };
 
-function syncedWords(lastSynced: string | null, now: Date): string {
-  if (!lastSynced) return "Bank not synced yet";
-  const d = new Date(lastSynced);
-  const days = Math.floor((now.getTime() - d.getTime()) / 86_400_000);
-  if (days <= 0) return "Synced today";
-  if (days === 1) return "Synced yesterday";
-  return `Synced ${d.toLocaleDateString("en-US", { month: "short", day: "numeric" })}`;
-}
-
 interface Params {
   period?: string;
   edit?: string;
@@ -292,7 +283,7 @@ export default async function BudgetPage({ searchParams }: { searchParams: Promi
 
   const currentMonth = monthKey(today);
 
-  const [{ data: expenseRows }, { data: cashRows }, { data: connections }, { data: entryLines }] = await actualsPromise!;
+  const [{ data: expenseRows }, { data: cashRows }, , { data: entryLines }] = await actualsPromise!;
 
   const expenses = (expenseRows ?? []) as ExpenseActualRow[];
   const cash = (cashRows ?? []) as CashActivityRow[];
@@ -394,7 +385,6 @@ export default async function BudgetPage({ searchParams }: { searchParams: Promi
       </div>
     ) : null;
 
-  const lastSynced = connections?.[0]?.last_synced_at ?? null;
   const paceWords = `${Math.round(pace * 100)}% of ${period === "month" ? "the month" : "the period"} gone`;
 
   const rowShell = "group border-b border-line/70 last:border-b-0";
@@ -492,16 +482,11 @@ export default async function BudgetPage({ searchParams }: { searchParams: Promi
             </Link>
           ))}
         </nav>
-        <p className="flex items-center gap-3 text-[12px] text-mute">
-          <span>
-            {p.label} · {syncedWords(lastSynced, today)}
-          </span>
-          {canEdit && hasBudget ? (
-            <a href={editHref} className="inline-flex min-h-[44px] items-center font-medium text-ink underline-offset-2 hover:underline sm:min-h-0">
-              Edit budget
-            </a>
-          ) : null}
-        </p>
+        {canEdit && hasBudget ? (
+          <a href={editHref} className="inline-flex min-h-[44px] items-center text-[12px] font-medium text-ink underline-offset-2 hover:underline sm:min-h-0">
+            Edit budget
+          </a>
+        ) : null}
       </div>
 
       {!hasBudget ? (
@@ -537,7 +522,7 @@ export default async function BudgetPage({ searchParams }: { searchParams: Promi
                 }))}
                 totalCents={allSpendTotal}
                 monthCount={p.months.length}
-                periodLabel={period === "month" ? `in ${p.label}` : period === "year" ? `in fiscal year ${fiscalYear.label} so far` : "in the last 12 months"}
+                periodLabel={period === "month" ? `in ${p.label}` : `in fiscal year ${fiscalYear.label} so far`}
                 comparison={comparison}
               />
             )}

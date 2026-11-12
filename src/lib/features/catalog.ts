@@ -12,14 +12,15 @@ export const CATEGORIES: Category[] = [
   {
     id: "finance",
     title: "Financial management",
+    heading: "Condo association accounting and bank reconciliation",
     icon: "finance",
     blurb:
       "Your bank feed, budget and financial statements in one place. Transactions arrive sorted, spending is tracked against the plan, and board-ready reports are a click away.",
     features: [
       {
         id: "bank-feed",
-        name: "Bank feed",
-        summary: "Every bank transaction lands in one list, ready to categorize.",
+        name: "Bank feed and bank reconciliation",
+        summary: "Every bank transaction lands in one list, so the monthly bank reconciliation is a few clicks, not an evening.",
         details: [
           "Connects through Plaid with read-only access, so Walkup can never move money",
           "Syncs every day, and again when you open the page if the data is over 12 hours old",
@@ -30,8 +31,8 @@ export const CATEGORIES: Category[] = [
       },
       {
         id: "bank-balances",
-        name: "Bank balances and connection alerts",
-        summary: "See what's in the bank, and hear when a bank needs you to sign in again.",
+        name: "Operating and reserve fund balances",
+        summary: "See what's in the bank, split into operating and reserve fund, and hear when a bank needs you to sign in again.",
         details: [
           "Live balances for every connected account, split into day-to-day and reserve",
           "Choose which fund each account counts as, so reserve savings at the same bank stay separate",
@@ -87,8 +88,8 @@ export const CATEGORIES: Category[] = [
       },
       {
         id: "budget",
-        name: "Budget and spending",
-        summary: "One number per category for the year, and one sentence on whether you're on plan.",
+        name: "Annual condo budget and spending",
+        summary: "One number per category for the year, and one sentence on whether you're on budget.",
         details: [
           "Plan against spent for the period, with a marker for where you should be by now",
           "Spending with no budget behind it is called out",
@@ -100,7 +101,7 @@ export const CATEGORIES: Category[] = [
       },
       {
         id: "statements",
-        name: "Financial statements",
+        name: "Financial statements for the board",
         summary: "Profit and loss for any month, quarter or year, ready for the board meeting.",
         details: [
           "Side-by-side periods, with budget variance, as total or expenses only",
@@ -112,8 +113,8 @@ export const CATEGORIES: Category[] = [
       },
       {
         id: "ledger",
-        name: "All transactions and trial balance",
-        summary: "The full ledger, with a check that the books balance.",
+        name: "General ledger and trial balance",
+        summary: "The full double-entry ledger, with a check that the books balance.",
         details: ["Totals by account and fund", "A clear balanced or not balanced check", "Open any total to see the entries behind it"],
         who: ["board", "accountant"],
       },
@@ -133,14 +134,15 @@ export const CATEGORIES: Category[] = [
   {
     id: "dues",
     title: "HOA dues and reminders",
+    heading: "HOA dues collection and delinquency tracking",
     icon: "dues",
     blurb:
       "Set each unit's dues once. Walkup matches deposits, shows who's behind, and prepares friendly reminders and statements for a board admin to approve.",
     features: [
       {
         id: "dues-plans",
-        name: "Dues plans",
-        summary: "Give every unit its own amount and schedule.",
+        name: "HOA dues and assessment plans",
+        summary: "Give every unit its own assessment amount and billing schedule.",
         details: [
           "A yearly amount per unit, paid monthly, quarterly, annually or once",
           "Units don't have to match",
@@ -152,13 +154,13 @@ export const CATEGORIES: Category[] = [
       {
         id: "dues-standing",
         name: "Where every unit stands",
-        summary: "A clear status for each unit, at a glance.",
+        summary: "See which owners are paid up and which have delinquent assessments, at a glance.",
         details: ["Up to date, behind, paid ahead or not charged yet", "Amount owed and the next charge for each unit"],
         who: ["board", "accountant"],
       },
       {
         id: "charges-fees",
-        name: "One-off charges and late fees",
+        name: "Special assessments and late fees",
         summary: "Add a special assessment, or set a late fee rule.",
         details: [
           "A late fee has an amount and a grace period",
@@ -178,8 +180,8 @@ export const CATEGORIES: Category[] = [
       },
       {
         id: "collections",
-        name: "Collections",
-        summary: "See who is late and what to do next.",
+        name: "Delinquent assessment collections",
+        summary: "See which owners are late on dues and what to do next.",
         details: [
           "Aging buckets: current, 1 to 30, 31 to 60 and over 60 days",
           "Friendly stage labels with a suggested next step: remind, send a fee notice, call or wait",
@@ -189,8 +191,8 @@ export const CATEGORIES: Category[] = [
       },
       {
         id: "reminder-emails",
-        name: "Reminder and late fee emails",
-        summary: "Prepare a batch, review each message, and a board admin approves it.",
+        name: "Dues reminder and late fee emails",
+        summary: "Prepare a batch of overdue dues reminders, review each message, and a board admin approves it.",
         details: [
           "Fixed, plain templates (no AI writes your emails), with room for your own note",
           "Never includes bank details, and every email has an unsubscribe link",
@@ -230,6 +232,7 @@ export const CATEGORIES: Category[] = [
   {
     id: "tax",
     title: "Tax prep support",
+    heading: "Form 1120-H tax prep for condo associations",
     icon: "tax",
     blurb:
       "Walkup checks whether your association qualifies for Form 1120-H, prepares the figures from your books, and keeps every deadline in front of you. It prepares; your board and accountant file.",
@@ -237,7 +240,7 @@ export const CATEGORIES: Category[] = [
       {
         id: "form-1120h",
         name: "Form 1120-H check",
-        summary: "Find out whether the short federal return fits your association.",
+        summary: "Find out whether the short federal return for condo associations fits yours.",
         details: [
           "Runs the 60% member income test and the 90% spending test from your books",
           "Estimates the tax on any income that isn't from members",
@@ -259,8 +262,8 @@ export const CATEGORIES: Category[] = [
       },
       {
         id: "form-1099",
-        name: "1099-NEC tracking",
-        summary: "Know which contractors need a 1099, and who still owes you a W-9.",
+        name: "1099-NEC tracking for contractors",
+        summary: "Know which contractors need a 1099-NEC, and who still owes you a W-9.",
         details: [
           "Totals paid to each contractor in the calendar year, against the filing threshold",
           "Flags missing W-9s, and asks for them with a drafted email",
@@ -307,14 +310,15 @@ export const CATEGORIES: Category[] = [
   {
     id: "insurance",
     title: "Insurance",
+    heading: "Condo association insurance tracking",
     icon: "insurance",
     blurb:
       "Keep every policy and renewal in one place, find out what your coverage leaves out, and request quotes without starting from a blank email.",
     features: [
       {
         id: "policies",
-        name: "Policies and renewals",
-        summary: "Every policy, what it costs and when it renews.",
+        name: "Condo insurance policies and renewals",
+        summary: "Every association policy, what it costs and when it renews.",
         details: [
           "Twelve coverage types, with premium history and a year-by-year comparison",
           "Renewal reminders that arrive early enough to shop around",
@@ -399,6 +403,7 @@ export const CATEGORIES: Category[] = [
   {
     id: "repairs",
     title: "Repairs and upkeep",
+    heading: "Repair and maintenance tracking for condo boards",
     icon: "repairs",
     blurb:
       "Anyone in the building can report a problem, and the board can follow each one from report to done. Yearly upkeep runs on a schedule instead of someone's memory.",
@@ -425,8 +430,8 @@ export const CATEGORIES: Category[] = [
       },
       {
         id: "tickets",
-        name: "Repair tickets",
-        summary: "Follow each problem from open to closed.",
+        name: "Repair and maintenance tickets",
+        summary: "Follow each repair request from open to closed.",
         details: [
           "Open, being worked on, waiting on contractor, fixed and closed",
           "Priority from can wait to needs attention now, with a timeline, notes and costs",
@@ -468,8 +473,8 @@ export const CATEGORIES: Category[] = [
       },
       {
         id: "upkeep",
-        name: "Upkeep schedule",
-        summary: "Recurring jobs that run on a calendar, not on memory.",
+        name: "Preventive maintenance schedule",
+        summary: "Recurring building maintenance jobs that run on a calendar, not on memory.",
         details: [
           "18 starter templates, offered and never added behind your back",
           "Due dates that roll forward as jobs are done",
@@ -500,14 +505,15 @@ export const CATEGORIES: Category[] = [
   {
     id: "contractors",
     title: "Contractors",
+    heading: "Contractor and vendor management for condo boards",
     icon: "contractors",
     blurb:
       "Keep every contractor's paperwork in order, find new ones when you need them, and ask for quotes without retyping the job.",
     features: [
       {
         id: "directory",
-        name: "Contractor directory",
-        summary: "Everyone you've used, in one place.",
+        name: "Contractor and vendor directory",
+        summary: "Every contractor and vendor you've used, in one place.",
         details: [
           "Trades, rates, ratings, board reviews and notes",
           "Email a contractor from their page",
@@ -558,6 +564,7 @@ export const CATEGORIES: Category[] = [
   {
     id: "documents",
     title: "Documents",
+    heading: "HOA document storage for condo boards",
     icon: "documents",
     blurb: "The declaration, the minutes, the budget and the policy, in one searchable place the next board can find.",
     features: [
@@ -574,8 +581,8 @@ export const CATEGORIES: Category[] = [
       },
       {
         id: "doc-search",
-        name: "Search",
-        summary: "Find a document by its title or by what's inside it.",
+        name: "Document search",
+        summary: "Find a bylaw, minutes or contract by its title or by what's inside it.",
         details: ["Searches the text of your files too", "Scanned images aren't read"],
         who: ["board"],
       },
@@ -682,6 +689,7 @@ export const CATEGORIES: Category[] = [
   {
     id: "owners",
     title: "Owner portal",
+    heading: "Condo owner portal",
     icon: "owners",
     blurb: "Owners get their own simple view. They see what they owe and what's happening in the building, and nothing about the association's books.",
     features: [
@@ -772,7 +780,7 @@ export const CATEGORIES: Category[] = [
       {
         id: "audit-log",
         name: "Audit log",
-        summary: "A record of who changed what.",
+        summary: "A record of who changed what in the association's books.",
         details: ["Every change is logged with the person who made it", "The log can't be edited"],
         who: ["board"],
       },

@@ -395,6 +395,15 @@ The account is separate from Doug's own login and holds `board_admin` plus
 `owner` on Unit 3. **Delete it, and its person and role_grant rows, before any
 real financial data exists.**
 
+**Update 2026-11-11: sign in as any role.** `/login` now lists a "Sign in as" button for each of the seven
+roles. Each is a real account holding only that role (the board admin is the original dev account; the other six
+are `walkup-dev+<role>@dscollective.io`, seeded into the dev database by `scripts/dev/role-accounts-sql.mjs`),
+so RLS, the sidebar and the data are exactly what that person sees. The button also answers the two-step check
+(the original account from `DEV_AUTH_TOTP_SECRET`; the others enrol an authenticator on first use and keep its
+secret in the gitignored `.env.dev-role-totp.local`). Same two gates as before, so it never exists on Vercel.
+`node scripts/dev/role-accounts-sql.mjs --remove` prints the SQL that deletes the six accounts. They carry
+fake names and the owner shares Unit 4; delete them before real data is loaded into the dev project.
+
 ---
 
 ## 20. Money must cross the API boundary as text

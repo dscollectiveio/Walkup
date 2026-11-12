@@ -9,6 +9,9 @@ import { createHash } from "node:crypto";
  * it not be PII; this is not.
  */
 export function plaidClientUserId(authUserId: string): string {
-  if (!authUserId) throw new Error("plaidClientUserId needs a signed-in user id.");
-  return createHash("sha256").update(`walkup:plaid-client-user:${authUserId}`).digest("hex");
+  if (!authUserId)
+    throw new Error("plaidClientUserId needs a signed-in user id.");
+  return createHash("sha256")
+    .update(`walkup:plaid-client-user:${authUserId}`)
+    .digest("hex");
 }

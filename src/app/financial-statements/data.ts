@@ -17,6 +17,8 @@ export interface AccountLine {
   account_name: string;
   account_type: "income" | "expense";
   amount: number;
+  /** Fixed reading order on the statements (accounts.sort_order); code order breaks ties. */
+  sort_order: number;
 }
 
 /** One posted journal line behind a statement row — what "click to see the entries" shows. */
@@ -65,6 +67,8 @@ export interface Statement {
   /** Budget for each account over this period, or null when no budget covers it. */
   budgetByAccount: Record<string, number> | null;
   budgetNote: string | null;
+  /** What the budget allows in total for the period: the Total income / Total expenses rows compare against these. */
+  budgetTotals: { income: number; expense: number } | null;
   entriesByAccount: Record<string, LineEntry[]>;
   /** The latest date with a posted entry — how current the books are. */
   postedThrough: string | null;
@@ -81,12 +85,16 @@ async function sumLines(
   associationId: string,
   bounds: PeriodBounds,
 ): Promise<{ rows: AccountLine[]; totalIncome: number; totalExpenses: number }> {
-  const { data: lineRows } = await supabase
-    .from("income_statement_lines")
-    .select("account_id, code, account_name, account_type, amount")
-    .eq("association_id", associationId)
-    .gte("entry_date", bounds.start)
-    .lte("entry_date", bounds.end);
+  const [{ data: lineRows }, { data: orderRows }] = await Promise.all([
+    supabase
+      .from("income_statement_lines")
+      .select("account_id, code, account_name, account_type, amount")
+      .eq("association_id", associationId)
+      .gte("entry_date", bounds.start)
+      .lte("entry_date", bounds.end),
+    supabase.from("accounts").select("id, sort_order").eq("association_id", associationId),
+  ]);
+  const orderById = new Map((orderRows ?? []).map((a) => [a.id as string, (a.sort_order as number | null) ?? 1000]));
 
   const byAccount = new Map<string, AccountLine>();
   for (const l of lineRows ?? []) {
@@ -100,9 +108,10 @@ async function sumLines(
         account_name: l.account_name,
         account_type: l.account_type as "income" | "expense",
         amount,
+        sort_order: orderById.get(l.account_id) ?? 1000,
       });
   }
-  const rows = [...byAccount.values()].sort((a, b) => a.code.localeCompare(b.code));
+  const rows = [...byAccount.values()].sort((a, b) => a.sort_order - b.sort_order || a.code.localeCompare(b.code));
   return {
     rows,
     totalIncome: rows.filter((r) => r.account_type === "income").reduce((s, r) => s + r.amount, 0),
@@ -123,6 +132,8 @@ export async function loadStatement(
   view: ViewMode,
   period: PeriodGrain,
   offset: number,
+  /** An arbitrary run of whole months (date range / compare). Replaces period+offset; no prior period or budget. */
+  custom?: PeriodBounds,
 ): Promise<Statement | { restricted: true }> {
   // Round trips are the cost here (the database is a continent away from
   // some callers), so independent reads go out together. Every one of them is
@@ -137,7 +148,7 @@ export async function loadStatement(
   if (!association) return { restricted: true };
   const fiscalYears: FiscalYear[] = fyRows ?? [];
 
-  const bounds = boundsFor(period, offset, fiscalYears);
+  const bounds = custom ?? boundsFor(period, offset, fiscalYears);
   const empty: Statement = {
     association,
     bounds,
@@ -154,12 +165,13 @@ export async function loadStatement(
     position: null,
     budgetByAccount: null,
     budgetNote: null,
+    budgetTotals: null,
     entriesByAccount: {},
     postedThrough: null,
   };
   if (!bounds) return empty;
 
-  const priorBounds = boundsFor(period, offset + 1, fiscalYears);
+  const priorBounds = custom ? null : boundsFor(period, offset + 1, fiscalYears);
   const coveringFy = fiscalYears.find((fy) => fy.starts_on <= bounds.start && fy.ends_on >= bounds.start) ?? null;
 
   const [
@@ -202,10 +214,10 @@ export async function loadStatement(
       .select("unit_id, balance, days_overdue")
       .eq("association_id", association.id)
       .in("status", ["open", "partial"]),
-    coveringFy
+    coveringFy && !custom
       ? supabase
           .from("budgets")
-          .select("id, fiscal_year:fiscal_years!inner(label, starts_on), lines:budget_lines(account_id, amount)")
+          .select("id, fiscal_year:fiscal_years!inner(label, starts_on), lines:budget_lines(account_id, amount, account:accounts(type))")
           .eq("association_id", association.id)
           .eq("fiscal_year.starts_on", coveringFy.starts_on)
           .limit(1)
@@ -244,9 +256,7 @@ export async function loadStatement(
   if (canReadFinancialsRes !== true) return { restricted: true };
 
   const incomeRows = current.rows.filter((r) => r.account_type === "income");
-  const expenseRows = current.rows
-    .filter((r) => r.account_type === "expense")
-    .sort((a, b) => (view === "expenses" ? b.amount - a.amount : a.code.localeCompare(b.code)));
+  const expenseRows = current.rows.filter((r) => r.account_type === "expense");
 
   // --- Position -------------------------------------------------------------
   const reserveFundIds = new Set((funds ?? []).filter((f) => f.kind === "reserve").map((f) => f.id));
@@ -289,12 +299,24 @@ export async function loadStatement(
   const budgetRow = (budgets?.[0] as unknown as BudgetRow | undefined) ?? null;
   let budgetByAccount: Record<string, number> | null = null;
   let budgetNote: string | null = null;
+  let budgetTotals: { income: number; expense: number } | null = null;
   if (budgetRow && budgetRow.lines.length > 0) {
     const annual: Record<string, number> = {};
     for (const l of budgetRow.lines) annual[l.account_id] = (annual[l.account_id] ?? 0) + Number(l.amount);
     const { byAccount, note } = prorateBudget(annual, period);
     const fyLabel = (Array.isArray(budgetRow.fiscal_year) ? budgetRow.fiscal_year[0] : budgetRow.fiscal_year)?.label;
     budgetByAccount = byAccount;
+    const typeOfBudgetLine = new Map<string, string>();
+    for (const l of budgetRow.lines as unknown as { account_id: string; account: { type: string } | { type: string }[] | null }[]) {
+      const a = Array.isArray(l.account) ? l.account[0] : l.account;
+      if (a?.type) typeOfBudgetLine.set(l.account_id, a.type);
+    }
+    budgetTotals = { income: 0, expense: 0 };
+    for (const [id, amount] of Object.entries(byAccount)) {
+      const t = typeOfBudgetLine.get(id);
+      if (t === "income") budgetTotals.income += amount;
+      else if (t === "expense") budgetTotals.expense += amount;
+    }
     budgetNote = `${note} of the ${fyLabel ?? ""} budget`.replace("  ", " ");
   }
 
@@ -346,6 +368,7 @@ export async function loadStatement(
     position,
     budgetByAccount,
     budgetNote,
+    budgetTotals,
     entriesByAccount,
     postedThrough: latestEntry?.[0]?.entry_date ?? null,
   };

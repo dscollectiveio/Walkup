@@ -6,6 +6,7 @@ import { revalidatePath } from "next/cache";
 import { createClient } from "@/lib/supabase/server";
 import { plaidClient, plaidErrorLog, describePlaidError } from "@/lib/plaid";
 import { syncOneConnection } from "@/lib/plaid/sync";
+import { daysSince } from "@/lib/plaid/books-start";
 import { plaidClientUserId } from "@/lib/plaid/client-user-id";
 import { forgetBalance } from "@/lib/plaid/balance-cache";
 import { matchRule, type CategorizationRule } from "@/lib/plaid/dedupe";
@@ -51,7 +52,9 @@ async function isBoardAdmin(associationId: string): Promise<boolean> {
  * Creates a Plaid Link token so the client can open the Link widget. The
  * widget itself never sees PLAID_SECRET — only this short-lived token.
  */
-export async function createLinkToken(): Promise<{ linkToken?: string; error?: string }> {
+export async function createLinkToken(
+  booksStart?: string,
+): Promise<{ linkToken?: string; error?: string }> {
   const associationId = await currentAssociationId();
   if (!associationId) return { error: "No association is visible to you." };
   if (!(await isBoardAdmin(associationId))) return { error: BOARD_ADMIN_ONLY };
@@ -70,7 +73,7 @@ export async function createLinkToken(): Promise<{ linkToken?: string; error?: s
       // 730 days (2 years) is the max Plaid accepts here. Some institutions
       // cap actual history well below that regardless; this only requests
       // the extended window, it doesn't guarantee it.
-      transactions: { days_requested: 730 },
+      transactions: { days_requested: daysSince(booksStart) },
       // Needed only for OAuth institutions (most large US banks in
       // production). Omitted, not defaulted, when unset — unlike PLAID_ENV,
       // a missing redirect_uri only breaks the OAuth handoff specifically;
@@ -159,6 +162,40 @@ export async function setBankAccountFund(
   revalidatePath("/");
   revalidatePath("/financial-statements");
   return { ok: true };
+}
+
+/**
+ * The board's own name for one account inside a connected bank ("Operating
+ * checking"). Blank clears it and the bank's name shows again. Board admin only
+ * (the table's write policy enforces it).
+ */
+export async function setBankAccountNickname(
+  connectionId: string,
+  plaidAccountId: string,
+  nickname: string,
+): Promise<{ ok?: true; nickname?: string | null; error?: string }> {
+  const name = nickname.replace(/\s+/g, " ").trim();
+  if (name.length > 40) return { error: "Keep it to 40 characters or fewer." };
+  const supabase = await createClient();
+  const { data: conn } = await supabase.from("bank_connections").select("association_id").eq("id", connectionId).limit(1);
+  const associationId = conn?.[0]?.association_id as string | undefined;
+  if (!associationId) return { error: "That bank connection isn't available." };
+  const { error } = name
+    ? await supabase.from("bank_account_nicknames").upsert({
+        bank_connection_id: connectionId,
+        plaid_account_id: plaidAccountId,
+        association_id: associationId,
+        nickname: name,
+        updated_at: new Date().toISOString(),
+      })
+    : await supabase
+        .from("bank_account_nicknames")
+        .delete()
+        .eq("bank_connection_id", connectionId)
+        .eq("plaid_account_id", plaidAccountId);
+  if (error) return { error: error.code === "42501" ? "Only a board admin can rename accounts." : "Couldn't save that. Try again." };
+  revalidatePath("/bank-feed");
+  return { ok: true, nickname: name || null };
 }
 
 /**
@@ -603,6 +640,8 @@ export async function categorizeBankTransaction(input: {
   unitId: string | null;
   vendorId: string | null;
   postNow: boolean;
+  /** What this was for. Omit to leave an existing note alone; an empty string clears it. */
+  note?: string;
 }): Promise<{
   ok?: true;
   posted?: boolean;
@@ -616,9 +655,10 @@ export async function categorizeBankTransaction(input: {
   const supabase = await createClient();
   const categorization = categorizationOf(input);
 
+  const note = input.note === undefined ? undefined : input.note.trim().slice(0, 500) || null;
   const { data, error } = await supabase
     .from("bank_transactions")
-    .update(categorization)
+    .update({ ...categorization, ...(note !== undefined ? { note } : {}) })
     .eq("id", input.transactionId)
     .is("journal_entry_id", null)
     .select("id, association_id, description, amount");

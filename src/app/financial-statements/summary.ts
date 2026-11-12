@@ -116,6 +116,7 @@ export interface MergedRow {
   account_id: string;
   code: string;
   account_name: string;
+  sort_order: number;
   /** One amount per period, in the order the periods were given. */
   amounts: number[];
   total: number;
@@ -127,22 +128,21 @@ export interface MergedRow {
  * a total across them.
  */
 export function mergeRows(
-  periods: { rows: { account_id: string; code: string; account_name: string; amount: number }[] }[],
-  order: "account" | "size" = "account",
+  periods: { rows: { account_id: string; code: string; account_name: string; amount: number; sort_order: number }[] }[],
 ): MergedRow[] {
   const byId = new Map<string, MergedRow>();
   periods.forEach((p, i) => {
     for (const r of p.rows) {
       const row =
         byId.get(r.account_id) ??
-        { account_id: r.account_id, code: r.code, account_name: r.account_name, amounts: periods.map(() => 0), total: 0 };
+        { account_id: r.account_id, code: r.code, account_name: r.account_name, sort_order: r.sort_order, amounts: periods.map(() => 0), total: 0 };
       row.amounts[i] += r.amount;
       row.total += r.amount;
       byId.set(r.account_id, row);
     }
   });
   const rows = [...byId.values()];
-  return order === "size" ? rows.sort((a, b) => b.total - a.total) : rows.sort((a, b) => a.code.localeCompare(b.code));
+  return rows.sort((a, b) => a.sort_order - b.sort_order || a.code.localeCompare(b.code));
 }
 
 export interface HeadlineInput {

@@ -1,37 +1,36 @@
 import Link from "next/link";
 import { createClient } from "@/lib/supabase/server";
-import { Card, Empty, Restricted, money } from "@/components/ui";
-import { todayIso } from "@/lib/dates";
-import { loadStatement, type Statement } from "./data";
-import { mergeRows, type PeriodSelection } from "./summary";
+import { Card, Empty, Restricted } from "@/components/ui";
+import { dateRangeLabel, todayIso } from "@/lib/dates";
+import { mergeRows } from "./summary";
+import { viewQuery, rangeSpan, type PickerState, type StatementView } from "./range";
 import { PeriodPicker } from "./period-picker";
 import { ReportActions } from "./report-actions";
-import { buildReport } from "./report";
+import { MultiStatementTable } from "./multi-table";
+import { buildReport, loadView } from "./report";
 import { statementHref, type FiscalYear } from "./periods";
 
-const NOUN = { monthly: "months", quarterly: "quarters", annual: "years" } as const;
-
 /**
- * Two or more periods chosen: each one is a column, with a Total at the end.
- * Same loader as the single view, run once per period, so every figure here
- * is the figure that period shows on its own. Budget, entry drill-down,
- * "where the money sits" and exports stay on the single-period view.
+ * More than one period on screen: a month per column with a Total, one combined
+ * column for a long range, or Period 1 | Period 2 | Difference when comparing.
+ * Same loader as the single view, so every figure here is the figure that period
+ * shows on its own. Budget, "where the money sits" and the year-end package stay
+ * on the single-period view.
  */
 export async function MultiPeriodView({
-  selection,
-  sort,
+  view,
   fiscalYears,
+  state,
 }: {
-  selection: PeriodSelection;
-  sort: "account" | "size";
+  view: StatementView;
   fiscalYears: FiscalYear[];
+  /** What the picker opens with. */
+  state: PickerState;
 }) {
   const supabase = await createClient();
-  const loaded = await Promise.all(
-    selection.items.map((it) => loadStatement(supabase, "total", selection.grain, it.offset)),
-  );
-  if (loaded.some((l) => "restricted" in l)) return <Restricted what="financial statements" />;
-  const periods = (loaded as Statement[]).filter((l) => l.bounds !== null);
+  const loaded = await loadView(supabase, view);
+  if (loaded === "restricted") return <Restricted what="financial statements" />;
+  const { statements: periods, compare, blank } = loaded;
   if (periods.length === 0) return <Restricted what="financial statements" />;
 
   const today = todayIso();
@@ -39,59 +38,27 @@ export async function MultiPeriodView({
   const first = labels[0];
   const last = labels[labels.length - 1];
   const selectionLabel =
-    periods.length === 1 ? first : `${first} – ${last}`;
-  const income = mergeRows(periods.map((p) => ({ rows: p.incomeRows })), "account");
-  const expenses = mergeRows(periods.map((p) => ({ rows: p.expenseRows })), sort);
+    view.kind === "compare"
+      ? `${labels[0]} vs. ${labels[1]}`
+      : view.kind === "combined"
+        ? rangeSpan(view.range)
+        : periods.length === 1
+          ? first
+          : `${first} – ${last}`;
+  const income = mergeRows(periods.map((p) => ({ rows: p.incomeRows })));
+  const expenses = mergeRows(periods.map((p) => ({ rows: p.expenseRows })));
   const totalIncome = periods.map((p) => p.totalIncome);
   const totalExpenses = periods.map((p) => p.totalExpenses);
   const net = periods.map((p) => p.netIncome);
   const sum = (xs: number[]) => xs.reduce((a, b) => a + b, 0);
-  const incomeAll = sum(totalIncome);
-  const expensesAll = sum(totalExpenses);
-  const netAll = incomeAll - expensesAll;
   const unposted = sum(periods.map((p) => p.unpostedCount));
   const hasActivity = income.length + expenses.length > 0;
-  const report = buildReport(periods);
-  const selectedKeys = selection.items.map((i) => i.key);
-  const cell = "figures whitespace-nowrap px-3 py-2.5 text-right text-ink";
-  const head = "whitespace-nowrap px-3 pb-2 text-right text-[12px] font-medium text-mute";
-  const band = "bg-fill/60 px-3 py-2 text-[11px] font-medium uppercase tracking-[0.07em] text-section-label";
-
-  const section = (label: string, rows: ReturnType<typeof mergeRows>, totals: number[], totalLabel: string, action?: React.ReactNode) => (
-    <>
-      <tr>
-        <td colSpan={periods.length + 2} className={band}>
-          <span className="flex items-center justify-between">
-            <span>{label}</span>
-            {action}
-          </span>
-        </td>
-      </tr>
-      {rows.map((r) => (
-        <tr key={r.account_id} className="border-b border-line/70">
-          <td className="px-3 py-2.5 text-ink">
-            {r.account_name}
-          </td>
-          {r.amounts.map((a, i) => (
-            <td key={i} className={`${cell} ${a === 0 ? "text-mute-soft" : ""}`}>
-              {a === 0 ? "—" : money(a)}
-            </td>
-          ))}
-          <td className={`${cell} font-medium`}>{money(r.total)}</td>
-        </tr>
-      ))}
-      <tr>
-        <td className="px-3 py-2.5 font-semibold text-ink">{totalLabel}</td>
-        {totals.map((t, i) => (
-          <td key={i} className={`${cell} font-semibold`}>
-            {money(t)}
-          </td>
-        ))}
-        <td className={`${cell} font-semibold`}>{money(sum(totals))}</td>
-      </tr>
-    </>
-  );
-
+  const report = buildReport(periods, { compare, blank });
+  const query = viewQuery(view);
+  const cardHint =
+    view.kind === "compare"
+      ? `From posted transactions · ${dateRangeLabel(periods[0].bounds!.start, periods[0].bounds!.end)} vs. ${dateRangeLabel(periods[1].bounds!.start, periods[1].bounds!.end)}`
+      : `From posted transactions · ${dateRangeLabel(periods[0].bounds!.start, periods[periods.length - 1].bounds!.end)}`;
   return (
     <div className="space-y-6">
       <div>
@@ -113,72 +80,32 @@ export async function MultiPeriodView({
       ) : null}
 
       <div className="flex flex-wrap items-center justify-between gap-3">
-        <PeriodPicker
-          label={selectionLabel}
-          grain={selection.grain}
-          selectedKeys={selectedKeys}
-          fiscalYears={fiscalYears}
-          today={today}
-          sort={sort}
-        />
+        <PeriodPicker state={state} fiscalYears={fiscalYears} today={today} />
         {report ? (
           <ReportActions
             report={report}
-            pdfHref={statementHref("/financial-statements/export/pdf", "total", "monthly", 0, { periods: selectedKeys.join(",") })}
+            pdfHref={statementHref("/financial-statements/export/pdf", "total", "monthly", 0, query)}
+            excelHref={statementHref("/financial-statements/export", "total", "monthly", 0, query)}
           />
         ) : null}
       </div>
 
-      <Card navy title={selectionLabel} hint={`${periods.length} ${NOUN[selection.grain]} · posted to the books`}>
+      <Card navy title={selectionLabel} hint={cardHint}>
         {!hasActivity ? (
-          <Empty>No posted activity in these periods.</Empty>
+          <Empty>No posted activity in {view.kind === "combined" ? "this period" : "these periods"}.</Empty>
         ) : (
-          <div className="space-y-5">
-            <div className="overflow-x-auto rounded-lg border border-line text-[13px]">
-              <table className="w-full min-w-[32rem]">
-                <thead>
-                  <tr className="border-b border-line">
-                    <th className="px-3 pb-2 pt-2.5 text-left text-[12px] font-medium text-mute">Account</th>
-                    {labels.map((l) => (
-                      <th key={l} className={`${head} pt-2.5`}>
-                        {l}
-                      </th>
-                    ))}
-                    <th className={`${head} pt-2.5 text-ink`}>Total</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {section("Income", income, totalIncome, "Total income")}
-                  {section(
-                    "Expenses",
-                    expenses,
-                    totalExpenses,
-                    "Total expenses",
-                    <Link
-                      href={statementHref("/financial-statements", "total", "monthly", 0, {
-                        periods: selectedKeys.join(","),
-                        sort: sort === "size" ? undefined : "size",
-                      })}
-                      className="-my-3.5 inline-flex items-center py-3.5 normal-case tracking-normal text-mute underline-offset-2 hover:text-ink hover:underline sm:my-0 sm:py-0"
-                    >
-                      {sort === "size" ? "Sort by account" : "Sort by size"}
-                    </Link>,
-                  )}
-                  <tr className="border-t-2 border-ink">
-                    <td className="px-3 py-3 text-[14px] font-bold text-ink">{netAll < 0 ? "Left over (short)" : "Left over"}</td>
-                    {net.map((n, i) => (
-                      <td key={i} className={`figures whitespace-nowrap px-3 py-3 text-right text-[14px] font-bold ${n < 0 ? "text-bad-text" : "text-good-text"}`}>
-                        {money(n)}
-                      </td>
-                    ))}
-                    <td className={`figures whitespace-nowrap px-3 py-3 text-right text-[14px] font-bold ${netAll < 0 ? "text-bad-text" : "text-good-text"}`}>
-                      {money(netAll)}
-                    </td>
-                  </tr>
-                </tbody>
-              </table>
-            </div>
-          </div>
+          <MultiStatementTable
+            labels={labels}
+            income={income}
+            expenses={expenses}
+            totalIncome={totalIncome}
+            totalExpenses={totalExpenses}
+            net={net}
+            entries={periods.map((p) => p.entriesByAccount)}
+            today={today}
+            compare={compare}
+            blank={blank}
+          />
         )}
       </Card>
     </div>

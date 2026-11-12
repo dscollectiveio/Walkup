@@ -30,6 +30,8 @@ export type CategoryIcon =
 export interface Category {
   id: string;
   title: string;
+  /** Longer, search-friendly heading for the section; the short title stays on the tabs. */
+  heading?: string;
   icon: CategoryIcon;
   /** Two sentences for the top of the section. */
   blurb: string;

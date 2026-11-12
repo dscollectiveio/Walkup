@@ -145,6 +145,12 @@ export const FAQ: { group: FaqGroup; q: string; a: string; links?: FaqLink[] }[]
   },
   {
     group: "About Walkup",
+    q: "Has a CPA reviewed Walkup's tax calculations?",
+    a: "Not yet. Walkup's tax figures, including the 60% and 90% checks, are provisional and have not been reviewed by a CPA. Every figure shows the numbers behind it so your accountant can check it before anything is filed.",
+    links: [{ label: "Tax prep support", href: "/features#cat-tax" }],
+  },
+  {
+    group: "About Walkup",
     q: "Does Walkup send emails and reports for us?",
     a: "Walkup prepares them and your board approves them. Dues reminders, late fee notices and owner statements follow rules you switch on, and each batch goes out only after a board admin approves it. The financial report for owners, quote requests to insurance agents and contractors, and notes to your accountant are drafted for you and open in your own email app to send.",
     links: [{ label: "Dues reminders and statements", href: "/features#cat-dues" }, { label: "How Walkup protects your data", href: "/security" }],

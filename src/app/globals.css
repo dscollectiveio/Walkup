@@ -15,8 +15,27 @@
    Font: Outfit, the brand typeface, from next/font (layout.tsx) as --font-outfit.
    ========================================================================== */
 
-:root {
+/* [data-theme="light"] on any element re-declares the light tokens for its whole subtree, so a page can stay
+   light inside a dark <html> (the landing page: landing/landing.tsx). */
+:root,
+[data-theme="light"] {
   color-scheme: light;
+
+  /* Transactions table: header, and the two row states that are still to sort. */
+  --w-head-bg: #f3eee3;
+  --w-head-line: #ddd5c4;
+  --w-head-text: #5b6272;
+  --w-head-strong: #e7dfcc;
+  --w-gold-tint: #f5ecd8;
+  --w-total-col: #faf8f3;       /* the Total column on the side-by-side statement: a very light tint */
+  --w-row-ready: #f4f8f5;       /* has a category (suggested or chosen), not posted */
+  --w-row-ready-bar: #3f7d58;
+  --w-row-ready-hover: #ebf3ed;
+  --w-row-ready-sel: #e1ede5;   /* ticked for the bulk bar: a step deeper */
+  --w-row-attn: #fcf8ee;        /* no category yet */
+  --w-row-attn-bar: #c9a24d;
+  --w-row-attn-hover: #f9f1df;
+  --w-row-attn-sel: #f5e8c6;
 
   /* Structure */
   --w-ink: #1b2a41;        /* Walkup navy: primary text; the band on card headers and primary buttons */
@@ -51,6 +70,7 @@
   --w-nav-text: #1b2a41;
   --w-nav-muted: #5b6475;     /* 6.1:1 on white */
   --w-nav-divider: #e3ded3;
+  --w-nav-rule: #1b2a41;      /* the heavy rule above the collapse button and the account row: brand blue */
   --w-nav-active-bg: #1b2a41;
   --w-nav-active-text: #ffffff; /* 16:1 */
   --w-sidebar-divider: #e3ded3;
@@ -98,6 +118,22 @@
 [data-theme="dark"] {
   color-scheme: dark;
 
+  /* Same relationships on the dark surface: a faint tint, a brighter bar. */
+  --w-head-bg: #1b2a44;
+  --w-head-line: #2c3b57;
+  --w-head-text: #a9b3c7;
+  --w-head-strong: #263a5c;
+  --w-gold-tint: #4a3f24;
+  --w-total-col: #1d2c47;
+  --w-row-ready: #172e2a;
+  --w-row-ready-bar: #5fb583;
+  --w-row-ready-hover: #1c3a34;
+  --w-row-ready-sel: #20443b;
+  --w-row-attn: #2d2a1d;
+  --w-row-attn-bar: #d9a441;
+  --w-row-attn-hover: #383420;
+  --w-row-attn-sel: #433d24;
+
   /* The navy band inverts: cream fill, navy text — same as the primary button. */
   --w-ink: #f5efe3;
   --w-ink-mid: #e6dfd0;
@@ -127,6 +163,7 @@
   --w-nav-text: #f5efe3;
   --w-nav-muted: #a3acbd;     /* 6.5:1 */
   --w-nav-divider: #36465f;
+  --w-nav-rule: #4f6a99;      /* brand blue, lifted so it shows on the navy sidebar */
   --w-nav-active-bg: #f5efe3;
   --w-nav-active-text: #1b2a41; /* 12:1 */
   --w-sidebar-divider: #36465f;
@@ -209,6 +246,7 @@
   --color-nav-text: var(--w-nav-text);
   --color-nav-muted: var(--w-nav-muted);
   --color-nav-divider: var(--w-nav-divider);
+  --color-nav-rule: var(--w-nav-rule);
   --color-nav-active: var(--w-nav-active-bg);
   --color-nav-active-text: var(--w-nav-active-text);
 
@@ -371,6 +409,18 @@ html[data-sidebar="rail"] {
 .brand-on-dark { display: none; }
 [data-theme="dark"] .brand-on-light { display: none; }
 [data-theme="dark"] .brand-on-dark { display: inline-flex; }
+/* Inside a light island (the landing page) the light lockup stays, whatever the <html> theme. */
+[data-theme="light"] .brand-on-light { display: inline-flex; }
+[data-theme="light"] .brand-on-dark { display: none; }
+
+/* The landing page is always light: the page behind and around it (overscroll, the scrollbar) follows. */
+html:has([data-force-light]) {
+  color-scheme: light;
+  background-color: #f5efe3;
+}
+html:has([data-force-light]) body {
+  background-color: #f5efe3;
+}
 
 /* The mark's entrance on load (components/mark.tsx, animate): the two circles pop in, the coin drops on top, the
    keyhole fades in. Each part scales from its own centre. */

@@ -1,60 +1,103 @@
 "use client";
 
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import { ChevronDown } from "lucide-react";
-import { statementHref, type PeriodGrain } from "./periods";
-import { MAX_SELECTED, parseSelection, pickerBounds } from "./summary";
+import { statementHref } from "./periods";
+import {
+  QUICK_PICKS,
+  booksStartIdx,
+  comparePeriod,
+  defaultColumns,
+  idxOfIso,
+  keyOf,
+  monthName,
+  monthOf,
+  monthsIn,
+  parseKey,
+  quickPickRange,
+  rangeName,
+  rangeSpan,
+  yearOf,
+  type CompareWith,
+  type MonthIdx,
+  type MonthRange,
+  type PickerState,
+  type QuickPick,
+} from "./range";
 
 const MONTHS = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
-const GRAINS: { key: PeriodGrain; label: string }[] = [
-  { key: "monthly", label: "Months" },
-  { key: "quarterly", label: "Quarters" },
-  { key: "annual", label: "Years" },
-];
-const NOUN = { monthly: "month", quarterly: "quarter", annual: "year" } as const;
+type Field = "from" | "to" | "from2" | "to2";
 
-const grainOf = (k: string): PeriodGrain => (k.startsWith("FY:") ? "annual" : k.includes("Q") ? "quarterly" : "monthly");
+const COMPARE_OPTIONS: { id: CompareWith; label: string }[] = [
+  { id: "ly", label: "Same months last year" },
+  { id: "prev", label: "The months just before" },
+  { id: "pick", label: "Pick months…" },
+];
 
 /**
- * Choose one or several months, quarters or fiscal years.
- *
- * One button shows what's on screen. It opens a wide panel laid out like a
- * calendar: one row per year, a chip per month (or quarter), newest year on
- * top, so a run of periods reads left to right the way a board member thinks
- * about it. Click a chip to add or remove it; shift-click a second chip to
- * take everything in between. Quick picks on the top row cover the usual
- * asks (this month, last 3, year so far…). Nothing changes on the page until
- * "Show" — one pick is the ordinary statement, several become columns.
+ * Two ways to choose what the statement shows: a date range (start month to end month,
+ * optionally a column per month) or a comparison of two periods. Whole months only.
  */
 export function PeriodPicker({
-  label,
-  grain: currentGrain,
-  selectedKeys,
+  state,
   fiscalYears,
   today,
-  sort,
 }: {
-  label: string;
-  grain: PeriodGrain;
-  /** Keys of what's on screen now (see periodKeyFor). */
-  selectedKeys: string[];
-  fiscalYears: { label: string; starts_on: string }[];
+  /** What the page is showing now; the picker opens on the mode that produced it. */
+  state: PickerState;
+  fiscalYears: { label: string; starts_on: string; ends_on: string }[];
   /** "YYYY-MM-DD", from the server so the grid never disagrees with the page. */
   today: string;
-  sort: "account" | "size";
 }) {
   const router = useRouter();
   const rootRef = useRef<HTMLDivElement>(null);
-  const [open, setOpen] = useState(false);
-  const [grain, setGrain] = useState<PeriodGrain>(currentGrain);
-  const [draft, setDraft] = useState<string[]>(selectedKeys);
-  const [anchor, setAnchor] = useState<string | null>(null);
+  const cellRefs = useRef<Map<number, HTMLButtonElement>>(new Map());
 
-  const bounds = pickerBounds(fiscalYears, today);
-  const ty = Number(today.slice(0, 4));
-  const years: number[] = [];
-  for (let y = bounds.maxYear; y >= bounds.minYear; y--) years.push(y);
+  const now = idxOfIso(today);
+  const min = booksStartIdx(fiscalYears) ?? now - 11;
+  const fy = fiscalYears as { label: string; starts_on: string; ends_on: string }[];
+
+  const fromState = (s: PickerState) => ({
+    from: parseKey(s.from) ?? now,
+    to: parseKey(s.to) ?? now,
+    from2: parseKey(s.from2) ?? now - 12,
+    to2: parseKey(s.to2) ?? now - 12,
+  });
+
+  const [open, setOpen] = useState(false);
+  const [mode, setMode] = useState<"range" | "compare">(state.mode);
+  const [p, setP] = useState(() => fromState(state));
+  const [colsTouched, setColsTouched] = useState<boolean | null>(null);
+  const [colsChecked, setColsChecked] = useState(state.cols);
+  const [withMode, setWithMode] = useState<CompareWith>(state.with);
+  const [active, setActive] = useState<Field>("from");
+  const [focusIdx, setFocusIdx] = useState<MonthIdx>(now);
+
+  const p1: MonthRange = { from: p.from, to: p.to };
+  const p2: MonthRange = comparePeriod(p1, withMode, withMode === "pick" ? { from: p.from2, to: p.to2 } : null);
+  const n = monthsIn(p1);
+  const cols = colsTouched === null ? defaultColumns(n) : colsChecked;
+
+  // The button names what the page shows, not the draft being edited.
+  const shown = fromState(state);
+  const shownRange: MonthRange = { from: shown.from, to: shown.to };
+  const label =
+    state.mode === "compare"
+      ? `${rangeName(shownRange)} vs. ${rangeName(comparePeriod(shownRange, state.with, { from: shown.from2, to: shown.to2 }))}`
+      : state.pick
+        ? (QUICK_PICKS.find((q) => q.id === state.pick)?.label ?? rangeSpan(shownRange))
+        : rangeSpan(shownRange);
+
+  const reset = () => {
+    setMode(state.mode);
+    setP(fromState(state));
+    setColsTouched(null);
+    setColsChecked(state.cols);
+    setWithMode(state.with);
+    setActive("from");
+    setFocusIdx(fromState(state).from);
+  };
 
   useEffect(() => {
     if (!open) return;
@@ -72,269 +115,289 @@ export function PeriodPicker({
     };
   }, [open]);
 
-  // Every period that can be picked for this grain, oldest first. Ranges are slices of it.
-  const monthAvailable = (y: number, i: number) => y * 12 + i >= bounds.minMonthIndex && y * 12 + i <= bounds.maxMonthIndex;
-  const quarterAvailable = (y: number, q: number) => {
-    const first = y * 12 + (q - 1) * 3;
-    return first + 2 >= bounds.minMonthIndex && first <= bounds.maxMonthIndex;
-  };
-  const monthKey = (y: number, i: number) => `${y}-${String(i + 1).padStart(2, "0")}`;
-  const quarterKey = (y: number, q: number) => `${y}-Q${q}`;
-  const allKeys: (string | null)[] =
-    grain === "monthly"
-      ? [...years].reverse().flatMap((y) => MONTHS.map((_, i) => (monthAvailable(y, i) ? monthKey(y, i) : null)))
-      : grain === "quarterly"
-        ? [...years].reverse().flatMap((y) => [1, 2, 3, 4].map((q) => (quarterAvailable(y, q) ? quarterKey(y, q) : null)))
-        : [...fiscalYears].reverse().map((fy) => `FY:${fy.label}`);
-  const ordered = allKeys.filter((k): k is string => k !== null);
-
-  const active = draft.filter((k) => grainOf(k) === grain);
-  const full = active.length >= MAX_SELECTED;
-  const sortKeys = (keys: string[]) => ordered.filter((k) => keys.includes(k));
-
-  const pick = (key: string, shift: boolean) => {
-    if (shift && anchor && anchor !== key) {
-      const a = ordered.indexOf(anchor);
-      const b = ordered.indexOf(key);
-      if (a >= 0 && b >= 0) {
-        const range = ordered.slice(Math.min(a, b), Math.max(a, b) + 1);
-        setDraft(sortKeys([...new Set([...active, ...range])]).slice(-MAX_SELECTED));
-        return;
-      }
-    }
-    setAnchor(key);
-    setDraft(active.includes(key) ? active.filter((k) => k !== key) : full ? active : sortKeys([...active, key]));
+  const go = (extra: Record<string, string | undefined>, offset = 0) => {
+    setOpen(false);
+    router.push(statementHref("/financial-statements", "total", "monthly", offset, extra));
   };
 
-  const last = (n: number) => ordered.slice(-n);
-  const presets: { label: string; keys: string[] }[] =
-    grain === "monthly"
-      ? [
-          { label: "This month", keys: last(1) },
-          { label: "Last 3 months", keys: last(3) },
-          { label: "Last 6 months", keys: last(6) },
-          { label: "Last 12 months", keys: last(12) },
-          { label: `${ty} so far`, keys: ordered.filter((k) => k.startsWith(`${ty}-`)) },
-        ]
-      : grain === "quarterly"
-        ? [
-            { label: "This quarter", keys: last(1) },
-            { label: "Last 4 quarters", keys: last(4) },
-            { label: `${ty} so far`, keys: ordered.filter((k) => k.startsWith(`${ty}-`)) },
-          ]
-        : [
-            { label: "This year", keys: last(1) },
-            { label: "Last 2 years", keys: last(2) },
-            { label: "Last 3 years", keys: last(3) },
-          ];
-  const presetOn = (keys: string[]) => keys.length > 0 && keys.length === active.length && keys.every((k) => active.includes(k));
+  const showRange = (r: MonthRange, c: boolean, pick?: QuickPick) => {
+    if (r.from === r.to) return go({ pick }, now - r.from);
+    return go({ from: keyOf(r.from), to: keyOf(r.to), cols: c ? "1" : "0", pick });
+  };
 
   const apply = () => {
-    const extra = { sort: sort === "size" ? "size" : undefined };
-    const sel = parseSelection(active.join(","), fiscalYears, today);
-    if (!sel) return;
-    setOpen(false);
-    if (sel.items.length === 1) {
-      router.push(statementHref("/financial-statements", "total", sel.grain, sel.items[0].offset, extra));
-    } else {
-      router.push(
-        statementHref("/financial-statements", "total", "monthly", 0, {
-          ...extra,
-          periods: sel.items.map((i) => i.key).join(","),
-        }),
-      );
-    }
+    if (mode === "range") return showRange(p1, cols);
+    go({
+      from: keyOf(p1.from),
+      to: keyOf(p1.to),
+      cmp: withMode,
+      ...(withMode === "pick" ? { from2: keyOf(p2.from), to2: keyOf(p2.to) } : {}),
+    });
   };
 
-  const unchanged =
-    grain === currentGrain && active.length === selectedKeys.length && selectedKeys.every((k) => active.includes(k));
+  // Clicking a field makes it the one the next grid click fills.
+  const editsPeriod2 = mode === "compare" && (active === "from2" || active === "to2");
+  const clickMonth = (m: MonthIdx) => {
+    setFocusIdx(m);
+    setP((cur) => {
+      const next = { ...cur };
+      if (active === "from") {
+        next.from = m;
+        next.to = m;
+      } else if (active === "to") {
+        next.to = m;
+        if (next.to < next.from) [next.from, next.to] = [next.to, next.from];
+      } else if (active === "from2") {
+        next.from2 = m;
+        next.to2 = m;
+      } else {
+        next.to2 = m;
+        if (next.to2 < next.from2) [next.from2, next.to2] = [next.to2, next.from2];
+      }
+      return next;
+    });
+    setActive((a) => (a === "from" ? "to" : a === "to" ? "from" : a === "from2" ? "to2" : "from2"));
+  };
 
-  const summary = (() => {
-    if (active.length === 0) return `Pick one or more ${NOUN[grain]}s`;
-    const keys = sortKeys(active);
-    const first = keys[0];
-    const lastKey = keys[keys.length - 1];
-    const run = ordered.slice(ordered.indexOf(first), ordered.indexOf(lastKey) + 1).length === keys.length;
-    const name = (k: string) =>
-      grain === "monthly"
-        ? `${MONTHS[Number(k.slice(5, 7)) - 1]} ${k.slice(0, 4)}`
-        : grain === "quarterly"
-          ? `${k.slice(5)} ${k.slice(0, 4)}`
-          : k.slice(3);
-    const count = `${keys.length} ${NOUN[grain]}${keys.length === 1 ? "" : "s"}`;
-    if (keys.length === 1) return name(first);
-    return run ? `${name(first)} – ${name(lastKey)} · ${count}` : `${count} (not in a row)`;
-  })();
+  const years = useMemo(() => {
+    const ys: number[] = [];
+    for (let y = yearOf(now); y >= yearOf(min); y--) ys.push(y);
+    return ys;
+  }, [now, min]);
+  const available = (m: MonthIdx) => m >= min && m <= now;
 
-  // A chip: selected = navy; the current period gets a thin ring so "now" is easy to find.
-  const chip = (key: string | null, text: string, sub?: string) => {
-    const on = key !== null && active.includes(key);
-    const disabled = key === null || (!on && full);
-    const isNow = key === ordered[ordered.length - 1];
+  const onGridKey = (e: React.KeyboardEvent, m: MonthIdx) => {
+    const step = e.key === "ArrowLeft" ? -1 : e.key === "ArrowRight" ? 1 : e.key === "ArrowUp" ? -12 : e.key === "ArrowDown" ? 12 : 0;
+    if (!step) return;
+    e.preventDefault();
+    // Up goes to the year above (later), so the keys follow the screen: rows run newest first.
+    const target = Math.abs(step) === 12 ? m - step : m + step;
+    if (!available(target)) return;
+    setFocusIdx(target);
+    cellRefs.current.get(target)?.focus();
+  };
+
+  const field = (id: Field, text: string, value: MonthIdx, disabled = false) => (
+    <button
+      type="button"
+      key={id}
+      disabled={disabled}
+      aria-pressed={active === id}
+      aria-label={`${text}: ${monthName(value)}`}
+      onClick={() => {
+        setActive(id);
+        setFocusIdx(value);
+      }}
+      className={`flex h-11 min-w-0 flex-1 flex-col items-start justify-center rounded-md border border-line-strong bg-paper px-3 text-left sm:h-10 ${
+        active === id ? "outline outline-2 outline-offset-0 outline-brass" : ""
+      }`}
+    >
+      <span className="text-[10px] font-medium uppercase tracking-[0.07em] text-mute">{text}</span>
+      <span className="figures text-[13px] font-medium text-ink">{monthName(value)}</span>
+    </button>
+  );
+
+  const inP1 = (m: MonthIdx) => m >= p1.from && m <= p1.to;
+  const inP2 = (m: MonthIdx) => mode === "compare" && m >= p2.from && m <= p2.to;
+  const cell = (m: MonthIdx) => {
+    const ok = available(m);
+    const end1 = m === p1.from || m === p1.to;
+    const cls = !ok
+      ? "cursor-not-allowed text-mute-soft opacity-40"
+      : inP1(m)
+        ? end1
+          ? "bg-ink text-paper"
+          : "bg-ink/15 text-ink"
+        : inP2(m)
+          ? "bg-[var(--w-gold-tint)] text-ink"
+          : "text-ink hover:bg-fill";
     return (
       <button
-        key={key ?? text}
+        key={m}
         type="button"
-        disabled={disabled}
-        aria-pressed={on}
-        onClick={(e) => key && pick(key, e.shiftKey)}
-        className={`flex h-11 min-w-0 flex-col items-center justify-center rounded-md text-[12px] font-medium leading-tight transition-colors sm:h-9 ${
-          on
-            ? "bg-ink text-paper"
-            : key === null
-              ? "cursor-default text-mute-soft opacity-30"
-              : disabled
-                ? "cursor-not-allowed text-mute-soft opacity-40"
-                : "text-ink hover:bg-fill"
-        } ${isNow && !on ? "ring-1 ring-inset ring-line-strong" : ""}`}
+        disabled={!ok}
+        ref={(el) => {
+          if (el) cellRefs.current.set(m, el);
+          else cellRefs.current.delete(m);
+        }}
+        tabIndex={m === Math.min(Math.max(focusIdx, min), now) ? 0 : -1}
+        aria-pressed={inP1(m) || inP2(m)}
+        aria-label={monthName(m)}
+        onClick={() => clickMonth(m)}
+        onKeyDown={(e) => onGridKey(e, m)}
+        className={`h-11 rounded-md text-[12px] font-medium transition-colors sm:h-9 ${cls}`}
       >
-        <span>{text}</span>
-        {sub ? <span className="text-[10px] font-normal opacity-70">{sub}</span> : null}
+        {MONTHS[monthOf(m)]}
       </button>
     );
   };
+
+  const p2Words = monthsIn(p2) === 1 ? monthName(p2.from) : `${monthName(p2.from)} to ${monthName(p2.to)}`;
+  const p2Message =
+    p2.to < min
+      ? `No posted data for ${rangeName(p2)}`
+      : p2.from < min
+        ? `Posted data for ${rangeName(p2)} starts ${monthName(min)}`
+        : null;
+
+  const summary =
+    mode === "range"
+      ? `${monthName(p1.from)} to ${monthName(p1.to)} · ${n} month${n === 1 ? "" : "s"}`
+      : `${rangeName(p1)} vs. ${rangeName(p2)}`;
 
   return (
     <div ref={rootRef} className="relative">
       <button
         type="button"
         onClick={() => {
-          setGrain(currentGrain);
-          setDraft(selectedKeys);
-          setAnchor(null);
+          if (!open) reset();
           setOpen((o) => !o);
         }}
         aria-haspopup="dialog"
         aria-expanded={open}
-        className="inline-flex h-11 min-w-[12rem] sm:h-9 items-center justify-between gap-2 rounded-md border border-line-strong bg-paper px-3 text-[13px] font-medium text-ink hover:bg-fill focus-visible:outline focus-visible:outline-2 focus-visible:outline-brass"
+        className="inline-flex h-11 min-w-[12rem] items-center justify-between gap-2 rounded-md border border-line-strong bg-paper px-3 text-[13px] font-medium text-ink hover:bg-fill focus-visible:outline focus-visible:outline-2 focus-visible:outline-brass sm:h-9"
       >
         <span className="truncate">{label}</span>
         <ChevronDown size={14} strokeWidth={1.6} aria-hidden="true" className="shrink-0 text-mute" />
       </button>
 
       {open ? (
-        <div
-          role="dialog"
-          aria-label="Choose periods"
-          className="absolute left-0 top-full z-30 mt-1.5 w-[min(44rem,calc(100vw-2rem))] rounded-xl border border-line bg-paper shadow-lg"
-        >
-          {/* Top row: what kind of period, and the quick picks for it. */}
-          <div className="flex flex-wrap items-center justify-between gap-2 border-b border-line px-4 py-3">
-            <div role="tablist" aria-label="Period type" className="grid grid-cols-3 gap-1 rounded-lg bg-fill p-1">
-              {GRAINS.map((g) => (
-                <button
-                  key={g.key}
-                  type="button"
-                  role="tab"
-                  aria-selected={grain === g.key}
-                  onClick={() => {
-                    setGrain(g.key);
-                    setAnchor(null);
-                  }}
-                  className={`h-11 rounded-md px-3 text-[12px] sm:h-7 font-medium ${
-                    grain === g.key ? "bg-paper text-ink shadow-sm" : "text-mute hover:text-ink"
-                  }`}
-                >
-                  {g.label}
-                </button>
-              ))}
-            </div>
-            <div className="flex flex-wrap items-center gap-1">
-              {presets
-                .filter((p) => p.keys.length > 0)
-                .map((p) => (
+        <>
+          <div className="fixed inset-0 z-20 bg-black/30 sm:hidden" aria-hidden="true" />
+          <div
+            role="dialog"
+            aria-label="Choose what to show"
+            className="fixed inset-x-0 bottom-0 z-30 max-h-[90vh] overflow-y-auto rounded-t-2xl border border-line bg-paper shadow-lg sm:absolute sm:inset-x-auto sm:bottom-auto sm:left-0 sm:top-full sm:mt-1.5 sm:max-h-none sm:w-[34rem] sm:rounded-xl"
+          >
+            <div className="space-y-3 border-b border-line px-4 py-3">
+              <div role="radiogroup" aria-label="What to show" className="grid grid-cols-2 gap-1 rounded-lg bg-fill p-1">
+                {(
+                  [
+                    ["range", "Date range"],
+                    ["compare", "Compare"],
+                  ] as const
+                ).map(([id, text]) => (
                   <button
-                    key={p.label}
+                    key={id}
                     type="button"
-                    aria-pressed={presetOn(p.keys)}
+                    role="radio"
+                    aria-checked={mode === id}
                     onClick={() => {
-                      setDraft(p.keys);
-                      setAnchor(null);
+                      setMode(id);
+                      setActive("from");
                     }}
-                    className={`h-11 rounded-full border px-3 text-[12px] sm:h-7 sm:px-2.5 sm:text-[11px] font-medium transition-colors ${
-                      presetOn(p.keys)
-                        ? "border-ink bg-ink text-paper"
-                        : "border-line text-mute hover:border-line-strong hover:text-ink"
+                    className={`h-11 rounded-md text-[13px] font-medium sm:h-8 ${
+                      mode === id ? "bg-paper text-ink shadow-sm" : "text-mute hover:text-ink"
                     }`}
                   >
-                    {p.label}
+                    {text}
                   </button>
                 ))}
-            </div>
-          </div>
+              </div>
 
-          {/* The calendar: a row per year, newest on top. */}
-          <div className="max-h-[40vh] overflow-y-auto sm:max-h-[22rem] px-4 py-3">
-            {grain === "annual" ? (
-              fiscalYears.length === 0 ? (
-                <p className="py-4 text-center text-[12px] text-mute">No fiscal year is set up yet.</p>
-              ) : (
-                <div className="grid grid-cols-4 gap-1 sm:grid-cols-6">
-                  {[...fiscalYears].reverse().map((fy) => chip(`FY:${fy.label}`, fy.label))}
+              {mode === "range" ? (
+                <div className="flex flex-wrap gap-1.5" aria-label="Quick picks" role="group">
+                  {QUICK_PICKS.map((q) => (
+                    <button
+                      key={q.id}
+                      type="button"
+                      onClick={() => {
+                        const r = quickPickRange(q.id, today, fy as never, min);
+                        showRange(r, defaultColumns(monthsIn(r)), q.id);
+                      }}
+                      className="h-11 rounded-full border border-line px-3 text-[12px] font-medium text-mute transition-colors hover:border-line-strong hover:text-ink sm:h-7 sm:px-2.5 sm:text-[11px]"
+                    >
+                      {q.label}
+                    </button>
+                  ))}
                 </div>
-              )
-            ) : (
-              <div className="space-y-1.5">
+              ) : null}
+
+              <div>
+                {mode === "compare" ? (
+                  <p className="mb-1.5 text-[11px] font-medium uppercase tracking-[0.07em] text-mute">Period 1</p>
+                ) : null}
+                <div className="flex gap-2">
+                  {field("from", "From", p.from)}
+                  {field("to", "To", p.to)}
+                </div>
+              </div>
+
+              {mode === "compare" ? (
+                <div className="space-y-1.5">
+                  <label className="block text-[11px] font-medium uppercase tracking-[0.07em] text-mute" htmlFor="compare-with">
+                    Compare with
+                  </label>
+                  <select
+                    id="compare-with"
+                    value={withMode}
+                    onChange={(e) => {
+                      setWithMode(e.target.value as CompareWith);
+                      if (e.target.value === "pick") setActive("from2");
+                      else setActive("from");
+                    }}
+                    className="h-11 w-full rounded-md border border-line-strong bg-paper px-3 text-[13px] text-ink sm:h-10"
+                  >
+                    {COMPARE_OPTIONS.map((o) => (
+                      <option key={o.id} value={o.id}>
+                        {o.label}
+                      </option>
+                    ))}
+                  </select>
+                  <p className="text-[12px] text-mute sm:text-[11px]">{p2Words}</p>
+                  {withMode === "pick" ? (
+                    <div className="flex gap-2 pt-1">
+                      {field("from2", "From", p.from2)}
+                      {field("to2", "To", p.to2)}
+                    </div>
+                  ) : null}
+                  {p2Message ? <p className="text-[12px] font-medium text-warning-text sm:text-[11px]">{p2Message}</p> : null}
+                </div>
+              ) : null}
+            </div>
+
+            <div className="px-4 py-3">
+              <div className="max-h-[34vh] space-y-1.5 overflow-y-auto sm:max-h-[18rem]" role="group" aria-label="Months">
                 {years.map((y) => (
-                  <div key={y} className="grid grid-cols-[3rem_1fr] items-center gap-2">
+                  <div key={y} className="grid grid-cols-[2.75rem_1fr] items-center gap-2">
                     <span className="figures text-[12px] font-medium text-mute">{y}</span>
-                    {grain === "monthly" ? (
-                      <div className="grid grid-cols-6 gap-1 sm:grid-cols-12">
-                        {MONTHS.map((m, i) => chip(monthAvailable(y, i) ? monthKey(y, i) : null, m))}
-                      </div>
-                    ) : (
-                      <div className="grid grid-cols-4 gap-1">
-                        {[1, 2, 3, 4].map((q) =>
-                          chip(
-                            quarterAvailable(y, q) ? quarterKey(y, q) : null,
-                            `Q${q}`,
-                            `${MONTHS[(q - 1) * 3]}–${MONTHS[(q - 1) * 3 + 2]}`,
-                          ),
-                        )}
-                      </div>
-                    )}
+                    <div className="grid grid-cols-6 gap-1 sm:grid-cols-12">
+                      {MONTHS.map((_, i) => cell(y * 12 + i))}
+                    </div>
                   </div>
                 ))}
               </div>
-            )}
-          </div>
-
-          {/* Bottom row: what's picked, and the one button that changes the page. */}
-          <div className="flex flex-wrap items-center justify-between gap-2 border-t border-line px-4 py-3">
-            <div className="min-w-0">
-              <p className="truncate text-[13px] font-medium text-ink">{summary}</p>
-              <p className="text-[12px] text-mute sm:text-[11px]">
-                {full
-                  ? `Up to ${MAX_SELECTED} at a time.`
-                  : grain === "annual"
-                    ? "Click to add or remove a year."
-                    : "Click to add or remove · shift-click to pick a run."}
+              <p className="mt-2 text-[12px] text-mute sm:text-[11px]">
+                {editsPeriod2 ? "Click a start month, then an end month for Period 2." : "Click a start month, then an end month."}
               </p>
-            </div>
-            <div className="flex items-center gap-1.5">
-              {active.length > 0 ? (
-                <button
-                  type="button"
-                  onClick={() => {
-                    setDraft([]);
-                    setAnchor(null);
-                  }}
-                  className="h-11 rounded-md px-3 text-[12px] sm:h-8 sm:px-2.5 font-medium text-mute hover:bg-fill hover:text-ink"
-                >
-                  Clear
-                </button>
+              {mode === "range" ? (
+                <label className="mt-2 flex min-h-[44px] items-center gap-2 text-[13px] text-ink sm:min-h-0">
+                  <input
+                    type="checkbox"
+                    checked={cols}
+                    onChange={(e) => {
+                      setColsTouched(true);
+                      setColsChecked(e.target.checked);
+                    }}
+                    className="h-4 w-4 accent-[var(--color-ink)]"
+                  />
+                  Show each month as a column
+                </label>
               ) : null}
+            </div>
+
+            <div className="flex flex-wrap items-center justify-between gap-2 border-t border-line px-4 py-3">
+              <p className="min-w-0 truncate text-[13px] font-medium text-ink">{summary}</p>
               <button
                 type="button"
                 onClick={apply}
-                disabled={active.length === 0 || unchanged}
-                className="h-11 rounded-md bg-ink px-3.5 sm:h-8 text-[12px] font-medium text-paper hover:bg-ink-mid disabled:opacity-40"
+                className="h-11 rounded-md bg-ink px-4 text-[13px] font-medium text-paper hover:bg-ink-mid sm:h-9"
               >
-                {active.length > 1 ? `Compare ${active.length} ${NOUN[grain]}s` : "Show"}
+                {mode === "range" ? "Show" : "Compare"}
               </button>
             </div>
           </div>
-        </div>
+        </>
       ) : null}
     </div>
   );

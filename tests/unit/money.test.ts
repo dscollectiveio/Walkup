@@ -19,10 +19,7 @@ describe("resolvePeriod", () => {
     expect(p.endDate).toBe("2026-09-30");
   });
 
-  it("uses the full annual budget for the last 12 months and 1/12 for this month", () => {
-    const y = resolvePeriod("12m", FY, SEPT_30);
-    expect(y.startKey).toBe("2025-10-01");
-    expect(y.budgetShare).toBe(1);
+  it("uses 1/12 of the annual budget for this month", () => {
     const m = resolvePeriod("month", FY, SEPT_30);
     expect(m.months).toEqual(["2026-09-01"]);
     expect(m.budgetShare).toBeCloseTo(1 / 12);

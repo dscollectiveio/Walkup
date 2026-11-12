@@ -19,6 +19,13 @@ const MAX_SLICES = 8;
 const R = 15.9; // middle of the ring; slices run from R − 3.1 to R + 3.1
 
 const whole = (cents: number) => formatMoney(Math.round(cents / 100) * 100).replace(/\.00$/, "");
+/** The row bar: navy unless the category is near or over its plan. */
+const BAR = {
+  over: "var(--color-bad)",
+  watch: "var(--color-warning)",
+  on_track: "var(--color-ink)",
+  none: "var(--color-ink)",
+} as const;
 const STATUS_TAG = {
   over: { text: "over plan", cls: "bg-bad-tint text-bad-text" },
   watch: { text: "near plan", cls: "bg-warning-tint text-warning-text" },
@@ -172,25 +179,19 @@ export function WhereItWent({
           const body = (
             <>
               <div className="flex items-center gap-3">
-                <span className="figures w-4 shrink-0 text-right text-[11px] text-mute-soft">{i + 1}</span>
-                <span aria-hidden="true" className="h-2.5 w-2.5 shrink-0 rounded-sm" style={{ backgroundColor: a.color }} />
                 <span className="min-w-0 flex-1 truncate text-[13px] font-medium text-ink">{a.label}</span>
                 {tag ? (
                   <span className={`shrink-0 rounded-full px-1.5 py-0.5 text-[10px] font-medium ${tag.cls}`}>{tag.text}</span>
                 ) : null}
                 <span className="figures shrink-0 whitespace-nowrap text-[13px] text-ink">{whole(a.valueCents)}</span>
-                <span className="figures w-9 shrink-0 text-right text-[12px] text-mute">{pctOf(a.valueCents)}%</span>
               </div>
-              <div className="ml-[2.1rem] mt-1.5 flex items-center gap-2">
+              <div className="mt-1.5 flex items-center gap-2">
                 <div className="h-1.5 flex-1 overflow-hidden rounded-full bg-fill">
                   <div
                     className="h-full rounded-full transition-[width]"
-                    style={{ width: `${Math.max(1.5, (a.valueCents / arcs[0].valueCents) * 100)}%`, backgroundColor: a.color }}
+                    style={{ width: `${Math.max(1.5, (a.valueCents / arcs[0].valueCents) * 100)}%`, backgroundColor: BAR[a.status] }}
                   />
                 </div>
-                {monthCount > 1 ? (
-                  <span className="w-16 shrink-0 text-right text-[11px] text-mute">{whole(Math.round(a.valueCents / monthCount))}/mo</span>
-                ) : null}
               </div>
             </>
           );
@@ -208,19 +209,18 @@ export function WhereItWent({
                     type="button"
                     onClick={() => setShowAll((v) => !v)}
                     aria-expanded={showAll}
-                    className="ml-[2.1rem] mt-1 inline-flex min-h-[44px] items-center text-[12px] font-medium text-mute underline-offset-2 hover:text-ink hover:underline"
+                    className="ml-0 mt-1 inline-flex min-h-[44px] items-center text-[12px] font-medium text-mute underline-offset-2 hover:text-ink hover:underline"
                   >
                     {showAll ? "Hide" : `Show ${tail.length} smaller categor${tail.length === 1 ? "y" : "ies"}`}
                   </button>
                   {showAll ? (
-                    <ul className="ml-[2.1rem] mt-2 divide-y divide-line/60 border-t border-line/60">
+                    <ul className="ml-0 mt-2 divide-y divide-line/60 border-t border-line/60">
                       {tail.map((t) => (
                         <li key={t.id}>
                           <Link href={t.href} className="flex items-baseline justify-between gap-3 py-3 text-[12px] hover:underline sm:py-1.5">
                             <span className="truncate text-ink">{t.label}</span>
                             <span className="figures shrink-0 whitespace-nowrap text-ink">
                               {whole(t.valueCents)}
-                              <span className="ml-1.5 text-mute">{pctOf(t.valueCents)}%</span>
                             </span>
                           </Link>
                         </li>

@@ -10,30 +10,40 @@ export function SyncButton({ connectionId }: { connectionId: string }) {
   const [note, setNote] = useState<string | null>(null);
 
   return (
-    <div className="flex min-w-0 flex-col items-start">
-      <button
-        type="button"
-        disabled={pending}
-        onClick={() =>
-          start(async () => {
-            setError(null);
-            setNote(null);
-            const result = await syncBankTransactions(connectionId);
-            if (result.error) setError(result.error);
-            else {
-              const parts = [`${result.count ?? 0} new or changed`];
-              if (result.posted) parts.push(`${result.posted} posted by your rules`);
-              setNote(parts.join(" · "));
-              if (result.warning) setError(result.warning);
-            }
-          })
-        }
-        className={LINK_ACTION}
-      >
-        {pending ? "Syncing…" : "Sync now"}
-      </button>
-      {note ? <p className="mt-2 text-[12px] text-mute">{note}</p> : null}
-      {error ? <p className="mt-2 text-[12px] text-bad-text">{error}</p> : null}
-    </div>
+    <>
+      {/* The dot travels with the button, and a phone drops it, so a wrapped line never shows a stray "·". */}
+      <span className="inline-flex items-center gap-2 whitespace-nowrap">
+        <span aria-hidden="true" className="hidden text-mute-soft sm:inline">
+          ·
+        </span>
+        <button
+          type="button"
+          disabled={pending}
+          onClick={() =>
+            start(async () => {
+              setError(null);
+              setNote(null);
+              const result = await syncBankTransactions(connectionId);
+              if (result.error) setError(result.error);
+              else {
+                const parts = [`${result.count ?? 0} new or changed`];
+                if (result.posted)
+                  parts.push(`${result.posted} posted by your rules`);
+                setNote(parts.join(" · "));
+                if (result.warning) setError(result.warning);
+              }
+            })
+          }
+          className={LINK_ACTION}
+        >
+          {pending ? "Syncing…" : "Sync now"}
+        </button>
+      </span>
+      {/* basis-full: inside the bank's status line these wrap onto their own row. */}
+      {note ? <p className="basis-full text-[12px] text-mute">{note}</p> : null}
+      {error ? (
+        <p className="basis-full text-[12px] text-bad-text">{error}</p>
+      ) : null}
+    </>
   );
 }

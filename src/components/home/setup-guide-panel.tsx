@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { createContext, useContext, useEffect, useRef, useState, useTransition, type ReactNode } from "react";
+import { createContext, useContext, useEffect, useRef, useState, useTransition } from "react";
 import { Check, ChevronDown, ChevronRight, Maximize2, X } from "lucide-react";
 import type { SetupSection, SetupStep } from "@/lib/home/setup-guide";
 import { dismissSetupGuide, setSetupStepOverride } from "@/app/home-actions";
@@ -17,27 +17,6 @@ function formatDone(iso: string): string {
 function sectionCounts(section: SetupSection): { done: number; total: number } {
   const steps = section.steps.filter((s) => !s.informational);
   return { done: steps.filter((s) => s.done).length, total: steps.length };
-}
-
-/** A thin bar for a group of steps: navy while anything is left, green once all are done. Never red. */
-function GroupBar({ done, total }: { done: number; total: number }) {
-  const pct = total > 0 ? Math.round((done / total) * 100) : 0;
-  const complete = total > 0 && done === total;
-  return (
-    <span
-      role="progressbar"
-      aria-label="Progress"
-      aria-valuemin={0}
-      aria-valuemax={100}
-      aria-valuenow={pct}
-      className="hidden h-2 w-28 shrink-0 overflow-hidden rounded-full border border-line bg-paper sm:block"
-    >
-      <span
-        className={`block h-full rounded-full motion-safe:transition-[width] ${complete ? "bg-good" : "bg-ink"}`}
-        style={{ width: `${pct}%` }}
-      />
-    </span>
-  );
 }
 
 /** The right-hand button on a step: the words and the arrow together. The step to do next is filled navy. */
@@ -235,15 +214,12 @@ export function SetupGuidePanel({
   done,
   total,
   readOnly = false,
-  notices = null,
 }: {
   sections: SetupSection[];
   activeStepKey: string | null;
   done: number;
   total: number;
   readOnly?: boolean;
-  /** The urgent notices, shown right under the header. */
-  notices?: ReactNode;
 }) {
   const [pending, start] = useTransition();
   const [error, setError] = useState<string | null>(null);
@@ -326,8 +302,6 @@ export function SetupGuidePanel({
         </div>
       </header>
 
-      {notices}
-
       {error ? <p className="shrink-0 border-b border-line px-5 py-2 text-[12px] text-bad-text">{error}</p> : null}
 
       <div className="relative flex min-h-0 flex-1 flex-col">
@@ -360,12 +334,12 @@ export function SetupGuidePanel({
                   </span>
                   <span className="truncate text-[14px] font-bold tracking-tight text-ink">{section.title}</span>
                 </span>
-                <GroupBar done={counts.done} total={counts.total} />
                 <span
                   className={`shrink-0 rounded-full px-2 py-0.5 text-[11px] ${
                     complete ? "border border-good-line bg-good-tint text-good-text" : "border border-line bg-paper text-mute"
                   }`}
                 >
+                  {complete ? <Check size={11} strokeWidth={2.5} aria-hidden="true" className="mr-1 inline" /> : null}
                   {counts.done} of {counts.total}
                 </span>
                 <ShowHide shown={!isCollapsed} />
@@ -398,8 +372,8 @@ export function SetupGuidePanel({
                 <span className="shrink-0 text-[10px] font-medium uppercase tracking-[0.07em] text-section-label">When you want</span>
                 <span className="truncate text-[14px] font-bold tracking-tight text-ink">Optional</span>
               </span>
-              <GroupBar done={optionalDone} total={optional.length} />
               <span className="shrink-0 rounded-full border border-line bg-paper px-2 py-0.5 text-[11px] text-mute">
+                {optionalDone === optional.length ? <Check size={11} strokeWidth={2.5} aria-hidden="true" className="mr-1 inline" /> : null}
                 {optionalDone} of {optional.length}
               </span>
               <ShowHide shown={!optionalIsFolded} />
@@ -497,7 +471,8 @@ export function SetupGuidePanel({
                       complete ? "border border-good-line bg-good-tint text-good-text" : "bg-fill text-mute"
                     }`}
                   >
-                    {counts.done} of {counts.total}
+                    {complete ? <Check size={11} strokeWidth={2.5} aria-hidden="true" className="mr-1 inline" /> : null}
+                  {counts.done} of {counts.total}
                   </span>
                 </button>
                 {isCollapsed ? null : (

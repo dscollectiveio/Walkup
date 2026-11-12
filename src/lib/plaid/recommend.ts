@@ -26,6 +26,23 @@ export interface Recommendation {
   /** Plain words for the line under the chip. */
   reason: string;
   needsPick: boolean;
+  /**
+   * Safe to show as ready and post in one tap: the board filed this payee
+   * the same way every single time before (or it is a flagged duplicate).
+   * A guess, or a payee the board has filed several different ways, is not:
+   * it stays on Categorize so nobody posts a wrong answer on trust.
+   */
+  trusted: boolean;
+  /** The few ways this board has filed the payee most often (history only), best first, for the picker's suggestions. */
+  alternatives?: PastChoice[];
+}
+
+/** One way this board has filed a payee, and how often. */
+export interface PastChoice {
+  kind: PostingKind;
+  accountId: string | null;
+  unitId: string | null;
+  count: number;
 }
 
 /**
@@ -68,6 +85,8 @@ interface Tally {
   totalCount: number;
   /** Mean abs(amount) in cents across every time the payee was filed, any choice. */
   typicalAmountCents: number;
+  /** Every choice made for the payee, most used first. */
+  choices: PastChoice[];
 }
 
 export type HistoryIndex = Map<string, Tally>;
@@ -89,22 +108,36 @@ export function buildHistoryIndex(rows: PayeeHistoryRow[]): HistoryIndex {
     t.count += r.count;
     t.cents += Number(r.amount_cents_total);
     totals.set(key, t);
+    const choice: PastChoice = {
+      kind: r.posting_kind,
+      accountId: r.account_id,
+      unitId: r.matched_unit_id,
+      count: r.count,
+    };
     const current = best.get(key);
-    if (!current || r.count > current.count) {
+    if (!current) {
       best.set(key, {
-        kind: r.posting_kind,
-        accountId: r.account_id,
-        unitId: r.matched_unit_id,
-        count: r.count,
+        ...choice,
         totalCount: 0,
         typicalAmountCents: 0,
+        choices: [choice],
       });
+    } else {
+      current.choices.push(choice);
+      if (r.count > current.count) {
+        current.kind = choice.kind;
+        current.accountId = choice.accountId;
+        current.unitId = choice.unitId;
+        current.count = choice.count;
+      }
     }
   }
   for (const [key, t] of best) {
+    t.choices.sort((a, b) => b.count - a.count);
     const total = totals.get(key);
     t.totalCount = total?.count ?? 0;
-    t.typicalAmountCents = total && total.count > 0 ? Math.round(total.cents / total.count) : 0;
+    t.typicalAmountCents =
+      total && total.count > 0 ? Math.round(total.cents / total.count) : 0;
   }
   return best;
 }
@@ -130,14 +163,34 @@ export function typicalAmountCents(
   if (!options.alreadyFiled) return past.typicalAmountCents;
   const others = past.totalCount - 1;
   if (others <= 0) return null;
-  const centsWithoutSelf = past.typicalAmountCents * past.totalCount - Math.abs(cents(t.amount));
+  const centsWithoutSelf =
+    past.typicalAmountCents * past.totalCount - Math.abs(cents(t.amount));
   return centsWithoutSelf > 0 ? Math.round(centsWithoutSelf / others) : null;
 }
 
-const times = (n: number) => (n === 1 ? "once" : n === 2 ? "twice" : `${n} times`);
+/** "CREDIT CARD 3333 PAYMENT", "CARD PMT", "PAYMENT TO CHASE CARD": paying a card, not buying something. */
+const CARD_PAYMENT =
+  /\bcard\b.*\b(payment|pmt|pymt)\b|\b(payment|pmt|pymt)\b.*\bcard\b/i;
 
-const MONTHS = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
-const dayNumber = (iso: string) => Math.round(new Date(`${iso.slice(0, 10)}T00:00:00Z`).getTime() / 86_400_000);
+const times = (n: number) =>
+  n === 1 ? "once" : n === 2 ? "twice" : `${n} times`;
+
+const MONTHS = [
+  "Jan",
+  "Feb",
+  "Mar",
+  "Apr",
+  "May",
+  "Jun",
+  "Jul",
+  "Aug",
+  "Sep",
+  "Oct",
+  "Nov",
+  "Dec",
+];
+const dayNumber = (iso: string) =>
+  Math.round(new Date(`${iso.slice(0, 10)}T00:00:00Z`).getTime() / 86_400_000);
 const cents = (v: string | number) => Math.round(Number(v) * 100);
 const dollars = (c: number) =>
   new Intl.NumberFormat("en-US", {
@@ -180,21 +233,55 @@ export function recommend(
   t: { description: string; amount: string | number; posted_on?: string },
   history: HistoryIndex,
   accounts: { expense: SuggestableAccount[]; income: SuggestableAccount[] },
-  extras: { manualPayments?: ManualPayment[] } = {},
+  extras: {
+    manualPayments?: ManualPayment[];
+    cardPayableId?: string | null;
+  } = {},
 ): Recommendation | null {
   const amount = Number(t.amount);
   const key = payeeKey(t.description, amount);
   const past = key ? history.get(key) : undefined;
+
+  // Paying off a credit card moves money; the purchases on the card are the
+  // expenses. Filing the payment as one as well would count it twice, so it is
+  // offered as "moving money" even when the board filed it as an expense before.
+  // It still needs a pick (the other account), so it never posts in one click.
+  if (
+    amount < 0 &&
+    CARD_PAYMENT.test(t.description) &&
+    past?.kind !== "transfer"
+  ) {
+    return {
+      kind: "transfer",
+      // With a card-payable account on the books the destination is known: the card.
+      accountId: extras.cardPayableId ?? null,
+      unitId: null,
+      source: "keyword",
+      reason: "looks like a credit card payment: money moving, not an expense",
+      needsPick: !extras.cardPayableId,
+      trusted: false,
+    };
+  }
+
   if (past) {
     const needsPick =
       (past.kind === "dues" && !past.unitId) ||
-      (["expense", "income", "transfer"].includes(past.kind) && !past.accountId);
+      (["expense", "income", "transfer"].includes(past.kind) &&
+        !past.accountId);
     // Duplicate guard: the board already recorded this money by hand on
     // Dues. Recommend keeping it out of the books rather than posting the
     // same dues twice. A distinct source so the UI can say so plainly.
     const twin =
-      past.kind === "dues" && past.unitId && amount > 0 && t.posted_on && extras.manualPayments?.length
-        ? manualTwin({ amount: t.amount, posted_on: t.posted_on }, past.unitId, extras.manualPayments)
+      past.kind === "dues" &&
+      past.unitId &&
+      amount > 0 &&
+      t.posted_on &&
+      extras.manualPayments?.length
+        ? manualTwin(
+            { amount: t.amount, posted_on: t.posted_on },
+            past.unitId,
+            extras.manualPayments,
+          )
         : null;
     if (twin) {
       const [, m, d] = twin.received_on.slice(0, 10).split("-").map(Number);
@@ -205,6 +292,7 @@ export function recommend(
         source: "duplicate",
         reason: `looks like the ${dollars(cents(twin.amount))} you recorded by hand on ${MONTHS[m - 1]} ${d} — already in the books`,
         needsPick: false,
+        trusted: true,
       };
     }
     return {
@@ -214,10 +302,18 @@ export function recommend(
       source: "history",
       reason: `you filed this payee the same way ${times(past.count)} before`,
       needsPick,
+      // Every past filing of this payee was the same choice.
+      trusted: !needsPick && past.choices.length === 1,
+      alternatives: past.choices.slice(0, 3),
     };
   }
 
-  const guess = suggestCategorization(t.description, amount, accounts.expense, accounts.income);
+  const guess = suggestCategorization(
+    t.description,
+    amount,
+    accounts.expense,
+    accounts.income,
+  );
   if (!guess) return null;
 
   if (guess.kind === "transfer") {
@@ -228,6 +324,7 @@ export function recommend(
       source: "keyword",
       reason: "looks like a move between your own accounts",
       needsPick: true,
+      trusted: false,
     };
   }
   if (guess.kind === "dues") {
@@ -238,6 +335,7 @@ export function recommend(
       source: "keyword",
       reason: "looks like an owner payment — pick the unit",
       needsPick: true,
+      trusted: false,
     };
   }
   return {
@@ -247,5 +345,6 @@ export function recommend(
     source: "keyword",
     reason: "a guess from the description",
     needsPick: !guess.accountId,
+    trusted: false,
   };
 }

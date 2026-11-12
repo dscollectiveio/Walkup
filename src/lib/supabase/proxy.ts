@@ -18,6 +18,7 @@ const MEMBER_COOKIE = "walkup.member";
 const PUBLIC_PATHS = [
   // The public features page.
   "/features",
+  "/form-1120-h",
   // Files crawlers and link previews fetch without signing in.
   "/sitemap.xml",
   "/opengraph-image",

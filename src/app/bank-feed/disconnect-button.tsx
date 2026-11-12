@@ -27,7 +27,9 @@ export function DisconnectButton({ connectionId }: { connectionId: string }) {
 
   return (
     <div className="flex flex-wrap items-center gap-2">
-      <span className="text-[13px] text-mute">Disconnect this bank account?</span>
+      <span className="text-[13px] text-mute">
+        Disconnect this bank account?
+      </span>
       <button
         type="button"
         disabled={pending}
@@ -51,7 +53,9 @@ export function DisconnectButton({ connectionId }: { connectionId: string }) {
       >
         Cancel
       </button>
-      {error ? <p className="w-full text-[12px] text-bad-text">{error}</p> : null}
+      {error ? (
+        <p className="w-full text-[12px] text-bad-text">{error}</p>
+      ) : null}
     </div>
   );
 }

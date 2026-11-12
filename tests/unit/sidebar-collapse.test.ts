@@ -162,7 +162,7 @@ describe("Sidebar: expanded and rail", () => {
     const building = navFor("board_admin").groups.find((g) => g.label === "Building")!;
     expect(building.items.map((i) => i.href)).not.toContain("/announcements");
     expect(navFor("board_member").ungrouped.map((i) => i.label)).toEqual(["Dashboard", "Announcements"]);
-    expect(navFor("board_admin").trailing).toEqual([]);
+    expect(navFor("board_admin").trailing.map((i) => i.label)).toEqual(["Test Space"]);
     const html = render("expanded", { role: "board_admin" });
     expect(html).not.toContain('data-tour="my-unit"');
     expect(html).not.toContain('href="/billing"');

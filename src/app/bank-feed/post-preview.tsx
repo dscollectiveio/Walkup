@@ -15,7 +15,10 @@ export interface PreviewRow {
 export const PREVIEW_ABOVE = 10;
 
 /** Money in and out across a set of rows, as positive numbers. */
-function sumInOut(rows: { amount: string | number }[]): { moneyIn: number; moneyOut: number } {
+function sumInOut(rows: { amount: string | number }[]): {
+  moneyIn: number;
+  moneyOut: number;
+} {
   let moneyIn = 0;
   let moneyOut = 0;
   for (const r of rows) {
@@ -60,7 +63,9 @@ export function previewFlags(rows: PreviewRow[]): string[] {
     const c = Math.abs(Math.round(Number(r.amount) * 100));
     if (c > UNUSUAL_RATIO * r.typicalCents) {
       const ratio = Math.round(c / r.typicalCents);
-      flags.push(`${r.description.trim()} ${money(c / 100)} is ${ratio}× its usual ${moneyRounded(r.typicalCents / 100)}`);
+      flags.push(
+        `${r.description.trim()} ${money(c / 100)} is ${ratio}× its usual ${moneyRounded(r.typicalCents / 100)}`,
+      );
     }
   }
   return flags.slice(0, 3);
@@ -92,7 +97,9 @@ export function PostPreview({
     >
       <p className="text-[13px] font-medium">
         Post {rows.length} transaction{rows.length === 1 ? "" : "s"}?
-        {sums ? <span className="figures ml-2 font-normal text-mute">{sums}</span> : null}
+        {sums ? (
+          <span className="figures ml-2 font-normal text-mute">{sums}</span>
+        ) : null}
       </p>
       {flags.length > 0 ? (
         <ul className="mt-2 space-y-1 border-l-[3px] border-warning-line pl-3 text-[12px] text-warning-text">

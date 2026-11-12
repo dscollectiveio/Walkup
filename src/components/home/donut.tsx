@@ -11,7 +11,7 @@ export interface DonutSegment {
 }
 
 /**
- * A ring chart: segments in order from twelve o'clock, with a figure in the middle. Hovering (or tabbing to) a
+ * A ring chart: segments in order from twelve o'clock, with its figure beside it on the left. Hovering (or tabbing to) a
  * segment pops out its details above the ring. With no segments it is a grey ring.
  */
 export function Donut({
@@ -46,7 +46,11 @@ export function Donut({
   const shown = active !== null ? arcs[active] : null;
 
   return (
-    <div ref={box} className="relative" onMouseLeave={() => setActive(null)}>
+    <div ref={box} className="relative flex items-center gap-2" onMouseLeave={() => setActive(null)}>
+      <div className="pointer-events-none flex flex-col items-end text-right">
+        <span className="figures text-[16px] font-bold leading-tight text-ink">{center}</span>
+        <span className="text-[10px] leading-tight text-mute">{sub}</span>
+      </div>
       <svg viewBox="0 0 88 88" className="h-24 w-24 overflow-visible" role="img" aria-label={label}>
         <circle cx="44" cy="44" r={r} fill="none" stroke="var(--color-fill)" strokeWidth="14" />
         {arcs.map((arc, i) =>
@@ -72,12 +76,6 @@ export function Donut({
             />
           ) : null,
         )}
-        <text x="44" y="44" textAnchor="middle" className="figures pointer-events-none fill-ink text-[16px] font-bold">
-          {center}
-        </text>
-        <text x="44" y="58" textAnchor="middle" className="pointer-events-none fill-mute text-[10px]">
-          {sub}
-        </text>
       </svg>
       {shown ? (
         <div

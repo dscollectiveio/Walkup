@@ -15,8 +15,15 @@ export async function claimAutoSync(
   connection: { id: string; last_synced_at: string | null },
   nowIso: string,
 ): Promise<boolean> {
-  let q = supabase.from("bank_connections").update({ last_synced_at: nowIso }).eq("id", connection.id).eq("status", "active");
-  q = connection.last_synced_at === null ? q.is("last_synced_at", null) : q.eq("last_synced_at", connection.last_synced_at);
+  let q = supabase
+    .from("bank_connections")
+    .update({ last_synced_at: nowIso })
+    .eq("id", connection.id)
+    .eq("status", "active");
+  q =
+    connection.last_synced_at === null
+      ? q.is("last_synced_at", null)
+      : q.eq("last_synced_at", connection.last_synced_at);
   const { data, error } = await q.select("id");
   return !error && (data?.length ?? 0) === 1;
 }
@@ -27,5 +34,9 @@ export async function releaseAutoSync(
   connection: { id: string; last_synced_at: string | null },
   nowIso: string,
 ): Promise<void> {
-  await supabase.from("bank_connections").update({ last_synced_at: connection.last_synced_at }).eq("id", connection.id).eq("last_synced_at", nowIso);
+  await supabase
+    .from("bank_connections")
+    .update({ last_synced_at: connection.last_synced_at })
+    .eq("id", connection.id)
+    .eq("last_synced_at", nowIso);
 }

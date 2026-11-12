@@ -18,7 +18,7 @@ const serverIsDark = () => false;
  * inline script in layout.tsx applies the same rule before first paint, so
  * this only reads what's already on <html> and flips it.
  */
-export function ThemeToggle({ className = "" }: { className?: string }) {
+export function ThemeToggle({ className = "", showLabel = false }: { className?: string; showLabel?: boolean }) {
   const dark = useSyncExternalStore(subscribe, isDark, serverIsDark);
 
   function toggle() {
@@ -38,9 +38,10 @@ export function ThemeToggle({ className = "" }: { className?: string }) {
       onClick={toggle}
       aria-label={label}
       title={label}
-      className={`flex h-11 w-11 shrink-0 md:h-7 md:w-7 items-center justify-center rounded-md text-nav-muted transition-colors hover:bg-nav-hover hover:text-nav-text ${className}`}
+      className={`flex h-11 shrink-0 md:h-7 items-center justify-center gap-1.5 rounded-md text-nav-muted transition-colors hover:bg-nav-hover hover:text-nav-text ${showLabel ? "px-2" : "w-11 md:w-7"} ${className}`}
     >
       {dark ? <Sun size={15} strokeWidth={1.6} aria-hidden="true" /> : <Moon size={15} strokeWidth={1.6} aria-hidden="true" />}
+      {showLabel ? <span className="text-[12px]">{dark ? "Light" : "Dark"}</span> : null}
     </button>
   );
 }
