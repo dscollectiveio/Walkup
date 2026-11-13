@@ -155,7 +155,7 @@ export default async function HomePage() {
     supabase
       .from("associations")
       .select(
-        "id, display_name, state_code, fiscal_year_end_month, incorporated_on, reserve_target, city, county, dues_payee_name, dues_account_number, dues_zelle_handle, setup_dismissed_at, setup_overrides, information_returns_filing, accountant_person_id, board_contact_name, board_contact_email",
+        "id, display_name, state_code, fiscal_year_end_month, incorporated_on, reserve_target, city, county, dues_payee_name, dues_account_number, dues_zelle_handle, dues_zelle_phone, setup_dismissed_at, setup_overrides, information_returns_filing, accountant_person_id, board_contact_name, board_contact_email",
       ),
     // Every year, newest first: [0] is the latest, and the tax deadlines pick
     // the one whose return is next to file from the whole list.

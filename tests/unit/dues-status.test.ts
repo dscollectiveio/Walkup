@@ -1,8 +1,10 @@
 import { describe, expect, it } from "vitest";
 import {
   lateFeeProposals,
+  nextDueOn,
   standingFor,
   suggestUnitForDeposit,
+  yearCharged,
   type ChargeLine,
   type UnitHint,
 } from "@/lib/dues/status";
@@ -27,7 +29,29 @@ describe("standingFor", () => {
       standing: "behind",
       owedCents: 45000,
       overdueCents: 45000,
+      dueSoonCents: 0,
+      dueSoonOn: null,
     });
+  });
+  it("splits unpaid charges into past due and due soon, and the grace period moves the line", () => {
+    const cs = [charge({ id: "a", due_on: "2026-10-01" }), charge({ id: "b", due_on: "2026-11-01", balanceCents: 10000 })];
+    const s = standingFor(cs, 0, today);
+    expect([s.overdueCents, s.dueSoonCents, s.dueSoonOn, s.owedCents]).toEqual([45000, 10000, "2026-11-01", 55000]);
+    // 14 days of grace: October 1 + 14 = October 15, which has not passed yet on October 15.
+    const g = standingFor(cs, 0, today, 14);
+    expect([g.standing, g.overdueCents, g.dueSoonCents]).toEqual(["current", 0, 55000]);
+    expect(standingFor(cs, 0, today, 13).standing).toBe("behind");
+  });
+  it("sums this year's charges and what is paid, and finds the next due date on or after today", () => {
+    const cs = [
+      charge({ id: "a", period_start: "2026-01-01", due_on: "2026-01-01", status: "paid", balanceCents: 0 }),
+      charge({ id: "b", period_start: "2026-10-01", due_on: "2026-10-01", balanceCents: 20000, status: "partial" }),
+      charge({ id: "c", period_start: "2026-12-01", due_on: "2026-12-01", balanceCents: 45000 }),
+      charge({ id: "d", period_start: "2025-12-01", due_on: "2025-12-01", status: "waived", balanceCents: 0 }),
+    ];
+    expect(yearCharged(cs, "2026")).toEqual({ chargedCents: 135000, paidCents: 70000 });
+    expect(nextDueOn(cs, today)).toBe("2026-12-01");
+    expect(nextDueOn([cs[0]], today)).toBeNull();
   });
   it("is current when owed but not yet due, or when nothing is owed", () => {
     expect(standingFor([charge({ due_on: "2026-11-01" })], 0, today).standing).toBe("current");

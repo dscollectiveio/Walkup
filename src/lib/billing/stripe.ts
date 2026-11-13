@@ -37,11 +37,12 @@ export function formEncode(params: Record<string, Param>): string {
   return out.join("&");
 }
 
-async function stripeRequest<T>(
+/** Also used by online dues payments (src/lib/payments/connect.ts). */
+export async function stripeRequest<T>(
   method: "GET" | "POST",
   path: string,
   params?: Record<string, Param>,
-  opts: { idempotencyKey?: string; fetchImpl?: typeof fetch } = {},
+  opts: { idempotencyKey?: string; fetchImpl?: typeof fetch; stripeAccount?: string } = {},
 ): Promise<T> {
   const problem = stripeConfigProblem();
   if (problem) throw new StripeError(problem, 0, "not_configured");
@@ -54,6 +55,8 @@ async function stripeRequest<T>(
   };
   if (method === "POST") headers["Content-Type"] = "application/x-www-form-urlencoded";
   if (opts.idempotencyKey) headers["Idempotency-Key"] = opts.idempotencyKey;
+  // A connected account (online dues payments, DECISIONS #57): the call acts on the association's own Stripe account.
+  if (opts.stripeAccount) headers["Stripe-Account"] = opts.stripeAccount;
 
   const res = await (opts.fetchImpl ?? fetch)(url, {
     method,

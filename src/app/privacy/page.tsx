@@ -1,4 +1,4 @@
-import { CONTACT_EMAIL, SUPPORT_EMAIL } from "@/lib/site-config";
+import { CONTACT_EMAIL, DUES_PAYMENTS_ENABLED, SUPPORT_EMAIL } from "@/lib/site-config";
 import Link from "next/link";
 import { Lockup } from "@/components/mark";
 
@@ -149,7 +149,7 @@ export default function PrivacyPage() {
           (bank connections), Anthropic (the AI features described below), Google
           and Photon (contractor search and address lookup, described below) and
           Resend (account emails, and the reminders, statements and notices a board
-          administrator approves) and Stripe (payment for Walkup&rsquo;s own plan,
+          administrator approves) and Stripe (payment for Walkup&rsquo;s own plan{DUES_PAYMENTS_ENABLED ? ", and online dues payments when a board turns them on" : ""},
           described below). Walkup does not sell data, share it for
           marketing, or give access to it to any company beyond those named on this
           page.
@@ -266,6 +266,25 @@ export default function PrivacyPage() {
           </a>
           .
         </p>
+        {DUES_PAYMENTS_ENABLED ? (
+          <p>
+            <strong className="font-semibold text-ink">Paying dues online (Stripe).</strong>{" "}
+            If a board administrator turns on online payments, the association
+            connects its own Stripe account, and Walkup keeps only that
+            account&rsquo;s reference number. When an owner presses Pay, Walkup
+            sends Stripe the amount owed, the unit&rsquo;s label, the
+            association&rsquo;s name, and Walkup&rsquo;s own reference numbers for
+            the payment, association and unit. The owner links their bank and
+            gives their name and email address directly to Stripe, on
+            Stripe&rsquo;s own page. Walkup never sees or stores bank account or
+            routing numbers. Stripe sends Walkup back the payment&rsquo;s status,
+            Stripe&rsquo;s fee, the reason if the bank refused it, and which
+            payout to the association&rsquo;s bank it was part of. The board and
+            the accountant see each unit&rsquo;s online payments; each owner sees
+            only their own. Stripe handles the payment under the association&rsquo;s
+            agreement with Stripe and Stripe&rsquo;s own Privacy Policy.
+          </p>
+        ) : null}
         <p>
           <strong className="font-semibold text-ink">Email from Walkup.</strong>{" "}
           Walkup sends an email only when a board administrator has approved it.

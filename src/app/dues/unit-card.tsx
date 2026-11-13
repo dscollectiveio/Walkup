@@ -1,6 +1,7 @@
 "use client";
 
-import { useActionState, useState, useTransition } from "react";
+import { useActionState, useEffect, useState, useTransition } from "react";
+import { useRouter } from "next/navigation";
 import {
   recordReserveContribution,
   removePropertyManager,
@@ -12,8 +13,9 @@ import {
 import { FREQUENCY_WORDS, PLAN_FREQUENCIES, perPeriodCents } from "@/lib/dues/plan";
 import { moneyToCents } from "@/lib/format/money-input";
 import { MoneyInput } from "@/components/money-input";
-import { yearProgress } from "@/lib/dues/year";
 import { DuesYearBar } from "./dues-year-bar";
+import { prepareReminders } from "./email-actions";
+import { SETUP_DUES_EVENT } from "./setup-dues-event";
 
 const money = (cents: number) =>
   new Intl.NumberFormat("en-US", {
@@ -49,6 +51,13 @@ export interface ManagerView {
   main: "owner" | "manager";
 }
 
+export type UnitStatus =
+  | { kind: "paid_up" }
+  | { kind: "due_soon"; cents: number; dueLabel: string }
+  | { kind: "past_due"; cents: number }
+  | { kind: "credit"; cents: number }
+  | { kind: "no_dues" };
+
 export interface UnitPlan {
   annualCents: number;
   frequency: (typeof PLAN_FREQUENCIES)[number];
@@ -74,10 +83,11 @@ export function UnitCard({
   label,
   ownerName,
   ownerNoEmail,
-  standingLabel,
-  standingTone,
-  owedLabel,
-  overdue,
+  status,
+  bar,
+  remind,
+  planSummary,
+  onlinePending = null,
   details,
   plan,
   canEdit,
@@ -96,12 +106,16 @@ export function UnitCard({
   ownerName: string | null;
   /** The owner has no email on file. */
   ownerNoEmail: boolean;
-  /** "up to date", "behind", and the pill colors for it. */
-  standingLabel: string;
-  standingTone: string;
-  /** What is owed, short: "$700" or "Paid up". */
-  owedLabel: string;
-  overdue: boolean;
+  /** The one status on the right of the row, from the two buckets (past due, due soon) and nothing else. */
+  status: UnitStatus;
+  /** This year's charges and how much is paid. Null when the unit has no charges this year: no bar. */
+  bar: { paidCents: number; chargedCents: number } | null;
+  /** The Remind button on a past-due row: null hides it, a reason disables it. */
+  remind: { ok: boolean; reason: string | null } | null;
+  /** "$5,000 a year, monthly", shown when the row is open. */
+  planSummary: string | null;
+  /** An online payment on its way (DECISIONS #57): "$400 paid online, pending". Still owed until the deposit is confirmed. */
+  onlinePending?: string | null;
   /** What is owed, last payment, next charge, statement link: shown when the card is open. */
   details: React.ReactNode;
   plan: UnitPlan | null;
@@ -121,6 +135,9 @@ export function UnitCard({
   ownerEmail: string | null;
 }) {
   const [open, setOpen] = useState(false);
+  const router = useRouter();
+  const [remindPending, startRemind] = useTransition();
+  const [remindError, setRemindError] = useState<string | null>(null);
   const [showManager, setShowManager] = useState(false);
   const [showAdditional, setShowAdditional] = useState(false);
   const [editingPlan, setEditingPlan] = useState(false);
@@ -188,7 +205,25 @@ export function UnitCard({
     `inline-flex h-11 items-center whitespace-nowrap sm:h-8 rounded-md bg-ink px-3 text-[12px] font-medium text-paper transition-colors hover:bg-ink-mid focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-brass ${
       active ? "ring-2 ring-brass ring-offset-1 ring-offset-paper" : ""
     }`;
-  const compact = yearProgress(plan?.annualCents ?? 0, paidCents, todayKey);
+  /** Open the row with the dues plan editor showing: the "Set up" link and the summary line's link. */
+  const openSetup = () => {
+    setOpen(true);
+    setEditingPlan(true);
+    setShowManager(false);
+    setShowAdditional(false);
+  };
+  useEffect(() => {
+    const onSetup = (e: Event) => {
+      if ((e as CustomEvent<string>).detail === unitId) {
+        setOpen(true);
+        setEditingPlan(true);
+        setShowManager(false);
+        setShowAdditional(false);
+      }
+    };
+    window.addEventListener(SETUP_DUES_EVENT, onSetup);
+    return () => window.removeEventListener(SETUP_DUES_EVENT, onSetup);
+  }, [unitId]);
 
   return (
     <article
@@ -196,55 +231,86 @@ export function UnitCard({
         editingPlan || showManager || showAdditional ? "border-line-strong shadow-md" : "border-line"
       }`}
     >
-      {/* The same lighter blue header band as each form on the Taxes tab: name and standing on the left, what is owed on the right. */}
-      <header className="flex flex-wrap items-center gap-x-3 gap-y-1 rounded-t-[11px] border-b border-line bg-ink/[0.09] px-4 py-2.5 text-ink">
-        <button
-          type="button"
-          onClick={() => setOpen((v) => !v)}
-          aria-expanded={open}
-          aria-label={`${open ? "Collapse" : "Expand"} ${label}`}
-          className="flex min-h-[44px] min-w-0 flex-1 items-center gap-3 text-left focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-brass"
-        >
-          <svg width="12" height="12" viewBox="0 0 12 12" aria-hidden="true" className={`shrink-0 transition-transform ${open ? "rotate-90" : ""}`}>
-            <path d="M4 2l4 4-4 4" stroke="currentColor" strokeWidth="1.6" fill="none" strokeLinecap="round" strokeLinejoin="round" />
-          </svg>
-          <span className="shrink-0 text-[15px] font-bold">{label}</span>
-          <span className={`shrink-0 whitespace-nowrap rounded-full px-2 py-0.5 text-[11px] ${standingTone}`}>{standingLabel}</span>
-          <span className="min-w-0 truncate text-[13px] text-mute">
-            {ownerName ?? "no owner on file"}
-            {ownerName && ownerNoEmail ? " · no email" : ""}
-          </span>
-        </button>
-        {/* What is owed, on the right of the bar, the way a form's due date is. */}
-        <p className="flex items-baseline whitespace-nowrap text-right sm:hidden">
-          <span className="mr-1.5 text-[11px] font-medium uppercase tracking-wide text-mute">Owed</span>
-          <span className={`tabular text-[14px] font-bold ${overdue ? "rounded bg-bad-tint px-1.5 text-bad-text" : ""}`}>{owedLabel}</span>
+      {/* One row: the whole row opens it. The Remind button and the Set up link stop that click. */}
+      <div
+        onClick={() => setOpen((v) => !v)}
+        className="cursor-pointer px-1 py-3 hover:bg-fill/40 sm:px-2"
+      >
+        <div className="flex flex-wrap items-center gap-x-3 gap-y-1">
+          <button
+            type="button"
+            aria-expanded={open}
+            aria-label={`${open ? "Collapse" : "Expand"} ${label}`}
+            className="flex min-h-[44px] min-w-0 items-center gap-3 text-left focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-brass sm:min-h-0"
+          >
+            <svg width="12" height="12" viewBox="0 0 12 12" aria-hidden="true" className={`shrink-0 text-mute transition-transform ${open ? "rotate-90" : ""}`}>
+              <path d="M4 2l4 4-4 4" stroke="currentColor" strokeWidth="1.6" fill="none" strokeLinecap="round" strokeLinejoin="round" />
+            </svg>
+            <span className="shrink-0 text-[15px] font-bold text-ink">{label}</span>
+            <span className="hidden min-w-0 truncate text-[13px] text-mute sm:inline">
+              {ownerName ?? "no owner on file"}
+              {ownerName && ownerNoEmail ? " · no email" : ""}
+            </span>
+          </button>
+          <div className="ml-auto flex flex-wrap items-center justify-end gap-x-3 gap-y-1">
+            {onlinePending ? (
+              <span className="whitespace-nowrap rounded-full bg-info-tint px-2 py-0.5 text-[11px] text-info-text">{onlinePending}</span>
+            ) : null}
+            <StatusText status={status} onSetup={() => openSetup()} />
+            {status.kind === "past_due" && remind ? (
+              <button
+                type="button"
+                disabled={!remind.ok || remindPending}
+                title={remind.reason ?? undefined}
+                onClick={(e) => {
+                  e.stopPropagation();
+                  startRemind(async () => {
+                    setRemindError(null);
+                    const res = await prepareReminders({ unitIds: [unitId] });
+                    if ("error" in res) setRemindError(res.error);
+                    else router.push(`/dues/send/${res.batchId}`);
+                  });
+                }}
+                className="inline-flex min-h-[44px] items-center rounded-md bg-ink px-3 text-[12px] font-medium text-paper transition-colors hover:bg-ink-mid disabled:opacity-50 sm:min-h-0 sm:py-1"
+              >
+                {remindPending ? "Preparing…" : "Remind"}
+              </button>
+            ) : null}
+          </div>
+        </div>
+        <p className="mt-0.5 pl-6 text-[13px] text-mute sm:hidden">
+          {ownerName ?? "no owner on file"}
+          {ownerName && ownerNoEmail ? " · no email" : ""}
         </p>
-        <p className="hidden items-baseline whitespace-nowrap text-right sm:flex">
-          <span className="mr-1.5 text-[11px] font-medium uppercase tracking-wide text-mute">Owed</span>
-          <span className={`tabular text-[14px] font-bold ${overdue ? "rounded bg-bad-tint px-1.5 text-bad-text" : ""}`}>{owedLabel}</span>
-          <span className="ml-2 hidden text-[11px] font-normal text-mute lg:inline">
-            {plan ? `${money(plan.annualCents)} a year · ${FREQUENCY_WORDS[plan.frequency]}` : "no dues plan yet"}
-          </span>
-        </p>
-        <button
-          type="button"
-          onClick={() => setOpen((v) => !v)}
-          aria-expanded={open}
-          className="inline-flex min-h-[44px] shrink-0 items-center gap-1.5 rounded-md bg-ink px-3 py-1.5 sm:min-h-0 text-[12px] font-medium text-paper transition-colors hover:bg-ink-mid focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-brass"
-        >
-          {open ? "Collapse" : "Expand"}
-          <svg width="10" height="10" viewBox="0 0 12 12" aria-hidden="true" className={`transition-transform ${open ? "rotate-90" : ""}`}>
-            <path d="M4 2l4 4-4 4" stroke="currentColor" strokeWidth="1.6" fill="none" strokeLinecap="round" strokeLinejoin="round" />
-          </svg>
-        </button>
-      </header>
+        {bar ? (
+          <div className="mt-1.5 flex flex-col gap-1 pl-6 sm:flex-row sm:items-center sm:gap-3">
+            <div
+              className="h-1 flex-1 overflow-hidden rounded-full bg-line"
+              role="img"
+              aria-label={`${money(bar.paidCents)} of ${money(bar.chargedCents)} paid this year`}
+            >
+              <div className="h-full rounded-full bg-good" style={{ width: `${Math.min(100, bar.chargedCents > 0 ? (bar.paidCents / bar.chargedCents) * 100 : 0)}%` }} />
+            </div>
+            <span className="figures whitespace-nowrap text-[12px] text-mute sm:text-right">
+              {money(bar.paidCents)} of {money(bar.chargedCents)} paid this year
+            </span>
+          </div>
+        ) : null}
+        {remindError ? (
+          <p role="alert" className="mt-1 pl-6 text-[12px] text-bad-text">
+            {remindError}
+          </p>
+        ) : null}
+      </div>
 
       {open ? (
       <>
       <div className="flex-1 p-4 md:p-5">
         <div className="flex flex-wrap items-start justify-between gap-x-6 gap-y-3">
-          <div className="min-w-0 flex-1 md:max-w-sm">{details}</div>
+          <div className="min-w-0 flex-1 md:max-w-sm">
+            {planSummary ? <p className="mb-3 text-[13px] text-mute">{planSummary}</p> : null}
+            {details}
+          </div>
           <div className="flex flex-wrap justify-end gap-2">
             {canEdit ? (
               <button type="button" onClick={() => openPanel("plan")} aria-expanded={editingPlan} className={panelButton(editingPlan)}>
@@ -614,40 +680,41 @@ export function UnitCard({
         ) : null}
       </footer>
       </>
-      ) : (
-        <div className="rounded-b-xl bg-fill/40 px-4 py-2.5">
-          <div className="flex flex-wrap items-baseline justify-between gap-x-3 text-[11px]">
-            <span className="font-semibold text-ink">{year} dues</span>
-            <span className="figures text-ink">
-              {plan ? (
-                <>
-                  {money(paidCents)} <span className="text-mute">of {money(plan.annualCents)}</span>
-                </>
-              ) : (
-                <span className="text-mute">no plan yet</span>
-              )}
-            </span>
-          </div>
-          <div className="mt-1 grid grid-cols-4 gap-1" aria-hidden="true">
-            {compact.quarters.map((q) => (
-              <div
-                key={q.label}
-                title={`${q.label}: ${money(q.filledCents)} of ${money(q.targetCents)}`}
-                className={`h-1.5 overflow-hidden rounded-full bg-line ${q.current ? "ring-1 ring-brass/70 ring-offset-1 ring-offset-paper" : ""}`}
-              >
-                <div className="h-full rounded-full bg-good transition-[width] duration-500 ease-out" style={{ width: `${q.pct}%` }} />
-              </div>
-            ))}
-          </div>
-          <div className="mt-0.5 grid grid-cols-4 gap-1 text-[11px] text-mute-soft" aria-hidden="true">
-            {compact.quarters.map((q) => (
-              <span key={q.label} className={q.current ? "font-semibold text-ink" : ""}>
-                {q.label}
-              </span>
-            ))}
-          </div>
-        </div>
-      )}
+      ) : null}
     </article>
   );
+}
+
+/** The one status on the right of a row. Past due is brick, a credit is green, a due date is navy. */
+function StatusText({ status, onSetup }: { status: UnitStatus; onSetup: () => void }) {
+  switch (status.kind) {
+    case "paid_up":
+      return <span className="whitespace-nowrap text-[13px] text-mute">Paid up</span>;
+    case "due_soon":
+      return (
+        <span className="figures whitespace-nowrap text-[13px] font-medium text-ink">
+          {money(status.cents)} due {status.dueLabel}
+        </span>
+      );
+    case "past_due":
+      return <span className="figures whitespace-nowrap text-[13px] font-semibold text-bad">{money(status.cents)} past due</span>;
+    case "credit":
+      return <span className="figures whitespace-nowrap text-[13px] font-medium text-good-text">{money(status.cents)} credit</span>;
+    case "no_dues":
+      return (
+        <span className="whitespace-nowrap text-[13px] text-mute">
+          No dues set up ·{" "}
+          <button
+            type="button"
+            onClick={(e) => {
+              e.stopPropagation();
+              onSetup();
+            }}
+            className="underline underline-offset-2 hover:text-ink"
+          >
+            Set up
+          </button>
+        </span>
+      );
+  }
 }

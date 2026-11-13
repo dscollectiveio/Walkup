@@ -73,7 +73,7 @@ export default async function BudgetPage({ searchParams }: { searchParams: Promi
   const editOpen = sp.edit === "1";
 
   const supabase = await createClient();
-  const { data: associations } = await supabase.from("associations").select("id, display_name").limit(1);
+  const { data: associations } = await supabase.from("associations").select("id, display_name, legal_name").limit(1);
   const association = associations?.[0];
   if (!association) return <Restricted what="the budget" />;
 
@@ -216,7 +216,7 @@ export default async function BudgetPage({ searchParams }: { searchParams: Promi
       <div>
         <h1 className="text-[20px] font-bold tracking-tight text-ink">Budget &amp; spending</h1>
         <p className="mt-1 text-mute">
-          {association.display_name} · Fiscal year {dateRangeLabel(fiscalYear.starts_on, fiscalYear.ends_on)}
+          {association.legal_name} · Fiscal year {dateRangeLabel(fiscalYear.starts_on, fiscalYear.ends_on)}
         </p>
       </div>
     </div>

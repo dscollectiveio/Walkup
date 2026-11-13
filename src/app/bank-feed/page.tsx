@@ -40,6 +40,8 @@ import {
 import { claimAutoSync, releaseAutoSync } from "@/lib/plaid/auto-sync-claim";
 import { syncOneConnection } from "@/lib/plaid/sync";
 import { plaidErrorLog } from "@/lib/plaid";
+import { StripePayoutsCard } from "./stripe-payouts-card";
+import { loadStripePayouts } from "@/lib/payments/payouts-load";
 
 export const dynamic = "force-dynamic";
 
@@ -453,6 +455,9 @@ export default async function BankFeedPage({
     : { data: false };
   const canEdit = booksDuty === true || isAdmin;
 
+  // Online dues (DECISIONS #57): Stripe payouts not yet in the books, each matched to its bank deposit.
+  const stripePayouts = associationId ? await loadStripePayouts(supabase, associationId) : [];
+
   if (!connections) return <Restricted what="the bank feed" />;
 
   const counts: Record<Status, number> = {
@@ -622,7 +627,10 @@ export default async function BankFeedPage({
     Boolean(q) || range !== "all" || Boolean(account) || Boolean(bank);
   const rulePatternById = new Map((rules ?? []).map((r) => [r.id, r.pattern]));
 
-  const transactionsWithSuggestions: SuggestedTransaction[] = transactions.map(
+  // A deposit matched to a Stripe payout is posted only through "Confirm Stripe payout" above, which records
+  // each unit's dues and the fee; categorizing it here as one lump would credit no unit.
+  const stripeDepositIds = new Set(stripePayouts.flatMap((p) => (p.deposit ? [p.deposit.id] : [])));
+  const transactionsWithSuggestions: SuggestedTransaction[] = transactions.filter((t) => !stripeDepositIds.has(t.id)).map(
     (t) => {
       // A categorized row is already in the payee tally, so its own amount is left out of "typical".
       const typicalCents = typicalAmountCents(t, history, {
@@ -802,6 +810,8 @@ export default async function BankFeedPage({
               filter and undo the posting if the bank was right.
             </p>
           ) : null}
+
+          {stripePayouts.length > 0 ? <StripePayoutsCard payouts={stripePayouts} canPost={canEdit} /> : null}
 
           <Card
             navy

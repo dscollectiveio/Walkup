@@ -1,5 +1,6 @@
 "use server";
 
+import { formatUsPhone, paymentDetailsProblem } from "@/lib/dues/payment-details";
 import { revalidatePath } from "next/cache";
 import { createClient } from "@/lib/supabase/server";
 import { buildingTodayIso } from "@/lib/dates";
@@ -175,8 +176,24 @@ export async function updateDuesPaymentInstructions(_prev: unknown, formData: Fo
     dues_account_number: String(formData.get("dues_account_number") ?? "").trim() || null,
     dues_routing_number: String(formData.get("dues_routing_number") ?? "").trim() || null,
     dues_zelle_handle: String(formData.get("dues_zelle_handle") ?? "").trim() || null,
+    dues_zelle_phone: String(formData.get("dues_zelle_phone") ?? "").trim() || null,
+    dues_zelle_name: String(formData.get("dues_zelle_name") ?? "").trim() || null,
     dues_payment_notes: String(formData.get("dues_payment_notes") ?? "").trim() || null,
+    dues_mailing_address: String(formData.get("dues_mailing_address") ?? "").trim() || null,
   };
+
+  const problem = paymentDetailsProblem({
+    payee: fields.dues_payee_name,
+    bank: fields.dues_bank_name,
+    routing: fields.dues_routing_number,
+    account: fields.dues_account_number,
+    zelleEmail: fields.dues_zelle_handle,
+    zellePhone: fields.dues_zelle_phone,
+    mailing: fields.dues_mailing_address,
+  });
+  if (problem) return { error: problem.message, field: problem.field };
+  if (fields.dues_zelle_phone) fields.dues_zelle_phone = formatUsPhone(fields.dues_zelle_phone);
+  if (fields.dues_routing_number) fields.dues_routing_number = fields.dues_routing_number.replace(/[\s-]/g, "");
 
   const supabase = await createClient();
   const associationId = await currentAssociationId(supabase);

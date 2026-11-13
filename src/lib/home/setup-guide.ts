@@ -44,6 +44,7 @@ export interface SetupInputs {
     dues_payee_name: string | null;
     dues_account_number: string | null;
     dues_zelle_handle: string | null;
+    dues_zelle_phone?: string | null;
     /** Who owners write to (owner-portal 0054); the email is what "done" means. */
     board_contact_name?: string | null;
     board_contact_email?: string | null;
@@ -149,7 +150,7 @@ export function buildSetupGuide(input: SetupInputs): SetupSection[] {
   const backlogDone = syncDone && input.uncategorizedCount === 0;
   const statementsDone = input.postedEntryCount > 0;
   const budgetDone = input.budgetLineCount > 0;
-  const paymentInfoDone = Boolean(a.dues_payee_name || a.dues_account_number || a.dues_zelle_handle);
+  const paymentInfoDone = Boolean(a.dues_payee_name || a.dues_account_number || a.dues_zelle_handle || a.dues_zelle_phone);
   const scheduleDone = input.assessmentScheduleCount > 0;
 
   // ---- Taxes & Insurance ---------------------------------------------------

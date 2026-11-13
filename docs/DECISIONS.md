@@ -2387,3 +2387,35 @@ This is the "to build" in #44. Doug chose: the system sends the notices by itsel
 - **Done:** the landing page says so in the hero, the Pricing section and the final call to action.
 - **Not done yet, and it must be before launch:** Terms section on the founding offer (`src/app/terms/page.tsx`) and `FOUNDING` in `site-config.ts` still say 12 months; the billing code grants a 12-month comp and the notice emails (`founding_charge`, 30 days before the first charge) assume a first charge happens; the FAQ and pricing wording; the lawyer review of the Terms. Until those change, the page and the Terms disagree, and the Terms are what a customer could rely on.
 - **Open for Doug:** whether "free for life" means the life of the association's account or the product, whether it survives a building changing hands, and what happens if the building passes 20 units.
+
+## 57. Owners can pay dues online through Stripe Connect (narrows #22 and the subscriptions plan)
+
+**Decided 2026-11-12 by Doug.** **Status:** built 2026-11-12 (migration 0097, not yet on prod), waiting on Stripe setup, a test-mode run and a lawyer review before launch. Build plan and launch checklist: `docs/specs/dues-online-payments.md`. Doug's answers: owners always pay the full open balance, and a failed payment counts as not paid.
+
+Owners can pay dues by ACH from the HOA Dues tab. This narrows "No payment initiation" in #22 and the "no Stripe Connect, no dues collection" line in `docs/specs/subscriptions-plan.md`. Those rules were written to keep Walkup from holding money or credentials. This design keeps both of those promises.
+
+- **Stripe Connect, Standard accounts.** Each association connects its own Stripe account from the HOA Dues tab. Money goes from the owner to the association's Stripe account and then to the association's bank. Walkup is never the merchant of record, never holds funds, and stores only the connected account id (`acct_...`).
+- **ACH only.** No cards. Owners link their bank on Stripe's hosted page. Walkup never sees or stores a bank or routing number.
+- **The association pays Stripe's fee** (0.8%, capped at $5 per payment, at the time of writing). Owners pay exactly what they owe. No surcharge, no convenience fee, and Walkup takes no cut (no application fee).
+- **Owner-initiated only.** Every payment starts with the owner pressing Pay. No autopay and no standing debit mandates. Autopay would be a new decision.
+- **Board admin only** connects or disconnects Stripe, behind the existing MFA gate. Same rule as the bank feed (#24, #26).
+- **#29 still holds: nothing reaches the ledger without a click.** A successful payment marks the unit "Paid online, pending deposit". It does not touch the ledger. The dues credit and the Stripe fee are posted when a board member confirms the Stripe payout in the bank feed, the same way a bank deposit is confirmed as dues today.
+- **ACH timing is shown honestly.** ACH takes about 4 business days to settle. Until it settles the payment shows as pending, never as paid. A failed or returned payment clears the pending mark and tells the owner and the board.
+- **Separate from Walkup's own billing.** The subscription webhook keeps its narrow scope (it "never touches the association's books"). Connect events get their own endpoint, signing secret and allowlist.
+
+## 58. Terms of Service expanded before the lawyer review (extends #44 and #57)
+
+**Decided 2026-11-12 by Doug** ("be a lawyer for a minute; I will check with a real lawyer too"). **Status:** drafted, **not reviewed by a lawyer**. It must be before online dues payments are switched on.
+
+`src/app/terms/page.tsx` now has 18 sections. New or widened:
+- **4. Your association's responsibilities:** the board owns compliance with its documents and the Condominium Property Act, what it sends, what each owner owes, late fees and collection steps, tax filings, and who it invites. Walkup is not a debt collector.
+- **3.** Walkup is not a bank, money transmitter, payment processor, collection agency, law firm, property manager or fiduciary. What is in Walkup is a working record, not the official books.
+- **7. Paying dues online:** the real text shows only when `DUES_PAYMENTS_ENABLED` is true. Off, it says Walkup takes no dues payments today. Covers roles (association is payee and merchant, Stripe processes, Walkup is software), the association's Stripe agreement and fees, the owner's debit authorization, ACH timing and returns, records, refunds and disputes, Stripe holds, and turning it off.
+- **11 to 14:** intellectual property, a stronger warranty disclaimer, a wider limit of liability (payments and outside services named), and an indemnity by the association.
+- **16 and 17:** a 30-day notice step before a case, Cook County courts as the only venue, a one-year claim period, and general terms (notices and e-signature, assignment, severability, force majeure).
+
+**Decided by Doug 2026-11-12, for the lawyer to confirm** ("make decisions for the lawyer decisions but I will double check"):
+1. **No arbitration and no jury waiver.** Customers are volunteer boards, and arbitration costs more than it saves. A class-action waiver is included, to the extent the law allows.
+2. **The indemnity binds the association only**, never a board member personally who signs in its name with authority. The one-year claim period stays.
+3. **Liability cap:** the greater of 12 months of fees or **$500** (was $100). Payments and outside services are named in section 13.
+4. **Stripe wording:** "Stripe's services agreement", the agreement a Standard connected account accepts. Counsel confirms Stripe's current wording and the ACH debit authorization on Stripe's page.

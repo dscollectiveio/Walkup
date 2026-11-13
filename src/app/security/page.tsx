@@ -1,4 +1,4 @@
-import { CONTACT_EMAIL, SECURITY_EMAIL } from "@/lib/site-config";
+import { CONTACT_EMAIL, DUES_PAYMENTS_ENABLED, SECURITY_EMAIL } from "@/lib/site-config";
 import Link from "next/link";
 import { Lockup } from "@/components/mark";
 
@@ -189,6 +189,21 @@ export default function SecurityPage() {
           </Link>{" "}
           lists what Walkup and Stripe share.
         </p>
+        {DUES_PAYMENTS_ENABLED ? (
+          <p className="mt-3">
+            Online dues payments are separate. Each association connects its own
+            Stripe account, so money goes from the owner to the association
+            through Stripe, never through Walkup. Walkup keeps only the
+            account&rsquo;s reference number, not a password or token. Owners
+            link their bank on Stripe&rsquo;s page. Stripe&rsquo;s updates
+            about these payments arrive at their own address with their own
+            signing secret. After the signature checks out, they can call a
+            short list of database functions, and those only move a
+            payment&rsquo;s status forward. None of them writes to the books: a
+            board member confirms each Stripe deposit in the bank feed, and that
+            single step records each unit&rsquo;s dues and Stripe&rsquo;s fee.
+          </p>
+        ) : null}
         <p className="mt-3">
           Walkup&rsquo;s AI features use Anthropic, the company that makes the
           Claude models, only when someone uses them and only from Walkup&rsquo;s

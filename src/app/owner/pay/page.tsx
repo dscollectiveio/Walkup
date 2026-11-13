@@ -6,16 +6,20 @@ import { CopyField } from "@/components/owner/copy-field";
 import { ReportPaymentForm } from "@/app/dues/report-payment-form";
 import { buildingTodayIso } from "@/lib/dates";
 import { loadOwnedUnits, loadSummary } from "@/lib/owner/load";
+import { memoInstruction } from "@/lib/dues/payment-details";
 import { hasPaymentDetails, reportLine, reportStatusWords, suggestedMemo, type ReportRow } from "@/lib/owner/pay";
 import { moneyAnswer, ownerStanding } from "@/lib/owner/standing";
 import { ViewerUnavailable } from "@/components/owner/viewer-unavailable";
 import { getViewer } from "@/lib/owner/viewer";
 import { MyReports, type MyReport } from "./my-reports";
+import { PayOnlineButton } from "./pay-online-button";
+import { payOnlineLine, returnMessage, type OnlinePaymentRow, type OnlinePaymentStatus } from "@/lib/payments/owner-view";
 
 export const dynamic = "force-dynamic";
 
 /** How to pay, and a way to tell the board you did (owner-portal-spec 6.3). Nothing here moves money. */
-export default async function OwnerPayPage() {
+export default async function OwnerPayPage({ searchParams }: { searchParams: Promise<{ paid?: string }> }) {
+  const { paid } = await searchParams;
   const viewer = await getViewer();
   if (!viewer) return <ViewerUnavailable />;
   const supabase = await createClient();
@@ -55,10 +59,10 @@ export default async function OwnerPayPage() {
     );
   }
 
-  const [assocRes, summaries, reportsRes, sessionRes] = await Promise.all([
+  const [assocRes, summaries, reportsRes, sessionRes, onlineStatusRes, onlineRowsRes, owedRes] = await Promise.all([
     supabase
       .from("associations")
-      .select("dues_payee_name, dues_bank_name, dues_account_number, dues_routing_number, dues_zelle_handle, dues_payment_notes")
+      .select("dues_payee_name, dues_bank_name, dues_account_number, dues_routing_number, dues_zelle_handle, dues_zelle_phone, dues_zelle_name, dues_payment_notes, dues_mailing_address")
       .eq("id", viewer.associationId)
       .limit(1),
     Promise.all(units.map((u) => loadSummary(supabase, u.id, today))),
@@ -69,6 +73,16 @@ export default async function OwnerPayPage() {
       .order("created_at", { ascending: false })
       .limit(10),
     supabase.auth.getClaims(),
+    // Online payments (DECISIONS #57): whether Pay is on, this owner's recent attempts, and each unit's full balance.
+    supabase.rpc("online_dues_status", { p_association_id: viewer.associationId }),
+    supabase
+      .from("online_dues_payments")
+      .select("unit_id, status, amount, created_at, failure_reason")
+      .in("unit_id", units.map((u) => u.id))
+      .neq("status", "canceled")
+      .order("created_at", { ascending: false })
+      .limit(20),
+    Promise.all(units.map((u) => supabase.rpc("online_dues_amount", { p_association_id: viewer.associationId, p_unit_id: u.id }))),
   ]);
   const a = assocRes.data?.[0] as
     | {
@@ -77,7 +91,10 @@ export default async function OwnerPayPage() {
         dues_account_number: string | null;
         dues_routing_number: string | null;
         dues_zelle_handle: string | null;
+        dues_zelle_phone: string | null;
+        dues_zelle_name: string | null;
         dues_payment_notes: string | null;
+        dues_mailing_address: string | null;
       }
     | undefined;
   const configured = a ? hasPaymentDetails(a) : false;
@@ -92,12 +109,35 @@ export default async function OwnerPayPage() {
   }));
   const netCents = summaries.reduce((sum, s) => (s.ok ? sum + Math.round(Number(s.summary.net) * 100) : sum), 0);
 
+  const onlineOn = onlineStatusRes.data === "ready";
+  const latestOnline = new Map<string, OnlinePaymentRow>();
+  for (const r of (onlineRowsRes.data ?? []) as { unit_id: string; status: OnlinePaymentStatus; amount: string; created_at: string; failure_reason: string | null }[]) {
+    if (!latestOnline.has(r.unit_id)) {
+      latestOnline.set(r.unit_id, {
+        status: r.status,
+        amountCents: Math.round(Number(r.amount) * 100),
+        createdAt: r.created_at,
+        failureReason: r.failure_reason,
+      });
+    }
+  }
+  const onlineLines = units.map((u, i) => ({
+    unit: u,
+    line: payOnlineLine({ owedCents: Math.round(Number(owedRes[i]?.data ?? 0) * 100), latest: latestOnline.get(u.id) ?? null }),
+  }));
+  // Shown when Pay is on, or while a payment from before it was turned off is still on its way.
+  const showOnline = onlineOn || onlineLines.some((l) => l.line.kind === "pending");
+  const back = returnMessage(paid);
+
   const fields: { label: string; value: string | null | undefined }[] = [
     { label: "Payee name", value: a?.dues_payee_name },
     { label: "Bank", value: a?.dues_bank_name },
-    { label: "Account number", value: a?.dues_account_number },
     { label: "Routing number", value: a?.dues_routing_number },
-    { label: "Zelle", value: a?.dues_zelle_handle },
+    { label: "Account number", value: a?.dues_account_number },
+    { label: "Zelle email", value: a?.dues_zelle_handle },
+    { label: "Zelle phone", value: a?.dues_zelle_phone },
+    { label: "Name shown in Zelle", value: a?.dues_zelle_name },
+    { label: "Mail checks to", value: a?.dues_mailing_address },
   ];
 
   return (
@@ -116,7 +156,41 @@ export default async function OwnerPayPage() {
         })}
       </div>
 
-      <Card navy title="Send your payment here">
+      {showOnline ? (
+        <div id="pay-online" className="scroll-mt-20">
+          <Card navy title="Pay online" hint="By bank transfer (ACH) through Stripe. No fee for you; the association covers it.">
+            {back ? (
+              <p role="status" className={`mb-3 text-[13px] ${back.tone === "good" ? "text-good-text" : "text-mute"}`}>
+                {back.text}
+              </p>
+            ) : null}
+            <div className="space-y-4">
+              {onlineLines.map(({ unit, line }) => (
+                <div key={unit.id}>
+                  {units.length > 1 ? <div className="mb-1 text-[12px] font-medium text-mute">{unit.label}</div> : null}
+                  {line.kind === "pending" ? (
+                    <p className="border-l-[3px] border-info bg-info-tint px-3 py-2 text-[13px] leading-relaxed text-info-text">{line.text}</p>
+                  ) : line.kind === "nothing_owed" ? (
+                    <p className="text-[13px] text-mute">Nothing is owed right now.</p>
+                  ) : onlineOn ? (
+                    <>
+                      {line.note ? (
+                        <p className="mb-2 border-l-[3px] border-bad bg-bad-tint px-3 py-2 text-[13px] leading-relaxed text-bad-text">{line.note}</p>
+                      ) : null}
+                      <PayOnlineButton unitId={unit.id} label={line.buttonLabel} />
+                    </>
+                  ) : null}
+                </div>
+              ))}
+            </div>
+            <p className="mt-4 text-[12px] text-mute">
+              You&rsquo;ll link your bank on Stripe&rsquo;s page. Walkup never sees your account number. It pays your full balance.
+            </p>
+          </Card>
+        </div>
+      ) : null}
+
+      <Card navy title={onlineOn ? "Or send your payment here" : "Send your payment here"}>
         {!configured || !a ? (
           <div>
             <Empty>The board hasn&rsquo;t added payment details yet. Ask {contactName}.</Empty>
@@ -143,7 +217,10 @@ export default async function OwnerPayPage() {
                 />
               ))}
             </div>
-            <p className="mt-4 border-l-[3px] border-warning bg-warning-tint px-3 py-2 text-[13px] leading-relaxed text-warning-text">
+            <p className="mt-4 text-[13px] font-medium text-ink">
+              {units.map((u) => memoInstruction(u.label)).join(" ")}
+            </p>
+            <p className="mt-3 border-l-[3px] border-warning bg-warning-tint px-3 py-2 text-[13px] leading-relaxed text-warning-text">
               Only use the details on this page. If an email or text asks you to send money anywhere else, call the board first.
             </p>
           </div>
@@ -154,6 +231,7 @@ export default async function OwnerPayPage() {
         <Card navy title="Tell the board you paid">
           <p className="mb-3 text-[13px] text-mute">
             This does not move money. It tells the board to look for your payment. They record it when the deposit shows up at the bank.
+            {onlineOn ? " Paid online above? No need to report it; it shows up on its own." : ""}
           </p>
           <ReportPaymentForm units={units} defaultAmount={netCents > 0 ? netCents / 100 : undefined} />
           <h3 className="mb-1 mt-6 text-[13px] font-medium text-ink">My reports</h3>

@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { DuesTabs } from "@/components/dues-tabs";
 import { createClient } from "@/lib/supabase/server";
 import { Answer, Card } from "@/components/ui";
 import { BoardOnly } from "@/components/board-only";
@@ -45,6 +46,7 @@ export default async function StatementsPage({ searchParams }: { searchParams: P
     <div>
       <h1 className="text-[20px] font-bold tracking-tight text-ink">Owner statements</h1>
       <p className="mt-1 text-mute">A statement for each unit, as a PDF to download or an email from Walkup.</p>
+      <DuesTabs current="statements" />
     </div>
   );
   if (unitList.length === 0) {

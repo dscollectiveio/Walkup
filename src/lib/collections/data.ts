@@ -21,7 +21,7 @@ export interface CollectionsData {
   totals: { owedCents: number; overdueCents: number };
 }
 
-export async function loadCollections(supabase: Supabase, associationId: string, todayIso: string, opts: { board: boolean }): Promise<CollectionsData | null> {
+export async function loadCollections(supabase: Supabase, associationId: string, todayIso: string, opts: { board: boolean; graceDays?: number }): Promise<CollectionsData | null> {
   const [unitsRes, chargesRes, ownersRes, managersRes] = await Promise.all([
     supabase.from("units").select("id, label, sort_order").order("sort_order"),
     supabase
@@ -100,7 +100,7 @@ export async function loadCollections(supabase: Supabase, associationId: string,
     }
   }
 
-  const units = buildCollections({ todayIso, units: rawUnits, charges, owners, messages, suppressed, optedOutPersonIds });
+  const units = buildCollections({ todayIso, units: rawUnits, charges, owners, messages, suppressed, optedOutPersonIds, graceDays: opts.graceDays });
   return {
     units,
     rawUnits,

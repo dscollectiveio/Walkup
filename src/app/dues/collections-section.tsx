@@ -2,13 +2,11 @@ import Link from "next/link";
 import type { SupabaseClient } from "@supabase/supabase-js";
 import { Answer } from "@/components/ui";
 import { buildingTodayIso } from "@/lib/dates";
-import { loadCollections } from "@/lib/collections/data";
+import type { CollectionsData } from "@/lib/collections/data";
 import { OFF_STRIP, emailStatus, type SettingsRow } from "@/lib/email-outbox/status";
 import { sendConfig } from "@/lib/email-outbox/config";
 import { statusWords } from "@/lib/email-outbox/reasons";
 import { KIND_LABEL, type EmailKind } from "@/lib/email-outbox/facts";
-import { fromCents } from "@/lib/tax/form1120h";
-import { formatMoney } from "@/lib/email-outbox/format";
 import { CollectionsTable, type CollectionRow, type HistoryItem } from "@/app/delinquency/collections-table";
 
 const HISTORY_PER_UNIT = 20;
@@ -20,17 +18,15 @@ const HISTORY_PER_UNIT = 20;
  */
 export async function CollectionsSection({
   supabase,
-  associationId,
   isBoard,
-  preselect,
+  data,
 }: {
   supabase: SupabaseClient;
-  associationId: string;
   isBoard: boolean;
-  preselect: string | null;
+  /** Loaded by the page with the grace period, so the stats above and this table use the same two buckets. */
+  data: CollectionsData | null;
 }) {
   const today = buildingTodayIso();
-  const data = await loadCollections(supabase, associationId, today, { board: isBoard });
   const heading = (
     <div>
       <h3 className="text-[15px] font-bold tracking-tight text-ink">Collections</h3>
@@ -45,7 +41,7 @@ export async function CollectionsSection({
       </div>
     );
   }
-  const { units, totals } = data;
+  const { units } = data;
 
   // Email status strip and history: board only (the outbox and settings are board-readable).
   let strip: { label: "Off" | "On" | "Suspended"; text: string | null } | null = null;
@@ -106,48 +102,28 @@ export async function CollectionsSection({
     };
   });
 
-  const answer =
-    units.length === 0 ? (
-      <Answer status="good" headline="Nobody is behind" detail="Every unit is up to date." />
-    ) : (
-      <Answer
-        status="attention"
-        headline={`${formatMoney(fromCents(totals.owedCents))} is outstanding across ${units.length} unit${units.length === 1 ? "" : "s"}`}
-        detail={`${formatMoney(fromCents(totals.overdueCents))} of it is past due.`}
-      />
-    );
-
   return (
     <div id="collections" className="mt-6 scroll-mt-20 space-y-4 border-t border-line pt-5">
       {heading}
-      {answer}
-      {units.length > 0 ? (
-        <p className="text-[13px] text-mute">
-          Unpaid dues are money earned but not received. They also lower the income your tax eligibility depends on; see the{" "}
-          <Link href="/tax" className="underline underline-offset-2 hover:text-ink">
-            Taxes
-          </Link>{" "}
-          page.
+      {strip ? (
+        <p className="text-[12px] text-mute">
+          {strip.label === "On"
+            ? "Reminders are sent from Walkup after you approve them. "
+            : strip.label === "Suspended"
+              ? "Sending from Walkup is suspended. Reminders open in your email app. "
+              : "Reminders open in your email app. "}
+          <Link href="/dues/email" className="inline-flex min-h-[44px] items-center text-ink underline underline-offset-2 sm:min-h-0">
+            {strip.label === "On" ? "Email settings" : "Send from Walkup instead"}
+          </Link>
         </p>
       ) : null}
 
-      {strip ? (
-        <div className="flex flex-wrap items-center gap-x-3 gap-y-1 rounded-lg border border-line bg-paper px-4 py-3 text-[13px]">
-          <span className="font-medium text-ink">Email from Walkup: {strip.label}</span>
-          {strip.text ? <span className="text-mute">{strip.text}</span> : null}
-          <Link href="/dues/email" className="ml-auto inline-flex min-h-[44px] items-center text-ink underline underline-offset-2">
-            Set up
-          </Link>
-        </div>
-      ) : null}
+      {units.length === 0 ? <p className="text-[13px] text-mute">Nobody is past due.</p> : null}
 
       {units.length > 0 ? (
         <>
-          <p className="text-[12px] text-mute">
-            A late fee is only ever charged by the board, from the Dues page. A notice just tells the owner about a fee that is
-            already posted. Check your declaration and bylaws before sending. Older balances are in the right-hand columns.
-          </p>
-          <CollectionsTable rows={rows} canPrepare={isBoard} preselect={preselect} today={today} />
+          <p className="text-[12px] text-mute">Late fees are added only by the board. Check your bylaws first.</p>
+          <CollectionsTable rows={rows} canPrepare={isBoard} today={today} />
         </>
       ) : null}
     </div>

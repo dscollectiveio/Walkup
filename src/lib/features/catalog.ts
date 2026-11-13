@@ -745,7 +745,7 @@ export const CATEGORIES: Category[] = [
         details: [
           "The bank connection can only read transactions and balances",
           "The access token is encrypted, and disconnecting closes it with Plaid",
-          "Walkup never moves or holds association money",
+          "Walkup never holds association money, and the bank connection can't move it",
         ],
         who: ["board"],
       },

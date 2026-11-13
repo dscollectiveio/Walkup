@@ -48,6 +48,10 @@ export function hasPaymentDetails(a: {
   dues_payee_name: string | null;
   dues_account_number: string | null;
   dues_zelle_handle: string | null;
+  dues_zelle_phone?: string | null;
+  dues_mailing_address?: string | null;
 }): boolean {
-  return Boolean(a.dues_payee_name?.trim() || a.dues_account_number?.trim() || a.dues_zelle_handle?.trim());
+  return Boolean(
+    a.dues_payee_name?.trim() || a.dues_account_number?.trim() || a.dues_zelle_handle?.trim() || a.dues_zelle_phone?.trim() || a.dues_mailing_address?.trim(),
+  );
 }

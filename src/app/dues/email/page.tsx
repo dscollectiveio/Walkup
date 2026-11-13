@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { DuesTabs } from "@/components/dues-tabs";
 import { createClient } from "@/lib/supabase/server";
 import { Answer, Card } from "@/components/ui";
 import { BoardOnly } from "@/components/board-only";
@@ -38,6 +39,7 @@ export default async function EmailPage({ searchParams }: { searchParams: Promis
     <div>
       <h1 className="text-[20px] font-bold tracking-tight text-ink">Email from Walkup</h1>
       <p className="mt-1 text-mute">Reminders, statements and notices, sent only after a board admin approves them.</p>
+      {viewer.isBoard ? <DuesTabs current="email" /> : null}
     </div>
   );
   if (!viewer.isBoard) {

@@ -42,6 +42,10 @@ const PUBLIC_PATHS = [
   // The route verifies the Stripe-Signature HMAC over the raw body itself and
   // 400s on anything else (src/app/api/stripe/webhook/route.ts); exact path.
   "/api/stripe/webhook",
+  // Stripe posts events from associations' connected accounts (online dues,
+  // DECISIONS #57) with no session; same signature check, its own secret
+  // (src/app/api/stripe/connect/webhook/route.ts); exact path.
+  "/api/stripe/connect/webhook",
   // An owner's unsubscribe link works signed out: the 48-byte token in it is the
   // whole credential, and the page only ever changes that person's email
   // preferences (src/app/unsubscribe, DECISIONS #36).

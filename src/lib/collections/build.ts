@@ -47,6 +47,8 @@ export interface CollectionsInput {
   suppressed: Map<string, "bounce" | "complaint">;
   /** People who turned off dues reminders or everything. */
   optedOutPersonIds: Set<string>;
+  /** The late fee grace period: a charge is past due once its due date plus this many days has passed. */
+  graceDays?: number;
 }
 
 function daysBetween(fromIso: string, toIso: string): number {
@@ -83,7 +85,7 @@ export function buildCollections(input: CollectionsInput): CollectionUnit[] {
     let overdue = 0;
     let oldest: string | null = null;
     for (const c of charges) {
-      const d = Math.max(0, daysBetween(c.due_on, todayIso));
+      const d = Math.max(0, daysBetween(c.due_on, todayIso) - (input.graceDays ?? 0));
       owed += c.balanceCents;
       if (d === 0) aging.current += c.balanceCents;
       else {

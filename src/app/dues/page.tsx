@@ -5,26 +5,35 @@ import { BoardOnly } from "@/components/board-only";
 import { getViewer } from "@/lib/owner/viewer";
 import { maskEmail, officerEmails } from "@/lib/access/contact-mask";
 import { loadContactDetails } from "@/lib/people/contact-details";
-import { Card, Empty, HEADER_BUTTON, Restricted, money } from "@/components/ui";
+import { DuesTabs } from "@/components/dues-tabs";
+import { EditPaymentDetailsButton } from "./edit-payment-button";
+import { MaskedAccount } from "./masked-account";
+import { Card, Empty, Restricted, money } from "@/components/ui";
 import { bankFeedHref } from "@/app/bank-feed/href";
 import { PaymentForm } from "@/app/delinquency/payment-form";
 import { PaymentInstructionsForm } from "./payment-instructions-form";
+import { OnlinePaymentsPanel, type OnlinePaymentsStatus } from "./online-payments-panel";
+import { connectConfigProblem } from "@/lib/payments/connect";
+import { attentionItems, pendingBadges, type BoardOnlineRow } from "@/lib/payments/board-view";
+import { loadStripePayouts } from "@/lib/payments/payouts-load";
 import { DuesScheduleCard, type ScheduleView } from "./dues-schedule-card";
 import { NeedsYou, type NeedsYouItem, type UnitOption } from "./needs-you";
 import { LateFeeRuleForm, OneOffChargeForm } from "./charge-forms";
 import { CollectionsSection } from "./collections-section";
-import { UnitCard, type UnitPlan } from "./unit-card";
+import { SetupDuesLink } from "./setup-dues-link";
+import { loadCollections } from "@/lib/collections/data";
+import { UnitCard, type UnitPlan, type UnitStatus } from "./unit-card";
 import { additionalProgress, duesPaidCents, rolledOverCents } from "@/lib/dues/year";
-import { annualFromPeriodCents, nextPeriodStartFor } from "@/lib/dues/plan";
+import { annualFromPeriodCents, FREQUENCY_WORDS, nextPeriodStartFor } from "@/lib/dues/plan";
 import { currentPeriodStart, periodLabel, perUnitAmount, type DuesFrequency } from "@/lib/dues/period";
 import {
   lateFeeProposals,
+  nextDueOn,
   standingFor,
   suggestUnitForDeposit,
-  STANDING_WORDS,
+  yearCharged,
   type ChargeLine,
   type UnitHint,
-  type UnitStanding,
 } from "@/lib/dues/status";
 import { shortDate, todayIso } from "@/lib/dates";
 
@@ -33,36 +42,14 @@ export const dynamic = "force-dynamic";
 const cents = (v: string | number | null | undefined) => Math.round(Number(v ?? 0) * 100);
 const dollars = (c: number) => money(c / 100);
 
-const STANDING_TONE: Record<UnitStanding, string> = {
-  current: "bg-good-tint text-good-text",
-  behind: "bg-bad-tint text-bad-text",
-  ahead: "bg-info-tint text-info-text",
-  not_charged: "bg-fill text-mute",
-};
-
-/** The first day of the period after the one `today` falls in. */
-function nextPeriodStart(frequency: DuesFrequency, today: Date, startsOn: string): string | null {
-  const iso = (d: Date) =>
-    `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
-  if (frequency === "one_time") return startsOn > iso(today) ? startsOn : null;
-  const next =
-    frequency === "monthly"
-      ? new Date(today.getFullYear(), today.getMonth() + 1, 1)
-      : frequency === "quarterly"
-        ? new Date(today.getFullYear(), Math.floor(today.getMonth() / 3) * 3 + 3, 1)
-        : new Date(today.getFullYear() + 1, 0, 1);
-  const n = iso(next);
-  return n < startsOn ? startsOn : n;
-}
-
-export default async function DuesPage({ searchParams }: { searchParams: Promise<{ select?: string }> }) {
-  const { select: selectParam } = await searchParams;
+export default async function DuesPage({ searchParams }: { searchParams: Promise<{ online?: string }> }) {
+  const { online: onlineParam } = await searchParams;
   const supabase = await createClient();
 
   const { data: associations } = await supabase
     .from("associations")
     .select(
-      "id, display_name, dues_payee_name, dues_bank_name, dues_account_number, dues_routing_number, dues_zelle_handle, dues_payment_notes, dues_late_fee_amount, dues_late_fee_grace_days",
+      "id, display_name, legal_name, dues_payee_name, dues_bank_name, dues_account_number, dues_routing_number, dues_zelle_handle, dues_zelle_phone, dues_zelle_name, dues_payment_notes, dues_mailing_address, dues_late_fee_amount, dues_late_fee_grace_days",
     )
     .limit(1);
   const association = associations?.[0];
@@ -81,6 +68,8 @@ export default async function DuesPage({ searchParams }: { searchParams: Promise
     { data: ownedUnitIds },
     { data: units },
     { data: owners },
+    { data: paymentAccount },
+    { data: onlineRows },
   ] = await Promise.all([
     supabase.rpc("is_member", { assoc: association.id }),
     supabase.rpc("has_role_in", { assoc: association.id, roles: ["board_admin"] }),
@@ -89,6 +78,19 @@ export default async function DuesPage({ searchParams }: { searchParams: Promise
     supabase.rpc("owned_unit_ids", { assoc: association.id }),
     supabase.from("units").select("id, label, sort_order").order("sort_order"),
     supabase.from("unit_owners").select("unit_id, effective_to, persons(full_name, email)"),
+    // Online payments (DECISIONS #57). RLS: board and accountant only; owners never see the account.
+    supabase
+      .from("association_payment_accounts")
+      .select("charges_enabled, payouts_enabled")
+      .eq("association_id", association.id)
+      .is("disconnected_at", null)
+      .maybeSingle(),
+    supabase
+      .from("online_dues_payments")
+      .select("id, unit_id, status, amount, created_at, failure_reason")
+      .in("status", ["processing", "succeeded", "failed", "refunded", "disputed"])
+      .order("created_at", { ascending: false })
+      .limit(200),
   ]);
   if (isMemberRes !== true) return <Restricted what="HOA dues" />;
   const isBoardAdmin = isBoardAdminRes === true;
@@ -124,6 +126,9 @@ export default async function DuesPage({ searchParams }: { searchParams: Promise
     const p = o.persons as unknown as { full_name: string; email: string | null } | null;
     if (p && !ownerByUnit.has(o.unit_id)) ownerByUnit.set(o.unit_id, { name: p.full_name, email: mask(p.email) });
   }
+
+  // The late fee grace period decides when a charge is past due: its due date plus this many days.
+  const graceDays = Math.max(0, Number(association.dues_late_fee_grace_days ?? 0));
 
   const scopeUnits = canReadFinancials ? unitList.map((u) => u.id) : myUnitIds;
   const [{ data: chargeRows }, { data: unapplied }, { data: paymentRows }, { data: reportRows }] =
@@ -252,27 +257,17 @@ export default async function DuesPage({ searchParams }: { searchParams: Promise
   for (const r of pledgeRows ?? []) {
     if (r.unit_id && !pledgeByUnit.has(r.unit_id)) pledgeByUnit.set(r.unit_id, cents(r.annual_amount ?? r.total_amount));
   }
-  // The reconciliation status beside the Reconcile Transactions button: deposits still waiting for a
-  // category or a unit, and deposits already labeled dues that are waiting to be posted to the books.
-  const [unmatchedRes, readyRes] = isBoard
-    ? await Promise.all([
-        supabase
-          .from("bank_transactions")
-          .select("id", { count: "exact", head: true })
-          .is("posting_kind", null)
-          .is("removed_at", null)
-          .eq("pending", false)
-          .gt("amount", 0),
-        supabase
-          .from("bank_transactions")
-          .select("id", { count: "exact", head: true })
-          .eq("posting_kind", "dues")
-          .is("journal_entry_id", null)
-          .is("removed_at", null),
-      ])
-    : [null, null];
-  const unmatchedDeposits = unmatchedRes?.count ?? 0;
-  const readyToPostDeposits = readyRes?.count ?? 0;
+  // Deposits still waiting for a category or a unit: the "Match N deposits" button and the stat under "Matched in".
+  const { count: unmatchedCount } = isBoard
+    ? await supabase
+        .from("bank_transactions")
+        .select("id", { count: "exact", head: true })
+        .is("posting_kind", null)
+        .is("removed_at", null)
+        .eq("pending", false)
+        .gt("amount", 0)
+    : { count: 0 };
+  const unmatchedDeposits = unmatchedCount ?? 0;
 
   // Each unit's property manager and who Walkup's email goes to for it (0066).
   const { data: managerRows } =
@@ -335,6 +330,10 @@ export default async function DuesPage({ searchParams }: { searchParams: Promise
     });
   }
 
+  const collections = canReadFinancials
+    ? await loadCollections(supabase, association.id, todayKey, { board: isBoard, graceDays })
+    : null;
+
   const standingByUnit = new Map(
     unitList.map((u) => [
       u.id,
@@ -342,6 +341,7 @@ export default async function DuesPage({ searchParams }: { searchParams: Promise
         chargeLines.filter((c) => c.unit_id === u.id),
         creditByUnit.get(u.id) ?? 0,
         todayKey,
+        graceDays,
       ),
     ]),
   );
@@ -350,8 +350,6 @@ export default async function DuesPage({ searchParams }: { searchParams: Promise
   let schedules: ScheduleView[] = [];
   const needsItems: NeedsYouItem[] = [];
   let collectedCents = 0;
-  let chargedCents = 0;
-  let nextDue: string | null = null;
   let perPeriodCents: number | null = null;
   const planByUnit = new Map<
     string,
@@ -360,7 +358,7 @@ export default async function DuesPage({ searchParams }: { searchParams: Promise
 
   if (canReadFinancials) {
     const monthKey = `${todayKey.slice(0, 7)}-01`;
-    const [{ data: scheduleRows }, { data: deposits }, { data: collection }] = await Promise.all([
+    const [{ data: scheduleRows }, { data: deposits }, { data: collection }, stripePayouts] = await Promise.all([
       supabase
         .from("assessment_schedules")
         .select("id, name, frequency, allocation_method, total_amount, starts_on, ends_on, unit_id, annual_amount, note")
@@ -376,6 +374,8 @@ export default async function DuesPage({ searchParams }: { searchParams: Promise
         .order("posted_on", { ascending: false })
         .limit(10),
       supabase.from("monthly_dues_collection").select("month, charged, collected").eq("month", monthKey).limit(1),
+      // A Stripe payout's deposit is several units' dues less fees: it is confirmed in the bank feed, never matched to one unit here.
+      loadStripePayouts(supabase, association.id),
     ]);
     const scheduleIds = (scheduleRows ?? []).map((s) => s.id);
     const { data: periodCharges } =
@@ -428,9 +428,6 @@ export default async function DuesPage({ searchParams }: { searchParams: Promise
     if (main && (main.allocation_method === "fixed_per_unit" || main.allocation_method === "equal")) {
       perPeriodCents = Math.round(perUnitAmount(main.allocation_method, main.total_amount, unitList.length) * 100);
     }
-    const nextCharges = [...planByUnit.values()].map((p) => p.nextCharge).filter((d): d is string => !!d).sort();
-    nextDue = nextCharges[0] ?? (main ? nextPeriodStart(mainFrequency, today, main.starts_on) : null);
-
     // Per-unit plans with a period due that isn't charged yet — one button.
     const dueNow = [...planByUnit.values()].filter((p) => p.periodStart && !p.charged);
     if (dueNow.length > 0) {
@@ -447,7 +444,6 @@ export default async function DuesPage({ searchParams }: { searchParams: Promise
       });
     }
     collectedCents = cents(collection?.[0]?.collected);
-    chargedCents = cents(collection?.[0]?.charged);
 
     // Needs you, in the order a treasurer would want to deal with them.
     for (const s of schedules) {
@@ -474,7 +470,8 @@ export default async function DuesPage({ searchParams }: { searchParams: Promise
     }));
     const pendingReports = reports.filter((r) => r.status === "pending");
     const claimedReports = new Set<string>();
-    for (const d of deposits ?? []) {
+    const stripeDepositIds = new Set(stripePayouts.flatMap((p) => (p.deposit ? [p.deposit.id] : [])));
+    for (const d of (deposits ?? []).filter((x) => !stripeDepositIds.has(x.id))) {
       const amountCents = cents(d.amount);
       const match = suggestUnitForDeposit(
         { description: d.description, amountCents },
@@ -550,23 +547,43 @@ export default async function DuesPage({ searchParams }: { searchParams: Promise
       return m && m.main === "manager" && (m.email ?? "").trim() !== "" ? m.name : null;
     })(),
   }));
-  const outstandingCents = [...standingByUnit.values()].reduce((s, v) => s + v.owedCents, 0);
-  const hasPaymentInfo = Boolean(
-    association.dues_payee_name || association.dues_account_number || association.dues_zelle_handle,
+    const hasPaymentInfo = Boolean(
+    association.dues_payee_name || association.dues_account_number || association.dues_zelle_handle || association.dues_zelle_phone || association.dues_mailing_address,
   );
+
+  const boardOnline: BoardOnlineRow[] = (
+    (onlineRows ?? []) as { id: string; unit_id: string; status: BoardOnlineRow["status"]; amount: string; created_at: string; failure_reason: string | null }[]
+  ).map((r) => ({
+    id: r.id,
+    unitId: r.unit_id,
+    status: r.status,
+    amountCents: cents(r.amount),
+    createdAt: r.created_at,
+    failureReason: r.failure_reason,
+  }));
+  const onlineBadges = pendingBadges(boardOnline);
+  const labelOf = (id: string) => unitList.find((u) => u.id === id)?.label ?? "A unit";
+  const onlineAttention = attentionItems(boardOnline, labelOf);
+
+  const onlineStatus: OnlinePaymentsStatus = !paymentAccount
+    ? "off"
+    : paymentAccount.charges_enabled && paymentAccount.payouts_enabled
+      ? "ready"
+      : "pending";
 
   const howToPay = (
     <Card
       navy
-      title="How to pay"
-      hint="Set this up once in your bank's bill pay (or Zelle), and it runs on its own every month. No processor, no fee for anyone."
+      title="How owners pay"
+      action={isBoardAdmin ? <EditPaymentDetailsButton /> : undefined}
+      hint={
+        onlineStatus === "ready"
+          ? "Owners can pay online by bank transfer, or from their own bank by bill pay, Zelle or check."
+          : "Owners pay from their own bank by bill pay, Zelle or check. Paying online by bank transfer is coming soon."
+      }
     >
       {!hasPaymentInfo ? (
-        <Empty>
-          {isBoardAdmin
-            ? "Add the association's payment details so owners know where to send dues."
-            : "The board hasn't added payment details yet."}
-        </Empty>
+        isBoardAdmin ? null : <Empty>The board hasn&rsquo;t added payment details yet.</Empty>
       ) : (
         <dl className="grid gap-x-6 gap-y-3 break-words text-[13px] sm:grid-cols-2">
           {association.dues_payee_name ? (
@@ -584,7 +601,7 @@ export default async function DuesPage({ searchParams }: { searchParams: Promise
           {association.dues_account_number ? (
             <div>
               <dt className="text-[11px] text-mute">Account number</dt>
-              <dd className="figures text-ink">{association.dues_account_number}</dd>
+              <dd className="text-ink"><MaskedAccount value={association.dues_account_number} /></dd>
             </div>
           ) : null}
           {association.dues_routing_number ? (
@@ -595,8 +612,26 @@ export default async function DuesPage({ searchParams }: { searchParams: Promise
           ) : null}
           {association.dues_zelle_handle ? (
             <div>
-              <dt className="text-[11px] text-mute">Zelle</dt>
+              <dt className="text-[11px] text-mute">Zelle email</dt>
               <dd className="text-ink">{association.dues_zelle_handle}</dd>
+            </div>
+          ) : null}
+          {association.dues_zelle_phone ? (
+            <div>
+              <dt className="text-[11px] text-mute">Zelle phone</dt>
+              <dd className="figures text-ink">{association.dues_zelle_phone}</dd>
+            </div>
+          ) : null}
+          {association.dues_zelle_name && (association.dues_zelle_handle || association.dues_zelle_phone) ? (
+            <div>
+              <dt className="text-[11px] text-mute">Name shown in Zelle</dt>
+              <dd className="text-ink">{association.dues_zelle_name}</dd>
+            </div>
+          ) : null}
+          {association.dues_mailing_address ? (
+            <div>
+              <dt className="text-[11px] text-mute">Mail checks to</dt>
+              <dd className="whitespace-pre-wrap text-ink">{association.dues_mailing_address}</dd>
             </div>
           ) : null}
           {association.dues_payment_notes ? (
@@ -610,17 +645,27 @@ export default async function DuesPage({ searchParams }: { searchParams: Promise
       {isBoardAdmin ? (
         <div className="mt-4">
           <PaymentInstructionsForm
+            legalName={association.legal_name}
             instructions={{
               dues_payee_name: association.dues_payee_name,
               dues_bank_name: association.dues_bank_name,
               dues_account_number: association.dues_account_number,
               dues_routing_number: association.dues_routing_number,
               dues_zelle_handle: association.dues_zelle_handle,
+              dues_zelle_phone: association.dues_zelle_phone,
+              dues_zelle_name: association.dues_zelle_name,
               dues_payment_notes: association.dues_payment_notes,
+              dues_mailing_address: association.dues_mailing_address,
             }}
           />
         </div>
       ) : null}
+      <OnlinePaymentsPanel
+        status={onlineStatus}
+        canManage={isBoardAdmin}
+        configProblem={isBoardAdmin ? connectConfigProblem() : null}
+        returnNotice={onlineParam ?? null}
+      />
     </Card>
   );
 
@@ -629,6 +674,18 @@ export default async function DuesPage({ searchParams }: { searchParams: Promise
   // ---------------------------------------------------------------------------
   const monthWord = today.toLocaleDateString("en-US", { month: "long" });
   const behindCount = [...standingByUnit.values()].filter((s) => s.standing === "behind").length;
+  // The two buckets, summed over every unit: past due plus due soon is every unpaid charge.
+  const pastDueCents = [...standingByUnit.values()].reduce((t, v) => t + v.overdueCents, 0);
+  const dueSoonCents = [...standingByUnit.values()].reduce((t, v) => t + v.dueSoonCents, 0);
+  const nextDue = nextDueOn(chargeLines, todayKey);
+  // A unit has dues set up when it has its own plan or has been billed (a building-wide schedule bills units without a plan of their own).
+  const noDuesUnits = unitList.filter((u) => !planByUnit.has(u.id) && !chargeLines.some((c) => c.unit_id === u.id));
+  const remindByUnit = new Map(
+    (collections?.units ?? []).map((u) => [
+      u.unitId,
+      { ok: u.suggestion.action === "remind" || u.suggestion.action === "late_fee_notice", reason: u.suggestion.action === "wait" || u.suggestion.action === "call" ? u.suggestion.why : null },
+    ]),
+  );
 
   return (
     <div className="space-y-6">
@@ -637,73 +694,66 @@ export default async function DuesPage({ searchParams }: { searchParams: Promise
         <p className="mt-1 text-mute">
           Who&rsquo;s paid, who hasn&rsquo;t, and what to do about it. Owners pay from their own bank; you confirm it when it lands.
         </p>
-        {isBoard ? (
-          <p className="mt-2 flex flex-wrap gap-x-4 gap-y-1 text-[13px]">
-            <Link href="#collections" className="inline-flex min-h-[44px] items-center text-ink underline underline-offset-2 sm:min-h-0">
-              Collections
-            </Link>
-            <Link href="/dues/statements" className="inline-flex min-h-[44px] items-center text-ink underline underline-offset-2 sm:min-h-0">
-              Owner statements
-            </Link>
-            <Link href="/dues/email" className="inline-flex min-h-[44px] items-center text-ink underline underline-offset-2 sm:min-h-0">
-              Email &amp; reminders
-            </Link>
-          </p>
-        ) : null}
+        {isBoard ? <DuesTabs current="collections" /> : null}
       </div>
+
+      {howToPay}
 
       <Card
         navy
         title="Where every unit stands"
         action={
-          isBoard ? (
-            <div className="flex flex-wrap items-center justify-end gap-2">
-              <span
-                role="status"
-                className={`whitespace-nowrap rounded-full px-2.5 py-1 text-[12px] font-medium ${
-                  unmatchedDeposits > 0 ? "bg-warning-tint text-warning-text" : readyToPostDeposits > 0 ? "bg-info-tint text-info-text" : "bg-good-tint text-good-text"
-                }`}
-              >
-                {unmatchedDeposits > 0
-                  ? `${unmatchedDeposits} deposit${unmatchedDeposits === 1 ? "" : "s"} to match`
-                  : readyToPostDeposits > 0
-                    ? `${readyToPostDeposits} ready to post`
-                    : "All deposits matched"}
-                {unmatchedDeposits > 0 && readyToPostDeposits > 0 ? ` · ${readyToPostDeposits} ready to post` : ""}
-              </span>
-              <Link href={bankFeedHref({ range: "all", status: "needs", sort: "date_desc" })} className={`${HEADER_BUTTON} min-h-[44px] sm:min-h-0`}>
-                Reconcile Transactions
-              </Link>
-            </div>
+          isBoard && unmatchedDeposits > 0 ? (
+            <Link
+              href={bankFeedHref({ range: "all", status: "needs", sort: "date_desc" })}
+              className="inline-flex shrink-0 items-center rounded-md bg-brass px-3 py-1.5 text-[13px] font-medium text-on-brass transition-colors hover:brightness-95 focus-visible:outline focus-visible:outline-2 focus-visible:outline-paper max-sm:min-h-[44px]"
+            >
+              Match {unmatchedDeposits} deposit{unmatchedDeposits === 1 ? "" : "s"}
+            </Link>
           ) : null
         }
         hint={
           unitList.length === 0
             ? "Add the building's units first."
             : behindCount === 0
-              ? `All ${unitList.length} units are up to date.`
+              ? "No units are behind."
               : `${behindCount} of ${unitList.length} units ${behindCount === 1 ? "is" : "are"} behind.`
         }
       >
-        <dl className="grid divide-y divide-line overflow-hidden rounded-lg border border-line sm:grid-cols-3 sm:divide-x sm:divide-y-0">
-          <div className="px-4 py-3">
-            <dt className="text-[12px] text-mute">Collected in {monthWord}</dt>
-            <dd className="figures mt-0.5 text-[20px] text-ink">
-              {dollars(collectedCents)}
-              {chargedCents > 0 ? <span className="text-[13px] text-mute"> of {dollars(chargedCents)}</span> : null}
-            </dd>
+        <dl className="flex flex-wrap gap-x-10 gap-y-3">
+          <div>
+            <dt className="text-[12px] text-mute">Past due</dt>
+            <dd className={`figures mt-0.5 text-[20px] ${pastDueCents > 0 ? "text-bad" : "text-ink"}`}>{dollars(pastDueCents)}</dd>
           </div>
-          <div className="px-4 py-3">
-            <dt className="text-[12px] text-mute">Outstanding</dt>
-            <dd className={`figures mt-0.5 text-[20px] ${outstandingCents > 0 ? "text-ink" : "text-good-text"}`}>{dollars(outstandingCents)}</dd>
+          <div>
+            <dt className="text-[12px] text-mute">Due soon</dt>
+            <dd className="figures mt-0.5 text-[20px] text-ink">{dollars(dueSoonCents)}</dd>
           </div>
-          <div className="px-4 py-3">
-            <dt className="text-[12px] text-mute">Next due</dt>
-            <dd className="figures mt-0.5 text-[20px] text-ink">
-              {nextDue ? shortDate(nextDue, todayKey) : <span className="text-[13px] font-normal text-mute">no schedule yet</span>}
-            </dd>
+          <div>
+            <dt className="text-[12px] text-mute">Matched in {monthWord}</dt>
+            <dd className="figures mt-0.5 text-[20px] text-ink">{dollars(collectedCents)}</dd>
+            {isBoard && unmatchedDeposits > 0 ? (
+              <dd className="mt-0.5 text-[12px] text-mute">
+                {unmatchedDeposits} deposit{unmatchedDeposits === 1 ? "" : "s"} waiting
+              </dd>
+            ) : null}
           </div>
+          {nextDue ? (
+            <div>
+              <dt className="text-[12px] text-mute">Next due</dt>
+              <dd className="figures mt-0.5 text-[20px] text-ink">{shortDate(nextDue, todayKey)}</dd>
+            </div>
+          ) : null}
         </dl>
+
+        {isBoard && noDuesUnits.length > 0 ? (
+          <p className="mt-4 flex flex-wrap items-center gap-x-2 rounded-md bg-[var(--w-total-col)] px-3 py-2 text-[13px] text-mute">
+            <span>
+              {noDuesUnits.length} unit{noDuesUnits.length === 1 ? " has" : "s have"} no dues set up
+            </span>
+            <SetupDuesLink unitId={noDuesUnits[0].id} />
+          </p>
+        ) : null}
 
         {unitList.length === 0 ? (
           <div className="mt-4">
@@ -721,7 +771,7 @@ export default async function DuesPage({ searchParams }: { searchParams: Promise
             </Empty>
           </div>
         ) : (
-          <div className="mt-5 space-y-4 border-t border-line pt-5">
+          <div className="mt-4 border-t border-line">
             {unitList.map((u) => {
               const s = standingByUnit.get(u.id)!;
               const owner = ownerByUnit.get(u.id);
@@ -729,6 +779,20 @@ export default async function DuesPage({ searchParams }: { searchParams: Promise
               const credit = creditByUnit.get(u.id) ?? 0;
               const plan = planByUnit.get(u.id);
               const year = yearPaidByUnit.get(u.id);
+              const unitCharges = chargeLines.filter((c) => c.unit_id === u.id);
+              const setUp = !!plan || unitCharges.length > 0;
+              const status: UnitStatus =
+                s.overdueCents > 0
+                  ? { kind: "past_due", cents: s.overdueCents }
+                  : s.dueSoonCents > 0
+                    ? { kind: "due_soon", cents: s.dueSoonCents, dueLabel: s.dueSoonOn ? shortDate(s.dueSoonOn, todayKey) : "soon" }
+                    : credit > 0
+                      ? { kind: "credit", cents: credit }
+                      : setUp
+                        ? { kind: "paid_up" }
+                        : { kind: "no_dues" };
+              const yc = yearCharged(unitCharges, yearKey);
+              const rem = remindByUnit.get(u.id) ?? null;
               // Additional Agreed Assessments: required means a charge exists for this year.
               const requiredCharge = chargeLines.find(
                 (c) => c.unit_id === u.id && c.charge_type === "special_assessment" && c.period_start === `${yearKey}-01-01`,
@@ -767,21 +831,25 @@ export default async function DuesPage({ searchParams }: { searchParams: Promise
                   label={u.label}
                   ownerName={owner?.name ?? null}
                   ownerNoEmail={!!owner && !owner.email}
-                  standingLabel={`${STANDING_WORDS[s.standing]}${s.standing === "ahead" && credit > 0 ? ` ${dollars(credit)}` : ""}`}
-                  standingTone={STANDING_TONE[s.standing]}
-                  owedLabel={s.owedCents > 0 ? dollars(s.owedCents) : "Paid up"}
-                  overdue={s.overdueCents > 0}
+                  status={status}
+                  bar={setUp && yc.chargedCents > 0 ? yc : null}
+                  remind={isBoard && s.overdueCents > 0 ? rem : null}
+                  planSummary={plan ? `${dollars(plan.plan.annualCents)} a year · ${FREQUENCY_WORDS[plan.plan.frequency]}` : null}
+                  onlinePending={onlineBadges.get(u.id) ?? null}
                   details={
                     <dl className="grid grid-cols-2 gap-x-4 gap-y-3 text-[13px]">
                       <div>
-                        <dt className="text-[11px] font-medium uppercase tracking-wide text-mute">Owed</dt>
-                        <dd className={`figures ${s.overdueCents > 0 ? "text-bad-text" : "text-ink"}`}>
-                          {s.owedCents > 0 ? dollars(s.owedCents) : "—"}
-                          {last ? (
-                            <div className="text-[11px] font-normal text-mute-soft">
-                              last paid {dollars(last.cents)} · {shortDate(last.on, todayKey)}
-                            </div>
-                          ) : null}
+                        <dt className="text-[11px] font-medium uppercase tracking-wide text-mute">Past due</dt>
+                        <dd className={`figures ${s.overdueCents > 0 ? "text-bad" : "text-ink"}`}>{s.overdueCents > 0 ? dollars(s.overdueCents) : "—"}</dd>
+                      </div>
+                      <div>
+                        <dt className="text-[11px] font-medium uppercase tracking-wide text-mute">Due soon</dt>
+                        <dd className="figures text-ink">{s.dueSoonCents > 0 ? dollars(s.dueSoonCents) : "—"}</dd>
+                      </div>
+                      <div>
+                        <dt className="text-[11px] font-medium uppercase tracking-wide text-mute">Last payment</dt>
+                        <dd className="figures text-ink">
+                          {last ? `${dollars(last.cents)} · ${shortDate(last.on, todayKey)}` : "—"}
                         </dd>
                       </div>
                       <div>
@@ -805,14 +873,7 @@ export default async function DuesPage({ searchParams }: { searchParams: Promise
           </div>
         )}
 
-        <CollectionsSection supabase={supabase} associationId={association.id} isBoard={isBoard} preselect={selectParam ?? null} />
-
-        {isBoard && unitList.length > 0 && planByUnit.size === 0 ? (
-          <p className="mt-3 text-[12px] text-mute">
-            Set each unit&rsquo;s dues in the table: a yearly amount and how often they pay. They don&rsquo;t have to match.
-            Then &ldquo;Charge what&rsquo;s due&rdquo; appears under Needs you each period.
-          </p>
-        ) : null}
+        <CollectionsSection supabase={supabase} isBoard={isBoard} data={collections} />
 
         {isBoard && unitList.length > 0 ? (
           <div className="mt-4 flex flex-wrap items-center justify-between gap-3 border-t border-line pt-4">
@@ -829,6 +890,23 @@ export default async function DuesPage({ searchParams }: { searchParams: Promise
       {isBoard && needsItems.length > 0 ? (
         <Card navy title="Needs you" hint="One decision each. Nothing here happens on its own.">
           <NeedsYou items={needsItems} units={unitOptions} associationName={association.display_name} />
+        </Card>
+      ) : null}
+
+      {onlineAttention.length > 0 ? (
+        <Card navy title="Online payments to look at" hint="Failed, refunded or disputed in the last 45 days. Nothing here changes the books on its own.">
+          <ul className="space-y-2">
+            {onlineAttention.map((a) => (
+              <li
+                key={a.id}
+                className={`border-l-[3px] px-3 py-2 text-[13px] leading-relaxed ${
+                  a.tone === "bad" ? "border-bad bg-bad-tint text-bad-text" : "border-warning bg-warning-tint text-warning-text"
+                }`}
+              >
+                {a.text}
+              </li>
+            ))}
+          </ul>
         </Card>
       ) : null}
 
@@ -851,8 +929,6 @@ export default async function DuesPage({ searchParams }: { searchParams: Promise
           </div>
         </Card>
       ) : null}
-
-      {howToPay}
     </div>
   );
 }

@@ -51,9 +51,6 @@ function lastReminder(r: CollectionRow, today: string): string {
 const chip = "rounded-full bg-warning-tint px-2 py-0.5 text-[11px] font-medium text-warning-text";
 const btn =
   "inline-flex min-h-[44px] items-center justify-center rounded-md bg-ink px-4 py-2 text-[13px] font-medium text-paper hover:bg-ink-mid disabled:opacity-50 sm:min-h-0";
-const btnGhost =
-  "inline-flex min-h-[44px] items-center justify-center rounded-md border border-line-strong bg-paper px-3 py-2 text-[12px] font-medium text-ink hover:bg-fill disabled:opacity-50 sm:min-h-0";
-
 function Unit({ r }: { r: CollectionRow }) {
   return (
     <div>
@@ -95,30 +92,16 @@ function History({ items }: { items: HistoryItem[] }) {
 export function CollectionsTable({
   rows,
   canPrepare,
-  preselect,
   today,
 }: {
   rows: CollectionRow[];
   canPrepare: boolean;
-  preselect: string | null;
   today: string;
 }) {
   const router = useRouter();
-  const [selected, setSelected] = useState<Set<string>>(() => {
-    const row = preselect ? rows.find((r) => r.unitId === preselect) : null;
-    return new Set(row?.selectable ? [row.unitId] : []);
-  });
   const [error, setError] = useState<string | null>(null);
   const [pending, start] = useTransition();
-  const selectable = useMemo(() => rows.filter((r) => r.selectable), [rows]);
-
-  const toggle = (id: string) =>
-    setSelected((s) => {
-      const next = new Set(s);
-      if (next.has(id)) next.delete(id);
-      else next.add(id);
-      return next;
-    });
+  const remindable = useMemo(() => rows.filter((r) => r.selectable).map((r) => r.unitId), [rows]);
 
   const prepare = (unitIds: string[]) => {
     setError(null);
@@ -155,21 +138,11 @@ export function CollectionsTable({
 
   return (
     <div>
-      {canPrepare ? (
-        <div className="mb-4 flex flex-col gap-2 sm:flex-row sm:items-center">
-          <button type="button" className={btn} disabled={pending || selected.size === 0} onClick={() => prepare([...selected])}>
-            {pending ? "Preparing..." : `Prepare reminders for selected (${selected.size})`}
+      {canPrepare && remindable.length > 0 ? (
+        <div className="mb-4">
+          <button type="button" className={btn} disabled={pending} onClick={() => prepare(remindable)}>
+            {pending ? "Preparing..." : `Remind everyone past due (${remindable.length})`}
           </button>
-          {selectable.length > 0 ? (
-            <button type="button" className={btnGhost} onClick={() => setSelected(new Set(selectable.map((r) => r.unitId)))}>
-              Select everyone who can be reminded
-            </button>
-          ) : null}
-          {selected.size > 0 ? (
-            <button type="button" className={btnGhost} onClick={() => setSelected(new Set())}>
-              Clear
-            </button>
-          ) : null}
         </div>
       ) : null}
       {error ? (
@@ -183,7 +156,6 @@ export function CollectionsTable({
         <table className="w-full min-w-[56rem] text-[13px]">
           <thead>
             <tr className="border-b border-line text-left text-mute">
-              {canPrepare ? <th className="w-8 pb-2" aria-label="Select" /> : null}
               <th className="pb-2 font-medium">Unit and owner</th>
               <th className="pb-2 text-right font-medium">Not yet due</th>
               <th className="pb-2 text-right font-medium">Up to a month</th>
@@ -197,19 +169,6 @@ export function CollectionsTable({
           <tbody className="divide-y divide-line align-top">
             {rows.map((r) => (
               <tr key={r.unitId}>
-                {canPrepare ? (
-                  <td className="py-3 pr-2">
-                    <input
-                      type="checkbox"
-                      aria-label={`Select ${r.label}`}
-                      className="h-4 w-4"
-                      checked={selected.has(r.unitId)}
-                      disabled={!r.selectable}
-                      title={r.disabledReason ?? undefined}
-                      onChange={() => toggle(r.unitId)}
-                    />
-                  </td>
-                ) : null}
                 <td className="py-3">
                   <Unit r={r} />
                   <History items={r.history} />
@@ -226,7 +185,7 @@ export function CollectionsTable({
           </tbody>
           <tfoot>
             <tr className="border-t border-line">
-              <td colSpan={canPrepare ? 6 : 5} className="pt-3 text-mute">
+              <td colSpan={5} className="pt-3 text-mute">
                 Total
               </td>
               <td className="figures pt-3 text-right text-ink">{formatMoney(fromCents(rows.reduce((s, r) => s + r.owedCents, 0)))}</td>
@@ -264,15 +223,6 @@ export function CollectionsTable({
                 <dd className="text-right">{lastReminder(r, today)}</dd>
               </dl>
               <div className="mt-3">{nextStep(r)}</div>
-              {canPrepare ? (
-                <label className="mt-3 flex min-h-[44px] items-center gap-2 text-[13px] text-ink" title={r.disabledReason ?? undefined}>
-                  <input type="checkbox" className="h-5 w-5" checked={selected.has(r.unitId)} disabled={!r.selectable} onChange={() => toggle(r.unitId)} />
-                  Include in the reminders
-                </label>
-              ) : null}
-              {canPrepare && !r.selectable && r.disabledReason ? (
-                <p className="text-[12px] text-mute">{r.disabledReason}</p>
-              ) : null}
               <History items={r.history} />
             </li>
           );

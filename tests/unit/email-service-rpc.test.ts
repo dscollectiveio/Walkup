@@ -65,12 +65,13 @@ describe("serviceRpc", () => {
     }
     expect(importers.sort()).toEqual(["app/api/cron/email-reminders/route.ts", "app/api/email/webhook/route.ts"]);
     // The bank sync cron (DECISIONS #28) and the Plaid webhook (PL3) keep their own; email adds only service-rpc.ts,
-    // and billing (subscriptions plan 2.6) only its sibling allowlist wrapper.
+    // billing (subscriptions plan 2.6) only its sibling allowlist wrapper, and online dues (DECISIONS #57) its own.
     expect(keyReaders.sort()).toEqual([
       "app/api/cron/sync-bank-feeds/route.ts",
       "app/api/plaid/webhook/route.ts",
       "lib/billing/service-rpc.ts",
       "lib/email-outbox/service-rpc.ts",
+      "lib/payments/service-rpc.ts",
     ]);
   });
 });

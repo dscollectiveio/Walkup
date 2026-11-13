@@ -26,26 +26,76 @@ export interface ChargeLine {
   days_overdue: number;
 }
 
+/** The date `n` days after an ISO day. */
+export function addDaysIso(iso: string, n: number): string {
+  const d = new Date(Date.UTC(+iso.slice(0, 4), +iso.slice(5, 7) - 1, +iso.slice(8, 10) + n));
+  return d.toISOString().slice(0, 10);
+}
+
+/** A charge is past due once its due date plus the grace period has passed. */
+export function isPastDue(dueOn: string, todayIso: string, graceDays = 0): boolean {
+  return addDaysIso(dueOn, graceDays) < todayIso;
+}
+
+export interface UnitBuckets {
+  standing: UnitStanding;
+  /** Past due plus due soon: every unpaid charge. */
+  owedCents: number;
+  /** Unpaid charges whose due date plus the grace period has passed. */
+  overdueCents: number;
+  /** Unpaid charges already billed but not yet past due. */
+  dueSoonCents: number;
+  /** The earliest due date among the due-soon charges. */
+  dueSoonOn: string | null;
+}
+
 /**
- * A unit is behind when anything is owed past its due date; ahead when it
- * has an unapplied credit; current when nothing is owed; "not charged yet"
- * when it has never been billed at all.
+ * Two buckets, used everywhere on the Dues page. Past due: billed, not fully
+ * paid, and the due date plus the grace period has passed. Due soon: billed,
+ * not fully paid, not past due yet. A unit is behind when anything is past
+ * due; ahead when it has an unapplied credit and owes nothing; "not charged
+ * yet" when it has never been billed at all.
  */
 export function standingFor(
   charges: ChargeLine[],
   unappliedCents: number,
   todayIso: string,
-): { standing: UnitStanding; owedCents: number; overdueCents: number } {
-  const owed = charges
-    .filter((c) => c.status === "open" || c.status === "partial")
-    .reduce((s, c) => s + c.balanceCents, 0);
-  const overdue = charges
-    .filter((c) => (c.status === "open" || c.status === "partial") && c.due_on < todayIso)
-    .reduce((s, c) => s + c.balanceCents, 0);
-  if (charges.length === 0) return { standing: "not_charged", owedCents: 0, overdueCents: 0 };
-  if (overdue > 0) return { standing: "behind", owedCents: owed, overdueCents: overdue };
-  if (owed === 0 && unappliedCents > 0) return { standing: "ahead", owedCents: 0, overdueCents: 0 };
-  return { standing: "current", owedCents: owed, overdueCents: 0 };
+  graceDays = 0,
+): UnitBuckets {
+  const unpaid = charges.filter((c) => (c.status === "open" || c.status === "partial") && c.balanceCents > 0);
+  const pastDue = unpaid.filter((c) => isPastDue(c.due_on, todayIso, graceDays));
+  const soon = unpaid.filter((c) => !isPastDue(c.due_on, todayIso, graceDays));
+  const sum = (xs: ChargeLine[]) => xs.reduce((t, c) => t + c.balanceCents, 0);
+  const overdue = sum(pastDue);
+  const dueSoon = sum(soon);
+  const dueSoonOn = soon.map((c) => c.due_on).sort()[0] ?? null;
+  const base = { owedCents: overdue + dueSoon, overdueCents: overdue, dueSoonCents: dueSoon, dueSoonOn };
+  if (charges.length === 0) return { standing: "not_charged", ...base };
+  if (overdue > 0) return { standing: "behind", ...base };
+  if (base.owedCents === 0 && unappliedCents > 0) return { standing: "ahead", ...base };
+  return { standing: "current", ...base };
+}
+
+/** This calendar year's charges for a unit: what was billed and how much of it is paid. Waived and written-off charges are left out. */
+export function yearCharged(charges: ChargeLine[], year: string): { chargedCents: number; paidCents: number } {
+  let chargedCents = 0;
+  let paidCents = 0;
+  for (const c of charges) {
+    if (c.status === "waived" || c.status === "written_off") continue;
+    if (c.period_start.slice(0, 4) !== year) continue;
+    chargedCents += c.amountCents;
+    paidCents += c.amountCents - c.balanceCents;
+  }
+  return { chargedCents, paidCents };
+}
+
+/** The earliest due date, on or after today, among unpaid charges. Null when none. */
+export function nextDueOn(charges: ChargeLine[], todayIso: string): string | null {
+  const dates = charges
+    .filter((c) => (c.status === "open" || c.status === "partial") && c.balanceCents > 0 && c.due_on >= todayIso)
+    .map((c) => c.due_on)
+    .sort();
+  return dates[0] ?? null;
 }
 
 export interface LateFeeRule {
